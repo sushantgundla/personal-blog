@@ -1,0 +1,36 @@
+---
+title: "What I Learned Building RAG Systems"
+date: "2026-03-19"
+description: "The gap between RAG tutorials and production RAG is enormous. Notes from the trenches."
+tags: ["AI", "RAG"]
+---
+
+Every RAG tutorial makes it look easy. Embed your docs, retrieve relevant chunks, stuff them into a prompt. Ship it in an afternoon.
+
+Production is a different story.
+
+## Chunking is where most pipelines break
+
+The single most impactful decision in your RAG pipeline is how you split documents. Too small and you lose context. Too large and you dilute relevance with noise.
+
+What worked for us: **adaptive chunking based on document structure**. Headers, paragraphs, code blocks, and tables each need different treatment. A 500-token chunk of prose is fine. A 500-token chunk that splits a code example in half is useless.
+
+## Retrieval quality beats generation quality
+
+If retrieval returns the wrong chunks, no amount of prompt engineering saves you. We spent 80% of our optimization time on retrieval, not generation.
+
+Hybrid search (dense vectors + sparse BM25) consistently outperforms either approach alone. Re-ranking with a cross-encoder on the top-k results adds latency but dramatically improves precision.
+
+## The evaluation problem
+
+How do you know your RAG system is improving? This is harder than it sounds.
+
+LLM-as-judge has biases. Human evaluation doesn't scale. Automated metrics help but have blind spots.
+
+What worked: a golden set of 200 question-answer pairs, manually curated. We run every pipeline change against this set. Tedious to maintain, but it catches regressions that automated metrics miss.
+
+## Caching helps more than you think
+
+Many queries are variations of the same question. A semantic cache with a similarity threshold served 30-40% of our queries without hitting the full pipeline. That's a significant cost and latency win.
+
+The lesson: most of the work in production RAG has nothing to do with the LLM. It's retrieval engineering, evaluation infrastructure, and operational plumbing.
