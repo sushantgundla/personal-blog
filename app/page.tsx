@@ -4,6 +4,7 @@ import { ArticleCard } from '@/components/ArticleCard'
 import { RadarTabs } from '@/components/RadarTabs'
 import { siteConfig } from '@/lib/config'
 import Link from 'next/link'
+import Image from 'next/image'
 
 const accentColors = ['var(--accent)', 'var(--accent-violet)', 'var(--accent-blue)']
 
@@ -15,12 +16,29 @@ export default function Home() {
   return (
     <div className="space-y-16">
 
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-16 lg:gap-12 items-start">
-
-      {/* ── LEFT COLUMN ── */}
-      <div>
-        {/* Hero */}
-        <section className="mb-10 animate-fade-up">
+    {/* Hero with portrait */}
+    <section className="animate-fade-up">
+      <div className="flex flex-col sm:flex-row gap-6 items-start">
+        <div
+          className="flex-shrink-0 rounded-2xl overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))',
+            padding: '3px',
+          }}
+        >
+          <div className="rounded-[14px] overflow-hidden bg-[var(--bg-secondary)]">
+            <Image
+              src="/portrait.jpg"
+              alt={siteConfig.name}
+              width={200}
+              height={200}
+              className="w-[120px] sm:w-[140px] object-cover object-top"
+              style={{ aspectRatio: '3/4' }}
+              unoptimized
+            />
+          </div>
+        </div>
+        <div>
           <h1
             className="text-[38px] font-bold tracking-tight leading-[1.1] mb-2"
             style={{ fontFamily: 'var(--font-display)' }}
@@ -70,8 +88,14 @@ export default function Home() {
               </svg>
             </a>
           </div>
-        </section>
+        </div>
+      </div>
+    </section>
 
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-16 lg:gap-12 items-start">
+
+      {/* ── LEFT COLUMN ── */}
+      <div>
         {/* Recent Articles */}
         <section className="animate-fade-up delay-1">
           <h2
@@ -106,10 +130,32 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        {/* ── RADAR SECTION ── */}
+        <section className="animate-fade-up delay-3 mt-16">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2
+              className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Radar
+            </h2>
+            <Link
+              href="/radar"
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--accent)] hover:opacity-80 transition-opacity"
+            >
+              View all
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </Link>
+          </div>
+          <RadarTabs posts={radarPosts} picks={radarPicks} />
+        </section>
       </div>
 
       {/* ── RIGHT COLUMN — Experience ── */}
-      <aside className="animate-fade-up delay-2 lg:sticky lg:top-8">
+      <aside className="animate-fade-up delay-2 order-last lg:order-none lg:sticky lg:top-8">
         <h2
           className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)] mb-4"
           style={{ fontFamily: 'var(--font-display)' }}
@@ -152,28 +198,6 @@ export default function Home() {
       </aside>
 
     </div>
-
-      {/* ── RADAR SECTION ── */}
-      <section className="animate-fade-up delay-3">
-        <div className="flex items-baseline justify-between mb-4">
-          <h2
-            className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            Radar
-          </h2>
-          <Link
-            href="/radar"
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--accent)] hover:opacity-80 transition-opacity"
-          >
-            View all
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-            </svg>
-          </Link>
-        </div>
-        <RadarTabs posts={radarPosts} picks={radarPicks} />
-      </section>
 
     </div>
   )
