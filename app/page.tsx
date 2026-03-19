@@ -32,7 +32,7 @@ export default function Home() {
               alt={siteConfig.name}
               width={140}
               height={140}
-              className="w-[100px] sm:w-[130px] aspect-square object-cover object-top"
+              className="w-[100px] sm:w-[130px] aspect-square object-cover object-center"
               unoptimized
             />
           </div>
