@@ -1,12 +1,12 @@
 export const siteConfig = {
   name: 'Sushant Gundla',
   title: 'Sushant Gundla',
-  description: 'Senior AI Engineer. Building agentic AI systems, RAG frameworks, and LLM pipelines at scale.',
+  description: 'Technical Lead - AI/ML. Building agentic AI systems, RAG frameworks, and LLM pipelines at scale.',
   url: 'https://sushantgundla.com',
-  tagline: 'Senior AI Engineer. Builder. Writer.',
-  bio: `I'm a Senior AI Engineer at ConnectWise, building agentic AI systems and RAG frameworks that serve enterprise teams at scale. With 6+ years of experience across Generative AI, NLP, and Computer Vision, I specialize in turning complex AI research into production systems that drive real business impact.
+  tagline: 'Technical Lead - AI/ML. Builder. Writer.',
+  bio: `I'm a Technical Lead for AI/ML and Innovation at PDI Technologies, driving agentic AI solutions, automation workflows, and ML-powered products for the convenience retail and petroleum industry. With 6+ years of experience across Generative AI, NLP, and Computer Vision, I specialize in turning complex AI research into production systems that drive real business impact.
 
-I've built agentic ticket resolution systems handling millions of records, architected in-house RAG frameworks used across entire organizations, and deployed LLM pipelines that cut support costs by 50%.
+I've built agent frameworks, chatbots, RAG systems, and AI-driven products serving enterprise customers at scale. Previously at ConnectWise, I architected agentic ticket resolution systems and in-house RAG frameworks used across entire organizations.
 
 I write about building AI systems, agentic architectures, and the lessons I pick up along the way. This blog is where I think out loud.`,
   email: 'hello@sushantgundla.com',
@@ -17,9 +17,21 @@ I write about building AI systems, agentic architectures, and the lessons I pick
   },
   work: [
     {
+      company: 'PDI Technologies',
+      role: 'Technical Lead - AI/ML & Innovation',
+      period: 'Oct 2025 — Present',
+      location: 'Bengaluru, India · Hybrid',
+      highlights: [
+        'Leading development of Agentic AI solutions and automation workflows for PDI\u2019s convenience retail and fuel wholesale product ecosystem',
+        'Building MyPDI — an AI-powered intelligent hub that centralizes analytics, AI-driven insights, and operations across the retail and energy platform',
+        'Architecting reusable frameworks for AI agents, chatbots, and RAG pipelines enabling AI-powered workflows across multiple product lines',
+        'Implementing ML solutions for fuel pricing optimization, loyalty personalization, and customer analytics at enterprise scale',
+      ],
+    },
+    {
       company: 'ConnectWise',
       role: 'Senior Machine Learning Engineer II',
-      period: 'Feb 2024 — Present',
+      period: 'Feb 2024 — Oct 2025',
       location: 'Bengaluru, India · Hybrid',
       highlights: [
         'Built Agentic Ticket Resolution Recommender using the Agno framework over millions of historical records — 60% reduction in resolution time, 40% drop in support costs',
