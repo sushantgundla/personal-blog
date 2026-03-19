@@ -13,7 +13,7 @@ export function Header() {
 
   return (
     <header className="border-b border-[var(--border)]">
-      <div className="max-w-[680px] mx-auto px-6 py-5 flex items-center justify-between">
+      <div className="max-w-[680px] lg:max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
         <Link
           href="/"
           className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)] hover:opacity-70 transition-opacity"
@@ -28,6 +28,12 @@ export function Header() {
             className="text-[14px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
           >
             Articles
+          </Link>
+          <Link
+            href="/radar"
+            className="text-[14px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            Radar
           </Link>
           <Link
             href="/about"

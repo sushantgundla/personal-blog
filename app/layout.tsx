@@ -48,7 +48,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <ThemeProvider>
           <Header />
-          <main className="max-w-[680px] mx-auto px-6 py-12">
+          <main className="max-w-[680px] lg:max-w-5xl mx-auto px-6 py-12">
             {children}
           </main>
           <Footer />
