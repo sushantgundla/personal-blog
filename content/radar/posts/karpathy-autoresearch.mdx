@@ -1,0 +1,13 @@
+---
+title: "Karpathy's Autoresearch: AI Agents Running ML Experiments Overnight"
+date: "2026-03-20"
+tags: ["AI", "Agents", "ML Research"]
+---
+
+Karpathy pushed 630 lines of Python to GitHub and went to sleep. By morning, his AI agent had run 50 experiments and committed the results to git. No human input in between.
+
+The tool is called autoresearch — and it's now the most viral open-source AI project of the month.
+
+The setup is almost too simple. You write research instructions in a Markdown file. An AI agent reads it, modifies a training script, runs a 5-minute experiment on a single GPU, checks if validation loss improved, keeps or reverts, and repeats. 12 experiments per hour. ~100 overnight.
+
+After 2 days and 700 experiments: 20 genuine improvements that stacked, an 11% training speedup on code he thought was already optimized, and a bug in his own attention implementation he'd missed for months. The agent caught it.

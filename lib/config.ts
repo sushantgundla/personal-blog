@@ -9,7 +9,7 @@ export const siteConfig = {
 I've built agent frameworks, chatbots, RAG systems, and AI-driven products serving enterprise customers at scale. Previously at ConnectWise, I architected agentic ticket resolution systems and in-house RAG frameworks used across entire organizations.
 
 I write about building AI systems, agentic architectures, and the lessons I pick up along the way. This blog is where I think out loud.`,
-  email: 'hello@sushantgundla.com',
+  email: 'gundla.sushant@gmail.com',
   social: {
     twitter: 'https://x.com/sushantgundla',
     github: 'https://github.com/sushantgundla',

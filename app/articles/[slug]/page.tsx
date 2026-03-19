@@ -43,30 +43,32 @@ export default function ArticlePage({ params }: Props) {
       {/* Back link */}
       <Link
         href="/articles"
-        className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors mb-10 animate-fade-up"
+        className="inline-flex items-center gap-1.5 text-primary font-label text-[10px] uppercase tracking-widest hover:opacity-80 transition-opacity mb-10 animate-fade-up"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
         </svg>
-        Back to articles
+        Back to Articles
       </Link>
 
       {/* Header */}
-      <header className="mb-10 animate-fade-up delay-1">
-        <h1
-          className="text-[32px] font-bold tracking-tight leading-[1.2] text-[var(--text-primary)] mb-3"
-          style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
-        >
+      <header className="mb-10 animate-fade-up" style={{ animationDelay: '100ms' }}>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tighter text-on-surface mb-4">
           {article.title}
         </h1>
-        <div className="flex items-center gap-3 text-[13px] text-[var(--text-muted)]">
-          <time>{article.date}</time>
-          <span className="opacity-30">·</span>
-          <span>{article.readingTime}</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <time className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant">
+            {article.date}
+          </time>
+          <span className="text-on-surface-variant/30">&middot;</span>
+          <span className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant">
+            {article.readingTime}
+          </span>
           {article.tags.map((tag) => (
             <span
               key={tag}
-              className="px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wide bg-[var(--bg-secondary)] text-[var(--text-muted)]"
+              className="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant text-[9px] font-label font-bold uppercase tracking-widest"
             >
               {tag}
             </span>
@@ -75,7 +77,7 @@ export default function ArticlePage({ params }: Props) {
       </header>
 
       {/* Content */}
-      <div className="prose animate-fade-up delay-2">
+      <div className="prose max-w-3xl animate-fade-up" style={{ animationDelay: '200ms' }}>
         <MDXRemote
           source={article.content}
           options={{
@@ -87,15 +89,16 @@ export default function ArticlePage({ params }: Props) {
       </div>
 
       {/* Bottom nav */}
-      <div className="mt-16 pt-8 border-t border-[var(--border)]">
+      <div className="mt-16 pt-8 border-t border-outline-variant/20">
         <Link
           href="/articles"
-          className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-[var(--accent)] hover:opacity-80 transition-opacity"
+          className="inline-flex items-center gap-1.5 text-primary font-label text-[10px] uppercase tracking-widest hover:opacity-80 transition-opacity"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
           </svg>
-          All articles
+          All Articles
         </Link>
       </div>
     </article>

@@ -8,59 +8,68 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)'],
-        display: ['var(--font-display)'],
-        mono: ['var(--font-mono)'],
+        headline: ['JetBrains Mono', 'monospace'],
+        body: ['Inter', 'system-ui', 'sans-serif'],
+        label: ['JetBrains Mono', 'monospace'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
-        bg: {
-          primary: 'var(--bg-primary)',
-          secondary: 'var(--bg-secondary)',
-          hover: 'var(--bg-hover)',
+        surface: {
+          DEFAULT: 'var(--surface)',
+          dim: 'var(--surface-dim)',
+          bright: 'var(--surface-bright)',
+          container: {
+            DEFAULT: 'var(--surface-container)',
+            low: 'var(--surface-container-low)',
+            high: 'var(--surface-container-high)',
+            highest: 'var(--surface-container-highest)',
+            lowest: 'var(--surface-container-lowest)',
+          },
+          variant: 'var(--surface-variant)',
+          tint: 'var(--primary)',
         },
-        text: {
-          primary: 'var(--text-primary)',
-          secondary: 'var(--text-secondary)',
-          muted: 'var(--text-muted)',
+        primary: {
+          DEFAULT: 'var(--primary)',
+          container: 'var(--primary)',
         },
-        border: {
-          DEFAULT: 'var(--border)',
+        secondary: {
+          DEFAULT: 'var(--secondary)',
+          container: 'var(--secondary-container)',
         },
-        accent: 'var(--accent)',
-      },
-      typography: {
-        DEFAULT: {
-          css: {
-            maxWidth: 'none',
-            color: 'var(--text-secondary)',
-            a: { color: 'var(--accent)', textDecoration: 'underline' },
-            strong: { color: 'var(--text-primary)', fontWeight: '600' },
-            h2: {
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-display)',
-              fontWeight: '600',
-              letterSpacing: '-0.02em',
-            },
-            h3: {
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-display)',
-              fontWeight: '600',
-            },
-            code: {
-              color: 'var(--text-primary)',
-              background: 'var(--bg-secondary)',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontWeight: '400',
-            },
-            'code::before': { content: 'none' },
-            'code::after': { content: 'none' },
-            blockquote: {
-              borderLeftColor: 'var(--accent)',
-              color: 'var(--text-secondary)',
-            },
+        tertiary: {
+          DEFAULT: 'var(--tertiary)',
+          container: 'var(--tertiary-container)',
+        },
+        outline: {
+          DEFAULT: 'var(--outline)',
+          variant: 'var(--outline-variant)',
+        },
+        on: {
+          surface: {
+            DEFAULT: 'var(--on-surface)',
+            variant: 'var(--on-surface-variant)',
+          },
+          primary: {
+            DEFAULT: 'var(--on-primary)',
+            container: 'var(--on-primary-container)',
           },
         },
+        background: 'var(--surface)',
+        'inverse-surface': 'var(--inverse-surface)',
+        'inverse-on-surface': 'var(--inverse-on-surface)',
+      },
+      borderRadius: {
+        DEFAULT: '0.5rem',
+        lg: '0.5rem',
+        xl: '0.75rem',
+        '2xl': '1rem',
+        '3xl': '1.5rem',
+        full: '9999px',
+      },
+      boxShadow: {
+        'glow': '0 0 20px rgba(255, 107, 43, 0.15)',
+        'glow-lg': '0 0 40px rgba(255, 107, 43, 0.1)',
+        'ambient': '0px 12px 32px rgba(0, 0, 0, 0.4)',
       },
     },
   },
