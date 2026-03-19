@@ -1,10 +1,9 @@
 import { getAllRadarPosts, getAllRadarPicks } from '@/lib/radar'
-import { RadarTabs } from '@/components/RadarTabs'
-import type { Metadata } from 'next'
+import RadarTabs from '@/components/RadarTabs'
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Radar',
-  description: 'Quick thoughts, observations, and things I recommend.',
+  description: 'Real-time signals and focus areas.',
 }
 
 export default function RadarPage() {
@@ -12,20 +11,17 @@ export default function RadarPage() {
   const picks = getAllRadarPicks()
 
   return (
-    <div>
-      <section className="mb-8 animate-fade-up">
-        <h1
-          className="text-[30px] font-bold tracking-tight text-[var(--text-primary)] mb-2"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Radar
-        </h1>
-        <p className="text-[15px] text-[var(--text-muted)]">
-          Quick thoughts, observations, and things I recommend.
-        </p>
-      </section>
+    <section className="mx-auto max-w-4xl px-6 py-16">
+      <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter uppercase">
+        AI Radar
+      </h1>
+      <p className="mt-4 text-on-surface-variant text-lg max-w-2xl">
+        Real-time signals, quick thoughts, and curated picks from the AI frontier.
+      </p>
 
-      <RadarTabs posts={posts} picks={picks} />
-    </div>
+      <div className="mt-12">
+        <RadarTabs posts={posts} picks={picks} />
+      </div>
+    </section>
   )
 }
