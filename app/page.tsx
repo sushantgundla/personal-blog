@@ -14,7 +14,7 @@ export default function Home() {
     <div>
 
       {/* ── HERO ── */}
-      <section className="mb-40">
+      <section className="mb-40 animate-fade-up">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Left */}
           <div className="lg:col-span-7">
@@ -96,7 +96,7 @@ export default function Home() {
       </section>
 
       {/* ── AI RADAR ── */}
-      <section className="mb-40">
+      <section className="mb-40 animate-fade-up delay-1">
         <div className="mb-10">
           <h2 className="font-headline text-4xl font-bold uppercase tracking-tight text-on-surface hover:text-primary transition-colors cursor-default">
             AI Radar
@@ -163,7 +163,7 @@ export default function Home() {
       </section>
 
       {/* ── RECENT ARTICLES ── */}
-      <section className="mb-40">
+      <section className="mb-40 animate-fade-up delay-2">
         <div className="flex items-end justify-between mb-10">
           <h2 className="font-headline text-4xl font-bold uppercase tracking-tight text-on-surface hover:text-primary transition-colors cursor-default">
             Articles
@@ -210,14 +210,18 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="py-16 text-center border border-dashed border-outline-variant/30 rounded-2xl">
-            <p className="text-on-surface-variant text-sm">No articles yet.</p>
+          <div className="py-16 text-center border border-dashed border-outline-variant/30 rounded-2xl hover:border-primary/30 hover:bg-surface-container-high hover:shadow-lg hover:shadow-primary/5 transition-all">
+            <p className="text-4xl mb-4">✍️</p>
+            <p className="font-headline text-lg font-bold text-on-surface mb-1">Still writing.</p>
+            <p className="text-on-surface-variant text-sm max-w-md mx-auto">
+              Articles will appear here once they leave the drafts.
+            </p>
           </div>
         )}
       </section>
 
       {/* ── PROJECTS ── */}
-      <section className="mb-40">
+      <section className="mb-40 animate-fade-up delay-3">
         <div className="flex items-end justify-between mb-10">
           <h2 className="font-headline text-4xl font-bold uppercase tracking-tight text-on-surface hover:text-primary transition-colors cursor-default">
             Projects
