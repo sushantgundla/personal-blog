@@ -20,20 +20,19 @@ export default function Home() {
     <section className="animate-fade-up">
       <div className="flex flex-col sm:flex-row gap-6 items-start">
         <div
-          className="flex-shrink-0 rounded-2xl overflow-hidden"
+          className="flex-shrink-0 rounded-full overflow-hidden"
           style={{
             background: 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))',
             padding: '3px',
           }}
         >
-          <div className="rounded-[14px] overflow-hidden bg-[var(--bg-secondary)]">
+          <div className="rounded-full overflow-hidden bg-[var(--bg-secondary)]">
             <Image
-              src="/portrait.jpg"
+              src="/portrait-home.jpg"
               alt={siteConfig.name}
-              width={200}
-              height={200}
-              className="w-[120px] sm:w-[140px] object-cover object-top"
-              style={{ aspectRatio: '3/4' }}
+              width={140}
+              height={140}
+              className="w-[100px] sm:w-[130px] aspect-square object-cover object-top"
               unoptimized
             />
           </div>
