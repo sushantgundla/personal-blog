@@ -20,6 +20,7 @@ const companyAccents = [
   'border-l-[var(--accent)]',
   'border-l-[var(--accent-violet)]',
   'border-l-[var(--accent-blue)]',
+  'border-l-[var(--accent)]',
 ]
 
 export default function AboutPage() {
@@ -32,20 +33,20 @@ export default function AboutPage() {
           {/* Portrait */}
           <div className="flex-shrink-0 w-full md:w-auto">
             <div
-              className="relative w-full md:w-56 rounded-2xl overflow-hidden"
+              className="relative w-full md:w-[340px] rounded-2xl overflow-hidden"
               style={{
                 background: 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))',
-                padding: '2px',
+                padding: '3px',
               }}
             >
               <div className="rounded-[14px] overflow-hidden bg-[var(--bg-secondary)]">
                 <Image
                   src="/portrait.jpg"
                   alt={siteConfig.name}
-                  width={224}
-                  height={320}
+                  width={340}
+                  height={480}
                   className="w-full object-cover object-top"
-                  style={{ aspectRatio: '7/10' }}
+                  style={{ aspectRatio: '17/24' }}
                   unoptimized
                 />
               </div>
@@ -61,7 +62,7 @@ export default function AboutPage() {
               {siteConfig.name}
             </h1>
             <p className="text-[15px] text-[var(--text-muted)] mb-3">
-              Senior AI Engineer · Bengaluru, India
+              Technical Lead - AI/ML · Bengaluru, India
             </p>
             {/* Stats row */}
             <div className="flex flex-wrap gap-4 mb-6">
@@ -75,7 +76,7 @@ export default function AboutPage() {
               </span>
               <span className="flex items-center gap-1.5 text-[13px] text-[var(--text-muted)]">
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent-blue)' }} />
-                ConnectWise
+                PDI Technologies
               </span>
             </div>
             {/* Bio */}
