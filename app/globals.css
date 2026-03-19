@@ -11,6 +11,13 @@
   --text-muted: #8a8a8a;
   --border: #e0ddd8;
   --accent: #c05626;
+  --accent-violet: #7c3aed;
+  --accent-blue: #2563eb;
+  --accent-teal: #0d9488;
+  --accent-green: #16a34a;
+  --accent-pink: #db2777;
+  --gradient-start: #c05626;
+  --gradient-end: #7c3aed;
 
   --font-sans: 'Instrument Sans', system-ui, sans-serif;
   --font-display: 'Instrument Sans', system-ui, sans-serif;
@@ -26,6 +33,13 @@
   --text-muted: #63635e;
   --border: #2c2c28;
   --accent: #e8733a;
+  --accent-violet: #a78bfa;
+  --accent-blue: #60a5fa;
+  --accent-teal: #2dd4bf;
+  --accent-green: #4ade80;
+  --accent-pink: #f472b6;
+  --gradient-start: #e8733a;
+  --gradient-end: #a78bfa;
 }
 
 * {
@@ -51,6 +65,14 @@ body {
 ::selection {
   background: var(--accent);
   color: white;
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Article prose styling */
@@ -169,3 +191,5 @@ body {
 .delay-3 { animation-delay: 0.3s; }
 .delay-4 { animation-delay: 0.4s; }
 .delay-5 { animation-delay: 0.5s; }
+.delay-6 { animation-delay: 0.6s; }
+.delay-7 { animation-delay: 0.7s; }

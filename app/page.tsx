@@ -11,10 +11,10 @@ export default function Home() {
       {/* Hero */}
       <section className="mb-14 animate-fade-up">
         <h1
-          className="text-[38px] font-bold tracking-tight leading-[1.1] text-[var(--text-primary)] mb-2"
+          className="text-[38px] font-bold tracking-tight leading-[1.1] mb-2"
           style={{ fontFamily: 'var(--font-display)' }}
         >
-          {siteConfig.name}
+          <span className="gradient-text">{siteConfig.name}</span>
         </h1>
         <p
           className="text-[15px] text-[var(--text-muted)] tracking-wide"
@@ -72,7 +72,16 @@ export default function Home() {
         <div className="space-y-0">
           {siteConfig.work.map((job, i) => (
             <div key={i} className="flex gap-4 py-3.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[var(--accent)] mt-1.5 flex-shrink-0 opacity-70" />
+              <div
+                className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 opacity-80"
+                style={{
+                  background: i === 0
+                    ? 'var(--accent)'
+                    : i === 1
+                    ? 'var(--accent-violet)'
+                    : 'var(--accent-blue)',
+                }}
+              />
               <div>
                 <div
                   className="text-[15px] font-semibold text-[var(--text-primary)]"
