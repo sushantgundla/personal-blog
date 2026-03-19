@@ -247,6 +247,14 @@ body {
   transition: text-shadow 0.4s ease;
 }
 
+.heading-glow {
+  transition: text-shadow 0.4s ease, color 0.3s ease;
+}
+.heading-glow:hover {
+  color: var(--primary);
+  text-shadow: 0 0 20px rgba(255, 107, 43, 0.4), 0 0 40px rgba(255, 107, 43, 0.15);
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

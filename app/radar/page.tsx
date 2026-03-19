@@ -12,14 +12,16 @@ export default function RadarPage() {
 
   return (
     <section className="mx-auto max-w-4xl px-6 py-16">
-      <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter uppercase">
-        AI Radar
-      </h1>
-      <p className="mt-4 text-on-surface-variant text-lg max-w-2xl">
-        Real-time signals, quick thoughts, and curated picks from the AI frontier.
-      </p>
+      <div className="animate-fade-up">
+        <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter uppercase">
+          AI Radar
+        </h1>
+        <p className="mt-4 text-on-surface-variant text-lg max-w-2xl">
+          Real-time signals, quick thoughts, and curated picks from the AI frontier.
+        </p>
+      </div>
 
-      <div className="mt-12">
+      <div className="mt-12 animate-fade-up delay-1">
         <RadarTabs posts={posts} picks={picks} />
       </div>
     </section>

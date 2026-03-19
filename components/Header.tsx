@@ -26,7 +26,7 @@ export function Header() {
         {/* Left: Brand */}
         <Link
           href="/"
-          className="font-headline text-xl font-bold tracking-tighter uppercase text-on-surface hover:opacity-80 transition-opacity"
+          className="font-headline text-xl font-bold tracking-tighter uppercase text-on-surface heading-glow"
         >
           Sushant Gundla
         </Link>
@@ -42,7 +42,7 @@ export function Header() {
                 className={
                   isActive
                     ? 'font-label text-xs uppercase tracking-widest text-primary border-b-2 border-primary pb-1 shadow-[0_4px_12px_rgba(255,107,43,0.2)]'
-                    : 'font-label text-xs uppercase tracking-widest text-on-surface/70 hover:text-on-surface transition-colors'
+                    : 'font-label text-xs uppercase tracking-widest text-on-surface/70 hover:text-primary heading-glow transition-colors'
                 }
               >
                 {label}
