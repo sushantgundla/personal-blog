@@ -1,6 +1,7 @@
 import { getAllArticles } from '@/lib/articles'
 import { getAllRadarPosts, getAllRadarPicks } from '@/lib/radar'
 import { siteConfig } from '@/lib/config'
+import { projects } from '@/lib/projects'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -9,6 +10,7 @@ export default function Home() {
   const radarPosts = getAllRadarPosts()
   const radarPicks = getAllRadarPicks()
   const latestPulse = radarPosts[0]
+  const topProjects = projects.slice(0, 3)
 
   return (
     <div>
@@ -50,12 +52,13 @@ export default function Home() {
               >
                 View Articles
               </Link>
-              <Link
-                href="/about"
+              <a
+                href="/resume.pdf"
+                download
                 className="inline-flex items-center justify-center px-7 py-3 rounded-full border border-outline-variant text-on-surface font-label text-sm font-semibold tracking-wide hover:bg-surface-container transition-colors"
               >
                 Resume
-              </Link>
+              </a>
             </div>
 
             {/* Social links */}
@@ -115,7 +118,7 @@ export default function Home() {
             <blockquote className="text-on-surface text-lg leading-relaxed font-body italic">
               {latestPulse
                 ? latestPulse.content?.slice(0, 200) || latestPulse.title
-                : 'The agentic paradigm isn\'t about replacing humans — it\'s about giving every engineer a fleet of tireless, context-aware collaborators.'}
+                : 'The agentic paradigm isn\'t about replacing humans. It\'s about giving every engineer a fleet of tireless, context-aware collaborators.'}
             </blockquote>
             {latestPulse && (
               <p className="text-on-surface-variant text-sm mt-4">
@@ -237,13 +240,36 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="py-16 text-center border border-dashed border-outline-variant/30 rounded-2xl hover:border-primary/30 hover:bg-surface-container-high hover:shadow-lg hover:shadow-primary/5 transition-all">
-          <p className="text-4xl mb-4">🧪</p>
-          <p className="font-headline text-lg font-bold text-on-surface mb-1">Still cooking.</p>
-          <p className="text-on-surface-variant text-sm max-w-md mx-auto">
-            Projects will appear here once they escape the lab.
-          </p>
-        </div>
+        {topProjects.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {topProjects.map((project) => (
+              <Link
+                key={project.slug}
+                href="/projects"
+                className="group rounded-2xl border border-outline-variant/20 bg-surface-container p-8 hover:border-primary/30 hover:bg-surface-container-high hover:shadow-lg hover:shadow-primary/5 transition-all"
+              >
+                <p className="text-primary font-medium text-xs mb-4">
+                  {project.organization}
+                  <span className="text-on-surface-variant/60"> · {project.period}</span>
+                </p>
+                <h3 className="font-headline text-xl font-semibold text-on-surface group-hover:text-primary transition-colors mb-3">
+                  {project.title}
+                </h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed line-clamp-2 font-body">
+                  {project.description}
+                </p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="py-16 text-center border border-dashed border-outline-variant/30 rounded-2xl hover:border-primary/30 hover:bg-surface-container-high hover:shadow-lg hover:shadow-primary/5 transition-all">
+            <p className="text-4xl mb-4">🧪</p>
+            <p className="font-headline text-lg font-bold text-on-surface mb-1">Still cooking.</p>
+            <p className="text-on-surface-variant text-sm max-w-md mx-auto">
+              Projects will appear here once they escape the lab.
+            </p>
+          </div>
+        )}
       </section>
 
     </div>
