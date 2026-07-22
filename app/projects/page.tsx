@@ -62,18 +62,25 @@ export default function ProjectsPage() {
                       </span>
                     ))}
                   </div>
+                  {project.link && (
+                    <span className="inline-flex items-center gap-1.5 mt-5 text-primary font-label text-xs uppercase tracking-wider group-hover:opacity-80 transition-opacity">
+                      Read the deep dive
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                    </span>
+                  )}
                 </>
               )
 
               const cardClassName =
                 'group rounded-2xl border border-outline-variant/20 bg-surface-container p-8 hover:border-primary/30 hover:bg-surface-container-high hover:shadow-lg hover:shadow-primary/5 transition-all'
 
+              const isInternal = project.link?.startsWith('/')
+
               return project.link ? (
                 <a
                   key={project.slug}
                   href={project.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  {...(isInternal ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
                   className={cardClassName}
                 >
                   {cardContent}
