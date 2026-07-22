@@ -63,7 +63,7 @@ export default function AboutPage() {
                 Download Resume
               </a>
               <a
-                href="#journey"
+                href="/projects"
                 className="inline-flex items-center gap-2 border border-outline-variant px-6 py-3 rounded-lg font-headline text-sm font-semibold tracking-tight text-on-surface hover:border-primary/50 transition-colors"
               >
                 View Projects
@@ -149,9 +149,17 @@ export default function AboutPage() {
                   <span className="text-on-surface-variant/60"> · {job.location}</span>
                 )}
               </p>
-              <p className="text-on-surface/70 leading-relaxed">
-                {job.highlights[0]}
-              </p>
+              <ul className="space-y-2.5">
+                {job.highlights.map((highlight, hi) => (
+                  <li
+                    key={hi}
+                    className="flex gap-3 text-on-surface/70 leading-relaxed"
+                  >
+                    <span className="text-primary mt-1.5 shrink-0">▸</span>
+                    <span>{highlight}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>

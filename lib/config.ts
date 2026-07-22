@@ -19,11 +19,11 @@ I write about building AI systems, agentic architectures, and the lessons I pick
     {
       company: 'PDI Technologies',
       role: 'Technical Lead - AI/ML & Innovation',
-      period: 'Oct 2025 — Present',
+      period: 'Oct 2025 – Present',
       location: 'Bengaluru, India · Hybrid',
       highlights: [
         'Architecting the AI platform behind MyPDI as a connected system of frameworks: the agentic framework, a document ingestion pipeline that feeds it, an MCP gateway, an LLM gateway, and the customer-facing chatbot. My work also covers model deployment and the service infrastructure that runs it all in production.',
-        'Building MyPDI — an AI-powered intelligent hub that centralizes analytics, AI-driven insights, and operations across the retail and energy platform',
+        'Building MyPDI, an AI-powered intelligent hub that centralizes analytics, AI-driven insights, and operations across the retail and energy platform',
         'Architecting reusable frameworks for AI agents, chatbots, and RAG pipelines enabling AI-powered workflows across multiple product lines',
         'Implementing ML solutions for fuel pricing optimization, loyalty personalization, and customer analytics at enterprise scale',
       ],
@@ -31,22 +31,22 @@ I write about building AI systems, agentic architectures, and the lessons I pick
     {
       company: 'ConnectWise',
       role: 'Senior Machine Learning Engineer II',
-      period: 'Feb 2024 — Oct 2025',
+      period: 'Feb 2024 – Oct 2025',
       location: 'Bengaluru, India · Hybrid',
       highlights: [
-        'Built Agentic Ticket Resolution Recommender using the Agno framework over millions of historical records — 60% reduction in resolution time, 40% drop in support costs',
+        'Built Agentic Ticket Resolution Recommender using the Agno framework over millions of historical records, cutting resolution time by 60% and support costs by 40%',
         'Designed and shipped an Agentic AI framework for config-driven agents deployed via REST API, supporting memory, multi-KB retrieval, tool use, and enterprise integrations',
-        'Architected an in-house RAG framework enabling low-code RAG app deployment — adopted by all internal teams and product managers',
-        'Built an internal chatbot for employee and client queries integrating HR, cybersecurity, and university knowledge bases — 50% reduction in support resolution time',
+        'Architected an in-house RAG framework enabling low-code RAG app deployment, adopted by all internal teams and product managers',
+        'Built an internal chatbot for employee and client queries integrating HR, cybersecurity, and university knowledge bases, a 50% reduction in support resolution time',
       ],
     },
     {
       company: 'Draup',
       role: 'Data Scientist III',
-      period: 'Sep 2021 — Feb 2024',
+      period: 'Sep 2021 – Feb 2024',
       location: 'Bengaluru, India · On-site',
       highlights: [
-        'Pre-trained an in-house RoBERTa-based language model on 60M job descriptions — 5%+ performance gain on downstream NLP tasks',
+        'Pre-trained an in-house RoBERTa-based language model on 60M job descriptions, a 5%+ performance gain on downstream NLP tasks',
         'Led development of Curie, an LLM-powered RAG querying system over 300M job descriptions responding in under 10 seconds at production scale',
         'Designed Skill Clustering algorithm with 93% top-5 accuracy using Sentence Transformers semantic similarity',
       ],
@@ -54,10 +54,10 @@ I write about building AI systems, agentic architectures, and the lessons I pick
     {
       company: 'Accolite Digital',
       role: 'Senior AI/ML Developer',
-      period: 'Jul 2019 — Sep 2021',
+      period: 'Jul 2019 – Sep 2021',
       location: 'Bengaluru, India · On-site',
       highlights: [
-        'Engineered a real-time Information Retrieval system for 40+ ID card types across 13 countries using SSOD, Heatmap Regression, and OCR — 95% F1-score',
+        'Engineered a real-time Information Retrieval system for 40+ ID card types across 13 countries using SSOD, Heatmap Regression, and OCR, achieving a 95% F1-score',
         'Architected end-to-end ML microservice pipelines using Django, Docker, and AKS for GPU-node deployment',
         'Built CNN-LSTM model achieving 92% F1-score for detecting criticality in radiology reports',
       ],
@@ -67,13 +67,13 @@ I write about building AI systems, agentic architectures, and the lessons I pick
     {
       school: 'COEP Technological University',
       degree: 'M.Tech, Computer Engineering (Information Security)',
-      period: '2017 — 2019',
+      period: '2017 – 2019',
       grade: '9.54 CGPA',
     },
     {
       school: 'KJ Somaiya College of Engineering',
       degree: 'B.Tech, Computer Engineering',
-      period: '2012 — 2016',
+      period: '2012 – 2016',
     },
   ],
   skills: [

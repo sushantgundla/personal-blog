@@ -79,7 +79,7 @@ export default function ArticlesPage() {
             Drafts in progress.
           </p>
           <p className="text-on-surface-variant text-sm max-w-md text-center leading-relaxed">
-            The ideas are brewing, the outlines are messy, and the first drafts are terrible — exactly as they should be. Articles will land here soon.
+            The ideas are brewing, the outlines are messy, and the first drafts are terrible, exactly as they should be. Articles will land here soon.
           </p>
           <div className="mt-8 flex items-center gap-2 text-on-surface-variant/40 font-mono text-xs">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
