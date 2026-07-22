@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
@@ -7,18 +7,18 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Sushant Gundla — Technical Lead AI/ML | Builder & Writer',
-    template: `%s — Sushant Gundla`,
+    default: 'Sushant Gundla, Technical Lead AI/ML | Builder & Writer',
+    template: `%s | Sushant Gundla`,
   },
-  description: 'Sushant Gundla — Technical Lead for AI/ML. Building agentic AI systems, RAG frameworks, and LLM pipelines at scale. Articles on AI engineering and agentic architectures.',
+  description: 'Sushant Gundla, Technical Lead for AI/ML. Building agentic AI systems, RAG frameworks, and LLM pipelines at scale. Articles on AI engineering and agentic architectures.',
   keywords: ['Sushant Gundla', 'Sushant', 'Gundla', 'AI/ML', 'Technical Lead', 'Agentic AI', 'RAG', 'LLM', 'Machine Learning Engineer'],
   metadataBase: new URL(siteConfig.url),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'Sushant Gundla — Technical Lead AI/ML',
-    description: 'Sushant Gundla — Building agentic AI systems, RAG frameworks, and LLM pipelines at scale.',
+    title: 'Sushant Gundla, Technical Lead AI/ML',
+    description: 'Sushant Gundla. Building agentic AI systems, RAG frameworks, and LLM pipelines at scale.',
     url: siteConfig.url,
     siteName: 'Sushant Gundla',
     locale: 'en_US',
@@ -26,14 +26,18 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Sushant Gundla — Technical Lead AI/ML',
-    description: 'Sushant Gundla — Building agentic AI systems, RAG frameworks, and LLM pipelines at scale.',
+    title: 'Sushant Gundla, Technical Lead AI/ML',
+    description: 'Sushant Gundla. Building agentic AI systems, RAG frameworks, and LLM pipelines at scale.',
     creator: '@sushantgundla',
   },
   robots: {
     index: true,
     follow: true,
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#FF6B2B',
 }
 
 const jsonLd = [

@@ -3,18 +3,15 @@ import Link from 'next/link'
 export default function NotFound() {
   return (
     <div className="py-20 text-center">
-      <h1
-        className="text-[72px] font-bold text-[var(--text-primary)] mb-2"
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
+      <h1 className="font-headline text-8xl font-bold tracking-tighter text-on-surface mb-4">
         404
       </h1>
-      <p className="text-[var(--text-muted)] mb-6">
-        This page doesn't exist.
+      <p className="text-on-surface-variant text-lg mb-10 max-w-md mx-auto">
+        This page doesn't exist, or it wandered off somewhere.
       </p>
       <Link
         href="/"
-        className="text-[14px] font-medium text-[var(--accent)] hover:opacity-80 transition-opacity"
+        className="inline-flex items-center justify-center px-7 py-3 rounded-full bg-primary text-white font-label text-sm font-semibold tracking-wide hover:bg-primary/90 transition-colors"
       >
         Go home
       </Link>
