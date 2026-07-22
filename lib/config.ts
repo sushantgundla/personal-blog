@@ -4,9 +4,9 @@ export const siteConfig = {
   description: 'Technical Lead - AI/ML. Building agentic AI systems, RAG frameworks, and LLM pipelines at scale.',
   url: 'https://sushantgundla.com',
   tagline: 'Technical Lead - AI/ML. Builder. Writer.',
-  bio: `I'm a Technical Lead for AI/ML and Innovation at PDI Technologies, driving agentic AI solutions, automation workflows, and ML-powered products for the convenience retail and petroleum industry. With 6+ years of experience across Generative AI, NLP, and Computer Vision, I specialize in turning complex AI research into production systems that drive real business impact.
+  bio: `I'm a Technical Lead for AI/ML and Innovation at PDI Technologies, where I help architect the AI platform behind MyPDI for the convenience retail and petroleum industry. My work spans a connected system of frameworks: the agentic framework, a document ingestion pipeline that feeds it, an MCP gateway, an LLM gateway, and the customer-facing chatbot, along with the model deployment and infrastructure that keep everything running in production. With 7+ years across Generative AI, NLP, and Computer Vision, I enjoy turning AI research into systems that ship at enterprise scale.
 
-I've built agent frameworks, chatbots, RAG systems, and AI-driven products serving enterprise customers at scale. Previously at ConnectWise, I architected agentic ticket resolution systems and in-house RAG frameworks used across entire organizations.
+I've built agent frameworks, ingestion pipelines, RAG systems, and chatbots serving enterprise customers at scale. Previously at ConnectWise, I architected an agentic ticket resolution system over millions of historical records that cut resolution time by 60%, along with in-house RAG frameworks adopted across teams.
 
 I write about building AI systems, agentic architectures, and the lessons I pick up along the way. This blog is where I think out loud.`,
   email: 'gundla.sushant@gmail.com',
@@ -22,7 +22,7 @@ I write about building AI systems, agentic architectures, and the lessons I pick
       period: 'Oct 2025 — Present',
       location: 'Bengaluru, India · Hybrid',
       highlights: [
-        'Leading development of Agentic AI solutions and automation workflows for PDI\u2019s convenience retail and fuel wholesale product ecosystem',
+        'Architecting the AI platform behind MyPDI as a connected system of frameworks: the agentic framework, a document ingestion pipeline that feeds it, an MCP gateway, an LLM gateway, and the customer-facing chatbot. My work also covers model deployment and the service infrastructure that runs it all in production.',
         'Building MyPDI — an AI-powered intelligent hub that centralizes analytics, AI-driven insights, and operations across the retail and energy platform',
         'Architecting reusable frameworks for AI agents, chatbots, and RAG pipelines enabling AI-powered workflows across multiple product lines',
         'Implementing ML solutions for fuel pricing optimization, loyalty personalization, and customer analytics at enterprise scale',
@@ -79,12 +79,14 @@ I write about building AI systems, agentic architectures, and the lessons I pick
   skills: [
     { label: 'Agentic AI', color: 'violet' },
     { label: 'RAG', color: 'orange' },
+    { label: 'MCP', color: 'teal' },
     { label: 'LLMs', color: 'blue' },
     { label: 'NLP', color: 'green' },
     { label: 'Computer Vision', color: 'pink' },
-    { label: 'OpenAI', color: 'teal' },
-    { label: 'LangChain', color: 'violet' },
+    { label: 'Agno', color: 'teal' },
+    { label: 'LiteLLM', color: 'violet' },
     { label: 'FastAPI', color: 'green' },
+    { label: 'Claude Code', color: 'pink' },
     { label: 'AWS', color: 'orange' },
     { label: 'Kubernetes', color: 'blue' },
     { label: 'Docker', color: 'blue' },
