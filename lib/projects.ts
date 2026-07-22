@@ -14,6 +14,42 @@ export interface Project {
 
 export const projects: Project[] = [
   {
+    slug: 'mypdi-agent-framework',
+    title: 'MyPDI AI Agent Framework',
+    organization: 'PDI Technologies',
+    period: '2025 – Present',
+    description:
+      'A platform that lets any team define agents, teams of agents, and multi-step workflows from configuration, instead of rebuilding the same infrastructure for every new AI feature.',
+    impact: 'Powers AI features across multiple MyPDI product lines',
+    tags: ['Agentic AI', 'MCP', 'LLMs', 'Workflows', 'Multi-tenant'],
+    status: 'production',
+    link: '/articles/building-a-platform-for-agents',
+  },
+  {
+    slug: 'mypdi-chatbot',
+    title: 'MyPDI Customer-Facing Chatbot',
+    organization: 'PDI Technologies',
+    period: '2025 – Present',
+    description:
+      'A conversational assistant that holds coherent multi-turn conversations, routes each question to the right specialist automatically, and answers grounded in real business data.',
+    impact: 'Grounded, multi-tenant conversational AI for retail and petroleum customers',
+    tags: ['Chatbot', 'RAG', 'LLMs', 'Conversational AI'],
+    status: 'production',
+    link: '/articles/a-chatbot-that-remembers',
+  },
+  {
+    slug: 'mypdi-ingestion',
+    title: 'MyPDI Document Ingestion Pipeline',
+    organization: 'PDI Technologies',
+    period: '2025 – Present',
+    description:
+      'The knowledge layer behind MyPDI: it turns messy real-world documents and structured sources into one consistent, queryable knowledge base, resiliently and without manual babysitting.',
+    impact: 'Feeds reliable retrieval across the AI platform',
+    tags: ['RAG', 'Ingestion', 'Knowledge Base', 'Data Pipelines'],
+    status: 'production',
+    link: '/articles/the-ingestion-problem',
+  },
+  {
     slug: 'agentic-ticket-resolution',
     title: 'Agentic Ticket Resolution Recommender',
     organization: 'ConnectWise',
