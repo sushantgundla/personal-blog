@@ -67,8 +67,8 @@ module.exports = {
         full: '9999px',
       },
       boxShadow: {
-        'glow': '0 0 20px rgba(255, 107, 43, 0.15)',
-        'glow-lg': '0 0 40px rgba(255, 107, 43, 0.1)',
+        'glow': '0 0 20px rgba(var(--primary-rgb), 0.15)',
+        'glow-lg': '0 0 40px rgba(var(--primary-rgb), 0.1)',
         'ambient': '0px 12px 32px rgba(0, 0, 0, 0.4)',
       },
     },

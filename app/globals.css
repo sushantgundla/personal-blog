@@ -18,6 +18,7 @@
   --surface-container-high: #262626;
   --surface-container-highest: #333333;
   --primary: #FF6B2B;
+  --primary-rgb: 255, 107, 43;
   --secondary: #d0bcff;
   --secondary-container: #5417be;
   --tertiary: #bac3ff;
@@ -45,6 +46,7 @@
   --surface-container-high: #e8e6e1;
   --surface-container-highest: #dddbd6;
   --primary: #c05626;
+  --primary-rgb: 192, 86, 38;
   --secondary: #6b4fa0;
   --secondary-container: #e9ddff;
   --tertiary: #4a56a0;
@@ -82,7 +84,7 @@ body {
 }
 
 ::selection {
-  background: rgba(255, 107, 43, 0.3);
+  background: rgba(var(--primary-rgb), 0.3);
   color: var(--on-surface);
 }
 
@@ -201,11 +203,11 @@ body {
     filter: brightness(1);
   }
   60% {
-    text-shadow: 0 0 40px rgba(255, 107, 43, 0.4), 0 0 80px rgba(255, 107, 43, 0.15);
+    text-shadow: 0 0 40px rgba(var(--primary-rgb), 0.4), 0 0 80px rgba(var(--primary-rgb), 0.15);
   }
   100% {
     opacity: 1;
-    text-shadow: 0 0 20px rgba(255, 107, 43, 0.1);
+    text-shadow: 0 0 20px rgba(var(--primary-rgb), 0.1);
     filter: brightness(1);
   }
 }
@@ -243,7 +245,7 @@ body {
 }
 
 .name-glow-hover:hover {
-  text-shadow: 0 0 30px rgba(255, 107, 43, 0.3), 0 0 60px rgba(255, 107, 43, 0.1);
+  text-shadow: 0 0 30px rgba(var(--primary-rgb), 0.3), 0 0 60px rgba(var(--primary-rgb), 0.1);
   transition: text-shadow 0.4s ease;
 }
 
@@ -252,7 +254,7 @@ body {
 }
 .heading-glow:hover {
   color: var(--primary);
-  text-shadow: 0 0 20px rgba(255, 107, 43, 0.4), 0 0 40px rgba(255, 107, 43, 0.15);
+  text-shadow: 0 0 20px rgba(var(--primary-rgb), 0.4), 0 0 40px rgba(var(--primary-rgb), 0.15);
 }
 
 @keyframes fadeUp {
@@ -290,7 +292,7 @@ body {
 }
 
 .glow-hover:hover {
-  box-shadow: 0 0 20px rgba(255, 107, 43, 0.25);
+  box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.25);
 }
 
 /* Timeline dot interaction */
@@ -301,12 +303,12 @@ body {
 .timeline-dot.is-first {
   background: var(--primary);
   border-color: var(--primary);
-  box-shadow: 0 0 12px rgba(255, 107, 43, 0.5);
+  box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.5);
 }
 .timeline-entry:hover .timeline-dot {
   background: var(--primary);
   border-color: var(--primary);
-  box-shadow: 0 0 12px rgba(255, 107, 43, 0.5);
+  box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.5);
 }
 .timeline-container:hover .timeline-dot.is-first {
   background: var(--surface);
@@ -316,7 +318,7 @@ body {
 .timeline-container:hover .timeline-entry:hover .timeline-dot.is-first {
   background: var(--primary);
   border-color: var(--primary);
-  box-shadow: 0 0 12px rgba(255, 107, 43, 0.5);
+  box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.5);
 }
 
 /* Education dot interaction */
@@ -327,7 +329,7 @@ body {
 .edu-entry:hover .edu-dot {
   background: var(--primary);
   border-color: var(--primary);
-  box-shadow: 0 0 12px rgba(255, 107, 43, 0.5);
+  box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.5);
 }
 
 .material-symbols-rounded {
