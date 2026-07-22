@@ -39,7 +39,7 @@ export default function ArticlePage({ params }: Props) {
   }
 
   return (
-    <article>
+    <article className="max-w-3xl mx-auto">
       {/* Back link */}
       <Link
         href="/articles"
@@ -77,7 +77,7 @@ export default function ArticlePage({ params }: Props) {
       </header>
 
       {/* Content */}
-      <div className="prose max-w-3xl animate-fade-up" style={{ animationDelay: '200ms' }}>
+      <div className="prose animate-fade-up" style={{ animationDelay: '200ms' }}>
         <MDXRemote
           source={article.content}
           options={{
