@@ -1,0 +1,46 @@
+---
+title: "The Unglamorous Problem That Decides Whether Your AI System Works"
+date: "2026-07-16"
+description: "Why turning messy, real-world documents into something an AI system can actually use is harder than it looks, and why it matters more than the model you pick."
+tags: ["AI", "RAG"]
+---
+
+Everyone wants to talk about the model. Which one is smartest, which one is cheapest, which one hallucinates least. Almost nobody wants to talk about the thing that actually determines whether an AI system works in production: the documents you feed it.
+
+I lead the team responsible for this at PDI Technologies, in the convenience retail and petroleum space. Over the last several months we've been building the ingestion layer that turns real, messy, human-generated content into something a retrieval system can reason over. I want to write about the problem itself, because it's more interesting, and more underrated, than most people assume.
+
+## The problem nobody wants to own
+
+Say the words "AI ingestion pipeline" and people picture something simple: read a file, chop it into pieces, turn it into numbers, done. That mental model survives about five minutes of contact with real content.
+
+Real-world knowledge doesn't show up as clean, uniform text. It shows up as PDFs that were scanned from paper decades ago and contain no extractable text at all. It shows up as spreadsheets where the meaning lives in the relationship between a header row and the ten thousand rows beneath it, not in any single cell. It shows up as slide decks where half the substance is in the speaker notes, not the slide itself. It shows up as database schemas where a column is literally named `col_14` and the only person who ever knew what it meant left the company years ago. It shows up as help documentation that gets rewritten every quarter, so last month's answer is this month's stale, misleading one.
+
+None of that is a model problem. It's a plumbing problem. And if the plumbing is bad, it doesn't matter how good the model downstream is, it will confidently retrieve the wrong thing, or nothing, and answer anyway.
+
+## What we set out to solve
+
+The goal was simple to state and hard to deliver: no matter where knowledge lives, whether that's a document, a website, or a structured data source, it should be able to flow into one consistent, queryable knowledge base, without every source needing its own bespoke, one-off integration downstream.
+
+That meant treating ingestion as its own real system, not a script somebody runs once. It needed to handle failure gracefully, because in the real world some fraction of any large batch of documents will fail to extract, and throwing away an entire job because one file was corrupted is not an acceptable answer. It needed to keep a knowledge base in sync as sources change, so that content removed at the source doesn't linger forever as a stale, misleading answer. And it needed to do all of this without a person babysitting it.
+
+## What it actually does
+
+A few capabilities ended up mattering more than the rest:
+
+**Format-agnostic intake.** The pipeline accepts common document formats along with structured sources like databases and web content, and normalizes all of it into the same downstream shape. From the point of view of anything querying the knowledge base, a spreadsheet, a webpage, and a help article all look the same.
+
+**Making structured data speak plain English.** Database tables and columns don't come with human-readable descriptions attached. Part of the pipeline's job is enriching that structured data with the context a retrieval system needs, so that a schema someone hasn't looked at in years becomes something people can ask about in plain English.
+
+**Graceful degradation.** A batch of a thousand files where forty fail to extract still produces value from the other nine hundred and sixty. Partial success is treated as success, not failure, with visibility into what didn't make it.
+
+**Staying in sync, not just accumulating.** When a source is re-ingested, content that changed gets updated and content that's gone gets retired, rather than the knowledge base slowly filling up with duplicates and dead answers.
+
+**Resilience by default.** Real infrastructure has hiccups: a network blip, a rate limit, a service restart. The pipeline retries the things worth retrying and fails fast on the things that won't fix themselves, without a human needing to notice and intervene.
+
+**Handling sensitive data responsibly.** Before content moves downstream, information that shouldn't leave its source is identified and removed.
+
+## Why this is the part that matters
+
+The uncomfortable truth is that most AI projects don't fail because the model was too weak. They fail because the knowledge underneath it was inconsistent, stale, incomplete, or simply never made it into the system in a usable form. The model is the visible part. Ingestion is the part that decides whether the visible part has anything good to work with.
+
+It's not a glamorous problem. Nobody writes a demo showing off their retry logic. But it's the layer that turns "we have an AI feature" into "we have an AI feature people actually trust," and that gap is where most of the real work lives.
