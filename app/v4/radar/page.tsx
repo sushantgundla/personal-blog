@@ -57,7 +57,7 @@ export default function V4RadarPage() {
                             {post.title}
                           </h3>
                           {excerpt && (
-                            <p className="mt-1.5 text-on-surface-variant text-sm leading-relaxed line-clamp-2 group-hover:text-on-primary/80 transition-colors">
+                            <p className="mt-1.5 text-on-surface-variant text-sm leading-relaxed line-clamp-2 group-hover:text-white/90 transition-colors">
                               {excerpt}
                             </p>
                           )}
@@ -101,7 +101,7 @@ export default function V4RadarPage() {
                           <ArrowUpRight className="v4-row-arrow shrink-0 mt-1" />
                         </div>
                         {pick.description && (
-                          <p className="mt-1.5 text-on-surface-variant text-sm leading-relaxed line-clamp-2 group-hover:text-on-primary/80 transition-colors">
+                          <p className="mt-1.5 text-on-surface-variant text-sm leading-relaxed line-clamp-2 group-hover:text-white/90 transition-colors">
                             {pick.description}
                           </p>
                         )}

@@ -103,11 +103,11 @@ export default function V4Home() {
                     <h3 className="v4-display font-bold tracking-tight text-2xl md:text-3xl leading-[1.12] text-on-surface group-hover:text-on-primary transition-colors">
                       {a.title}
                     </h3>
-                    <p className="text-on-surface-variant group-hover:text-on-primary/80 mt-3 leading-relaxed transition-colors">
+                    <p className="text-on-surface-variant group-hover:text-white/90 mt-3 leading-relaxed transition-colors">
                       {a.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider text-on-surface-variant group-hover:text-on-primary/80 shrink-0 transition-colors">
+                  <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider text-on-surface-variant group-hover:text-on-primary shrink-0 transition-colors">
                     <time dateTime={a.date}>{formatDate(a.date)}</time>
                     <span className="opacity-40">·</span>
                     <span>{a.readingTime}</span>
@@ -130,13 +130,13 @@ export default function V4Home() {
               >
                 <span className="v4-row-fill" aria-hidden="true" />
                 <div className="v4-row-content">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-on-surface-variant group-hover:text-on-primary/80 mb-3 transition-colors">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-on-surface-variant group-hover:text-on-primary mb-3 transition-colors">
                     {p.organization} · {p.period}
                   </p>
                   <h3 className="v4-display font-bold tracking-tight text-xl leading-[1.15] text-on-surface group-hover:text-on-primary transition-colors mb-3">
                     {p.title}
                   </h3>
-                  <p className="text-on-surface-variant text-[15px] leading-relaxed group-hover:text-on-primary/80 mb-4 transition-colors">
+                  <p className="text-on-surface-variant text-[15px] leading-relaxed group-hover:text-white/90 mb-4 transition-colors">
                     {p.description}
                   </p>
                   <div className="flex flex-wrap gap-2">

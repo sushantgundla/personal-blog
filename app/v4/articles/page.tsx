@@ -57,7 +57,7 @@ export default function V4ArticlesPage() {
                           <span key={t} className="opacity-60">{t}</span>
                         ))}
                       </div>
-                      <p className="mt-4 text-on-surface-variant text-sm md:text-base max-w-2xl leading-relaxed">
+                      <p className="mt-4 text-on-surface-variant group-hover:text-white/90 text-sm md:text-base max-w-2xl leading-relaxed transition-colors">
                         {a.description}
                       </p>
                     </div>
