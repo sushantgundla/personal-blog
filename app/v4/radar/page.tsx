@@ -35,29 +35,34 @@ export default function V4RadarPage() {
         <section>
           <ColumnHeader index="01" title="Pulses" count={posts.length} />
           {posts.length > 0 ? (
-            <ul className="divide-y divide-outline-variant/50 border-t border-outline-variant/50">
+            <ul className="border-t border-outline-variant/50">
               {posts.map((post, i) => {
                 const excerpt = post.content.trim().split(/\n\n+/)[0]
                 return (
                   <Reveal key={post.slug} delay={Math.min(i, 8) * 40}>
-                    <li className="py-4 md:py-[18px]">
-                      <div className="flex items-center gap-x-2.5 font-mono text-[10px] uppercase tracking-widest text-on-surface-variant/80">
-                        <time>{post.date}</time>
-                        {post.tags?.[0] && (
-                          <>
-                            <span className="opacity-40">·</span>
-                            <span>{post.tags[0]}</span>
-                          </>
-                        )}
+                    <li>
+                      <div className="v4-row group -mx-3 px-3 py-4 md:py-[18px] border-b border-outline-variant/50">
+                        <span className="v4-row-fill" aria-hidden="true" />
+                        <div className="v4-row-content">
+                          <div className="v4-row-meta flex items-center gap-x-2.5 font-mono text-[10px] uppercase tracking-widest">
+                            <time>{post.date}</time>
+                            {post.tags?.[0] && (
+                              <>
+                                <span className="opacity-40">·</span>
+                                <span>{post.tags[0]}</span>
+                              </>
+                            )}
+                          </div>
+                          <h3 className="v4-row-title v4-display font-bold tracking-tight text-lg md:text-xl leading-[1.2] mt-1.5">
+                            {post.title}
+                          </h3>
+                          {excerpt && (
+                            <p className="mt-1.5 text-on-surface-variant text-sm leading-relaxed line-clamp-2 group-hover:text-on-primary/80 transition-colors">
+                              {excerpt}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <h3 className="v4-display font-bold tracking-tight text-lg md:text-xl leading-[1.2] mt-1.5 text-on-surface">
-                        {post.title}
-                      </h3>
-                      {excerpt && (
-                        <p className="mt-1.5 text-on-surface-variant text-sm leading-relaxed line-clamp-2">
-                          {excerpt}
-                        </p>
-                      )}
                     </li>
                   </Reveal>
                 )
