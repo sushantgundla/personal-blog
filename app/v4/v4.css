@@ -1,0 +1,396 @@
+/* ============================================================
+   v4 — "Bold Signal"
+   Fixed cream/rust scheme. Scoped entirely under .v4-root so it
+   never leaks into globals.css or the other version previews.
+   ============================================================ */
+
+.v4-root {
+  --surface: #1c1917;
+  --surface-dim: #1a1714;
+  --surface-bright: #3a2f27;
+  --surface-variant: #262019;
+  --surface-container-lowest: #151210;
+  --surface-container-low: #211d1a;
+  --surface-container: #262019;
+  --surface-container-high: #2e2620;
+  --surface-container-highest: #372d25;
+
+  --primary: #c1662f;
+  --primary-rgb: 193, 102, 47;
+  --secondary: #c1662f;
+
+  --on-surface: #ede7df;
+  --on-surface-variant: #a89d90;
+  --on-primary: #1c1207;
+
+  --outline: #3d342c;
+  --outline-variant: #2a231d;
+
+  /* Identity band — warm-dark hero with an ember ambient glow */
+  --band: #211913;
+  --band-rgb: 193, 102, 47;
+  --on-band: #ede7df;
+  --on-band-rgb: 237, 231, 223;
+}
+
+.v4-display {
+  font-family: 'Fraunces', Georgia, serif;
+  font-optical-sizing: auto;
+}
+
+.v4-band {
+  background: var(--band);
+}
+
+/* Subtle film grain over the whole surface (replaces the hero gradient). */
+.v4-grain::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* ============================================================
+   Reveal-on-scroll (IntersectionObserver driven, transform+opacity only)
+   ============================================================ */
+
+.v4-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.v4-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================================
+   Kinetic type — staggered word/char rise + one-shot highlight sweep
+   ============================================================ */
+
+.v4-kinetic {
+  position: relative;
+  display: inline-block;
+}
+
+.v4-kinetic-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.06em;
+}
+
+.v4-char {
+  display: inline-block;
+  transform: translateY(115%);
+  transition: transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.v4-kinetic.is-mounted .v4-char {
+  transform: translateY(0);
+}
+
+/* Continuous, gentle ember glow that breathes on the accent surname. */
+.v4-name-accent {
+  animation: v4NameGlow 3.6s ease-in-out 1.6s infinite;
+}
+
+@keyframes v4NameGlow {
+  0%,
+  100% {
+    text-shadow: 0 0 0 rgba(var(--primary-rgb), 0);
+  }
+  50% {
+    text-shadow: 0 0 26px rgba(var(--primary-rgb), 0.5), 0 0 10px rgba(var(--primary-rgb), 0.32);
+  }
+}
+
+.v4-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(var(--on-band-rgb), 0.55) 45%,
+    rgba(var(--on-band-rgb), 0.55) 55%,
+    transparent 70%
+  );
+  mix-blend-mode: overlay;
+  transform: translateX(-130%);
+  opacity: 0;
+}
+
+.v4-kinetic.is-mounted .v4-sweep {
+  animation: v4Sweep 4s cubic-bezier(0.65, 0, 0.35, 1) 1.2s infinite;
+}
+
+@keyframes v4Sweep {
+  0% {
+    transform: translateX(-130%);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  20% {
+    transform: translateX(130%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(130%);
+    opacity: 0;
+  }
+}
+
+/* ============================================================
+   Hero band decoration + magnetic CTAs
+   ============================================================ */
+
+.v4-band-glow {
+  display: none;
+}
+
+.v4-magnetic {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.v4-band-cta {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.v4-band-cta:hover {
+  opacity: 0.88;
+}
+
+.v4-band-cta-ghost {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.v4-band-cta-ghost:hover {
+  background: rgba(var(--on-band-rgb), 0.1);
+  border-color: rgba(var(--on-band-rgb), 0.7);
+}
+
+/* ============================================================
+   Portrait — duotone treatment + clip-path mask reveal
+   ============================================================ */
+
+.v4-portrait-frame {
+  border: 1px solid rgba(var(--on-band-rgb), 0.25);
+  background: var(--surface-container-highest);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 1.15s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+}
+
+.v4-portrait-frame.is-visible {
+  clip-path: inset(0 0 0 0);
+}
+
+.v4-portrait-img {
+  filter: grayscale(0.5);
+  transition: filter 0.6s ease;
+}
+
+.v4-portrait:hover .v4-portrait-img {
+  filter: grayscale(0);
+}
+
+.v4-portrait-tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg, rgba(var(--band-rgb), 0.3), transparent 72%);
+  mix-blend-mode: color;
+  pointer-events: none;
+  opacity: 0.6;
+  transition: opacity 0.6s ease;
+}
+
+.v4-portrait:hover .v4-portrait-tint {
+  opacity: 0.15;
+}
+
+/* ============================================================
+   Marquee — slow infinite skills strip, pauses on hover
+   ============================================================ */
+
+.v4-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.v4-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: v4Marquee 38s linear infinite;
+}
+
+.v4-marquee:hover .v4-marquee-track {
+  animation-play-state: paused;
+}
+
+.v4-marquee-set {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.v4-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.75rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--on-surface-variant);
+  padding: 0 1.75rem 0 0;
+  white-space: nowrap;
+}
+
+.v4-marquee-dot {
+  color: var(--primary);
+}
+
+@keyframes v4Marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ============================================================
+   Sticky section labels
+   ============================================================ */
+
+.v4-sticky-label {
+  position: sticky;
+  top: 5.5rem;
+}
+
+/* ============================================================
+   Bold list hover — rust fill sweep + arrow slide
+   ============================================================ */
+
+.v4-row {
+  position: relative;
+  isolation: isolate;
+}
+
+.v4-row-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.v4-row-content {
+  position: relative;
+  z-index: 1;
+}
+
+.v4-row-index,
+.v4-row-title,
+.v4-row-meta,
+.v4-row-arrow {
+  transition: color 0.4s ease, transform 0.4s ease, opacity 0.35s ease;
+}
+
+.v4-row-index,
+.v4-row-meta {
+  color: var(--on-surface-variant);
+}
+
+.v4-row-title {
+  color: var(--on-surface);
+}
+
+.v4-row-arrow {
+  color: var(--primary);
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.v4-row:hover .v4-row-fill {
+  transform: scaleX(1);
+}
+
+.v4-row:hover .v4-row-index,
+.v4-row:hover .v4-row-title,
+.v4-row:hover .v4-row-meta {
+  color: var(--on-primary);
+}
+
+.v4-row:hover .v4-row-title {
+  transform: translateX(8px);
+}
+
+.v4-row:hover .v4-row-arrow {
+  color: var(--on-primary);
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ============================================================
+   Reduced motion — static, fully-visible fallback
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .v4-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .v4-char {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .v4-sweep {
+    display: none !important;
+  }
+
+  .v4-name-accent {
+    animation: none !important;
+    text-shadow: none !important;
+  }
+
+  .v4-portrait-frame {
+    clip-path: inset(0 0 0 0) !important;
+    transition: none !important;
+  }
+
+  .v4-marquee-track {
+    animation: none !important;
+  }
+
+  .v4-marquee-set[aria-hidden='true'] {
+    display: none !important;
+  }
+
+  .v4-marquee {
+    overflow-x: auto;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .v4-magnetic {
+    transition: none !important;
+  }
+
+  .v4-row-title:hover {
+    transform: none !important;
+  }
+}

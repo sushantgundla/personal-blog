@@ -1,0 +1,36 @@
+---
+title: "Nobody Wants to Build the Evals, and That's Why the Product Breaks"
+date: "2026-07-03"
+description: "The least glamorous part of shipping an LLM product is measuring whether it actually works, and it's the part that most teams skip until it hurts."
+tags: ["AI", "Evals"]
+---
+
+There's a moment in almost every AI project where someone demos a feature, it works beautifully on the three examples they tried, everyone nods, and the thing gets greenlit. Then it ships, real users throw real inputs at it, and it turns out "works beautifully" meant "works on the three examples they tried." I've been on both sides of that moment. The thing that separates the teams who recover from it and the teams who keep getting surprised is whether they took evaluation seriously before it hurt.
+
+I'll say the unpopular thing directly: evals are the hardest and most underrated part of building with LLMs, and almost nobody wants to do them.
+
+## Why it's so easy to skip
+
+Traditional software has a comforting property: given the same input, it produces the same output, and you can write a test that says "this input should yield exactly this result." When it passes, it passes. LLM systems break that comfort. The same input can produce different phrasings, different structure, sometimes different substance. "Correct" becomes a fuzzy, judgment-laden thing rather than a boolean. So the usual testing instincts don't transfer cleanly, and the honest work of figuring out what "good" even means for your specific use case is genuinely hard.
+
+It's also invisible work. A new feature is exciting and demoable. An evaluation harness is a spreadsheet of examples and a scoring rig that nobody outside the team will ever see. Given the choice, most teams keep shipping features and keep deferring the measurement, telling themselves they'll add it once things settle. Things never settle.
+
+## The demo is a liar
+
+The core problem is that a demo selects for the cases where the system already works. You reach for an input you know it handles. That's not dishonesty, it's just human. But it means the demo is systematically blind to exactly the failures you most need to know about. Without a real evaluation set, you are flying on a sample that was chosen, unconsciously, to make you feel good.
+
+I've learned to distrust the good demo more than the bad one. A bad demo tells you where the work is. A good demo tells you nothing, because you don't know whether it generalizes or whether you just happened to pick the friendly inputs.
+
+## What building evals actually looks like
+
+The version that has worked for me is unglamorous and I recommend it anyway. Collect real examples, especially the ugly ones, the ambiguous questions, the inputs that broke things before. Write down what a good answer would look like for each, in whatever form you can pin down, whether that's an exact expected value, a set of facts that must appear, or a rubric a human or a model can score against. Then run the system against that set every time you change something, and watch whether the number moves.
+
+Some of it can be checked automatically: did it retrieve the right source, did it return valid structure, did it include the required fact, did it refuse the thing it was supposed to refuse. Some of it needs judgment, and using a model to grade another model's output is a legitimate tool as long as you stay honest that the grader has its own blind spots and you spot-check it against human judgment. The point isn't a perfect score. The point is that when you tweak the system, you find out whether you made it better or quietly broke something two use cases over.
+
+## The payoff is confidence, not a number
+
+The reason this matters isn't the metric itself. It's that without it, every change is a gamble. You fix one thing, you have no idea what else moved, and you're back to demoing on your favorite three inputs and hoping. With a real evaluation set, iteration stops being scary. You can change the retrieval strategy, swap a model, rewrite the assembly of context, and get an actual answer to the only question that matters: is it better than it was.
+
+That's the quiet superpower. Teams with good evals ship faster, not slower, because they can move without fear. Teams without them move fast right up until the first bad surprise in production, and then they slow to a crawl because every change might be the one that breaks something and nobody would know.
+
+Nobody will thank you for the eval harness. It won't demo well. But it's the difference between believing your system works and knowing it does, and in a field where the models are non-deterministic and the failure modes are confident and quiet, that difference is the whole game.

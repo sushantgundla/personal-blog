@@ -1,0 +1,104 @@
+/* ============================================================
+   v4-prose — reading styles for MDX article content in the
+   dark Deep Ember palette. Uses var() tokens from .v4-root so it
+   inherits whatever the v4 theme defines.
+   ============================================================ */
+
+.v4-prose h2 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-top: 2.75rem;
+  margin-bottom: 1.1rem;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.v4-prose h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-top: 2.25rem;
+  margin-bottom: 0.85rem;
+  line-height: 1.35;
+}
+
+.v4-prose p {
+  font-size: 1.06rem;
+  line-height: 1.85;
+  margin-bottom: 1.35rem;
+  color: var(--on-surface-variant);
+}
+
+.v4-prose strong {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.v4-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.2s ease;
+}
+
+.v4-prose a:hover {
+  opacity: 0.8;
+}
+
+.v4-prose ul,
+.v4-prose ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.35rem;
+}
+
+.v4-prose li {
+  margin-bottom: 0.5rem;
+  font-size: 1.06rem;
+  line-height: 1.85;
+  color: var(--on-surface-variant);
+}
+
+.v4-prose blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1.1rem;
+  margin: 1.75rem 0;
+  font-style: italic;
+  color: var(--on-surface-variant);
+}
+
+.v4-prose code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+  background: var(--surface-container-high);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--primary);
+}
+
+.v4-prose pre {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  padding: 1.25rem;
+  overflow-x: auto;
+  margin: 1.75rem 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.v4-prose pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--on-surface);
+}
+
+.v4-prose hr {
+  border: none;
+  height: 1px;
+  background: var(--outline-variant);
+  margin: 2.5rem 0;
+}

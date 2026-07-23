@@ -1,0 +1,32 @@
+---
+title: "The Gap Between a Magical Demo and a System People Can Trust"
+date: "2026-07-21"
+description: "Why the last ten percent of making an AI feature reliable in production is harder than the ninety percent that made it impressive."
+tags: ["AI", "Engineering"]
+---
+
+Building an AI feature that produces a jaw-dropping demo is, honestly, not that hard anymore. Wire a capable model up to some data, spend an afternoon on the flow, and you can show something that makes a room go quiet. I've built those demos. They're fun. They're also the easy part, and mistaking them for the finished thing is how a lot of AI projects quietly fail. The distance between the demo and something people rely on every day is enormous, and almost all of the real engineering lives inside it.
+
+## The demo optimizes for the wrong thing
+
+A demo has one job: to work impressively, once, on inputs you chose. Production has a much less forgiving job: to work acceptably, every time, on inputs you did not choose and cannot predict. Those are different targets, and optimizing for the first tells you very little about the second.
+
+The demo runs on a clean, friendly input. Production gets the malformed one, the empty one, the one in a format nobody anticipated, the one from a user actively trying to break things. The demo runs once while everyone watches. Production runs thousands of times while nobody watches, and the failures nobody sees are the ones that erode trust the fastest. The demo can hide its mistakes because you steer around them. Production has no one steering.
+
+## Reliability is mostly about the unhappy paths
+
+When I think about what actually made our systems trustworthy, almost none of it was visible in any demo. It was the handling of everything that goes wrong. What happens when a source is unavailable. What happens when the model returns something malformed. What happens when a batch of a thousand documents has forty that won't process, and whether the answer is "lose all thousand" or "keep the nine hundred and sixty and report the rest." What happens on a network blip, a rate limit, a restart. Whether the system retries the things worth retrying and gives up fast on the things that won't heal.
+
+None of that shows up when you demo the happy path. All of it shows up the first week real traffic hits. A system that only knows how to succeed is not a system, it's a performance, and performances fall apart the moment the inputs stop cooperating.
+
+## Confident wrong answers are worse than errors
+
+The failure mode that makes AI different from ordinary software is that when these systems get it wrong, they usually don't crash or throw an error you can catch. They produce something fluent, well-formatted, and wrong, and they hand it over with the same tone they use for correct answers. A user has no way to tell the difference by looking.
+
+That changes what reliability even means. It's not enough for the system to run without exceptions. It has to be grounded in real sources so its answers can be checked. It has to be able to say it doesn't know instead of inventing something. It has to be measured against real examples so you can catch the confident-but-wrong cases before your users do. In ordinary software a bug announces itself. Here the worst bugs are silent and self-assured, and designing against that has to be part of the system, not an afterthought.
+
+## The last ten percent is the actual product
+
+Everyone talks about the ninety percent that makes the demo. The last ten percent is the error handling, the retries, the graceful degradation, the isolation between tenants, the defense against people feeding it hostile input, the measurement that tells you whether a change helped or hurt, the keeping of sources fresh so answers don't quietly rot. That ten percent is boring to describe and impossible to skip, and it usually costs more than everything before it.
+
+I've come to think that's the real dividing line in applied AI right now. Making something impressive is close to a solved problem. Making something dependable, the kind of thing people reach for without thinking because it has earned their trust, is still genuinely hard work, and it's mostly work nobody sees. The demo gets the applause. The unglamorous ten percent is what decides whether anyone is still using the thing a month later. If I could give a team building their first AI feature one warning, it would be this: the demo is not the hard part, and treating it like the finish line is how you end up shipping something that dazzles once and disappoints forever after.

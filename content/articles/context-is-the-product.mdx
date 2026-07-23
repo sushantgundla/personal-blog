@@ -1,0 +1,34 @@
+---
+title: "Context Is the Product, Not the Prompt"
+date: "2026-06-28"
+description: "Why the real work of building with LLMs moved from crafting clever prompts to deciding what information the model gets to see at the moment it answers."
+tags: ["AI", "LLMs"]
+---
+
+A couple of years ago, the skill everyone wanted to hire for was prompt engineering. People traded clever phrasings like recipes, arguing over whether "you are an expert" made the model smarter or whether threatening it produced better output. Some of that mattered, for about a season. Then the models got good enough that the phrasing stopped being the bottleneck, and a quieter, harder problem took its place. The real question was never how you asked. It was what the model could see when you asked.
+
+I've spent the last while building AI systems for a company with a lot of product lines, and the pattern keeps repeating: the difference between an answer that lands and an answer that embarrasses you is almost never the wording of the instruction. It's whether the right facts were in front of the model at the moment it had to respond.
+
+## The prompt was always the small part
+
+When a model gives a bad answer, the instinct is to go rewrite the prompt. Add a rule. Add an example. Add a "do not make things up." Sometimes that helps at the margins. But most of the failures I've chased down in production weren't caused by a poorly worded instruction. They were caused by the model not having the one piece of information it needed, or having ten pieces of stale, contradictory information and no way to tell which one was current.
+
+You can write the most beautiful instruction in the world, and if the model is reasoning over the wrong document, it will give you a wrong answer with total confidence. That confidence is the dangerous part. A model missing a fact doesn't shrug. It fills the gap with something plausible.
+
+## What the window actually holds
+
+I think of the context window as the model's entire working reality for a single request. Whatever is in there is true as far as the model is concerned, and whatever is not in there might as well not exist. That reframes the whole engineering problem. You are no longer writing instructions to a smart assistant. You are curating the world that assistant is allowed to know about for the next few seconds.
+
+Once you see it that way, the important questions change. Not "how do I phrase this," but: what goes in, in what order, from which sources, how fresh is it, how much of the past conversation still earns its place, and what do I leave out so the signal doesn't drown. That last one gets underrated. More context is not better context. A window stuffed with marginally relevant material makes the model worse, not smarter, because the thing that matters is now buried next to nine things that don't.
+
+## Curation is the hard engineering
+
+This is why so much of the actual work in an applied AI system has nothing to do with the model. It's the machinery that decides what to retrieve, how to rank it, when to drop history that has gone stale, how to fit a long conversation into a finite window without losing the thread, and how to keep the sources feeding that window from going out of date. None of that is glamorous. All of it is what separates a demo from something people trust on a Tuesday afternoon.
+
+I've watched teams pour weeks into tuning instructions and get a small bump, then get a much bigger bump from simply fixing what the retrieval layer was handing the model. The lesson repeats: if the inputs are wrong, no amount of instruction saves you, and if the inputs are right, the model usually needs very little coaching to do the rest.
+
+## What this means for how you build
+
+So my advice to anyone starting on this now is to stop treating the prompt as the product. The prompt is a small, stable piece of scaffolding you get right once and rarely touch. The living, breaking, constantly-in-need-of-attention part is the pipeline that assembles context: what it pulls in, how it keeps that fresh, how it decides what is relevant, and how it stays within the limits of the window without throwing away what matters.
+
+The models will keep getting better, and each generation will forgive sloppier prompting than the last. What they will not forgive is being handed the wrong information. That failure mode does not get solved by a bigger model. It gets solved by the unglamorous discipline of deciding, carefully and continuously, what the model is allowed to see. That decision is the product. The prompt is just the note you pin to the top of it.
