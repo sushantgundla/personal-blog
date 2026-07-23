@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/ThemeProvider'
-import { Header } from '@/components/Header'
-import { Footer } from '@/components/Footer'
+import { SiteFrame } from '@/components/SiteFrame'
 import { siteConfig } from '@/lib/config'
 import './globals.css'
 
@@ -77,7 +76,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -87,11 +86,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <ThemeProvider>
-          <Header />
-          <main className="pt-32 pb-20 max-w-7xl mx-auto px-8">
-            {children}
-          </main>
-          <Footer />
+          <SiteFrame>{children}</SiteFrame>
         </ThemeProvider>
       </body>
     </html>

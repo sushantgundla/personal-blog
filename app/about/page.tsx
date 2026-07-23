@@ -11,13 +11,19 @@ const skillGroups = [
   {
     title: 'AI & Machine Learning',
     skills: siteConfig.skills.filter(s =>
-      ['Agentic AI', 'RAG', 'MCP', 'LLMs', 'NLP', 'Computer Vision', 'PyTorch', 'Transformers'].includes(s.label)
+      ['Agentic AI', 'RAG', 'MCP', 'LLMs', 'NLP', 'Computer Vision', 'PyTorch', 'Transformers', 'Fine-tuning', 'Prompt Engineering', 'Hugging Face', 'Evals'].includes(s.label)
     ),
   },
   {
     title: 'Frameworks & Tools',
     skills: siteConfig.skills.filter(s =>
-      ['Agno', 'LiteLLM', 'FastAPI', 'Claude Code', 'MLOps'].includes(s.label)
+      ['Agno', 'LiteLLM', 'FastAPI', 'Claude Code', 'MLOps', 'LangGraph', 'LangChain', 'Python', 'Django'].includes(s.label)
+    ),
+  },
+  {
+    title: 'Data & Retrieval',
+    skills: siteConfig.skills.filter(s =>
+      ['Vector Databases', 'Embeddings', 'Semantic Search', 'Postgres', 'Redis'].includes(s.label)
     ),
   },
   {

@@ -1,0 +1,30 @@
+---
+title: "No, RAG Isn't Dead, You Just Found Out What It Was For"
+date: "2026-07-10"
+description: "A practitioner's rebuttal to the idea that giant context windows make retrieval obsolete."
+tags: ["AI", "RAG"]
+---
+
+Every time context windows get bigger, someone declares retrieval dead. The argument sounds reasonable on the surface: if a model can read a million tokens at once, why bother with all the machinery of chunking, embedding, and retrieving? Just put everything in the window and let the model sort it out. I've heard some version of this pitch several times now, and each time the window gets bigger the pitch gets louder. I build these systems for a living, and I think the argument misunderstands what retrieval was ever for.
+
+## "Just put it all in the window" doesn't survive contact with scale
+
+The first problem is arithmetic. A big context window sounds infinite until you look at the size of a real corpus. Companies don't have a million tokens of knowledge, they have years of documents, spreadsheets, help articles, records, and structured data that dwarf any window by orders of magnitude. You cannot put "everything" in the window because "everything" is thousands of times larger than the window, no matter how big the window gets this year. Retrieval was never a workaround for small windows. It was the answer to the question of which slice of a vast corpus is relevant to this specific question right now.
+
+The second problem is cost and speed. Even when you can technically fit a lot into the window, you pay for every token, on every request, in both money and latency. Stuffing a huge context in to answer a question that actually depends on two paragraphs is enormously wasteful. Doing it on every request at scale is the kind of decision that looks fine in a demo and shows up as an unpleasant surprise in the bill and the response time.
+
+## Bigger windows make the model worse at finding the needle
+
+There's a subtler issue that matters more than the cost. Models do not use a giant context uniformly well. Bury the one relevant fact in the middle of a huge pile of loosely related material, and the model is more likely to miss it or get distracted by something adjacent and plausible. More context is not more signal. Past a point, it's more noise, and the answer gets worse even though you gave the model more to work with.
+
+Good retrieval is the thing that fights this. Its whole job is to hand the model a small, dense, relevant set of material instead of a large, dilute one. Done well, it doesn't just make the system cheaper and faster, it makes the answers better, because the model is reasoning over signal instead of hunting through a haystack you built for it.
+
+## Retrieval was never only about size
+
+The framing that retrieval exists to compensate for small windows misses most of what it does. Retrieval is how you keep answers current without retraining anything: change the source, and the next answer reflects it. It's how you point to where an answer came from, which is the difference between a system people trust and a system that just sounds confident. It's how you keep one tenant's data from ever reaching another's request. It's how you bring in information that lives in databases and systems the model was never trained on and never will be. None of those needs go away because the window grew. If anything, they get more important as these systems handle more that actually matters.
+
+## What actually changed
+
+I don't want to pretend nothing changed. Bigger windows are genuinely useful, and they change how you tune the retrieval layer. You can afford to bring back more candidates and let the model weigh them. You can keep more of a long conversation alive without aggressive truncation. You can be less brutal about cutting things close to the edge. The window growing makes retrieval more forgiving to build. It does not make it unnecessary.
+
+So when someone tells me RAG is dead, I hear something more like: retrieval got easier to do well, and one of its old constraints relaxed. That's good news for people building these systems, not a eulogy. The job was never to squeeze knowledge into a tiny window. The job was, and still is, to figure out which small part of an enormous body of knowledge belongs in front of the model for this exact question. That problem doesn't disappear at any window size I can imagine. It just gets a little more room to breathe.

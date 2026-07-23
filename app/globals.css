@@ -339,3 +339,6 @@ body {
     'GRAD' 0,
     'opsz' 24;
 }
+
+/* The /v4 redesign carries its own scoped styles in app/v4/v4.css.
+   Nothing for it lives in globals. */
