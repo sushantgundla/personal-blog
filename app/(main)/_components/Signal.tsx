@@ -262,32 +262,22 @@ export function Signal(): JSX.Element {
               </div>
             ))}
 
-            {/* Foundation band. Spans the full width because everything above
-                rests on it — this is not a fourth column-aligned row. */}
+            {/* Foundation: three plain cards, same as every other row — no
+                wrapper panel and no label. The `support` connector is a wide
+                bracket rather than three parallel lines, so it reads as
+                "everything above rests on these" instead of implying each card
+                maps one-to-one to the card above it. */}
             <Connector variant="support" />
             <Reveal delay={LAYERS.length * 90}>
-              <div className="v2-panel v2-col" style={{ gap: '0.9rem' }}>
-                <span className="v2-eyebrow">Runs on</span>
-                <div className="v2-grid" data-cols="3">
-                  {FOUNDATION.map((item) => (
-                    <div
-                      key={item.id}
-                      className="v2-col"
-                      style={{
-                        gap: '0.3rem',
-                        opacity: hoveredId !== null && hoveredId !== item.id ? 0.55 : 1,
-                        transition: 'opacity var(--v2-dur-fast) var(--v2-ease)',
-                      }}
-                      onMouseEnter={() => setHoveredId(item.id)}
-                      onMouseLeave={() => setHoveredId(null)}
-                    >
-                      <span className="v2-sub">{item.label}</span>
-                      <p className="v2-body v2-muted" style={{ margin: 0 }}>
-                        {item.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+              <div className="v2-grid" data-cols="3">
+                {FOUNDATION.map((item) => (
+                  <LayerCard
+                    key={item.id}
+                    item={item}
+                    hoveredId={hoveredId}
+                    onHover={setHoveredId}
+                  />
+                ))}
               </div>
             </Reveal>
           </div>

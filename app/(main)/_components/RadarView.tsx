@@ -18,7 +18,7 @@ function PulseEntry({ post, isLatest }: { post: RadarPost; isLatest: boolean }):
   const paragraphs = post.content.trim().split(/\n\n+/)
 
   return (
-    <div className="v2-radar-entry">
+    <div className="v2-card v2-card-lift v2-radar-entry">
       <div className="v2-row" style={{ gap: '8px', alignItems: 'center' }}>
         <span className="v2-mono v2-muted" style={{ fontSize: '0.78em' }}>
           {formatDate(post.date)}
@@ -54,7 +54,7 @@ function PickEntry({ pick, isLatest }: { pick: RadarPick; isLatest: boolean }): 
       href={pick.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="v2-radar-entry v2-radar-pick"
+      className="v2-card v2-card-lift v2-radar-entry v2-radar-pick"
       style={{
         display: 'block',
         textDecoration: 'none',
@@ -164,21 +164,13 @@ export function RadarView({ posts, picks }: RadarViewProps): JSX.Element {
       <style
         dangerouslySetInnerHTML={{
           __html: `
+        /* Skin comes from .v2-card, which every theme file styles — that is
+           why radar looked different from the rest of the site. Only layout
+           and link-reset live here; do not re-declare border, background,
+           radius or shadow or the theme's card treatment gets overridden. */
         .v2-radar-entry {
           display: block;
-          padding: 10px 12px;
           margin-block: 2px;
-          border-radius: var(--v2-radius-sm);
-          border: var(--v2-border-w) solid transparent;
-          transition: border-color var(--v2-dur-fast) var(--v2-ease),
-                      background var(--v2-dur-fast) var(--v2-ease),
-                      box-shadow var(--v2-dur-fast) var(--v2-ease);
-        }
-        .v2-radar-entry:hover,
-        .v2-radar-pick:focus-visible {
-          border-color: var(--v2-line-2);
-          background: var(--v2-surface-2);
-          box-shadow: var(--v2-glow);
         }
         .v2-radar-pick:focus-visible {
           outline: 2px solid var(--v2-accent);
