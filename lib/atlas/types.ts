@@ -120,6 +120,13 @@ export interface UnescoSite {
   coordinates: { lat: number; lng: number } | null;
 }
 
+/** One bordering country — Wikidata P47. */
+export interface NeighbourCountry {
+  iso3: string;
+  name: string;
+  flagImageUrl: string | null;
+}
+
 /** The Wikidata dossier facts. Head of state / government are NEVER sourced
  * here — see lib/atlas/overrides.ts. Every other field must carry asOf. */
 export interface WikidataFacts {
@@ -147,6 +154,16 @@ export interface WikidataFacts {
    * for maybe a quarter of countries (mostly Catholic ones); empty is normal. */
   patronSaints: string[];
   unescoSites: UnescoSite[];
+  /**
+   * Wikidata P47 — bordering countries, empty for islands (a normal state,
+   * not an error) and also empty if the live fetch failed, same collapse
+   * unescoSites above already does. Optional, not just possibly-empty: the
+   * dossier snapshot files written before 2026-08-03 genuinely don't have
+   * this key at all (JSON.parse gives `undefined`, not `[]`) — every reader
+   * must treat "missing" as its own "not fetched yet" state, distinct from
+   * "fetched, zero neighbours". See app/atlas/_components/Neighbours.tsx.
+   */
+  neighbours?: NeighbourCountry[];
 }
 
 export interface WikipediaSummary {

@@ -1,5 +1,4 @@
 import type { CountryDossier } from '@/lib/atlas/types'
-import { BY_ISO3 } from '@/lib/atlas/iso-countries'
 import { AnthemPlayer } from './AnthemPlayer'
 import { CapitalClock } from './CapitalClock'
 import { LandmarkStrip } from './LandmarkStrip'
@@ -31,11 +30,6 @@ export function DossierExtras({ dossier }: DossierExtrasProps) {
   const wikidata = dossier.wikidata.ok ? dossier.wikidata.data : null
   const people = dossier.famousPeople.ok ? dossier.famousPeople.data : []
   const timeSeries = dossier.timeSeries.ok ? dossier.timeSeries.data : []
-  // CountryDossier carries iso3/iso2/name but not the Wikidata Q-id —
-  // Neighbours needs it and nothing else here does. Derived from the same
-  // local ISO join table every other source keys off of, rather than
-  // widening CountryDossier's shape (a type this component does not own).
-  const qid = BY_ISO3[dossier.iso3]?.qid ?? ''
 
   return (
     <section className={styles.extrasSection} aria-label="Extras">
@@ -53,15 +47,11 @@ export function DossierExtras({ dossier }: DossierExtrasProps) {
           capital={wikidata?.capital ?? null}
           coordinates={wikidata?.capitalCoordinates ?? null}
         />
-        {qid ? (
-          // Server component with its own data fetch — see Neighbours.tsx.
-          <Neighbours qid={qid} countryName={dossier.name} />
-        ) : (
-          <div className={styles.utilityNote}>
-            <span className="atlas-label">Neighbours</span>
-            <div className={styles.emptyState}>Neighbour data unavailable right now</div>
-          </div>
-        )}
+        <Neighbours neighbours={wikidata?.neighbours} countryName={dossier.name} />
+        {/* wikidata is null when dossier.wikidata itself failed (SourceResult
+            ok:false) — Neighbours' own `undefined` branch already covers
+            that the same way it covers "field missing from an old snapshot",
+            so no separate fallback branch is needed here. */}
       </div>
 
       <LandmarkStrip sites={wikidata?.unescoSites ?? []} countryName={dossier.name} />
