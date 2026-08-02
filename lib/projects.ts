@@ -104,4 +104,15 @@ export const projects: Project[] = [
     tags: ['Transformers', 'PyTorch', 'NLP', 'RoBERTa'],
     status: 'confidential',
   },
+  {
+    slug: 'the-atlas',
+    title: 'The Atlas',
+    organization: 'Personal Project',
+    period: '2026',
+    description:
+      'An interactive world map where every country\'s data is engraved as its own banknote — population, economy, trade, history, famous people, hundreds of numbers, all pulled live from open data.',
+    tags: ['Next.js', 'Data Visualization', 'Open Data', 'TypeScript'],
+    status: 'open-source',
+    link: '/atlas',
+  },
 ]

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { BY_ISO3, ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
+import { BY_ISO3 } from '@/lib/atlas/iso-countries'
 import { getDossier } from '@/lib/atlas/dossier'
 import { attachRankings } from '@/lib/atlas/rankings'
 import { countryInk } from '@/lib/atlas/ink'
@@ -16,8 +16,22 @@ import styles from '../_components/dossier.module.css'
 // window every lib/atlas/sources client already fetches with.
 export const revalidate = 604800
 
+// Pre-rendering all ~250 countries at build time means ~250 x ~11 requests
+// against APIs that throttle hard (World Bank, Wikidata, Comtrade), which
+// makes `next build` take hours or fail outright. Instead we prerender only
+// the countries a visitor is most likely to land on directly — the largest
+// populations and economies — and let every other country render on first
+// request, then cache for `revalidate` (dynamicParams defaults to true, so
+// all 250 ISO3 codes still resolve; see docs/superpowers/specs/2026-08-02-country-explorer-design.md §5).
+const PRERENDER_ISO3 = [
+  'IND', 'USA', 'CHN', 'FRA', 'DEU', 'GBR', 'JPN', 'BRA',
+  'RUS', 'CAN', 'AUS', 'ITA', 'ESP', 'MEX', 'IDN', 'KOR',
+  'SAU', 'TUR', 'NLD', 'CHE', 'ARG', 'ZAF', 'EGY', 'NGA',
+  'PAK',
+]
+
 export function generateStaticParams() {
-  return ISO_COUNTRIES.map((c) => ({ iso3: c.iso3.toLowerCase() }))
+  return PRERENDER_ISO3.map((iso3) => ({ iso3: iso3.toLowerCase() }))
 }
 
 export async function generateMetadata({
@@ -81,9 +95,8 @@ export default async function CountryDossierPage({
         <UvLamp />
       </div>
 
-      {/* TEMP: FaceNote disabled during atlas-plate verification — an
-          unrelated http/https next/image bug in FaceNote.tsx 500s the
-          whole page (see report). Restoring before finishing. */}
+      <FaceNote dossier={dossier} country={country} />
+
       <NoteSheet
         indicators={rankedIndicators}
         timeSeries={dossier.timeSeries.ok ? dossier.timeSeries.data : []}

@@ -27,6 +27,27 @@ export interface FormatValueOptions {
 /** The em dash used everywhere a number is missing, not zero. */
 const DEFAULT_EMPTY = '—';
 
+/**
+ * Wikidata serialises every image/audio URL as literal `http://`, even
+ * though Commons and Wikipedia are https-only — that is just how Wikidata
+ * stores the property, regardless of the real scheme. `next/image`'s
+ * `remotePatterns` in `next.config.js` is (correctly) https-only, so passing
+ * an `http://` value straight through throws instead of degrading, taking
+ * the whole page down with it (confirmed live: Gandhi's portrait on
+ * `/atlas/ind`, Chiang Kai-shek's on `/atlas/twn`).
+ *
+ * One shared fix, applied at the source in `lib/atlas/sources/wikidata.ts`
+ * so every field it returns is already normalised, and reused by any
+ * component that renders a URL from elsewhere (e.g. the static
+ * `content/atlas/famous-people.json`) as a second line of defence.
+ */
+export function toHttps(url: string): string;
+export function toHttps(url: string | null): string | null;
+export function toHttps(url: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith('http://') ? `https://${url.slice(7)}` : url;
+}
+
 function isMissing(v: number | null | undefined): v is null | undefined {
   return v === null || v === undefined || typeof v !== 'number' || Number.isNaN(v);
 }
