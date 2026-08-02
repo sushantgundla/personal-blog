@@ -350,7 +350,10 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 0.35rem;
-  max-width: min(220px, calc(100% - 1.5rem));
+  /* Fixed 2026-08-03: 220px clipped the search input's own placeholder —
+     "Search a country — press /" lost its trailing "/". Widened just
+     enough for that text to render whole. */
+  max-width: min(260px, calc(100% - 1.5rem));
 }
 
 /* The one quiet line telling a first-time visitor the map responds to
@@ -463,6 +466,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  flex: none;
   gap: 0.5rem;
 }
 

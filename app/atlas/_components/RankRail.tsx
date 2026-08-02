@@ -62,6 +62,17 @@ export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, 
           {indicator ? indicator.label : 'Population'} · {sorted.length} countries
           {worldAverage !== null && ` · world avg ${formatValue(worldAverage, format)}`}
         </div>
+        {/* Fixed 2026-08-03: the asterisk on a handful of names (Bahrain,
+            Tonga, ...) is real information — those ~76 countries have no
+            SVG shape on the map at this resolution, only a rail row and a
+            search result — but the only explanation of it used to sit
+            below all 250 rows, past the "Show all" button, where almost
+            no one scrolls far enough to see it. Moved up here so it's
+            visible without scrolling; the version at the foot of the list
+            is gone; this is now the only copy. */}
+        <p className="atlas-serial" style={{ marginTop: '0.15rem' }}>
+          * no shape on the plate at this resolution — still linked here and in search
+        </p>
       </div>
       <div className={styles.railList}>
         {visible.map((row) => {
@@ -108,9 +119,6 @@ export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, 
           </button>
         </div>
       )}
-      <p className="atlas-serial" style={{ marginTop: '0.5rem' }}>
-        * no shape on the plate at this resolution — still linked here and in search
-      </p>
     </div>
   )
 }
