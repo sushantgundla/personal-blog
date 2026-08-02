@@ -6,8 +6,9 @@ import { Reveal } from '../_components/Reveal'
 
 export const metadata: Metadata = {
   title: 'Writing',
+  // His own wording — matches the visible intro below. Do not paraphrase.
   description:
-    'Notes on the architecture of modern machine intelligence, retrieval systems, and the software built around them.',
+    'Technical deep-dives into the architecture of modern machine intelligence, retrieval systems, and neural optimization.',
 }
 
 interface ArticleSummary {
@@ -132,8 +133,17 @@ export default function ArticlesPage() {
                       className="v2-card v2-card-lift v2-col"
                       style={{ gap: '0.85rem', padding: 'clamp(28px, 4vw, 48px)' }}
                     >
-                      <span className="v2-badge">Latest</span>
-                      <h2 className="v2-head">{featured.title}</h2>
+                      <div className="v2-row" style={{ gap: '12px', flexWrap: 'wrap' }}>
+                        <span
+                          className="v2-badge"
+                          style={{ fontSize: '0.62rem', padding: '0.22em 0.6em' }}
+                        >
+                          Latest
+                        </span>
+                        <h2 className="v2-head" style={{ margin: 0 }}>
+                          {featured.title}
+                        </h2>
+                      </div>
                       <div className="v2-row" style={{ gap: '12px' }}>
                         <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>
                           {formatDate(featured.date)}

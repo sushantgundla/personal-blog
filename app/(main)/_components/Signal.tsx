@@ -19,52 +19,54 @@ interface LayerItem {
   tag: string
 }
 
-// Five layers, top to bottom. A row with more than one item renders side by side.
+// Three layers, top to bottom on screen: what you build with agents, the
+// agentic framework that runs them, and the substrate underneath it. A row
+// with more than one item renders side by side.
+//
+// Descriptions and mono tags are written as generic capability statements —
+// what this kind of system does and what can be built with it — not as
+// documentation of one employer's specific implementation.
 const LAYERS: LayerItem[][] = [
   [
     {
       id: 'chatbot',
       label: 'Chatbot',
-      desc: 'The customer-facing surface for retail and petroleum operators',
-      tag: 'chat.mypdi',
+      desc: 'A conversational interface end users talk to directly',
+      tag: 'chat.interface',
+    },
+    {
+      id: 'automation',
+      label: 'Automation Workflows',
+      desc: 'Multi-step tasks an agent completes on a trigger, unattended',
+      tag: 'workflow.auto',
     },
   ],
   [
     {
       id: 'agentic',
       label: 'Agentic Framework',
-      desc: 'Config-driven agents, teams, and multi-step workflows',
-      tag: 'agents.run()',
+      desc: 'Config-driven agents, teams, and multi-step reasoning',
+      tag: 'agent.framework',
     },
   ],
   [
-    {
-      id: 'mcp',
-      label: 'MCP Gateway',
-      desc: 'Routes tools and context to every agent',
-      tag: 'mcp://gateway',
-    },
     {
       id: 'llm',
       label: 'LLM Gateway',
       desc: 'One governed path to every model provider',
-      tag: 'llm://gateway',
+      tag: 'llm.gateway',
     },
-  ],
-  [
     {
-      id: 'ingestion',
-      label: 'Ingestion Pipeline',
-      desc: 'Crawl, chunk, embed, index — continuously',
-      tag: 'ingest.pipeline',
+      id: 'mcp',
+      label: 'MCP Gateway',
+      desc: 'Routes tools and context to every agent',
+      tag: 'mcp.gateway',
     },
-  ],
-  [
     {
-      id: 'infra',
-      label: 'Model Deployment & Infra',
-      desc: 'Serving and the infrastructure that runs it all in production',
-      tag: 'infra.deploy',
+      id: 'knowledge',
+      label: 'Knowledge Base',
+      desc: 'Documents crawled, chunked, embedded, and indexed for search',
+      tag: 'knowledge.base',
     },
   ],
 ]
@@ -94,13 +96,26 @@ function groupOf(label: string): Group {
   return 'ai'
 }
 
-type ConnectorVariant = 'single' | 'spread' | 'merge'
+type ConnectorVariant = 'single' | 'spread' | 'spread3' | 'merge'
+
+/**
+ * Given the item counts of the row above and the row being connected into,
+ * picks the connector shape: `single` (1-to-1), `spread` (1 forks to 2),
+ * `spread3` (1 forks to 3), or `merge` (2+ cards come back to 1).
+ */
+function connectorVariant(prevCount: number, count: number): ConnectorVariant {
+  if (prevCount > 1) return 'merge'
+  if (count === 3) return 'spread3'
+  if (count > 1) return 'spread'
+  return 'single'
+}
 
 /**
  * Draws the line between two layer rows. `spread` fans one line into two
- * when the row below has two cards; `merge` brings two lines back into one.
- * Stretches to the full row width via preserveAspectRatio="none" so it lines
- * up with the grid above/below regardless of viewport width.
+ * when the row below has two cards; `spread3` fans it into three; `merge`
+ * brings cards from a paired row back into one. Stretches to the full row
+ * width via preserveAspectRatio="none" so it lines up with the grid
+ * above/below regardless of viewport width.
  */
 function Connector({ variant }: { variant: ConnectorVariant }): JSX.Element {
   const common = {
@@ -117,7 +132,9 @@ function Connector({ variant }: { variant: ConnectorVariant }): JSX.Element {
       ? 'M100,0 L100,60'
       : variant === 'spread'
         ? 'M100,0 L100,22 L40,60 M100,22 L160,60'
-        : 'M40,0 L100,38 L100,60 M160,0 L100,38'
+        : variant === 'spread3'
+          ? 'M100,0 L100,18 L30,60 M100,18 L100,60 M100,18 L170,60'
+          : 'M40,0 L100,38 L100,60 M160,0 L100,38'
 
   return (
     <svg {...common}>
@@ -151,7 +168,7 @@ function LayerCard({
     >
       <span className="v2-sub">{item.label}</span>
       <p className="v2-body v2-muted" style={{ margin: 0 }}>{item.desc}</p>
-      {/* --v2-muted, not --v2-faint. These tags ("chat.mypdi", "agents.run()")
+      {/* --v2-muted, not --v2-faint. These tags ("chat.interface", "llm.gateway")
           are real content, and --v2-faint is a 0.30-alpha watermark tone — it
           measured as low as 1.9:1 in several dimensions. */}
       <span className="v2-mono" style={{ fontSize: '0.78rem', color: 'var(--v2-muted)' }}>{item.tag}</span>
@@ -171,11 +188,17 @@ export function Signal(): JSX.Element {
           <div className="v2-col" style={{ maxWidth: 720, gap: '1rem' }}>
             <span className="v2-eyebrow"><span className="v2-dot" />What I build</span>
             <h2 className="v2-head">One connected AI platform, not five separate projects</h2>
+            {/* Rewritten for two reasons. It described the internal wiring of a
+                specific employer's platform, which does not belong on a
+                personal capability page; and it listed an ingestion pipeline
+                and an infra layer that are no longer in the diagram below. It
+                now describes the capability generically and matches the four
+                layers actually shown. */}
             <p className="v2-body v2-muted">
-              I architect the AI platform behind MyPDI as a single connected system: an agentic
-              framework, a document ingestion pipeline that feeds it, an MCP gateway and an LLM
-              gateway that route every request, and a customer-facing chatbot on top — plus the
-              model deployment and infrastructure that keep all of it running in production.
+              I build AI systems as one connected platform rather than five disconnected projects:
+              gateways that make models and tools reliably available, a knowledge base that grounds
+              them in real content, an agent framework standing on both, and the chatbots and
+              automation workflows people actually use on top.
             </p>
           </div>
         </Reveal>
@@ -188,16 +211,10 @@ export function Signal(): JSX.Element {
           <div className="v2-col" style={{ gap: 0 }}>
             {LAYERS.map((row, i) => (
               <div key={row[0]?.id ?? i}>
-                {i > 0 && (
-                  <Connector
-                    variant={
-                      LAYERS[i - 1].length === row.length ? 'single' : row.length > 1 ? 'spread' : 'merge'
-                    }
-                  />
-                )}
+                {i > 0 && <Connector variant={connectorVariant(LAYERS[i - 1].length, row.length)} />}
                 <Reveal delay={i * 90}>
                   {row.length > 1 ? (
-                    <div className="v2-grid" data-cols="2">
+                    <div className="v2-grid" data-cols={String(row.length)}>
                       {row.map((item) => (
                         <LayerCard key={item.id} item={item} hoveredId={hoveredId} onHover={setHoveredId} />
                       ))}

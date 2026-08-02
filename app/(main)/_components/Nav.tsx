@@ -102,9 +102,10 @@ export function Nav() {
         #v2-nav .v2-nav-mark {
           text-decoration: none;
           white-space: nowrap;
-          font-size: 0.95rem;
-          font-weight: 600;
-          letter-spacing: 0.02em;
+          font-size: 1.2rem;
+          font-weight: 800;
+          letter-spacing: 0.01em;
+          color: var(--v2-text);
         }
         #v2-nav .v2-nav-mark-full {
           display: none;
@@ -133,6 +134,7 @@ export function Nav() {
           #v2-nav .v2-nav-inner { height: 56px; }
           #v2-nav .v2-nav-links { gap: 8px; }
           #v2-nav .v2-nav-link { font-size: 0.76rem; padding-inline: 0.1em; }
+          #v2-nav .v2-nav-mark { font-size: 1.05rem; }
         }
         @media (prefers-reduced-motion: reduce) {
           #v2-nav { transition: none; transform: none !important; }
