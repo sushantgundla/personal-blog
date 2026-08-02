@@ -1,0 +1,108 @@
+/* Glassmorphism — frosted panels floating over an aurora wash */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@600;700;800&display=swap');
+
+:root {
+  --v2-bg: #120f24;
+  --v2-bg-2: #1a1338;
+  --v2-surface: rgba(255,255,255,0.08);
+  --v2-surface-2: rgba(255,255,255,0.14);
+  --v2-surface-3: rgba(255,255,255,0.06);
+  --v2-text: #f6f4ff;
+  --v2-muted: rgba(246,244,255,0.72);
+  --v2-faint: rgba(246,244,255,0.38);
+  --v2-line: rgba(255,255,255,0.22);
+  --v2-line-2: rgba(255,255,255,0.4);
+  --v2-accent: #7dd3ff;
+  --v2-accent-2: #a78bfa;
+  --v2-accent-3: #34d399;
+  --v2-accent-soft: rgba(125,211,255,0.16);
+  --v2-on-accent: #0c0a1f;
+
+  --v2-radius: 20px;
+  --v2-radius-sm: 12px;
+  --v2-radius-lg: 28px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: 0 8px 32px -8px rgba(10,8,30,0.5);
+  --v2-shadow-lg: 0 30px 70px -20px rgba(10,8,30,0.7);
+  --v2-glow: 0 0 40px rgba(125,211,255,0.25);
+
+  --v2-font-display: 'Sora', 'Space Grotesk', system-ui, sans-serif;
+  --v2-font-head: 'Sora', system-ui, sans-serif;
+  --v2-font-body: 'Manrope', system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 800;
+  --v2-display-tracking: -0.03em;
+  --v2-head-transform: none;
+  --v2-head-tracking: 0.14em;
+
+  --v2-backdrop: none;
+  --v2-cursor: ring;
+  --v2-enter: iris;
+}
+
+body {
+  background:
+    radial-gradient(60% 50% at 12% 8%, rgba(125,211,255,0.35), transparent 60%),
+    radial-gradient(55% 45% at 90% 12%, rgba(167,139,250,0.32), transparent 60%),
+    radial-gradient(70% 60% at 50% 100%, rgba(52,211,153,0.22), transparent 65%),
+    var(--v2-bg) !important;
+}
+
+.v2-band { background: rgba(255,255,255,0.03) !important; }
+
+.v2-orb { display: block !important; opacity: 0.9 !important; filter: blur(70px) saturate(160%) !important; }
+.v2-noise { display: none !important; }
+
+.v2-card,
+.v2-panel {
+  background: linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow:
+    var(--v2-shadow),
+    inset 0 1px 0 rgba(255,255,255,0.35) !important;
+}
+
+.v2-card-lift:hover {
+  box-shadow: var(--v2-shadow-lg), var(--v2-glow), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+  transform: translateY(-4px) !important;
+}
+
+.v2-chip {
+  background: rgba(255,255,255,0.1) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+}
+.v2-chip-on {
+  background: linear-gradient(135deg, var(--v2-accent), var(--v2-accent-2)) !important;
+  color: var(--v2-on-accent) !important;
+  border-color: transparent !important;
+}
+
+.v2-btn {
+  background: linear-gradient(135deg, var(--v2-accent), var(--v2-accent-2)) !important;
+  color: var(--v2-on-accent) !important;
+  border: none !important;
+  box-shadow: 0 10px 30px -10px rgba(125,211,255,0.5) !important;
+}
+.v2-btn-ghost {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+}
+
+.v2-badge {
+  background: rgba(255,255,255,0.14) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  color: var(--v2-text) !important;
+}
+
+.v2-frame {
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  box-shadow: var(--v2-shadow), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+}
+
+.v2-rule { background: rgba(255,255,255,0.2) !important; }

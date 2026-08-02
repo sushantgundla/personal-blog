@@ -1,0 +1,78 @@
+/* Gradient Descent — a loss landscape, contour lines, cyan→green→yellow as loss decreases */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+:root {
+  --v2-bg: #0a1128;
+  --v2-bg-2: #080d1f;
+  --v2-surface: #0d1530;
+  --v2-surface-2: #121b3d;
+  --v2-surface-3: #182449;
+  --v2-text: #eaf2fb;
+  --v2-muted: rgba(234,242,251,0.6);
+  --v2-faint: rgba(234,242,251,0.28);
+  --v2-line: rgba(34,211,238,0.18);
+  --v2-line-2: rgba(74,222,128,0.4);
+  --v2-accent: #22d3ee;
+  --v2-accent-2: #4ade80;
+  --v2-accent-3: #facc15;
+  --v2-accent-soft: rgba(34,211,238,0.1);
+  --v2-on-accent: #0a1128;
+
+  --v2-radius: 6px;
+  --v2-radius-sm: 4px;
+  --v2-radius-lg: 10px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  --v2-shadow-lg: 0 20px 50px -20px rgba(0,0,0,0.7);
+  --v2-glow: 0 0 20px rgba(74,222,128,0.35);
+
+  --v2-font-display: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+  --v2-font-head: 'IBM Plex Mono', monospace;
+  --v2-font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --v2-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --v2-display-weight: 600;
+  --v2-display-tracking: -0.02em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.14em;
+
+  --v2-backdrop: grid;
+  --v2-cursor: crosshair;
+  --v2-enter: collapse;
+}
+
+body {
+  background:
+    repeating-linear-gradient(0deg, rgba(34,211,238,0.035) 0px, transparent 1px, transparent 40px, rgba(34,211,238,0.035) 41px),
+    repeating-linear-gradient(90deg, rgba(74,222,128,0.02) 0px, transparent 1px, transparent 40px),
+    var(--v2-bg) !important;
+}
+.v2-band { background: var(--v2-bg-2) !important; }
+.v2-orb { display: none !important; }
+.v2-noise { opacity: 0.04 !important; }
+
+.v2-card, .v2-panel {
+  background-image: linear-gradient(var(--v2-surface), var(--v2-surface)), linear-gradient(120deg, var(--v2-accent), var(--v2-accent-2), var(--v2-accent-3)) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--v2-radius) !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+.v2-card-lift:hover { box-shadow: var(--v2-glow) !important; }
+
+.v2-title { color: var(--v2-text) !important; }
+.v2-eyebrow { color: var(--v2-accent) !important; }
+.v2-num, .v2-mono { color: var(--v2-accent-2) !important; }
+
+.v2-btn { background: linear-gradient(120deg, var(--v2-accent), var(--v2-accent-2)) !important; color: var(--v2-bg) !important; border: none !important; border-radius: var(--v2-radius-sm) !important; }
+.v2-btn-ghost { border: 1px solid var(--v2-line-2) !important; color: var(--v2-text) !important; background: transparent !important; border-radius: var(--v2-radius-sm) !important; }
+.v2-btn-quiet { color: var(--v2-accent) !important; }
+
+.v2-chip { border: 1px solid var(--v2-line) !important; background: var(--v2-surface-2) !important; border-radius: var(--v2-radius-sm) !important; }
+.v2-chip-on { border-color: var(--v2-accent-2) !important; color: var(--v2-accent-2) !important; background: rgba(74,222,128,0.1) !important; }
+
+.v2-rule { background: linear-gradient(90deg, var(--v2-accent), var(--v2-accent-2), var(--v2-accent-3)) !important; height: 1px !important; opacity: 0.6 !important; }
+.v2-badge { border: 1px solid var(--v2-accent-3) !important; color: var(--v2-accent-3) !important; background: rgba(250,204,21,0.08) !important; border-radius: var(--v2-radius-sm) !important; }
+.v2-frame { border: 1px solid var(--v2-line-2) !important; border-radius: var(--v2-radius-lg) !important; }
+.v2-kbd { border: 1px solid var(--v2-line) !important; background: var(--v2-surface-3) !important; border-radius: var(--v2-radius-sm) !important; }

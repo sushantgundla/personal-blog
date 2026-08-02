@@ -1,0 +1,70 @@
+/* Phosphor Terminal — black + P1 green CRT, monospace everything, scanlines */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --v2-bg: #000000;
+  --v2-bg-2: #030603;
+  --v2-surface: #061006;
+  --v2-surface-2: #0a1a0a;
+  --v2-surface-3: #0f240f;
+  --v2-text: #33ff66;
+  --v2-muted: rgba(51,255,102,0.62);
+  --v2-faint: rgba(51,255,102,0.32);
+  --v2-line: rgba(51,255,102,0.35);
+  --v2-line-2: rgba(51,255,102,0.6);
+  --v2-accent: #33ff66;
+  --v2-accent-2: #baffce;
+  --v2-accent-3: #ffb703;
+  --v2-accent-soft: rgba(51,255,102,0.12);
+  --v2-on-accent: #000000;
+
+  --v2-radius: 0px;
+  --v2-radius-sm: 0px;
+  --v2-radius-lg: 0px;
+  --v2-radius-pill: 0px;
+  --v2-border-w: 1px;
+  --v2-shadow: none;
+  --v2-shadow-lg: 0 0 24px rgba(51,255,102,0.25);
+  --v2-glow: 0 0 12px rgba(51,255,102,0.55);
+
+  --v2-font-display: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-head: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: -0.01em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.1em;
+
+  --v2-backdrop: scan;
+  --v2-cursor: block;
+  --v2-enter: scanline;
+}
+
+body, .v2-body, .v2-title, .v2-head, .v2-sub {
+  text-shadow: 0 0 6px rgba(51,255,102,0.35) !important;
+}
+
+.v2-card, .v2-panel, .v2-frame, .v2-badge, .v2-chip, .v2-kbd {
+  border: 1px solid var(--v2-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--v2-surface) !important;
+}
+.v2-card-lift:hover {
+  box-shadow: var(--v2-glow) !important;
+  border-color: var(--v2-accent) !important;
+}
+
+.v2-btn, .v2-btn-ghost, .v2-icon-btn {
+  border-radius: 0 !important;
+  border: 1px solid var(--v2-accent) !important;
+}
+.v2-btn:hover, .v2-btn-ghost:hover { box-shadow: var(--v2-glow) !important; }
+
+.v2-eyebrow::before { content: '> ' !important; }
+
+.v2-orb { display: none !important; }
+.v2-noise { display: none !important; }
+
+.v2-rule { background: var(--v2-line-2) !important; }

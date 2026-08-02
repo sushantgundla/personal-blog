@@ -1,0 +1,75 @@
+/* Lecture Hall — dark green chalkboard, chalk-dust texture, hand-drawn warmth */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --v2-bg: #1e3229;
+  --v2-bg-2: #1a2b23;
+  --v2-surface: #23392f;
+  --v2-surface-2: #2a4137;
+  --v2-surface-3: #324a3f;
+  --v2-text: #f2efe6;
+  --v2-muted: rgba(242,239,230,0.62);
+  --v2-faint: rgba(242,239,230,0.3);
+  --v2-line: rgba(242,239,230,0.16);
+  --v2-line-2: rgba(246,224,94,0.4);
+  --v2-accent: #f6e05e;
+  --v2-accent-2: #f6a8a8;
+  --v2-accent-3: #a8c5b8;
+  --v2-accent-soft: rgba(246,224,94,0.12);
+  --v2-on-accent: #1e3229;
+
+  --v2-radius: 14px;
+  --v2-radius-sm: 8px;
+  --v2-radius-lg: 24px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  --v2-shadow-lg: 0 16px 40px -14px rgba(0,0,0,0.5);
+  --v2-glow: 0 0 16px rgba(246,224,94,0.3);
+
+  --v2-font-display: 'Caveat', 'Fraunces', cursive;
+  --v2-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --v2-font-body: 'Inter', system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: 0em;
+  --v2-head-transform: none;
+  --v2-head-tracking: 0.02em;
+
+  --v2-backdrop: dots;
+  --v2-cursor: default;
+  --v2-enter: tear;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 300px 160px at 15% 20%, rgba(242,239,230,0.04), transparent 60%),
+    radial-gradient(ellipse 260px 140px at 85% 70%, rgba(242,239,230,0.03), transparent 60%),
+    var(--v2-bg) !important;
+}
+.v2-band { background: var(--v2-bg-2) !important; }
+.v2-orb { opacity: 0.4 !important; filter: blur(50px) !important; }
+.v2-noise { opacity: 0.06 !important; }
+
+.v2-card, .v2-panel {
+  background: var(--v2-surface) !important;
+  border: 1px dashed var(--v2-line-2) !important;
+  border-radius: 18px 12px 20px 10px / 10px 20px 12px 18px !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+.v2-card-lift:hover { box-shadow: var(--v2-glow) !important; border-color: var(--v2-accent) !important; }
+
+.v2-title { color: var(--v2-accent) !important; text-shadow: 0 0 12px rgba(246,224,94,0.25) !important; }
+.v2-eyebrow { color: var(--v2-accent-2) !important; }
+
+.v2-btn { background: var(--v2-accent) !important; color: var(--v2-on-accent) !important; border: 1px dashed rgba(30,50,41,0.4) !important; border-radius: var(--v2-radius-pill) !important; }
+.v2-btn-ghost { border: 1px dashed var(--v2-line-2) !important; color: var(--v2-text) !important; background: transparent !important; border-radius: var(--v2-radius-pill) !important; }
+.v2-btn-quiet { color: var(--v2-accent-2) !important; }
+
+.v2-chip { border: 1px dashed var(--v2-line-2) !important; background: var(--v2-surface-2) !important; border-radius: var(--v2-radius-pill) !important; }
+.v2-chip-on { background: var(--v2-accent-soft) !important; border-color: var(--v2-accent) !important; color: var(--v2-accent) !important; }
+
+.v2-badge { border: 1px dashed var(--v2-accent-2) !important; color: var(--v2-accent-2) !important; background: rgba(246,168,168,0.08) !important; border-radius: var(--v2-radius-pill) !important; }
+.v2-frame { border: 1px dashed var(--v2-line-2) !important; border-radius: 20px 10px 24px 12px / 12px 24px 10px 20px !important; }
+.v2-rule { background: repeating-linear-gradient(90deg, var(--v2-line-2) 0 6px, transparent 6px 10px) !important; height: 2px !important; opacity: 0.7 !important; }
+.v2-kbd { border: 1px dashed var(--v2-line) !important; background: var(--v2-surface-3) !important; border-radius: var(--v2-radius-sm) !important; }

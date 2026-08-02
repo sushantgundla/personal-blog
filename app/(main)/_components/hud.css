@@ -1,0 +1,134 @@
+/*
+ * DimensionHUD — one small button, bottom-left. Self-contained styling.
+ *
+ * This is the only control on /v2, and it has to stay legible on all 30
+ * dimensions — including the ones that flip to a light background or push
+ * contrast to extremes. So unlike the rest of the page it deliberately does
+ * NOT hook into the themeable surface/text tokens (--v2-surface, --v2-text,
+ * --v2-line, ...). It defines its own tiny constant palette — dark glass,
+ * light text — and only *borrows* --v2-accent (with a hardcoded fallback) for
+ * the spark, since every theme keeps that token legible against dark.
+ *
+ * Every padding/margin below carries !important on purpose. v2.css contains
+ * `.v2-root, .v2-root * { margin: 0; padding: 0 }`, which has the same
+ * specificity as any single class here and loads after it — without
+ * !important that reset silently flattens this button.
+ */
+
+#v2-hud {
+  position: fixed;
+  left: clamp(16px, 3vw, 32px);
+  bottom: clamp(16px, 3vw, 32px);
+  z-index: 9000;
+}
+
+.v2-hud-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+  padding: 10px 16px 10px 13px !important;
+  margin: 0 !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(14, 14, 16, 0.72);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.10) inset,
+    0 10px 30px -8px rgba(0, 0, 0, 0.55);
+
+  color: #f4f2ef;
+  font-family: var(--v2-font-head, system-ui, sans-serif);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s ease;
+}
+
+.v2-hud-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.26);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 16px 40px -10px rgba(0, 0, 0, 0.65);
+}
+
+.v2-hud-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.v2-hud-btn:focus-visible {
+  outline: 2px solid var(--v2-accent, #ff6b35);
+  outline-offset: 3px;
+}
+
+/* Swallowing clicks mid-transition — show it rather than feeling broken. */
+.v2-hud-btn.is-busy {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.v2-hud-btn-text {
+  display: flex !important;
+  flex-direction: column;
+  gap: 1px !important;
+  min-width: 0;
+}
+
+.v2-hud-btn-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Current dimension name — present but quiet. Reserves its line even when
+   empty (pre-mount) so the button never resizes. */
+.v2-hud-btn-sub {
+  font-family: var(--v2-font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: rgba(244, 242, 239, 0.5);
+  white-space: nowrap;
+  min-height: 13px;
+}
+
+/* The accent dot. Breathes slowly so the button reads as "alive" and
+   pressable without shouting. */
+.v2-hud-btn-spark {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--v2-accent, #ff6b35);
+  box-shadow: 0 0 0 0 var(--v2-accent, #ff6b35);
+  animation: v2-hud-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes v2-hud-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.28); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0); }
+}
+
+@media (max-width: 480px) {
+  .v2-hud-btn {
+    padding: 9px 14px 9px 12px !important;
+  }
+  .v2-hud-btn-label { font-size: 12px; }
+  .v2-hud-btn-sub   { font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-hud-btn,
+  .v2-hud-btn:hover,
+  .v2-hud-btn:active {
+    transform: none;
+    transition: none;
+  }
+  .v2-hud-btn-spark { animation: none; }
+}

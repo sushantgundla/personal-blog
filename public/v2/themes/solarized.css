@@ -1,0 +1,108 @@
+/* Solarized Dark — the classic editor palette, mono UI, six-hue accent cycle */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --v2-bg: #002b36;
+  --v2-bg-2: #012732;
+  --v2-surface: #073642;
+  --v2-surface-2: #0a4152;
+  --v2-surface-3: #0d4a5c;
+  --v2-text: #93a1a1;
+  --v2-muted: rgba(180,193,193,0.85);
+  --v2-faint: rgba(147,161,161,0.42);
+  --v2-line: rgba(131,148,150,0.22);
+  --v2-line-2: rgba(131,148,150,0.4);
+  --v2-accent: #2aa198;
+  --v2-accent-2: #268bd2;
+  --v2-accent-3: #b58900;
+  --v2-accent-soft: rgba(42,161,152,0.12);
+  --v2-on-accent: #002b36;
+
+  --v2-radius: 6px;
+  --v2-radius-sm: 3px;
+  --v2-radius-lg: 10px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --v2-shadow-lg: 0 16px 40px -16px rgba(0,0,0,0.55);
+  --v2-glow: 0 0 0 3px rgba(42,161,152,0.2);
+
+  --v2-font-display: 'IBM Plex Sans', 'Space Grotesk', system-ui, sans-serif;
+  --v2-font-head: 'IBM Plex Mono', ui-monospace, monospace;
+  --v2-font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --v2-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: -0.01em;
+  --v2-head-transform: none;
+  --v2-head-tracking: 0.06em;
+
+  --v2-backdrop: none;
+  --v2-cursor: block;
+  --v2-enter: scanline;
+}
+
+body { background: var(--v2-bg) !important; }
+.v2-band { background: var(--v2-bg-2) !important; }
+
+.v2-orb { display: none !important; }
+.v2-noise { opacity: 0.02 !important; }
+
+.v2-eyebrow { color: #e29c7f !important; } /* raw #cb4b16 reads 3.26:1 on bg — lightened to match the chip-cycle tint */
+.v2-title { color: #eee8d5 !important; }
+
+.v2-card,
+.v2-panel {
+  background: var(--v2-surface) !important;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: var(--v2-radius) !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+.v2-card-lift:hover {
+  border-color: var(--v2-accent) !important;
+  box-shadow: var(--v2-glow), var(--v2-shadow-lg) !important;
+}
+
+.v2-chip {
+  background: var(--v2-surface-2) !important;
+  border: 1px solid var(--v2-line-2) !important;
+  font-family: var(--v2-font-mono) !important;
+}
+/* Text uses a lightened tint of each hue — the raw Solarized accent colours
+   read below 4.5:1 on --v2-surface-2; the border keeps the true hue at low alpha. */
+.v2-chip:nth-of-type(6n+1) { border-color: rgba(181,137,0,0.5) !important; color: #d6be73 !important; }
+.v2-chip:nth-of-type(6n+2) { border-color: rgba(203,75,22,0.5) !important; color: #e29c7f !important; }
+.v2-chip:nth-of-type(6n+3) { border-color: rgba(220,50,47,0.5) !important; color: #ec8e8d !important; }
+.v2-chip:nth-of-type(6n+4) { border-color: rgba(211,54,130,0.5) !important; color: #e790ba !important; }
+.v2-chip:nth-of-type(6n+5) { border-color: rgba(38,139,210,0.5) !important; color: #88bfe6 !important; }
+.v2-chip:nth-of-type(6n+0) { border-color: rgba(42,161,152,0.5) !important; color: #8acbc6 !important; }
+.v2-chip-on {
+  background: var(--v2-accent) !important;
+  color: var(--v2-on-accent) !important;
+  border-color: var(--v2-accent) !important;
+}
+
+.v2-btn {
+  background: #2076b3 !important; /* darkened accent-2 — raw hue is too light for cream text at 4.5:1 */
+  color: #fdf6e3 !important;
+  border: none !important;
+  border-radius: var(--v2-radius-sm) !important;
+}
+.v2-btn:hover { background: var(--v2-accent) !important; color: var(--v2-on-accent) !important; }
+.v2-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--v2-line-2) !important;
+  border-radius: var(--v2-radius-sm) !important;
+}
+
+.v2-badge {
+  background: var(--v2-surface-2) !important;
+  border: 1px solid var(--v2-accent-3) !important;
+  color: #e0b000 !important; /* brightened mustard — the raw hue is too dark on surface-2 */
+  border-radius: var(--v2-radius-sm) !important;
+}
+
+.v2-mono { color: var(--v2-muted) !important; } /* base default (--v2-faint) reads 1.99:1 on surface — bumped to muted for 4.5:1+ */
+
+.v2-frame { border: 1px solid var(--v2-line-2) !important; border-radius: var(--v2-radius-sm) !important; }
+.v2-rule { background: var(--v2-line) !important; }
+.v2-kbd { background: var(--v2-surface-2) !important; border: 1px solid var(--v2-line-2) !important; border-radius: 3px !important; color: #eee8d5 !important; }

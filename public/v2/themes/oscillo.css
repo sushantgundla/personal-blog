@@ -1,0 +1,123 @@
+/* Oscilloscope — true black, phosphor-cyan strokes, drawn by an electron beam. */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --v2-bg: #000000;
+  --v2-bg-2: #020403;
+  --v2-surface: rgba(0, 255, 213, 0.03);
+  --v2-surface-2: rgba(0, 255, 213, 0.07);
+  --v2-surface-3: rgba(0, 255, 213, 0.02);
+  --v2-text: #eafffa;
+  --v2-muted: rgba(234, 255, 250, 0.6);
+  --v2-faint: rgba(234, 255, 250, 0.32);
+  --v2-line: rgba(0, 255, 213, 0.45);
+  --v2-line-2: rgba(0, 255, 213, 0.8);
+  --v2-accent: #00ffd5;
+  --v2-accent-2: #00b89f;
+  --v2-accent-3: #7fffe0;
+  --v2-accent-soft: rgba(0, 255, 213, 0.08);
+  --v2-on-accent: #001410;
+
+  --v2-radius: 3px;
+  --v2-radius-sm: 2px;
+  --v2-radius-lg: 6px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: none;
+  --v2-shadow-lg: 0 0 30px rgba(0, 255, 213, 0.22);
+  --v2-glow: 0 0 18px rgba(0, 255, 213, 0.4);
+
+  --v2-font-display: 'Space Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-head: 'Space Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: 0.01em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.22em;
+
+  --v2-backdrop: waves;
+  --v2-cursor: crosshair;
+  --v2-enter: scanline;
+}
+
+body { background: var(--v2-bg) !important; }
+
+.v2-orb { display: none !important; }
+.v2-noise {
+  display: block !important;
+  opacity: 0.12 !important;
+  background: repeating-linear-gradient(0deg, rgba(0, 255, 213, 0.5) 0px, rgba(0, 255, 213, 0.5) 1px, transparent 1px, transparent 3px) !important;
+  mix-blend-mode: screen !important;
+}
+
+.v2-card, .v2-panel {
+  background: var(--v2-surface) !important;
+  border: 1px solid var(--v2-line) !important;
+  box-shadow: none !important;
+}
+.v2-card-lift:hover {
+  border-color: var(--v2-accent) !important;
+  box-shadow: var(--v2-glow) !important;
+  background: var(--v2-surface-2) !important;
+}
+
+.v2-title, .v2-head, .v2-num {
+  color: var(--v2-accent) !important;
+  text-shadow: 0 0 8px rgba(0, 255, 213, 0.55), 0 0 2px rgba(0, 255, 213, 0.85) !important;
+}
+.v2-eyebrow { text-shadow: 0 0 6px rgba(0, 255, 213, 0.5) !important; }
+
+.v2-btn {
+  background: transparent !important;
+  border: 1px solid var(--v2-accent) !important;
+  color: var(--v2-accent) !important;
+  text-shadow: 0 0 6px rgba(0, 255, 213, 0.6) !important;
+  box-shadow: none !important;
+}
+.v2-btn:hover {
+  background: var(--v2-accent-soft) !important;
+  box-shadow: var(--v2-glow) !important;
+}
+
+.v2-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--v2-line) !important;
+  color: var(--v2-muted) !important;
+}
+
+.v2-chip {
+  background: transparent !important;
+  border: 1px solid var(--v2-line) !important;
+  color: var(--v2-text) !important;
+}
+.v2-chip-on {
+  background: var(--v2-accent) !important;
+  color: var(--v2-on-accent) !important;
+  border-color: var(--v2-accent) !important;
+}
+
+.v2-frame {
+  background: transparent !important;
+  border: 1px solid var(--v2-accent) !important;
+  box-shadow: var(--v2-glow) !important;
+}
+
+.v2-badge {
+  background: transparent !important;
+  border: 1px solid var(--v2-accent) !important;
+  color: var(--v2-accent) !important;
+  text-shadow: 0 0 5px rgba(0, 255, 213, 0.5) !important;
+}
+
+.v2-kbd {
+  background: transparent !important;
+  border: 1px solid var(--v2-line-2) !important;
+}
+
+.v2-rule { background: var(--v2-line) !important; }
+
+.v2-dot {
+  background: var(--v2-accent) !important;
+  box-shadow: 0 0 6px rgba(0, 255, 213, 0.8) !important;
+}
