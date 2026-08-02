@@ -160,9 +160,12 @@ export function Hero(): JSX.Element {
               ))}
             </h1>
 
+            {/* No employer or product named here. The home page is his own
+                capability page; where he works belongs on /about, which still
+                names PDI Technologies in full. */}
             <p className="v2-body v2-muted" style={{ maxWidth: '46ch' }}>
-              Technical Lead for AI/ML at PDI Technologies — I architect the agent frameworks,
-              RAG pipelines, and LLM gateways running MyPDI in production.
+              Technical Lead for AI/ML — I architect the agent frameworks, RAG pipelines and LLM
+              gateways behind AI products running in production.
             </p>
 
             <div className="v2-row" style={{ gap: '1rem' }}>
