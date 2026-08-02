@@ -5,7 +5,7 @@ import { CapitalClock } from './CapitalClock'
 import { LandmarkStrip } from './LandmarkStrip'
 import { PeopleWatermarks } from './PeopleWatermarks'
 import { HistoryStrip } from './HistoryStrip'
-import { SizeOverlay } from './SizeOverlay'
+import { SizeOverlayLazy } from './SizeOverlayLazy'
 import { Neighbours } from './Neighbours'
 import { YearSlider } from './YearSlider'
 import styles from './extras.module.css'
@@ -70,7 +70,7 @@ export function DossierExtras({ dossier }: DossierExtrasProps) {
 
       <HistoryStrip independenceDate={wikidata?.independenceDate ?? null} countryName={dossier.name} />
 
-      <SizeOverlay iso3={dossier.iso3} countryName={dossier.name} />
+      <SizeOverlayLazy iso3={dossier.iso3} countryName={dossier.name} />
 
       <YearSlider timeSeries={timeSeries} />
     </section>

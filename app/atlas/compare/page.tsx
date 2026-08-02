@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { BY_ISO3 } from '@/lib/atlas/iso-countries'
-import { ComparePicker } from '../_components/ComparePicker'
+import { BY_ISO3, ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
+import { CompareSlots } from '../_components/CompareSlots'
 import dossierStyles from '../_components/dossier.module.css'
 import styles from '../_components/compare.module.css'
 
@@ -17,12 +17,14 @@ const MIN_COMPARE = 2
 const MAX_COMPARE = 5
 
 /**
- * The compare picker (spec §4.3). This is the whole no-JavaScript path
- * into `/atlas/compare/[countries]`: a plain `<form method="get">` submits
- * `?a=..&b=..&c=..` (up to five slots, `c`/`d`/`e` optional) to this same
- * route, and — because this is a Server Component reading `searchParams` —
- * the redirect to the pretty `ind-vs-fra-vs-jpn` URL happens on the server,
- * before any client JS would even have a chance to run.
+ * `/atlas/compare` with no countries chosen — the same screen as
+ * `/atlas/compare/[countries]`, just with every slot empty (owner's
+ * request: no separate picker screen). This is also still the whole
+ * no-JavaScript path in: a plain `<form method="get">` (rendered by
+ * CompareSlots' own `<noscript>`) submits `?a=..&b=..&c=..` here, and —
+ * because this is a Server Component reading `searchParams` — the redirect
+ * to the pretty `ind-vs-fra-vs-jpn` URL happens on the server, before any
+ * client JS would even have a chance to run.
  */
 export default function ComparePickerPage({
   searchParams,
@@ -56,12 +58,18 @@ export default function ComparePickerPage({
           Up to five notes, head to head
         </h1>
         <p className="atlas-body">
-          Pick two to five countries. Every indicator on the sheet renders as a ledger row, one
-          column per country, and the honest best value strikes in ember.
+          Add two to five countries below. Every indicator on the sheet renders as a ledger row,
+          one column per country, and the honest best value strikes in ember.
         </p>
       </div>
 
-      <ComparePicker invalidSelection={invalidSelection} />
+      {invalidSelection && (
+        <p className="atlas-serial" style={{ color: 'var(--note-thread)' }} role="alert">
+          Pick at least two countries from the list below.
+        </p>
+      )}
+
+      <CompareSlots allCountries={ISO_COUNTRIES} initialIsos={[]} flagUrls={{}} />
     </div>
   )
 }
