@@ -1,0 +1,502 @@
+/* ============================================================
+   Dossier extras — layout and positioning only, same split as
+   dossier.module.css: every colour, font and surface effect comes from
+   ../atlas.css; this file is purely grid/flex/sizing for the "sights and
+   sounds" panels (anthem, clock, landmarks, people, history, size,
+   neighbours, year slider) composed by DossierExtras.tsx.
+   ============================================================ */
+
+.extrasSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Groups TradeArcs and TradeBond into one vertical stack on the dossier
+   page (app/atlas/[iso3]/page.tsx) — same gap rhythm as .extrasSection,
+   kept as its own class since this pair isn't part of DossierExtras. */
+.tradeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* A panel that has nothing to show. Every extra needs one of these —
+   dashed rule, dim text, no border-box drama. Never looks like an error. */
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 5rem;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px dashed var(--note-rule);
+  color: var(--note-intaglio-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+}
+
+.panelLabel {
+  margin-bottom: 0.75rem;
+}
+
+/* ---------------------------------------------------------- utility row
+   Anthem, capital clock and neighbours: three small utility notes. */
+
+.utilityRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1px;
+  background: var(--note-rule);
+  border: 1px solid var(--note-rule);
+}
+
+.utilityNote {
+  position: relative;
+  background: var(--note-paper);
+  padding: 1.1rem 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 8.5rem;
+}
+
+/* ---------------------------------------------------------- anthem */
+
+.anthemRow {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.anthemSeal {
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 1px solid var(--note-seal);
+  background: transparent;
+  color: var(--note-seal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease),
+    background-color 0.2s var(--atlas-ease);
+}
+
+.anthemSeal:hover,
+.anthemSeal:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+  background: var(--note-paper-hi);
+}
+
+.anthemMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.anthemName {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--note-intaglio);
+  overflow-wrap: break-word;
+}
+
+.anthemAttribution {
+  color: var(--note-intaglio-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 0.5625rem;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.anthemAttribution:hover,
+.anthemAttribution:focus-visible {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- capital clock */
+
+.clockFace {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.clockTime {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  color: var(--note-intaglio);
+}
+
+.clockCapital {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  color: var(--note-intaglio);
+}
+
+/* ---------------------------------------------------------- neighbours */
+
+.neighboursRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-content: flex-start;
+}
+
+.neighbourSeal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.35rem;
+  border: 1px solid var(--note-rule);
+  border-radius: 999px;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.neighbourSeal:hover,
+.neighbourSeal:focus-visible {
+  color: var(--note-intaglio);
+  border-color: var(--note-ink);
+}
+
+.neighbourFlag {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--note-paper-hi);
+}
+
+.neighbourFlagImg {
+  object-fit: cover;
+}
+
+.neighbourFlagFallback {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.5rem;
+  border: 1px solid var(--note-seal);
+  color: var(--note-seal);
+}
+
+.neighbourName {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------- landmark strip */
+
+.landmarkStrip {
+  display: flex;
+  gap: 1px;
+  overflow-x: auto;
+  background: var(--note-rule);
+  border: 1px solid var(--note-rule);
+  scrollbar-width: thin;
+}
+
+.landmarkCard {
+  flex: 0 0 auto;
+  width: clamp(150px, 26vw, 220px);
+  background: var(--note-paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.landmarkImageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+
+.landmarkImg {
+  object-fit: cover;
+  filter: grayscale(0.85) sepia(0.25) contrast(1.05);
+  opacity: 0.82;
+  transition: filter 0.5s var(--atlas-ease), opacity 0.5s var(--atlas-ease);
+}
+
+.landmarkCard:hover .landmarkImg,
+.landmarkCard:focus-within .landmarkImg {
+  filter: none;
+  opacity: 1;
+}
+
+.landmarkCaption {
+  padding: 0.6rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.landmarkName {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-size: 0.9rem;
+  color: var(--note-intaglio);
+  overflow-wrap: break-word;
+}
+
+.landmarkAttribution {
+  color: var(--note-intaglio-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 0.5rem;
+}
+
+.landmarkAttribution:hover,
+.landmarkAttribution:focus-visible {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- people watermarks */
+
+.peopleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1px;
+  background: var(--note-rule);
+  border: 1px solid var(--note-rule);
+}
+
+.personCard {
+  background: var(--note-paper);
+  padding: 1rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+
+.personPortraitWrap {
+  position: relative;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.personPortraitImg {
+  object-fit: cover;
+  filter: grayscale(1);
+}
+
+.personPlate {
+  width: 5rem;
+  height: 5rem;
+  color: var(--note-seal);
+}
+
+.personName {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-size: 0.85rem;
+  color: var(--note-intaglio);
+  line-height: 1.2;
+}
+
+.personDates {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5625rem;
+  color: var(--note-intaglio-dim);
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------- history strip */
+
+.historyStrip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem 0 0.5rem 1.75rem;
+}
+
+.historyStrip::before {
+  content: '';
+  position: absolute;
+  left: 0.45rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    var(--note-thread),
+    var(--note-ink) 50%,
+    var(--note-thread)
+  );
+  opacity: 0.6;
+}
+
+.historyEvent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.historyEvent::before {
+  content: '';
+  position: absolute;
+  left: -1.75rem;
+  top: 0.3rem;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--note-ink);
+  box-shadow: 0 0 0 3px var(--note-paper);
+}
+
+.historyDate {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  color: var(--note-ink);
+}
+
+.historyText {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  color: var(--note-intaglio);
+}
+
+/* ---------------------------------------------------------- size overlay */
+
+.sizeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.sizePickerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.sizeSelect {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  background: var(--note-paper);
+  color: var(--note-intaglio);
+  border: 1px solid var(--note-rule);
+  padding: 0.45rem 0.6rem;
+  max-width: 100%;
+}
+
+.sizeSelect:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+.sizeSvgWrap {
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.sizeLegend {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.sizeLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+}
+
+.sizeSwatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------- year slider */
+
+.yearCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.yearRangeRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.yearRange {
+  flex: 1;
+  accent-color: var(--note-ember);
+}
+
+.yearValueBadge {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  min-width: 3.5ch;
+  text-align: right;
+  color: var(--note-ember);
+}
+
+.yearReadouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--note-rule);
+  border: 1px solid var(--note-rule);
+}
+
+.yearIndicator {
+  background: var(--note-paper);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.yearIndicatorValue {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  color: var(--note-intaglio);
+}
+
+@media (max-width: 640px) {
+  .personPortraitWrap,
+  .personPlate {
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+}

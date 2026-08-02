@@ -12,6 +12,7 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
   production: 'Production',
   confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
+  experiment: 'Experiments',
 }
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -19,6 +20,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'production', label: 'Production' },
   { value: 'open-source', label: 'Open Source' },
   { value: 'confidential', label: 'Confidential' },
+  { value: 'experiment', label: 'Experiments' },
 ]
 
 interface ProjectCardProps {
@@ -94,6 +96,11 @@ function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element 
 export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element {
   const [filter, setFilter] = useState<Filter>('all')
 
+  // Experiments are personal, curiosity-built projects — kept out of the
+  // work grid and shown as their own group underneath, not mixed in.
+  const workProjects = useMemo(() => projects.filter((p) => p.status !== 'experiment'), [projects])
+  const experimentProjects = useMemo(() => projects.filter((p) => p.status === 'experiment'), [projects])
+
   const visibleCount = useMemo(() => {
     if (filter === 'all') return projects.length
     return projects.filter((p) => p.status === filter).length
@@ -136,7 +143,7 @@ export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element
       </Reveal>
 
       <div className="v2-grid" data-cols="2">
-        {projects.map((project, i) => (
+        {workProjects.map((project, i) => (
           <ProjectCard
             key={project.slug}
             project={project}
@@ -145,6 +152,29 @@ export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element
           />
         ))}
       </div>
+
+      {experimentProjects.length > 0 && (
+        <div style={{ marginTop: 'clamp(32px, 4vh, 48px)' }}>
+          <Reveal>
+            <div className="v2-row" style={{ alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
+              <span className="v2-eyebrow">Experiments</span>
+              <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>
+                Built out of curiosity, not for work
+              </span>
+            </div>
+          </Reveal>
+          <div className="v2-grid" data-cols="2">
+            {experimentProjects.map((project, i) => (
+              <ProjectCard
+                key={project.slug}
+                project={project}
+                dimmed={filter !== 'all' && project.status !== filter}
+                delay={Math.min(workProjects.length + i, 6) * 60}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </>
   )
 }
