@@ -1,8 +1,10 @@
 import { getAllArticles } from '@/lib/articles'
+import { getAllRadarPosts, getAllRadarPicks } from '@/lib/radar'
 import { Hero } from './_components/Hero'
 import { Signal } from './_components/Signal'
 import { Work } from './_components/Work'
 import { Writing, type ArticleCard } from './_components/Writing'
+import { RadarHome } from './_components/RadarHome'
 import { Contact } from './_components/Contact'
 
 /**
@@ -23,12 +25,18 @@ export default function V2Page() {
       readingTime,
     }))
 
+  // Radar is read here too — lib/radar.ts uses fs, so it must stay server-side
+  // and reach RadarHome as plain props.
+  const radarPosts = getAllRadarPosts()
+  const radarPicks = getAllRadarPicks()
+
   return (
     <>
       <Hero />
       <Signal />
       <Work />
       <Writing articles={articles} />
+      <RadarHome latestPost={radarPosts[0] ?? null} picks={radarPicks.slice(0, 4)} />
       <Contact />
     </>
   )
