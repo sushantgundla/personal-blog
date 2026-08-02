@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BY_ISO3, type IsoCountry } from '@/lib/atlas/iso-countries'
+import { BY_ISO3, ISO_COUNTRIES, type IsoCountry } from '@/lib/atlas/iso-countries'
 import { getDossier } from '@/lib/atlas/dossier'
 import { countryInk, type CountryInk } from '@/lib/atlas/ink'
 import { formatValue, formatYear, toHttps } from '@/lib/atlas/format'
 import type { IndicatorValue } from '@/lib/atlas/types'
 import { FaceNote } from '../../_components/FaceNote'
 import { CompareSheet } from '../../_components/CompareSheet'
+import { CompareSlots } from '../../_components/CompareSlots'
 import { TradeBond } from '../../_components/TradeBond'
 import { Sources } from '../../_components/Sources'
 import dossierStyles from '../../_components/dossier.module.css'
@@ -171,60 +172,70 @@ export default async function ComparePage({ params }: { params: { countries: str
     }
   })
 
+  const flagUrls = Object.fromEntries(columns.map((c) => [c.iso3, c.flagUrl]))
+
   return (
     <div className={`${styles.pairPage} atlas-fade-in`}>
       <div className={styles.pairToolbar}>
-        <Link href="/atlas/compare" className={dossierStyles.backLink}>
-          ← Choose different countries
+        <Link href="/atlas" className={dossierStyles.backLink}>
+          ← Back to the plate
         </Link>
       </div>
 
-      {/* Full-size face notes only for two countries — a banknote's name is
-          sized off the viewport, not its column, so it cannot shrink to a
-          third of a shared row without clipping. Three or more get the
-          compact identity strip instead; the ledger's own header repeats
-          flag + ink + name again right below, so nothing is lost. */}
-      {countries.length <= MAX_FULL_FACE_NOTES ? (
+      {/* The slots ARE the picker now — no separate screen to leave and
+          come back from (owner's request). Adding, removing or swapping a
+          country here pushes a new URL immediately; this page then
+          re-fetches and re-renders everything below for whichever
+          countries are now current. */}
+      <CompareSlots allCountries={ISO_COUNTRIES} initialIsos={isos} flagUrls={flagUrls}>
+        {/* Full-size face notes only for two countries — a banknote's name
+            is sized off the viewport, not its column, so it cannot shrink
+            to a third of a shared row without clipping. Three or more get
+            the compact identity strip instead; the ledger's own header
+            repeats flag + ink + name again right below, so nothing is
+            lost. */}
+        {countries.length <= MAX_FULL_FACE_NOTES ? (
+          <div className={styles.faceRow}>
+            {countries.map((country, i) => (
+              <div
+                key={country.iso3}
+                style={{
+                  ['--note-ink' as string]: inks[i].hex,
+                  ['--note-ink-rgb' as string]: hexToRgbString(inks[i].hex),
+                }}
+              >
+                <FaceNote dossier={dossiers[i]} country={country} compact />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <CompactIdentityStrip
+            countries={countries.map((country, i) => ({
+              iso3: country.iso3,
+              name: dossiers[i].name,
+              ink: inks[i],
+              flagUrl: columns[i].flagUrl,
+              population: columns[i].indicators.find((v) => v.code === 'SP.POP.TOTL') ?? null,
+            }))}
+          />
+        )}
+
+        <CompareSheet countries={columns} />
+
+        {/* Each TradeBond carries its own "— TRADE —" cutting guide, so the
+            set sits side by side with no extra heading duplicating it. */}
         <div className={styles.faceRow}>
           {countries.map((country, i) => (
-            <div
-              key={country.iso3}
-              style={{
-                ['--note-ink' as string]: inks[i].hex,
-                ['--note-ink-rgb' as string]: hexToRgbString(inks[i].hex),
-              }}
-            >
-              <FaceNote dossier={dossiers[i]} country={country} compact />
-            </div>
+            <TradeBond key={country.iso3} trade={dossiers[i].trade} countryName={dossiers[i].name} />
           ))}
         </div>
-      ) : (
-        <CompactIdentityStrip
-          countries={countries.map((country, i) => ({
-            iso3: country.iso3,
-            name: dossiers[i].name,
-            ink: inks[i],
-            flagUrl: columns[i].flagUrl,
-            population: columns[i].indicators.find((v) => v.code === 'SP.POP.TOTL') ?? null,
-          }))}
-        />
-      )}
 
-      <CompareSheet countries={columns} />
-
-      {/* Each TradeBond carries its own "— TRADE —" cutting guide, so the
-          set sits side by side with no extra heading duplicating it. */}
-      <div className={styles.faceRow}>
-        {countries.map((country, i) => (
-          <TradeBond key={country.iso3} trade={dossiers[i].trade} countryName={dossiers[i].name} />
-        ))}
-      </div>
-
-      <div className={styles.sourcesRow}>
-        {countries.map((country, i) => (
-          <Sources key={country.iso3} dossier={dossiers[i]} country={country} />
-        ))}
-      </div>
+        <div className={styles.sourcesRow}>
+          {countries.map((country, i) => (
+            <Sources key={country.iso3} dossier={dossiers[i]} country={country} />
+          ))}
+        </div>
+      </CompareSlots>
     </div>
   )
 }

@@ -9,7 +9,7 @@ import { FaceNote } from '../_components/FaceNote'
 import { CountryStory } from '../_components/CountryStory'
 import { FactsPanel } from '../_components/FactsPanel'
 import { NoteSheet } from '../_components/NoteSheet'
-import { TradeArcs } from '../_components/TradeArcs'
+import { TradeArcsLazy } from '../_components/TradeArcsLazy'
 import { TradeBond } from '../_components/TradeBond'
 import { UvLamp } from '../_components/UvLamp'
 import { RefreshButton } from '../_components/RefreshButton'
@@ -115,7 +115,7 @@ export default async function CountryDossierPage({
       />
 
       <div className={extrasStyles.tradeGroup}>
-        <TradeArcs iso3={country.iso3} countryName={country.name} trade={dossier.trade} />
+        <TradeArcsLazy iso3={country.iso3} countryName={country.name} trade={dossier.trade} />
         <TradeBond trade={dossier.trade} countryName={country.name} />
       </div>
 
