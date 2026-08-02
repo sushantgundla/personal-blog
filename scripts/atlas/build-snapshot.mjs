@@ -29,6 +29,7 @@
 //
 // Usage:
 //   node scripts/atlas/build-snapshot.mjs [--limit N] [--only ISO3,ISO3] [--force] [--skip-rankings] [--skip-countries]
+//   node scripts/atlas/build-snapshot.mjs --patch-neighbours   (see below)
 import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,7 +37,7 @@ import { fileURLToPath } from "node:url";
 import { ISO_COUNTRIES } from "../../lib/atlas/iso-countries.ts";
 import { ALL_INDICATOR_CODES, CHART_INDICATOR_CODES } from "../../lib/atlas/indicators.ts";
 import { fetchLatestIndicators, fetchTimeSeries } from "../../lib/atlas/sources/worldbank.ts";
-import { fetchDossierFacts } from "../../lib/atlas/sources/wikidata.ts";
+import { fetchDossierFacts, fetchNeighbours } from "../../lib/atlas/sources/wikidata.ts";
 import { fetchSummary } from "../../lib/atlas/sources/wikipedia.ts";
 import { fetchTradeSummary } from "../../lib/atlas/sources/comtrade.ts";
 import { fetchCapitalWeather } from "../../lib/atlas/sources/meteo.ts";
@@ -61,6 +62,40 @@ function sleep(ms) {
 function countryPath(iso3) {
   return path.join(COUNTRIES_DIR, `${iso3}.json`);
 }
+
+// A durable "is this still alive" marker, independent of any log file or
+// whoever's watching a terminal. Written after every country and on every
+// exit path (normal completion, uncaught exception, SIGTERM/SIGINT) so a
+// human or another agent checking hours later can tell the difference
+// between "still running", "finished", and "died" from one file, without
+// needing to have been watching when it happened. `cat` this file — a
+// `status: "running"` with an old `updatedAt` (nothing else updates it) is
+// the signal that it silently died rather than exiting cleanly.
+const STATUS_PATH = path.join(repoRoot, "content", "atlas", "snapshot", ".sweep-status.json");
+
+async function writeStatus(status, extra = {}) {
+  try {
+    await mkdir(path.dirname(STATUS_PATH), { recursive: true });
+    await writeFile(
+      STATUS_PATH,
+      JSON.stringify({ status, updatedAt: new Date().toISOString(), pid: process.pid, ...extra }),
+      "utf-8"
+    );
+  } catch {
+    // Best-effort — never let the status marker itself break the sweep.
+  }
+}
+
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.on(signal, async () => {
+    await writeStatus("stopped", { reason: `received ${signal}` });
+    process.exit(0);
+  });
+}
+process.on("uncaughtException", async (err) => {
+  await writeStatus("crashed", { reason: err instanceof Error ? err.message : String(err) });
+  process.exit(1);
+});
 
 function toResult(settled) {
   if (settled.status === "fulfilled") return settled.value;
@@ -174,10 +209,12 @@ async function processOneCountry(country) {
 
   if (okCount === 0) {
     console.log(`${country.iso3} (${country.name})... FAILED (0/7 sources ok, ${elapsed}s) — will retry on next run`);
+    await writeStatus("running", { lastCountry: country.iso3, lastResult: "failed-0-of-7" });
     return { ok: false };
   }
   await saveCountry(country.iso3, data);
   console.log(`${country.iso3} (${country.name})... ${okCount}/7 sources ok, ${elapsed}s`);
+  await writeStatus("running", { lastCountry: country.iso3, lastResult: `${okCount}/7` });
   return { ok: true };
 }
 
@@ -207,6 +244,65 @@ async function runPool(countries, concurrency) {
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   return failed;
+}
+
+/**
+ * Backfills `wikidata.data.neighbours` (Wikidata P47) into every already-
+ * captured country file that doesn't have it yet — every file written
+ * before 2026-08-03, when neighbours moved from Neighbours.tsx's own live
+ * per-request query into fetchDossierFacts. Patches just that one field via
+ * a single small SPARQL query per country, not a full country re-fetch —
+ * a full re-fetch would waste the World Bank/Comtrade/Wikipedia work that
+ * file already has and is much slower for no reason, since fetchNeighbours
+ * is exported from wikidata.ts specifically to make this possible.
+ *
+ * A file whose wikidata source itself is ok:false (no qid, or the earlier
+ * fetch failed outright) is skipped — there's no capital-derived qid to
+ * query neighbours with, and dossier.ts's getDossier already degrades
+ * `undefined` neighbours to "unavailable" the same way as any other missing
+ * field, so this is a normal, non-blocking skip, not a failure.
+ */
+async function patchNeighbours() {
+  const captured = await loadAlreadyCaptured();
+  let patched = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const iso3 of captured) {
+    const filePath = countryPath(iso3);
+    let data;
+    try {
+      data = JSON.parse(await readFile(filePath, "utf-8"));
+    } catch (err) {
+      console.log(`${iso3}: FAILED to read/parse (${err.message})`);
+      failed++;
+      continue;
+    }
+
+    if (!data.wikidata?.ok) {
+      skipped++;
+      continue;
+    }
+    if (Array.isArray(data.wikidata.data.neighbours)) {
+      skipped++;
+      continue;
+    }
+
+    const country = ISO_COUNTRIES.find((c) => c.iso3 === iso3);
+    if (!country) {
+      skipped++;
+      continue;
+    }
+
+    const result = await fetchNeighbours(country.qid);
+    data.wikidata.data.neighbours = result.ok ? result.data : [];
+    await saveCountry(iso3, data);
+    console.log(`${iso3} (${country.name}): ${result.ok ? result.data.length : 0} neighbour(s)${result.ok ? "" : ` — fetch failed (${result.reason}), recorded as empty, will not retry automatically`}`);
+    patched++;
+    await sleep(1500);
+  }
+
+  console.log(`\nNeighbours patch: ${patched} patched, ${skipped} already had it or had no wikidata, ${failed} failed to read.`);
 }
 
 async function buildCountries({ limit, only, force }) {
@@ -250,6 +346,16 @@ async function main() {
   const force = args.includes("--force");
   const skipRankings = args.includes("--skip-rankings");
   const skipCountries = args.includes("--skip-countries");
+  const patchNeighboursOnly = args.includes("--patch-neighbours");
+
+  await writeStatus("running", { startedAt: new Date().toISOString() });
+
+  if (patchNeighboursOnly) {
+    await patchNeighbours();
+    await writeStatus("done");
+    console.log("\nDone.");
+    return;
+  }
 
   if (!skipCountries) {
     await buildCountries({ limit, only, force });
@@ -258,10 +364,12 @@ async function main() {
     await buildRankings();
   }
 
+  await writeStatus("done");
   console.log("\nDone.");
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
+  await writeStatus("crashed", { reason: err instanceof Error ? err.message : String(err) });
   process.exit(1);
 });

@@ -12,8 +12,9 @@
 //   other OPTIONAL clauses duplicates the whole row (confirmed live against
 //   Tuvalu, which has two circulating currencies).
 // - Every fact carries the query's run time as "asOf", per §3.7.
-import type { Person, SourceResult, UnescoSite, WikidataFacts } from "../types";
+import type { NeighbourCountry, Person, SourceResult, UnescoSite, WikidataFacts } from "../types";
 import { commonsThumbnail, toHttps } from "../format";
+import { ISO_COUNTRIES } from "../iso-countries";
 
 const ENDPOINT = "https://query.wikidata.org/sparql";
 const USER_AGENT =
@@ -131,6 +132,19 @@ function dossierQuery(qid: string): string {
 } LIMIT 1`;
 }
 
+const QID_TO_COUNTRY = new Map(ISO_COUNTRIES.map((c) => [c.qid, c] as const));
+
+/** Wikidata P47 — countries this one shares a land border with. Islands
+ * legitimately return zero rows; that is a normal empty state, not an
+ * error (see NeighbourCountry's doc comment on WikidataFacts). */
+function neighboursQuery(qid: string): string {
+  return `SELECT ?neighbour ?neighbourLabel ?flag WHERE {
+  wd:${qid} wdt:P47 ?neighbour .
+  OPTIONAL { ?neighbour wdt:P41 ?flag . }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+} LIMIT 40`;
+}
+
 function unescoQuery(qid: string): string {
   return `SELECT ?site ?siteLabel ?siteDescription ?image ?coord WHERE {
   ?site wdt:P1435 wd:Q9259 .
@@ -154,6 +168,7 @@ export async function fetchDossierFacts(
     const rows = await sparql(dossierQuery(qid));
     const row = rows[0] ?? {};
     const unesco = await fetchUnescoSites(qid);
+    const neighbours = await fetchNeighbours(qid);
 
     const facts: WikidataFacts = {
       asOf: new Date().toISOString(),
@@ -183,6 +198,7 @@ export async function fetchDossierFacts(
         : null,
       patronSaints: str(row, "patrons")?.split("|").filter(Boolean) ?? [],
       unescoSites: unesco.ok ? unesco.data : [],
+      neighbours: neighbours.ok ? neighbours.data : [],
     };
     return { ok: true, data: facts };
   } catch (err) {
@@ -212,6 +228,45 @@ export async function fetchUnescoSites(
       });
     }
     return { ok: true, data: sites };
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Bordering countries — Wikidata P47. Exported separately from
+ * fetchDossierFacts (not just inlined there) so
+ * scripts/atlas/build-snapshot.mjs can patch just this field into a snapshot
+ * file written before this existed, without re-fetching everything else for
+ * that country — see the script's `--patch-neighbours` flag.
+ *
+ * Fixed 2026-08-03: this used to live entirely inside
+ * app/atlas/_components/Neighbours.tsx as its own standalone live query,
+ * deliberately not going through this file — which meant it never landed in
+ * the committed snapshot and stayed slow (measured 52s cold on Peru) even
+ * after every other panel got fast. Neighbours.tsx now just renders
+ * `dossier.wikidata.data.neighbours`.
+ */
+export async function fetchNeighbours(qid: string): Promise<SourceResult<NeighbourCountry[]>> {
+  try {
+    const rows = await sparql(neighboursQuery(qid));
+    const seen = new Set<string>();
+    const neighbours: NeighbourCountry[] = [];
+    for (const row of rows) {
+      const neighbourQid = str(row, "neighbour")?.split("/").pop() ?? "";
+      const country = QID_TO_COUNTRY.get(neighbourQid);
+      // A neighbour not in our ~250-row ISO table (disputed territories,
+      // historical entities) is skipped rather than linked to a 404.
+      if (!country || seen.has(country.iso3)) continue;
+      seen.add(country.iso3);
+      neighbours.push({
+        iso3: country.iso3,
+        name: str(row, "neighbourLabel") ?? country.name,
+        flagImageUrl: commonsThumbnail(toHttps(str(row, "flag")), 64),
+      });
+    }
+    neighbours.sort((a, b) => a.name.localeCompare(b.name));
+    return { ok: true, data: neighbours };
   } catch (err) {
     return { ok: false, reason: err instanceof Error ? err.message : String(err) };
   }
