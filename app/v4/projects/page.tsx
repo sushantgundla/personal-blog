@@ -55,7 +55,7 @@ export default function V4Projects() {
               const isArticleLink = project.link?.startsWith('/articles')
               const isExternal = !!project.link && !project.link.startsWith('/')
               const href = project.link
-                ? project.link.startsWith('/')
+                ? project.link.startsWith('/') && !project.link.startsWith('/atlas')
                   ? `/v4${project.link}`
                   : project.link
                 : undefined
