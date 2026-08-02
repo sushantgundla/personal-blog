@@ -5,120 +5,86 @@ import styles from './compare.module.css'
 
 export interface CompareNoteProps {
   indicator: IndicatorDef
-  nameA: string
-  nameB: string
-  a: IndicatorValue
-  b: IndicatorValue
+  /** One value per country, same order as the ledger's header row. */
+  values: readonly IndicatorValue[]
+  /** Same order as `values` — used only for a screen-reader label per
+   * cell, since the visible country names live once in the header row. */
+  names: readonly string[]
+  /** The shared `grid-template-columns` string — see CompareSheet's
+   * `ledgerColumns`. Applied to every row so the whole sheet lines up as
+   * one continuous ledger even though each row is its own grid. */
+  columns: string
   cascadeIndex?: number
 }
 
-type Side = 'a' | 'b' | null
-
 /**
- * Which side is "better" per indicator.higherIsBetter — never the same
- * question as which side is bigger. Returns null (no winner) whenever
- * either value is missing, the indicator is genuinely neutral, or the
- * two values tie. A missing value can never win by default.
+ * Which column, if any, honestly wins this row. Never the same question as
+ * "which number is biggest":
+ *  - `indicator.higherIsBetter === null` (population, land area, ...): there
+ *    is no "better", so no winner, ever, no matter how the numbers compare.
+ *  - a missing value can never win, and is never treated as zero.
+ *  - a genuine tie among the remaining values also has no winner — awarding
+ *    one side arbitrarily would be a claim the data doesn't support.
+ *  - fewer than two countries actually have a value: one lone number
+ *    "wins" against nothing.
  */
-function winner(indicator: IndicatorDef, a: IndicatorValue, b: IndicatorValue): Side {
+function winnerIndex(indicator: IndicatorDef, values: readonly IndicatorValue[]): number | null {
   if (indicator.higherIsBetter === null) return null
-  if (a.value === null || b.value === null) return null
-  if (a.value === b.value) return null
-  const aHigher = a.value > b.value
-  if (indicator.higherIsBetter) return aHigher ? 'a' : 'b'
-  return aHigher ? 'b' : 'a'
+
+  const present = values
+    .map((v, i) => (v.value === null ? null : { i, value: v.value }))
+    .filter((x): x is { i: number; value: number } => x !== null)
+  if (present.length < 2) return null
+
+  const extreme = indicator.higherIsBetter
+    ? Math.max(...present.map((p) => p.value))
+    : Math.min(...present.map((p) => p.value))
+  const winners = present.filter((p) => p.value === extreme)
+  return winners.length === 1 ? winners[0].i : null
 }
 
 /**
- * The bar's lean is a separate question from `winner`: it always shows
- * which raw number is numerically larger, regardless of direction. Colour
- * (ember for the winner, thread for the loser, both dim when neutral) is
- * layered on afterward — see the render below. Ties or missing data lean
- * nowhere, matching the "neither wins" rule for a value the bar itself
- * cannot honestly award.
+ * One indicator, one ledger row, one cell per country (2-5) — the compare
+ * screen's equivalent of DenominationNote. Replaces the old two-column
+ * "note" card and its split security thread: a two-sided lean bar doesn't
+ * generalise past two countries, so the honest-winner rule now speaks
+ * entirely through colour — ember (`atlas-remarkable` + `.ledgerWinnerValue`)
+ * on the winning cell, muted everywhere else, "no data" (never zero) for a
+ * value that genuinely doesn't exist for that country.
  */
-function lean(a: IndicatorValue, b: IndicatorValue): Side {
-  if (a.value === null || b.value === null) return null
-  if (a.value === b.value) return null
-  return a.value > b.value ? 'a' : 'b'
-}
-
-/** 0-100 magnitude of the lean, using absolute values so a negative
- * balance still measures sensibly against a positive one. */
-function leanMagnitude(a: IndicatorValue, b: IndicatorValue): number {
-  if (a.value === null || b.value === null) return 0
-  const av = Math.abs(a.value)
-  const bv = Math.abs(b.value)
-  const total = av + bv
-  if (total === 0) return 0
-  return (Math.abs(av - bv) / total) * 100
-}
-
-function valueClass(side: 'a' | 'b', win: Side): string {
-  if (win === null) return ''
-  return win === side ? 'atlas-remarkable' : styles.noteValueLoser
-}
-
-/**
- * One indicator, two countries: the compare-screen equivalent of
- * DenominationNote (spec §4.3). Renders the value that exists for each
- * side and marks a genuinely missing one "no data" — never zero, and
- * never a winner.
- */
-export function CompareNote({ indicator, nameA, nameB, a, b, cascadeIndex }: CompareNoteProps) {
-  const win = winner(indicator, a, b)
-  const leanSide = lean(a, b)
-  const magnitude = leanMagnitude(a, b)
-
-  const style: CSSProperties | undefined =
-    cascadeIndex !== undefined ? { ['--atlas-cascade-i' as string]: cascadeIndex } : undefined
-
-  const leanColor =
-    win === null ? 'var(--note-intaglio-dim)' : leanSide === win ? 'var(--note-ember)' : 'var(--note-thread)'
+export function CompareNote({ indicator, values, names, columns, cascadeIndex }: CompareNoteProps) {
+  const win = winnerIndex(indicator, values)
+  const style: CSSProperties & Record<string, string | number> = { gridTemplateColumns: columns }
+  if (cascadeIndex !== undefined) style['--atlas-cascade-i'] = cascadeIndex
 
   return (
-    <article className={`atlas-note atlas-perforated ${styles.compareNote}`} style={style}>
-      <div className={styles.compareTop}>
+    <div className={styles.ledgerRow} style={style}>
+      <div className={styles.ledgerRowLabel}>
         <span className="atlas-label">{indicator.label}</span>
         <span className="atlas-serial">{indicator.unit}</span>
       </div>
 
-      <div className={styles.compareValues}>
-        <div className={styles.compareSide}>
-          <span className="atlas-serial">{nameA}</span>
-          <span className={`atlas-denomination ${styles.compareValue} ${valueClass('a', win)}`}>
-            {a.value === null ? 'no data' : formatValue(a.value, indicator.format)}
-          </span>
-          {a.year && <span className="atlas-serial">{formatYear(Number(a.year))}</span>}
-        </div>
+      {values.map((v, i) => {
+        const isWinner = win === i
+        const valueClass = [
+          'atlas-denomination',
+          styles.ledgerValue,
+          isWinner ? `atlas-remarkable ${styles.ledgerWinnerValue}` : '',
+          v.value === null ? styles.ledgerNoData : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
 
-        <div className={styles.compareSide} style={{ textAlign: 'right' }}>
-          <span className="atlas-serial">{nameB}</span>
-          <span className={`atlas-denomination ${styles.compareValue} ${valueClass('b', win)}`}>
-            {b.value === null ? 'no data' : formatValue(b.value, indicator.format)}
-          </span>
-          {b.year && <span className="atlas-serial">{formatYear(Number(b.year))}</span>}
-        </div>
-      </div>
-
-      {/* Split security thread — centre is a tie, the bar leans toward
-          whichever raw value is numerically larger. Coloured by winner()
-          above, not by lean(), so the two questions never get conflated. */}
-      <div className={styles.splitTrack} aria-hidden="true">
-        <span className={styles.splitCenter} />
-        {leanSide === 'a' && (
-          <span
-            className={styles.splitFillLeft}
-            style={{ width: `${magnitude / 2}%`, background: leanColor }}
-          />
-        )}
-        {leanSide === 'b' && (
-          <span
-            className={styles.splitFillRight}
-            style={{ width: `${magnitude / 2}%`, background: leanColor }}
-          />
-        )}
-      </div>
-    </article>
+        return (
+          <div key={indicator.code + i} className={styles.ledgerCell}>
+            <span className="sr-only">{names[i]}: </span>
+            <span className={valueClass}>
+              {v.value === null ? 'no data' : formatValue(v.value, indicator.format)}
+            </span>
+            {v.year && <span className="atlas-serial">{formatYear(Number(v.year))}</span>}
+          </div>
+        )
+      })}
+    </div>
   )
 }

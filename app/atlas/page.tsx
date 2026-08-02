@@ -64,7 +64,15 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
 
   // A dead World Bank call for one dial indicator drops that chip rather
   // than the page — never Promise.all here (see spec §7).
-  const dialIndicators = DIAL_CODES.filter((code) => code !== DEFAULT_METRIC && rankings[code]).map(
+  //
+  // Fixed 2026-08-03: this used to filter out DEFAULT_METRIC (population),
+  // on the theory that it's already the rail's resting sort order so it
+  // didn't need its own chip too. In practice that meant population could
+  // never be painted onto the map at all — there was no chip for it — which
+  // is exactly the "population colouring doesn't work" the owner reported.
+  // Population gets a chip like every other indicator; it just also happens
+  // to be the default rail order and cartouche line.
+  const dialIndicators = DIAL_CODES.filter((code) => rankings[code]).map(
     (code) => INDICATORS_BY_CODE[code]
   )
 
@@ -81,7 +89,7 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
         </p>
         <nav className={styles.introLinks} aria-label="More ways into The Atlas">
           <Link href="/atlas/compare" className={styles.introLink}>
-            Compare two countries →
+            Compare countries →
           </Link>
           <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
             Full rankings →

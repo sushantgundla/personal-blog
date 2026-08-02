@@ -12,6 +12,7 @@ import { NoteSheet } from '../_components/NoteSheet'
 import { TradeArcs } from '../_components/TradeArcs'
 import { TradeBond } from '../_components/TradeBond'
 import { UvLamp } from '../_components/UvLamp'
+import { RefreshButton } from '../_components/RefreshButton'
 import { Sources } from '../_components/Sources'
 import { DossierExtras } from '../_components/DossierExtras'
 import styles from '../_components/dossier.module.css'
@@ -97,6 +98,7 @@ export default async function CountryDossierPage({
         <Link href="/atlas" className={styles.backLink}>
           ← Back to the plate
         </Link>
+        <RefreshButton iso3={country.iso3} capturedAt={dossier.capturedAt} />
         <UvLamp />
       </div>
 

@@ -56,6 +56,25 @@
   background: var(--note-void);
   color: var(--note-intaglio);
   min-height: 100vh;
+
+  /* The top bar's real rendered height — one source of truth shared by
+     .atlas-top-bar below and by /atlas's own page shell
+     (app/atlas/_components/plate.module.css's .page), which pins itself to
+     exactly "the viewport below the header" via `position: fixed` rather
+     than by relying on this element's height/overflow. Kept here, not
+     hand-duplicated in two places, so the two never drift apart. Only
+     /atlas (the landing page) opts into a fixed, non-scrolling shell —
+     every other /atlas/* route (a dossier, compare, rankings) keeps
+     scrolling the ordinary way through this shared layout, untouched. */
+  --atlas-header-h: 61px;
+}
+
+/* app/atlas/layout.tsx's top bar. A `min-height` (not `height`) so it can
+   still grow if its content ever wraps — .page's fixed positioning below
+   assumes it doesn't, in normal use. */
+.atlas-top-bar {
+  flex: none;
+  min-height: var(--atlas-header-h);
 }
 
 /* UV lamp — one class on the root swaps the palette into UV mode. Paper

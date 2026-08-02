@@ -52,7 +52,6 @@ export function LandmarkStrip({ sites, countryName }: LandmarkStripProps) {
           return (
             <figure key={site.qid} className={styles.landmarkCard}>
               <div className={styles.landmarkImageWrap}>
-                {/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */}
                 <Image src={toHttps(site.imageUrl!)} alt="" fill sizes="220px" className={styles.landmarkImg} />
               </div>
               <figcaption className={styles.landmarkCaption}>

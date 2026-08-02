@@ -545,6 +545,70 @@
   background: var(--note-paper-hi);
 }
 
+/* ---------------------------------------------------------- refresh button */
+
+.refreshRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.refreshAsOf {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+}
+
+.refreshButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--note-rule);
+  background: var(--note-paper);
+  color: var(--note-intaglio-dim);
+  cursor: pointer;
+  transition: border-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease),
+    background-color 0.2s var(--atlas-ease);
+}
+
+.refreshButton:hover:not(:disabled),
+.refreshButton:focus-visible:not(:disabled) {
+  color: var(--note-intaglio);
+  border-color: var(--note-ink);
+}
+
+.refreshButton:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.refreshLog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+}
+
+.refreshOk {
+  color: var(--note-thread);
+}
+
+.refreshFail {
+  color: var(--note-ember);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+}
+
 /* ---------------------------------------------------------- not found */
 
 .notFound {

@@ -14,10 +14,28 @@
 // comment). Every indicator's ranking is now built from one shared batched
 // fetch (~10 requests for all ~150 codes), computed once per process/ISR
 // window and reused by getRanking, getCountryRank and attachRankings alike.
+//
+// Fixed 2026-08-03: even that one shared batched fetch was still a live
+// World Bank call on a visitor's first request, and the World Bank throttles
+// hard enough that a cold page could take 30-95s. content/atlas/snapshot/rankings.json
+// (written by scripts/atlas/build-snapshot.mjs) is now read first — a plain
+// file read, no network — with the live batched fetch (computeAllRankings)
+// kept as the rare fallback for a process that starts before any snapshot
+// exists. See lib/atlas/dossier.ts for the same pattern applied per-country.
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { BY_ISO3 } from "./iso-countries";
 import { ALL_INDICATOR_CODES, INDICATORS_BY_CODE } from "./indicators";
 import { fetchIndicatorsAllCountries } from "./sources/worldbank";
 import type { IndicatorValue, Ranking, RankingRow, SourceResult } from "./types";
+
+const SNAPSHOT_PATH = path.join(
+  process.cwd(),
+  "content",
+  "atlas",
+  "snapshot",
+  "rankings.json"
+);
 
 type CountryValueRow = { iso3: string; name: string; value: number | null; year: string | null };
 
@@ -31,7 +49,15 @@ type CountryValueRow = { iso3: string; name: string; value: number | null; year:
  */
 const MIN_RANKABLE_COUNTRIES = 30;
 
-function buildRanking(
+/**
+ * Exported so scripts/atlas/build-snapshot.mjs can build the exact same
+ * Ranking shape this module would compute live, from the batched
+ * `fetchIndicatorsAllCountries` response — one implementation, reused by
+ * both the snapshot-build script and the (rare) live fallback below. Node
+ * imports this .ts file directly (native TypeScript type-stripping), so
+ * there is no separate plain-JS copy of this logic to keep in sync.
+ */
+export function buildRanking(
   code: string,
   rows: readonly CountryValueRow[],
   lastUpdated: string | null
@@ -123,7 +149,15 @@ function buildRanking(
  */
 let allRankingsPromise: Promise<Map<string, SourceResult<Ranking>>> | null = null;
 
-async function loadAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
+/**
+ * The live path: one shared batched `fetchIndicatorsAllCountries` call
+ * against the World Bank, computed into a Ranking per indicator. This is
+ * what scripts/atlas/build-snapshot.mjs calls to produce
+ * content/atlas/snapshot/rankings.json, and what getAllRankings falls back
+ * to below if that snapshot doesn't exist yet (e.g. a fresh checkout before
+ * the first snapshot build has ever run).
+ */
+export async function computeAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
   const batch = await fetchIndicatorsAllCountries(ALL_INDICATOR_CODES);
   const out = new Map<string, SourceResult<Ranking>>();
 
@@ -142,6 +176,39 @@ async function loadAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
   }
 
   return out;
+}
+
+/** The JSON shape written to content/atlas/snapshot/rankings.json. */
+interface RankingsSnapshotFile {
+  capturedAt: string;
+  rankings: Record<string, SourceResult<Ranking>>;
+}
+
+let cachedSnapshotCapturedAt: string | null = null;
+
+/** The `capturedAt` timestamp from the last snapshot read, for "data as of" display. */
+export function getRankingsSnapshotCapturedAt(): string | null {
+  return cachedSnapshotCapturedAt;
+}
+
+async function readRankingsSnapshot(): Promise<Map<string, SourceResult<Ranking>> | null> {
+  try {
+    const raw = await readFile(SNAPSHOT_PATH, "utf-8");
+    const parsed = JSON.parse(raw) as RankingsSnapshotFile;
+    cachedSnapshotCapturedAt = parsed.capturedAt ?? null;
+    return new Map(Object.entries(parsed.rankings));
+  } catch {
+    return null;
+  }
+}
+
+async function loadAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
+  const snapshot = await readRankingsSnapshot();
+  if (snapshot) return snapshot;
+  // Rare fallback: no committed snapshot yet (fresh checkout, or
+  // scripts/atlas/build-snapshot.mjs hasn't been run). This is the one path
+  // that still makes a live, throttle-prone World Bank call.
+  return computeAllRankings();
 }
 
 function getAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {

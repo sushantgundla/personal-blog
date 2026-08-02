@@ -205,4 +205,13 @@ export interface CountryDossier {
   /** From content/atlas/famous-people.json (build-time SPARQL, too slow to run per-request). Empty ok:true when the file has no entry yet. */
   famousPeople: SourceResult<Person[]>;
   overrides: CountryOverrides;
+  /**
+   * When this data was captured, ISO 8601. Always a real timestamp — either
+   * read from content/atlas/snapshot/countries/{iso3}.json (written by
+   * scripts/atlas/build-snapshot.mjs, or last updated by the refresh
+   * button), or, for the rare country missing from the snapshot, the moment
+   * of the live fallback fetch in lib/atlas/dossier.ts. Render this as
+   * "data as of {date}" so the snapshot's age is never hidden.
+   */
+  capturedAt: string;
 }
