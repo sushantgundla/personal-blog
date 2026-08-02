@@ -49,6 +49,19 @@ function str(row: Record<string, { value: string }>, key: string): string | null
   return row[key]?.value ?? null;
 }
 
+/**
+ * Wikidata's `Special:FilePath` values (flags, emblems, portraits, anthem
+ * audio) come back as `http://commons.wikimedia.org/...` routinely, not
+ * `https://` — confirmed live: this broke `next/image` outright, since
+ * `next.config.js` only allows `https://` in `images.remotePatterns` and
+ * next/image throws rather than degrading on an `http://` src. Applied to
+ * every URL field this module returns, not patched on one call site.
+ */
+function toHttps(url: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith("http://") ? `https://${url.slice(7)}` : url;
+}
+
 function num(row: Record<string, { value: string }>, key: string): number | null {
   const v = row[key]?.value;
   if (v === undefined) return null;
@@ -129,9 +142,9 @@ export async function fetchDossierFacts(
       asOf: new Date().toISOString(),
       motto: str(row, "mottoLabel"),
       anthemName: str(row, "anthemLabel"),
-      anthemAudioUrl: str(row, "anthemAudio"),
-      flagImageUrl: str(row, "flag"),
-      emblemImageUrl: str(row, "emblem"),
+      anthemAudioUrl: toHttps(str(row, "anthemAudio")),
+      flagImageUrl: toHttps(str(row, "flag")),
+      emblemImageUrl: toHttps(str(row, "emblem")),
       capital: str(row, "capitalLabel"),
       capitalCoordinates: parsePoint(str(row, "capCoord")),
       independenceDate: str(row, "inception"),
@@ -160,13 +173,22 @@ export async function fetchUnescoSites(
 ): Promise<SourceResult<UnescoSite[]>> {
   try {
     const rows = await sparql(unescoQuery(qid));
-    const sites: UnescoSite[] = rows.map((row) => ({
-      qid: str(row, "site")?.split("/").pop() ?? "",
-      name: str(row, "siteLabel") ?? "Unnamed site",
-      description: str(row, "siteDescription"),
-      imageUrl: str(row, "image"),
-      coordinates: parsePoint(str(row, "coord")),
-    }));
+    // A site with more than one P18 image produces one row per image —
+    // confirmed live on Poland (Q9395907 twice). Keep the first per qid.
+    const seen = new Set<string>();
+    const sites: UnescoSite[] = [];
+    for (const row of rows) {
+      const siteQid = str(row, "site")?.split("/").pop() ?? "";
+      if (seen.has(siteQid)) continue;
+      seen.add(siteQid);
+      sites.push({
+        qid: siteQid,
+        name: str(row, "siteLabel") ?? "Unnamed site",
+        description: str(row, "siteDescription"),
+        imageUrl: toHttps(str(row, "image")),
+        coordinates: parsePoint(str(row, "coord")),
+      });
+    }
     return { ok: true, data: sites };
   } catch (err) {
     return { ok: false, reason: err instanceof Error ? err.message : String(err) };

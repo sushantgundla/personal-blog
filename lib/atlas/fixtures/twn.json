@@ -1,0 +1,99 @@
+{
+  "iso3": "TWN",
+  "iso2": "TW",
+  "name": "Taiwan",
+  "worldBank": {
+    "ok": true,
+    "data": {
+      "indicators": [],
+      "lastUpdated": null
+    }
+  },
+  "timeSeries": {
+    "ok": true,
+    "data": []
+  },
+  "wikidata": {
+    "ok": true,
+    "data": {
+      "asOf": "2026-08-02T13:33:21.864Z",
+      "motto": null,
+      "anthemName": "National Anthem of the Republic of China",
+      "anthemAudioUrl": "http://commons.wikimedia.org/wiki/Special:FilePath/National%20anthem%20of%20the%20Republic%20of%20China%20%28Taiwan%29%20%E4%B8%AD%E8%8F%AF%E6%B0%91%E5%9C%8B%E5%9C%8B%E6%AD%8C%28%E6%BC%94%E5%A5%8F%E7%89%88%29.ogg",
+      "flagImageUrl": "http://commons.wikimedia.org/wiki/Special:FilePath/Flag%20of%20the%20Republic%20of%20China.svg",
+      "emblemImageUrl": "http://commons.wikimedia.org/wiki/Special:FilePath/National%20Emblem%20of%20the%20Republic%20of%20China.svg",
+      "capital": "Taipei",
+      "capitalCoordinates": {
+        "lng": 121.5625,
+        "lat": 25.0375
+      },
+      "independenceDate": "1912-01-01T00:00:00Z",
+      "officialLanguages": [
+        "Taiwanese Hokkien",
+        "Rukai",
+        "Bunun",
+        "Kanakanavu",
+        "Standard Taiwanese Mandarin",
+        "Yami",
+        "Atayal",
+        "Saaroa",
+        "Paiwan",
+        "Taiwanese Sign Language",
+        "Amis",
+        "Kavalan",
+        "Tsou",
+        "Matsu dialect",
+        "Kinmen dialect",
+        "Wuqiu dialect",
+        "Sakizaya",
+        "Taiwanese Hakka",
+        "Truku",
+        "Seediq",
+        "Puyuma",
+        "Saisiyat"
+      ],
+      "currencyName": "New Taiwan dollar",
+      "currencyCode": "TWD",
+      "drivingSide": "right",
+      "callingCode": "+886",
+      "highestPoint": {
+        "name": "Yushan Main Peak",
+        "elevationM": 3952
+      },
+      "lowestPoint": null,
+      "unescoSites": []
+    }
+  },
+  "wikipedia": {
+    "ok": true,
+    "data": {
+      "title": "Taiwan",
+      "extract": "Taiwan, officially the Republic of China (ROC), is a country in East Asia. The main island of Taiwan, also known as Formosa, lies between the East and South China Seas in the northwestern Pacific Ocean, with the People's Republic of China (PRC) to the northwest, Japan to the northeast, and the Philippines to the south. It has an area of 35,808 square kilometers, with mountain ranges dominating the eastern two-thirds and plains in the western third, where its highly urbanized population is concentrated. The combined territories under ROC control consist of 168 islands in total covering 36,193 square kilometers. The largest metropolitan area is formed by Taipei, New Taipei City, and Keelung. With around 23.9 million inhabitants, Taiwan is among the most densely populated countries.",
+      "description": "Country in East Asia",
+      "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Flag_of_the_Republic_of_China.svg/330px-Flag_of_the_Republic_of_China.svg.png",
+      "canonicalUrl": "https://en.wikipedia.org/wiki/Taiwan",
+      "revisionTimestamp": "2026-07-26T15:54:51Z"
+    }
+  },
+  "trade": {
+    "ok": false,
+    "reason": "Comtrade HTTP 429 for reporter 158 flow X"
+  },
+  "weather": {
+    "ok": true,
+    "data": {
+      "temperatureC": 28.5,
+      "windKph": 3.3,
+      "observedAt": "2026-08-02T13:30"
+    }
+  },
+  "fx": {
+    "ok": false,
+    "reason": "TWD not covered by Frankfurter"
+  },
+  "famousPeople": {
+    "ok": true,
+    "data": []
+  },
+  "overrides": {}
+}

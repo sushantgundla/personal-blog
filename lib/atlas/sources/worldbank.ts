@@ -10,15 +10,68 @@
 //   truncates.
 // - Use `res.json()`, never `JSON.parse(await res.text())` — the response
 //   carries a UTF-8 BOM that breaks manual parsing.
-// - Retry 3x with exponential backoff, treating HTTP 400 as retryable. The
-//   API throws random 400s under throttling even on valid URLs.
+// - Retry with exponential backoff + jitter, treating HTTP 400 as retryable.
+//   The API throws random 400s under throttling even on valid URLs.
 // - Filter `region.value !== "Aggregates"` — 78 of 295 "countries" are
 //   aggregates like "World" and "Euro area".
+//
+// Fixed 2026-08-02: a cold dossier used to fire ~150 separate requests (one
+// `country/all/indicator/{code}` per indicator, from rankings.ts) and the
+// World Bank throttled roughly 2 of every 3 of them. Two changes fix that:
+// `fetchIndicatorsAllCountries` below batches many indicator codes into one
+// `country/all` call the same way `country/{iso3}` already batched them, and
+// every request in this file now goes through a small semaphore so at most
+// `MAX_CONCURRENT` are ever in flight at once, however many batches a caller
+// fires at the same time.
 import type { IndicatorValue, SourceResult, TimeSeries } from "../types";
 
 const BASE = "https://api.worldbank.org/v2";
 const BATCH_SIZE = 25;
 const REVALIDATE_WEEK = 604800;
+const MAX_CONCURRENT = 4;
+
+/**
+ * Smaller batch just for `fetchIndicatorsAllCountries`: 25 indicators x
+ * ~295 countries at `mrv=1` runs ~2.1-2.2MB of JSON — over Next's 2MB
+ * fetch-cache write limit, so those responses were silently uncached (still
+ * returned correctly, just refetched from the World Bank every time instead
+ * of served from Next's data cache). 15 indicators keeps every batch safely
+ * under 2MB. Confirmed live 2026-08-02.
+ */
+const RANKING_BATCH_SIZE = 15;
+
+/**
+ * Caps how many World Bank requests are in flight at once, across every
+ * function in this file and every caller — so firing 6 ranking batches or a
+ * 6-batch dossier fetch never turns into 6+ simultaneous connections that
+ * the API throttles.
+ */
+class Semaphore {
+  private free: number;
+  private queue: Array<() => void> = [];
+
+  constructor(concurrency: number) {
+    this.free = concurrency;
+  }
+
+  async acquire(): Promise<() => void> {
+    if (this.free > 0) {
+      this.free--;
+      return () => this.release();
+    }
+    await new Promise<void>((resolve) => this.queue.push(resolve));
+    this.free--;
+    return () => this.release();
+  }
+
+  private release(): void {
+    this.free++;
+    const next = this.queue.shift();
+    if (next) next();
+  }
+}
+
+const requestGate = new Semaphore(MAX_CONCURRENT);
 
 interface WorldBankMeta {
   page: number;
@@ -64,14 +117,20 @@ function sleep(ms: number): Promise<void> {
  * Fetch a World Bank URL, retrying on network errors, non-2xx and even a
  * 400 — the API returns spurious 400s on perfectly valid URLs when it is
  * throttling, so a 400 is not treated as a permanent "bad request" here.
+ *
+ * Every attempt first waits its turn at `requestGate` so this file never has
+ * more than `MAX_CONCURRENT` requests in flight, no matter how many batches
+ * a caller (rankings.ts fetching ~150 indicators, dossier.ts fetching one
+ * country) fires at once.
  */
 async function fetchWorldBank(
   url: string,
   revalidate: number,
-  attempts = 3
+  attempts = 5
 ): Promise<WorldBankResponse> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt++) {
+    const release = await requestGate.acquire();
     try {
       const res = await fetch(url, { next: { revalidate } });
       if (!res.ok) {
@@ -89,12 +148,19 @@ async function fetchWorldBank(
       }
     } catch (err) {
       lastError = err;
+    } finally {
+      // Release before the backoff sleep, not after — a slot sitting idle
+      // during our own backoff is a slot another batch could be using.
+      release();
     }
     if (attempt < attempts - 1) {
       // Confirmed live 2026-08-02: sub-second backoff was not enough during
       // a throttled window — mrnev=1 calls kept 400ing for 10+ seconds
-      // straight before succeeding. Start the backoff at 2s.
-      await sleep(2000 * 2 ** attempt + Math.random() * 500);
+      // straight before succeeding. Start at 3s, double each time, cap at
+      // 30s, and add up to 1.5s of jitter so retries from parallel batches
+      // don't all land on the same instant.
+      const backoff = Math.min(3000 * 2 ** attempt, 30000);
+      await sleep(backoff + Math.random() * 1500);
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
@@ -103,6 +169,27 @@ async function fetchWorldBank(
 function rowsFromResponse(resp: WorldBankResponse): WorldBankRow[] {
   const [, rows] = resp;
   return rows ?? [];
+}
+
+/**
+ * Run several batch fetches with allSettled, not all: one bad/throttled
+ * batch of 25 indicators must not blank out the other ~125 that succeeded.
+ * A dropped batch just means those indicators show "no data" for this
+ * country, which is the correct degrade — never throwing the whole call.
+ */
+async function fetchBatchesSettled(
+  urls: readonly string[]
+): Promise<WorldBankResponse[]> {
+  const settled = await Promise.allSettled(
+    urls.map((url) => fetchWorldBank(url, REVALIDATE_WEEK))
+  );
+  const results: WorldBankResponse[] = [];
+  for (const s of settled) {
+    if (s.status === "fulfilled") results.push(s.value);
+    // A rejected batch is silently dropped — its indicators just have no
+    // data for this call rather than failing every other batch's data too.
+  }
+  return results;
 }
 
 function metaFromResponse(resp: WorldBankResponse): WorldBankMeta {
@@ -116,14 +203,15 @@ export async function fetchLatestIndicators(
 ): Promise<SourceResult<{ indicators: IndicatorValue[]; lastUpdated: string | null }>> {
   try {
     const batches = chunk(codes, BATCH_SIZE);
-    const results = await Promise.all(
-      batches.map((batch) => {
-        const url =
-          `${BASE}/country/${encodeURIComponent(iso3)}/indicator/${batch.join(";")}` +
-          `?source=2&format=json&mrnev=1&per_page=200`;
-        return fetchWorldBank(url, REVALIDATE_WEEK);
-      })
+    const urls = batches.map(
+      (batch) =>
+        `${BASE}/country/${encodeURIComponent(iso3)}/indicator/${batch.join(";")}` +
+        `?source=2&format=json&mrnev=1&per_page=200`
     );
+    const results = await fetchBatchesSettled(urls);
+    if (results.length === 0 && urls.length > 0) {
+      return { ok: false, reason: `All ${urls.length} World Bank batch(es) failed for ${iso3}` };
+    }
 
     const indicators: IndicatorValue[] = [];
     let lastUpdated: string | null = null;
@@ -158,14 +246,15 @@ export async function fetchTimeSeries(
 ): Promise<SourceResult<TimeSeries[]>> {
   try {
     const batches = chunk(codes, BATCH_SIZE);
-    const results = await Promise.all(
-      batches.map((batch) => {
-        const url =
-          `${BASE}/country/${encodeURIComponent(iso3)}/indicator/${batch.join(";")}` +
-          `?source=2&format=json&date=${from}:${to}&per_page=1000`;
-        return fetchWorldBank(url, REVALIDATE_WEEK);
-      })
+    const urls = batches.map(
+      (batch) =>
+        `${BASE}/country/${encodeURIComponent(iso3)}/indicator/${batch.join(";")}` +
+        `?source=2&format=json&date=${from}:${to}&per_page=1000`
     );
+    const results = await fetchBatchesSettled(urls);
+    if (results.length === 0 && urls.length > 0) {
+      return { ok: false, reason: `All ${urls.length} World Bank batch(es) failed for ${iso3}` };
+    }
 
     const byCode = new Map<string, TimeSeries>();
     for (const resp of results) {
@@ -218,6 +307,67 @@ export async function fetchAllCountries(
         year: row.date ?? null,
       }));
     return { ok: true, data: { rows, lastUpdated: meta.lastupdated ?? null } };
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Fetch `mrv=1` rows for many indicators, every country, in one batched call
+ * per `RANKING_BATCH_SIZE` codes — the `country/all` equivalent of what
+ * `fetchLatestIndicators` already does for a single country. This is what
+ * lets rankings.ts fetch all ~150 indicators' rankings in ~10 requests
+ * instead of ~150 one-indicator-at-a-time `fetchAllCountries` calls.
+ *
+ * Batches run through `fetchBatchesSettled`, so one throttled batch of 15
+ * indicators just means those codes come back with no ranking data — never
+ * a thrown error for the other ~135.
+ */
+export async function fetchIndicatorsAllCountries(
+  codes: readonly string[]
+): Promise<
+  SourceResult<
+    Map<
+      string,
+      { rows: { iso3: string; name: string; value: number | null; year: string | null }[]; lastUpdated: string | null }
+    >
+  >
+> {
+  try {
+    const batches = chunk(codes, RANKING_BATCH_SIZE);
+    const urls = batches.map(
+      (batch) =>
+        `${BASE}/country/all/indicator/${batch.map(encodeURIComponent).join(";")}` +
+        `?source=2&format=json&mrv=1&per_page=20000`
+    );
+    const results = await fetchBatchesSettled(urls);
+    if (results.length === 0 && urls.length > 0) {
+      return { ok: false, reason: `All ${urls.length} World Bank ranking batch(es) failed` };
+    }
+
+    const byCode = new Map<
+      string,
+      { rows: { iso3: string; name: string; value: number | null; year: string | null }[]; lastUpdated: string | null }
+    >();
+    for (const code of codes) byCode.set(code, { rows: [], lastUpdated: null });
+
+    for (const resp of results) {
+      const meta = metaFromResponse(resp);
+      for (const row of rowsFromResponse(resp)) {
+        if ((row.country as { value: string }).value === "Aggregates") continue;
+        const entry = byCode.get(row.indicator.id);
+        if (!entry) continue; // a code the World Bank doesn't recognise for this batch
+        entry.rows.push({
+          iso3: row.countryiso3code,
+          name: row.country.value,
+          value: row.value,
+          year: row.date ?? null,
+        });
+        if (!entry.lastUpdated && meta.lastupdated) entry.lastUpdated = meta.lastupdated;
+      }
+    }
+
+    return { ok: true, data: byCode };
   } catch (err) {
     return { ok: false, reason: err instanceof Error ? err.message : String(err) };
   }
