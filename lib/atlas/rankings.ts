@@ -12,7 +12,9 @@
 // indicator — ~150 separate `country/all` requests for one dossier, which
 // the World Bank throttled hard (see fetchIndicatorsAllCountries's doc
 // comment). Every indicator's ranking is now built from one shared batched
-// fetch (~10 requests for all ~150 codes), computed once per process/ISR
+// fetch (~50 requests for all ~150 codes — see worldbank.ts's
+// RANKING_BATCH_SIZE doc comment for why that batch is small), computed once
+// per process/ISR
 // window and reused by getRanking, getCountryRank and attachRankings alike.
 //
 // Fixed 2026-08-03: even that one shared batched fetch was still a live
