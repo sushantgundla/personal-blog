@@ -45,9 +45,19 @@
 .faceNote {
   position: relative;
   overflow: hidden;
-  padding: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(1.5rem, 4cqw, 3rem);
   aspect-ratio: 5 / 2;
   display: flex;
+  /* Everything below sized in vw used to mean "the country name is 11% of
+     the viewport" even when the note itself was only half that wide (the
+     two-country compare screen) — the name (and the rosette, the flag
+     seal, the portrait) rendered for a full-width note regardless of how
+     wide this particular one actually was, and clipped whatever didn't
+     fit. `cqw` below measures against this container's own width instead,
+     so the same clamp() shrinks correctly when the note is narrower. On
+     the full-width dossier this box's width already tracks the viewport,
+     so nothing here changes there. */
+  container-type: inline-size;
 }
 
 @media (max-width: 640px) {
@@ -55,6 +65,16 @@
     aspect-ratio: auto;
     min-height: 24rem;
   }
+}
+
+/* Two-country compare only (FaceNote's `compact` prop) — never applied on
+   the full-width dossier. A fixed 5:2 aspect ratio has no spare height for
+   a long name ("Democratic Republic of the Congo") wrapping onto two or
+   three lines, so this trades the fixed ratio for organic height: the note
+   grows to fit whatever the name actually needs instead of clipping it. */
+.faceNoteCompact {
+  aspect-ratio: auto;
+  min-height: 18rem;
 }
 
 .faceNoteInner {
@@ -86,7 +106,7 @@
      row's own right edge reaches exactly where the seal sits. Confirmed
      live: a country with a long region name ("Insular Oceania") rendered
      partly hidden behind the flag ring without this. */
-  padding-right: clamp(3.25rem, 7vw, 4.75rem);
+  padding-right: clamp(3.25rem, 7cqw, 4.75rem);
 }
 
 /* The flag as an engraved seal — round, ringed, stamped in the note's
@@ -96,8 +116,8 @@
   top: 0;
   right: 0;
   z-index: 3;
-  width: clamp(2.75rem, 5vw, 4rem);
-  height: clamp(2.75rem, 5vw, 4rem);
+  width: clamp(2.75rem, 5cqw, 4rem);
+  height: clamp(2.75rem, 5cqw, 4rem);
   border-radius: 50%;
   overflow: hidden;
   border: 1.5px solid var(--note-seal);
@@ -118,6 +138,22 @@
   margin: 0;
   max-width: 85%;
   word-break: break-word;
+}
+
+/* Two-country compare only (FaceNote's `compact` prop). Two classes here
+   (.faceName.faceNameCompact) so this reliably outranks both .faceName's
+   own font-size, if it ever gets one, and atlas.css's global
+   .atlas-face-name — a single-class rule can't be trusted to win the
+   cascade against another single-class rule regardless of file order.
+   `cqw` (not `vw`) measures against .faceNote's own width, which
+   .faceNoteCompact and the compare grid have already made genuinely half
+   the page rather than the full-width dossier's — see .faceNote's own
+   comment. --face-name-scale (set inline per-name in FaceNote.tsx) trims
+   long names down further so they wrap onto two or three lines instead of
+   five, not so they fit on one — word-break: break-word above still does
+   the actual wrapping. */
+.faceName.faceNameCompact {
+  font-size: clamp(1.5rem, calc(var(--face-name-scale, 1) * 11cqw), 9rem);
 }
 
 .faceDenomination {
@@ -163,8 +199,8 @@
 
 .faceMotto {
   position: absolute;
-  left: clamp(1.5rem, 4vw, 3rem);
-  right: clamp(1.5rem, 4vw, 3rem);
+  left: clamp(1.5rem, 4cqw, 3rem);
+  right: clamp(1.5rem, 4cqw, 3rem);
   bottom: 0.75rem;
   z-index: 2;
   text-align: center;
@@ -190,8 +226,8 @@
      and the guilloché. */
   right: 30%;
   transform: translateY(-50%);
-  width: clamp(150px, 20vw, 260px);
-  height: clamp(150px, 20vw, 260px);
+  width: clamp(150px, 20cqw, 260px);
+  height: clamp(150px, 20cqw, 260px);
   pointer-events: auto;
 }
 
@@ -222,14 +258,14 @@
      reads as one complete, balanced rosette. */
   right: 4%;
   transform: translateY(-50%);
-  width: clamp(220px, 32vw, 400px);
-  height: clamp(220px, 32vw, 400px);
+  width: clamp(220px, 32cqw, 400px);
+  height: clamp(220px, 32cqw, 400px);
 }
 
 .faceRosetteGrown {
   right: 6%;
-  width: clamp(260px, 40vw, 520px);
-  height: clamp(260px, 40vw, 520px);
+  width: clamp(260px, 40cqw, 520px);
+  height: clamp(260px, 40cqw, 520px);
 }
 
 .faceGuilloche {
@@ -268,20 +304,20 @@
 
   .facePortrait {
     right: 22%;
-    width: clamp(100px, 32vw, 170px);
-    height: clamp(100px, 32vw, 170px);
+    width: clamp(100px, 32cqw, 170px);
+    height: clamp(100px, 32cqw, 170px);
   }
 
   .faceRosette {
     right: 2%;
-    width: clamp(140px, 46vw, 240px);
-    height: clamp(140px, 46vw, 240px);
+    width: clamp(140px, 46cqw, 240px);
+    height: clamp(140px, 46cqw, 240px);
   }
 
   .faceRosetteGrown {
     right: 4%;
-    width: clamp(170px, 54vw, 280px);
-    height: clamp(170px, 54vw, 280px);
+    width: clamp(170px, 54cqw, 280px);
+    height: clamp(170px, 54cqw, 280px);
   }
 }
 

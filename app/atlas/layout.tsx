@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import Link from 'next/link'
-import { ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
-import { AtlasSearch } from './_components/AtlasSearch'
 import './atlas.css'
 
 /**
@@ -12,9 +10,12 @@ import './atlas.css'
  */
 
 export const metadata: Metadata = {
-  title: 'The Atlas',
+  // The section-wide default — individual routes (the plate itself, a
+  // dossier, compare, rankings) can and do set their own more specific
+  // title/description; this is what a route falls back to if it doesn't.
+  title: 'The Atlas — every country in the world, engraved',
   description:
-    'An interactive atlas of every country: geography, economy, trade, society and history, rendered as an uncut sheet of banknotes.',
+    'An interactive atlas of every country on Earth, rendered as an uncut sheet of banknotes — geography, economy, trade, society and history, one note per country.',
 }
 
 export const viewport: Viewport = {
@@ -74,22 +75,20 @@ export default function AtlasLayout({ children }: { children: React.ReactNode })
 
       <AtlasHatchDefs />
 
-      <header className="atlas-top-bar flex items-center justify-between gap-4 px-5 md:px-8 py-4 border-b border-[var(--note-rule)]">
+      {/* Fixed 2026-08-03: this header used to also carry the search box,
+          shown on every /atlas/* route. The owner looked at it and didn't
+          want "Search a country — press /" on pages where a country is
+          already open — it read as noise there. Search now renders only
+          from Plate.tsx, as furniture on the map itself (the one route
+          that has a map); every other route keeps its own "← back to the
+          plate"-style link as the way back instead. */}
+      <header className="atlas-top-bar flex items-center gap-4 px-5 md:px-8 py-4 border-b border-[var(--note-rule)]">
         <Link
           href="/"
           className="atlas-label !text-[10px] !tracking-[0.2em] hover:text-[var(--note-ember)] transition-colors"
         >
           ← sushantgundla.com
         </Link>
-
-        {/* One search control, rendered directly here — every /atlas/*
-            route shares this header, so this is the single place a
-            visitor can jump to any country from anywhere in the Atlas.
-            See AtlasSearch.tsx for why this replaced an earlier
-            DOM-relocation hack that produced a duplicate search box. */}
-        <div className="flex-1 max-w-sm">
-          <AtlasSearch countries={ISO_COUNTRIES} />
-        </div>
       </header>
 
       <main className="flex-1">{children}</main>

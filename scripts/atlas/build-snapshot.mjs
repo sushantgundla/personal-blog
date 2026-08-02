@@ -141,32 +141,81 @@ async function saveCountry(iso3, data) {
   await writeFile(countryPath(iso3), JSON.stringify(data), "utf-8");
 }
 
-async function buildCountries({ limit, only, force }) {
-  const already = force ? new Set() : await loadAlreadyCaptured();
-  let processed = 0;
+const SOURCE_KEYS = ["worldBank", "timeSeries", "wikidata", "wikipedia", "trade", "weather", "fx"];
+
+// How many countries run at once. Tried 3 on a fresh batch of 9 countries
+// on 2026-08-02 — AUT and AUS (already-warm/fast countries) finished in
+// under 5s each, but AZE/BHR/BRB then took 477s/548s/611s, far worse than
+// this same script's ~60-80s/country sequential baseline. The World Bank is
+// clearly not just rate-limited by request count (which the shared
+// semaphore in worldbank.ts already caps at 4 in flight) but also degrades
+// under simultaneous *load* from multiple countries' batches competing at
+// once — concurrency made it worse, not better, exactly the case team-lead
+// asked to hear about. Left at 1 (sequential). Do not raise this without
+// re-testing on a fresh sample first — the failure mode here is silent
+// (everything still "succeeds", just 5-10x slower), so watch elapsed time,
+// not just the ok-count, before trusting a higher value again.
+const CONCURRENCY = 1;
+
+/**
+ * One country: fetch, then only write the file if at least one source came
+ * back ok. A country where literally everything failed (network blip, a
+ * genuinely bad run) is *not* recorded as captured, so the next run retries
+ * it automatically instead of silently freezing it in a broken state — this
+ * is different from a country that's honestly missing from some sources
+ * (Taiwan has no World Bank row at all, most countries have no Frankfurter
+ * rate) — those are normal partial results and do get written.
+ */
+async function processOneCountry(country) {
+  const started = Date.now();
+  const data = await fetchOneCountry(country);
+  const okCount = SOURCE_KEYS.filter((k) => data[k].ok).length;
+  const elapsed = ((Date.now() - started) / 1000).toFixed(1);
+
+  if (okCount === 0) {
+    console.log(`${country.iso3} (${country.name})... FAILED (0/7 sources ok, ${elapsed}s) — will retry on next run`);
+    return { ok: false };
+  }
+  await saveCountry(country.iso3, data);
+  console.log(`${country.iso3} (${country.name})... ${okCount}/7 sources ok, ${elapsed}s`);
+  return { ok: true };
+}
+
+/** A fixed-size pool of workers, each pulling the next country off the
+ * shared queue as soon as it finishes one — not fixed batches, so one slow
+ * country (ATG took 321s under heavy throttling in an earlier run) doesn't
+ * hold up the other workers' next pick. */
+async function runPool(countries, concurrency) {
+  let cursor = 0;
   let failed = 0;
 
-  for (const country of ISO_COUNTRIES) {
-    if (processed >= limit) break;
-    if (only && !only.has(country.iso3)) continue;
-    if (already.has(country.iso3)) continue;
-
-    process.stdout.write(`${country.iso3} (${country.name})... `);
-    const started = Date.now();
-    try {
-      const data = await fetchOneCountry(country);
-      await saveCountry(country.iso3, data);
-      const okCount = ["worldBank", "timeSeries", "wikidata", "wikipedia", "trade", "weather", "fx"].filter(
-        (k) => data[k].ok
-      ).length;
-      console.log(`${okCount}/7 sources ok, ${((Date.now() - started) / 1000).toFixed(1)}s`);
-    } catch (err) {
-      failed++;
-      console.log(`FAILED (${err.message}) — will retry on next run`);
+  async function worker() {
+    for (;;) {
+      const index = cursor++;
+      if (index >= countries.length) return;
+      const country = countries[index];
+      try {
+        const result = await processOneCountry(country);
+        if (!result.ok) failed++;
+      } catch (err) {
+        failed++;
+        console.log(`${country.iso3} (${country.name})... FAILED (${err.message}) — will retry on next run`);
+      }
+      await sleep(PAUSE_MS);
     }
-    processed++;
-    await sleep(PAUSE_MS);
   }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return failed;
+}
+
+async function buildCountries({ limit, only, force }) {
+  const already = force ? new Set() : await loadAlreadyCaptured();
+  const queue = ISO_COUNTRIES.filter(
+    (c) => (!only || only.has(c.iso3)) && !already.has(c.iso3)
+  ).slice(0, limit);
+
+  const failed = await runPool(queue, CONCURRENCY);
 
   const total = ISO_COUNTRIES.length;
   const done = (await loadAlreadyCaptured()).size;

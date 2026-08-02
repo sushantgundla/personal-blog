@@ -18,6 +18,16 @@ export const METRIC_RAMP = [
   '#3A4A55',
 ] as const
 
+/** Display-only shortenings for the two labels too long to sit in a single
+ * thin bar — lib/atlas/indicators.ts's own `label` is shared with the rank
+ * rail header, the rankings page title, etc., so it isn't touched here;
+ * this is purely how the dial's own chip reads. Codes not listed just use
+ * indicator.label as-is. */
+const SHORT_LABELS: Record<string, string> = {
+  'AG.LND.FRST.ZS': 'Forest cover',
+  'EN.GHG.CO2.PC.CE.AR5': 'CO₂ per person',
+}
+
 export interface MetricDialProps {
   indicators: IndicatorDef[]
   active: string | null
@@ -26,10 +36,22 @@ export interface MetricDialProps {
   nodataCount: number | null
 }
 
+/**
+ * Fixed 2026-08-03: this used to be its own floating panel — first in the
+ * rail, then a bordered card over the map's top-left corner. The owner
+ * looked at the latter and said plainly he didn't want a "rectangle";
+ * he wanted a thin bar in the map's own top furniture strip, in the gap
+ * between the (now-deleted) serial number and the country counts — see
+ * Plate.tsx's .furnitureRow. This component itself still only needs
+ * active/onChange/nodataCount; the sweep/paint logic in Plate.tsx never
+ * changed across any of these moves.
+ */
 export function MetricDial({ indicators, active, onChange, nodataCount }: MetricDialProps) {
   return (
     <div className={styles.dial}>
-      <div className="atlas-label">Paint the world</div>
+      <span className="atlas-label" style={{ flex: 'none' }}>
+        Paint the world
+      </span>
       <div className={styles.dialChips} role="group" aria-label="Choose an indicator to colour the map">
         <MagneticButton className="atlas-magnetic" strength={0.2}>
           <button
@@ -49,7 +71,7 @@ export function MetricDial({ indicators, active, onChange, nodataCount }: Metric
               aria-pressed={active === indicator.code}
               onClick={() => onChange(indicator.code)}
             >
-              {indicator.label}
+              {SHORT_LABELS[indicator.code] ?? indicator.label}
             </button>
           </MagneticButton>
         ))}

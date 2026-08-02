@@ -12,7 +12,7 @@ import styles from './_components/plate.module.css'
 export const revalidate = 604800 // World Bank indicators move a few times a year — see docs spec §3.1
 
 export const metadata: Metadata = {
-  title: 'The Atlas — the world, engraved',
+  title: 'The Atlas — every country in the world, engraved',
   description:
     'The uncut printing plate of every country on Earth. Hover, search, or pick an indicator to paint the world — then open any country as its own banknote.',
 }
@@ -79,14 +79,18 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
   return (
     <div className={styles.page}>
       {/* Plain-language orientation for a first-time visitor — see the
-          design review: "not easy to understand or navigate". One
-          sentence, no marketing copy, plus the two routes the plate
-          itself doesn't otherwise link to. */}
+          design review: "not easy to understand or navigate". A real
+          heading (there wasn't one before — just this paragraph), one
+          sentence beneath it, no marketing copy, plus the two routes the
+          plate itself doesn't otherwise link to. */}
       <div className={styles.intro}>
-        <p className={styles.introLine}>
-          The world, engraved as banknotes — one note per country. Hover the map, search, or pick
-          a row in the standings, then open a country to read its note.
-        </p>
+        <div className={styles.introText}>
+          <h1 className={`atlas-face-name ${styles.introTitle}`}>The Atlas</h1>
+          <p className={styles.introLine}>
+            The world, engraved as banknotes — one note per country. Hover the map, search, or pick
+            a row in the standings, then open a country to read its note.
+          </p>
+        </div>
         <nav className={styles.introLinks} aria-label="More ways into The Atlas">
           <Link href="/atlas/compare" className={styles.introLink}>
             Compare countries →

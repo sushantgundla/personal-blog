@@ -1,0 +1,70 @@
+/* ============================================================
+   IndicatorPicker — the "rank the world by ___" control on
+   /atlas/rankings/[indicator]. Colour, type and the note surface all come
+   from ../atlas.css (.atlas-note wraps the <form> itself) and mirror
+   compare.module.css's picker form — this file only adds what's specific
+   to a search field + grouped select + submit button.
+   ============================================================ */
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  margin: 1.5rem 0 2.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1 1 240px;
+  text-align: left;
+}
+
+.search,
+.select {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  padding: 0.65rem 0.75rem;
+  background: var(--note-paper-hi);
+  border: 1px solid var(--note-rule);
+  color: var(--note-intaglio);
+  border-radius: 2px;
+}
+
+.search::placeholder {
+  color: var(--note-intaglio-dim);
+}
+
+.search:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 1px;
+}
+
+.submit {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.5rem;
+  background: var(--note-paper-hi);
+  border: 1px solid var(--note-ember);
+  color: var(--note-ember);
+  cursor: pointer;
+  transition: background-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease);
+}
+
+.submit:hover,
+.submit:focus-visible {
+  background: var(--note-ember);
+  color: var(--note-void);
+}
+
+/* No-JS baseline: the submit button is the only way to apply a choice.
+   With JS, the select auto-submits on change (see IndicatorPicker.tsx),
+   so the button is a redundant-but-harmless "Go" for anyone who prefers
+   to click it, and the sole path for anyone without JS. */

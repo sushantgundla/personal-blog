@@ -7,6 +7,38 @@ import styles from './dossier.module.css'
 export interface FaceNoteProps {
   dossier: CountryDossier
   country: IsoCountry
+  /**
+   * Rendered at a fraction of full width — currently only the two-country
+   * compare screen (`/atlas/compare/[countries]`). The full-width dossier
+   * never passes this: its rendering must stay byte-for-byte what it was
+   * before this prop existed.
+   *
+   * Container-relative sizing (`cqw`, via `.faceNote`'s own
+   * `container-type: inline-size` in dossier.module.css) already handles
+   * most of the difference — the same clamp() resolves smaller once the
+   * note itself is narrower, with no separate code path. `compact` only
+   * adds what container units can't: a name like "Democratic Republic of
+   * the Congo" needs to shrink further than its container width alone
+   * would give it, and the note needs room to actually wrap that name
+   * onto two or three lines instead of a fixed banknote aspect ratio
+   * clipping whatever doesn't fit.
+   */
+  compact?: boolean
+}
+
+/**
+ * A long name has no choice but to wrap in a half-width note — there just
+ * isn't the horizontal room "Bosnia and Herzegovina" or "Democratic
+ * Republic of the Congo" would need on one line at a legible size. This
+ * only trims the *starting* size so that wrap lands on two or three lines
+ * rather than five: --face-name-scale multiplies the container-relative
+ * clamp in .faceNameCompact (dossier.module.css), it does not replace
+ * word-break: break-word, which is still what actually wraps the text.
+ */
+function faceNameScale(name: string): number {
+  const len = name.length
+  if (len <= 8) return 1
+  return Math.max(0.45, 8 / len)
 }
 
 const GUILLOCHE_SIZE = 400
@@ -53,7 +85,7 @@ function Fact({ label, value }: { label: string; value: string }) {
  * seated inside the guilloché rosette, the M49 numeric code as a serial, and
  * the motto as bottom-edge microtext.
  */
-export function FaceNote({ dossier, country }: FaceNoteProps) {
+export function FaceNote({ dossier, country, compact }: FaceNoteProps) {
   const indicators = dossier.worldBank.ok ? dossier.worldBank.data.indicators : []
   const population = indicators.find((i) => i.code === 'SP.POP.TOTL') ?? null
   const popYear = population?.year ? formatYear(Number(population.year)) : null
@@ -79,7 +111,7 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
 
   return (
     <section
-      className={`atlas-note atlas-vt-face-note ${styles.faceNote}`}
+      className={`atlas-note atlas-vt-face-note ${styles.faceNote} ${compact ? styles.faceNoteCompact : ''}`}
       style={{ ['--atlas-vt-name' as string]: `atlas-country-${country.iso3.toLowerCase()}` }}
     >
       <div className={styles.faceNoteInner}>
@@ -103,7 +135,12 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
           </div>
         )}
 
-        <h1 className={`atlas-face-name ${styles.faceName}`}>{dossier.name}</h1>
+        <h1
+          className={`atlas-face-name ${styles.faceName} ${compact ? styles.faceNameCompact : ''}`}
+          style={compact ? { ['--face-name-scale' as string]: faceNameScale(dossier.name) } : undefined}
+        >
+          {dossier.name}
+        </h1>
 
         <div className={styles.faceFacts}>
           {facts?.capital && <Fact label="Capital" value={facts.capital} />}
