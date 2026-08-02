@@ -16,7 +16,7 @@ export interface ArticleCard {
 
 const STATUS_LABEL: Record<ProjectStatus, string> = {
   production: 'Production',
-  confidential: 'Confidential',
+  confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
 }
 

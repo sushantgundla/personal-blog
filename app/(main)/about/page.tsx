@@ -10,96 +10,102 @@ export const metadata: Metadata = {
 }
 
 /**
- * Skill taxonomy. Mirrors the grouping used in `_components/Signal.tsx` so a
- * skill lands in the same bucket everywhere on the site. Redefined locally
- * (not imported) since Signal's sets are a client-side filter concern, not
- * shared data — but the four buckets exactly partition all 29 skills.
+ * Skill taxonomy for the "Technical Stack" section. Mirrors the grouping used
+ * on the v4 prototype (app/v4/about/page.tsx) so the same four buckets show
+ * up here. Anything in siteConfig.skills that doesn't match one of the four
+ * label lists still renders — it lands in a trailing "Also" group instead of
+ * being silently dropped.
  */
-const AI_SYSTEMS = new Set([
-  'Agentic AI', 'RAG', 'MCP', 'LLMs', 'NLP', 'Computer Vision', 'Agno',
-  'LangGraph', 'LangChain', 'Fine-tuning', 'Prompt Engineering', 'Hugging Face',
-  'Evals', 'Vector Databases', 'Embeddings', 'Semantic Search', 'Transformers',
-])
-const INFRA = new Set(['LiteLLM', 'AWS', 'Kubernetes', 'Docker', 'MLOps'])
-const DATA = new Set(['Postgres', 'Redis'])
-const LANG = new Set(['Python', 'FastAPI', 'Django', 'Claude Code', 'PyTorch'])
-
-const SKILL_GROUPS: { title: string; skills: typeof siteConfig.skills }[] = [
-  { title: 'AI Systems', skills: siteConfig.skills.filter((s) => AI_SYSTEMS.has(s.label)) },
-  { title: 'Infra & MLOps', skills: siteConfig.skills.filter((s) => INFRA.has(s.label)) },
-  { title: 'Data & Retrieval', skills: siteConfig.skills.filter((s) => DATA.has(s.label)) },
-  { title: 'Languages & Frameworks', skills: siteConfig.skills.filter((s) => LANG.has(s.label)) },
+const SKILL_GROUPS: { title: string; labels: string[] }[] = [
+  {
+    title: 'AI & Machine Learning',
+    labels: [
+      'Agentic AI', 'RAG', 'MCP', 'LLMs', 'NLP', 'Computer Vision', 'PyTorch',
+      'Transformers', 'Fine-tuning', 'Prompt Engineering', 'Hugging Face', 'Evals',
+    ],
+  },
+  {
+    title: 'Frameworks & Tools',
+    labels: ['Agno', 'LiteLLM', 'FastAPI', 'Claude Code', 'MLOps', 'LangGraph', 'LangChain', 'Python', 'Django'],
+  },
+  {
+    title: 'Data & Retrieval',
+    labels: ['Vector Databases', 'Embeddings', 'Semantic Search', 'Postgres', 'Redis'],
+  },
+  {
+    title: 'Infrastructure',
+    labels: ['AWS', 'Kubernetes', 'Docker'],
+  },
 ]
 
-/** Pulls the start year out of a period string like "Oct 2025 – Present". */
-function startYear(period: string): string {
-  const match = period.match(/\d{4}/)
-  return match ? match[0] : period
-}
-
-/** Turns "Oct 2025 – Present" into a compact badge like "2025–" or "2019–2021". */
-function badgeFor(period: string): string {
-  const years = period.match(/\d{4}/g) ?? []
-  if (years.length === 0) return period
-  if (period.toLowerCase().includes('present')) return `${years[0]}–`
-  if (years.length === 1) return years[0]
-  return `${years[0]}–${years[years.length - 1]}`
+function buildSkillGroups(): { title: string; skills: typeof siteConfig.skills }[] {
+  const groups = SKILL_GROUPS.map((group) => ({
+    title: group.title,
+    skills: siteConfig.skills.filter((s) => group.labels.includes(s.label)),
+  }))
+  const placed = new Set(SKILL_GROUPS.flatMap((g) => g.labels))
+  const rest = siteConfig.skills.filter((s) => !placed.has(s.label))
+  if (rest.length > 0) groups.push({ title: 'Also', skills: rest })
+  return groups
 }
 
 export default function AboutPage(): JSX.Element {
-  const { work, education, skills, bio } = siteConfig
+  const { work, education, bio } = siteConfig
   const bioParagraphs = bio.split('\n\n')
-
-  // Pulled from the bio text itself ("7+ years across...") rather than
-  // invented — the other two are plain counts of the data arrays.
-  const yearsMatch = bio.match(/(\d+\+)\s+years/)
-  const yearsExperience = yearsMatch ? yearsMatch[1] : `${work.length}`
-  const companyCount = work.length
-  const skillCount = skills.length
-
-  const careerSpan = `${startYear(work[work.length - 1].period)} → present`
+  const skillGroups = buildSkillGroups()
 
   return (
     <>
-      {/* ── Header: identity + portrait ── */}
+      {/* ── Header: eyebrow, headline, bio, actions + portrait ── */}
       <section id="v2-about-intro" className="v2-section">
         <div className="v2-wrap">
           <div
             className="v2-row"
-            style={{ alignItems: 'center', gap: 'clamp(32px, 6vw, 80px)', flexWrap: 'wrap' }}
+            style={{ alignItems: 'flex-start', gap: 'clamp(32px, 6vw, 80px)', flexWrap: 'wrap' }}
           >
             <div className="v2-col" style={{ flex: '1.3 1 480px', minWidth: '300px', gap: '1.5rem' }}>
               <Reveal>
-                <span className="v2-eyebrow"><span className="v2-dot" />About</span>
+                <span className="v2-eyebrow">Technical Lead, AI/ML · PDI Technologies</span>
                 <h1 className="v2-title v2-title-xl" style={{ marginTop: '16px' }}>
-                  Hi, I&apos;m {siteConfig.name}.
+                  Architecting the <span style={{ color: 'var(--v2-accent)' }}>Latent Space</span>.
                 </h1>
-                <p className="v2-body v2-muted" style={{ marginTop: '14px' }}>{siteConfig.tagline}</p>
               </Reveal>
 
-              <Reveal delay={80}>
-                <div className="v2-row" style={{ gap: 'clamp(24px, 4vw, 48px)' }}>
-                  <div className="v2-col" style={{ gap: '2px' }}>
-                    <span className="v2-num">{yearsExperience}</span>
-                    <span className="v2-mono v2-muted" style={{ fontSize: '0.82rem' }}>years experience</span>
-                  </div>
-                  <div className="v2-col" style={{ gap: '2px' }}>
-                    <span className="v2-num">{companyCount}</span>
-                    <span className="v2-mono v2-muted" style={{ fontSize: '0.82rem' }}>companies</span>
-                  </div>
-                  <div className="v2-col" style={{ gap: '2px' }}>
-                    <span className="v2-num">{skillCount}</span>
-                    <span className="v2-mono v2-muted" style={{ fontSize: '0.82rem' }}>skills &amp; tools</span>
-                  </div>
+              <div className="v2-col" style={{ gap: '1.1rem', maxWidth: 'var(--v2-measure)' }}>
+                {bioParagraphs.map((paragraph, i) => (
+                  <Reveal key={i} delay={80 + i * 60}>
+                    <p className="v2-body v2-muted">{paragraph}</p>
+                  </Reveal>
+                ))}
+              </div>
+
+              <Reveal delay={80 + bioParagraphs.length * 60}>
+                <div className="v2-row" style={{ gap: '12px', flexWrap: 'wrap' }}>
+                  <a
+                    href="/resume.pdf"
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="v2-btn"
+                  >
+                    Download Resume
+                  </a>
+                  <a href="/projects" className="v2-btn-ghost">
+                    View Projects
+                  </a>
                 </div>
               </Reveal>
             </div>
 
             <div style={{ flex: '1 1 300px', minWidth: '240px', display: 'flex', justifyContent: 'center' }}>
               <Reveal delay={60}>
+                {/* Self-sizing width, not width:100%. Reveal renders a plain
+                    div that becomes a flex item here, so it sizes to content —
+                    a percentage width resolved against zero and collapsed the
+                    frame to 2x3px, hiding the portrait entirely. */}
                 <div
                   className="v2-frame"
-                  style={{ position: 'relative', width: '100%', maxWidth: '340px', aspectRatio: '4 / 5' }}
+                  style={{ position: 'relative', width: 'min(340px, 70vw)', aspectRatio: '4 / 5' }}
                 >
                   <Image
                     src="/portrait.jpg"
@@ -116,29 +122,16 @@ export default function AboutPage(): JSX.Element {
         </div>
       </section>
 
-      {/* ── Bio ── */}
-      <section id="v2-about-bio" className="v2-section" style={{ paddingTop: 0 }}>
-        <div className="v2-wrap">
-          <div className="v2-col" style={{ gap: '1.1rem', maxWidth: 'var(--v2-measure)' }}>
-            {bioParagraphs.map((paragraph, i) => (
-              <Reveal key={i} delay={i * 60}>
-                <p className="v2-body">{paragraph}</p>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Work history ── */}
-      <section id="v2-about-work" className="v2-band v2-section">
+      {/* ── 01 / EXPERIENCE ── */}
+      <section id="v2-about-work" className="v2-section" style={{ paddingTop: 0 }}>
         <div className="v2-wrap">
           <Reveal>
-            <span className="v2-eyebrow"><span className="v2-dot" />Career</span>
-            <h2 className="v2-head" style={{ marginTop: '12px' }}>Where I&apos;ve worked</h2>
-            <div className="v2-row" style={{ gap: '18px', marginTop: '14px', flexWrap: 'wrap' }}>
-              <span className="v2-mono v2-muted">{careerSpan}</span>
-              <span className="v2-mono v2-muted">{companyCount} companies</span>
-            </div>
+            <div className="v2-rule" />
+          </Reveal>
+          <Reveal>
+            <span className="v2-eyebrow" style={{ display: 'inline-block', marginTop: '24px' }}>
+              01 / EXPERIENCE
+            </span>
           </Reveal>
 
           <div style={{ position: 'relative', marginTop: '32px' }}>
@@ -165,7 +158,10 @@ export default function AboutPage(): JSX.Element {
                     </div>
 
                     <div className="v2-card" style={{ paddingBlock: 'clamp(18px, 2.6vw, 26px)' }}>
-                      <div className="v2-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                      <div
+                        className="v2-row"
+                        style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}
+                      >
                         <div className="v2-stack" style={{ gap: '4px' }}>
                           <div className="v2-row" style={{ alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                             <span className="v2-sub">{entry.role}</span>
@@ -176,7 +172,7 @@ export default function AboutPage(): JSX.Element {
                             {entry.location && <> · {entry.location}</>}
                           </span>
                         </div>
-                        <span className="v2-badge">{badgeFor(entry.period)}</span>
+                        <span className="v2-badge">{entry.period}</span>
                       </div>
 
                       <div className="v2-stack" style={{ gap: '8px', marginTop: '16px' }}>
@@ -198,11 +194,16 @@ export default function AboutPage(): JSX.Element {
         </div>
       </section>
 
-      {/* ── Education (quieter than work) ── */}
-      <section id="v2-about-education" className="v2-section">
+      {/* ── 02 / EDUCATION ── */}
+      <section id="v2-about-education" className="v2-section" style={{ paddingTop: 0 }}>
         <div className="v2-wrap">
           <Reveal>
-            <span className="v2-eyebrow v2-muted">Education</span>
+            <div className="v2-rule" />
+          </Reveal>
+          <Reveal>
+            <span className="v2-eyebrow" style={{ display: 'inline-block', marginTop: '24px' }}>
+              02 / EDUCATION
+            </span>
           </Reveal>
           <div className="v2-grid" data-cols="2" style={{ marginTop: '18px' }}>
             {education.map((edu, i) => (
@@ -221,15 +222,19 @@ export default function AboutPage(): JSX.Element {
         </div>
       </section>
 
-      {/* ── Skills ── */}
-      <section id="v2-about-skills" className="v2-section">
+      {/* ── 03 / TECHNICAL STACK ── */}
+      <section id="v2-about-skills" className="v2-section" style={{ paddingTop: 0 }}>
         <div className="v2-wrap v2-col" style={{ gap: 'clamp(20px, 3vw, 32px)' }}>
           <Reveal>
-            <span className="v2-eyebrow"><span className="v2-dot" />Skills</span>
-            <h2 className="v2-head" style={{ marginTop: '12px' }}>What I work with</h2>
+            <div className="v2-rule" />
+          </Reveal>
+          <Reveal>
+            <span className="v2-eyebrow" style={{ display: 'inline-block', marginTop: '24px' }}>
+              03 / TECHNICAL STACK
+            </span>
           </Reveal>
 
-          {SKILL_GROUPS.map((group, gi) => (
+          {skillGroups.map((group, gi) => (
             <Reveal key={group.title} delay={gi * 60}>
               <div className="v2-col" style={{ gap: '0.75rem' }}>
                 <span className="v2-mono v2-muted" style={{ fontSize: '0.85rem' }}>{group.title}</span>
@@ -256,7 +261,13 @@ export default function AboutPage(): JSX.Element {
             <a
               href={`mailto:${siteConfig.email}`}
               className="v2-link"
-              style={{ display: 'inline-block', marginTop: '24px', fontFamily: 'var(--v2-font-head)', fontSize: 'clamp(1.15rem, 2.6vw, 1.75rem)', fontWeight: 600 }}
+              style={{
+                display: 'inline-block',
+                marginTop: '24px',
+                fontFamily: 'var(--v2-font-head)',
+                fontSize: 'clamp(1.15rem, 2.6vw, 1.75rem)',
+                fontWeight: 600,
+              }}
             >
               {siteConfig.email}
             </a>
@@ -264,9 +275,6 @@ export default function AboutPage(): JSX.Element {
 
           <Reveal delay={120}>
             <div className="v2-row" style={{ marginTop: '28px', gap: '12px' }}>
-              <a href="/resume.pdf" target="_blank" rel="noopener noreferrer" className="v2-btn">
-                Download CV
-              </a>
               <a href={siteConfig.social.github} target="_blank" rel="noopener noreferrer" className="v2-btn-ghost">
                 GitHub
               </a>

@@ -10,7 +10,7 @@ type Filter = 'all' | ProjectStatus
 
 const STATUS_LABEL: Record<ProjectStatus, string> = {
   production: 'Production',
-  confidential: 'Confidential',
+  confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
 }
 
