@@ -1,0 +1,96 @@
+/* Flight Recorder — aviation black box, safety orange, warning stripes, cockpit panel */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap');
+
+:root {
+  --v2-bg: #000000;
+  --v2-bg-2: #060606;
+  --v2-surface: #0a0a0a;
+  --v2-surface-2: #121212;
+  --v2-surface-3: #1a1a1a;
+  --v2-text: #f0ede4;
+  --v2-muted: rgba(240,237,228,0.6);
+  --v2-faint: rgba(240,237,228,0.28);
+  --v2-line: rgba(255,106,0,0.35);
+  --v2-line-2: #ff6a00;
+  --v2-accent: #ff6a00;
+  --v2-accent-2: #ffd400;
+  --v2-accent-3: #f0ede4;
+  --v2-accent-soft: rgba(255,106,0,0.1);
+  --v2-on-accent: #000000;
+
+  --v2-radius: 0px;
+  --v2-radius-sm: 0px;
+  --v2-radius-lg: 0px;
+  --v2-radius-pill: 0px;
+  --v2-border-w: 2px;
+  --v2-shadow: 0 1px 0 rgba(255,106,0,0.2);
+  --v2-shadow-lg: 0 0 0 2px rgba(255,106,0,0.3);
+  --v2-glow: 0 0 16px rgba(255,106,0,0.5);
+
+  --v2-font-display: 'Oswald', 'Space Grotesk', sans-serif;
+  --v2-font-head: 'Oswald', sans-serif;
+  --v2-font-body: 'Inter', system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: 0.01em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.12em;
+
+  --v2-backdrop: grid;
+  --v2-cursor: crosshair;
+  --v2-enter: scanline;
+}
+
+body { background: #000000 !important; }
+.v2-band { background: var(--v2-bg-2) !important; border-top: 1px solid var(--v2-line) !important; border-bottom: 1px solid var(--v2-line) !important; }
+.v2-orb { display: none !important; }
+.v2-noise { opacity: 0.06 !important; }
+
+.v2-card, .v2-panel {
+  position: relative !important;
+  background: var(--v2-surface) !important;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.v2-card::before, .v2-card::after {
+  content: '' !important;
+  position: absolute !important;
+  width: 10px !important;
+  height: 10px !important;
+  pointer-events: none !important;
+}
+.v2-card::before { top: -1px !important; left: -1px !important; border-top: 2px solid var(--v2-accent) !important; border-left: 2px solid var(--v2-accent) !important; }
+.v2-card::after { bottom: -1px !important; right: -1px !important; border-bottom: 2px solid var(--v2-accent) !important; border-right: 2px solid var(--v2-accent) !important; }
+.v2-card-lift:hover { box-shadow: var(--v2-glow) !important; border-color: var(--v2-accent) !important; }
+
+.v2-title { color: var(--v2-text) !important; }
+.v2-eyebrow { color: var(--v2-accent) !important; }
+.v2-num { color: var(--v2-accent) !important; font-family: var(--v2-font-mono) !important; }
+
+.v2-btn { background: var(--v2-accent) !important; color: #000 !important; border: 2px solid var(--v2-accent) !important; border-radius: 0 !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; }
+.v2-btn:hover { background: #000 !important; color: var(--v2-accent) !important; box-shadow: var(--v2-glow) !important; }
+.v2-btn-ghost { background: transparent !important; border: 2px solid var(--v2-line-2) !important; color: var(--v2-text) !important; border-radius: 0 !important; }
+
+.v2-chip { border: 1px solid var(--v2-line-2) !important; background: #000 !important; color: var(--v2-accent) !important; border-radius: 0 !important; font-family: var(--v2-font-mono) !important; }
+.v2-chip-on { background: var(--v2-accent) !important; color: #000 !important; }
+
+.v2-badge {
+  position: relative !important;
+  background: #000 !important;
+  color: var(--v2-accent-2) !important;
+  border: 1px solid var(--v2-accent) !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+.v2-badge::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: repeating-linear-gradient(45deg, rgba(255,212,0,0.25) 0 6px, transparent 6px 12px) !important;
+  pointer-events: none !important;
+}
+
+.v2-frame { border: 2px solid var(--v2-accent) !important; border-radius: 0 !important; filter: contrast(1.1) saturate(0.9) !important; }
+.v2-rule { background: repeating-linear-gradient(45deg, var(--v2-accent-2) 0 6px, #000 6px 12px) !important; height: 4px !important; }
+.v2-kbd { border: 1px solid var(--v2-line-2) !important; background: #000 !important; color: var(--v2-accent) !important; border-radius: 0 !important; }

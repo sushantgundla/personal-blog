@@ -1,0 +1,108 @@
+/* Matrix — pure black, cascading phosphor green, cold and blocky */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  --v2-bg: #000000;
+  --v2-bg-2: #000000;
+  --v2-surface: #000000;
+  --v2-surface-2: #050805;
+  --v2-surface-3: #0a0f0a;
+  --v2-text: #00ff41;
+  --v2-muted: rgba(0,255,65,0.62);
+  --v2-faint: rgba(0,255,65,0.55);
+  --v2-line: rgba(0,255,65,0.4);
+  --v2-line-2: rgba(0,255,65,0.75);
+  --v2-accent: #00ff41;
+  --v2-accent-2: #00cc33;
+  --v2-accent-3: #00ff41;
+  --v2-accent-soft: rgba(0,255,65,0.08);
+  --v2-on-accent: #000000;
+
+  --v2-radius: 0px;
+  --v2-radius-sm: 0px;
+  --v2-radius-lg: 0px;
+  --v2-radius-pill: 0px;
+  --v2-border-w: 1px;
+  --v2-shadow: none;
+  --v2-shadow-lg: 0 0 24px rgba(0,255,65,0.35);
+  --v2-glow: 0 0 12px rgba(0,255,65,0.6);
+
+  --v2-font-display: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-head: 'Share Tech Mono', ui-monospace, monospace;
+  --v2-font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: 0em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.2em;
+
+  --v2-backdrop: rain;
+  --v2-cursor: block;
+  --v2-enter: pixelate;
+}
+
+body { background: #000000 !important; }
+.v2-band { background: #030503 !important; border-top: 1px solid rgba(0,255,65,0.15) !important; border-bottom: 1px solid rgba(0,255,65,0.15) !important; }
+
+.v2-orb { display: none !important; }
+.v2-noise { opacity: 0.04 !important; mix-blend-mode: screen !important; }
+
+.v2-title,
+.v2-eyebrow { text-shadow: 0 0 6px rgba(0,255,65,0.6) !important; }
+
+.v2-card,
+.v2-panel {
+  background: #000000 !important;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.v2-card-lift:hover {
+  border-color: var(--v2-accent) !important;
+  box-shadow: var(--v2-glow) !important;
+}
+
+.v2-chip {
+  background: #000000 !important;
+  border: 1px solid var(--v2-line-2) !important;
+  border-radius: 0 !important;
+  font-family: var(--v2-font-mono) !important;
+}
+.v2-chip::before { content: '> ' !important; }
+.v2-chip-on {
+  background: var(--v2-accent) !important;
+  color: #000000 !important;
+  border-color: var(--v2-accent) !important;
+}
+
+.v2-btn {
+  background: #000000 !important;
+  color: var(--v2-accent) !important;
+  border: 1px solid var(--v2-accent) !important;
+  border-radius: 0 !important;
+  text-transform: uppercase !important;
+  box-shadow: var(--v2-glow) !important;
+}
+.v2-btn:hover { background: var(--v2-accent) !important; color: #000000 !important; }
+.v2-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--v2-line-2) !important;
+  border-radius: 0 !important;
+  color: var(--v2-text) !important;
+}
+
+.v2-badge {
+  background: #000000 !important;
+  border: 1px solid var(--v2-accent) !important;
+  border-radius: 0 !important;
+}
+
+.v2-frame {
+  border: 1px solid var(--v2-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: grayscale(1) contrast(1.1) sepia(1) hue-rotate(70deg) saturate(3) !important;
+}
+
+.v2-rule { background: var(--v2-line-2) !important; height: 1px !important; }
+.v2-kbd { border-radius: 0 !important; border: 1px solid var(--v2-line-2) !important; box-shadow: none !important; }

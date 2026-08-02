@@ -1,0 +1,88 @@
+/* Attention Heads — the site as a transformer attention map, blue→violet→amber heat */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --v2-bg: #08090d;
+  --v2-bg-2: #0c0e14;
+  --v2-surface: #0f1119;
+  --v2-surface-2: #151827;
+  --v2-surface-3: #1c2033;
+  --v2-text: #eef0f8;
+  --v2-muted: rgba(238,240,248,0.6);
+  --v2-faint: rgba(238,240,248,0.28);
+  --v2-line: rgba(124,58,237,0.28);
+  --v2-line-2: rgba(245,158,11,0.45);
+  --v2-accent: #f59e0b;
+  --v2-accent-2: #7c3aed;
+  --v2-accent-3: #1e3a8a;
+  --v2-accent-soft: rgba(245,158,11,0.1);
+  --v2-on-accent: #08090d;
+
+  --v2-radius: 4px;
+  --v2-radius-sm: 3px;
+  --v2-radius-lg: 8px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  --v2-shadow-lg: 0 24px 60px -20px rgba(0,0,0,0.85);
+  --v2-glow: 0 0 24px rgba(245,158,11,0.4);
+
+  --v2-font-display: 'Space Grotesk', system-ui, sans-serif;
+  --v2-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --v2-font-body: 'Inter', system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: -0.02em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.14em;
+
+  --v2-backdrop: embed;
+  --v2-cursor: crosshair;
+  --v2-enter: pixelate;
+}
+
+body { background: var(--v2-bg) !important; }
+.v2-band { background: var(--v2-bg-2) !important; border-top: 1px solid var(--v2-line) !important; border-bottom: 1px solid var(--v2-line) !important; }
+.v2-orb { display: none !important; }
+.v2-noise { opacity: 0.05 !important; mix-blend-mode: screen !important; }
+
+.v2-card, .v2-panel {
+  background:
+    repeating-linear-gradient(115deg, rgba(30,58,138,0.1) 0px, rgba(124,58,237,0.07) 2px, transparent 2px, transparent 14px),
+    var(--v2-surface) !important;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: var(--v2-radius) !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+.v2-card-lift:hover {
+  border-color: var(--v2-accent) !important;
+  background:
+    repeating-linear-gradient(115deg, rgba(245,158,11,0.14) 0px, rgba(245,158,11,0.08) 2px, transparent 2px, transparent 14px),
+    var(--v2-surface-2) !important;
+  box-shadow: var(--v2-glow) !important;
+}
+
+.v2-title { color: var(--v2-text) !important; }
+/* Base .v2-mono defaults to --v2-faint (a 0.30-alpha watermark tone) — only 2.3:1 here.
+   These annotation labels ("chat.mypdi", "mcp://gateway", etc.) need to be readable,
+   so give them --v2-muted instead (~6.4:1). */
+.v2-mono { color: var(--v2-muted) !important; }
+.v2-eyebrow { color: var(--v2-accent) !important; font-family: var(--v2-font-mono) !important; } /* accent-2 violet read at 3.49:1 on bg — the amber end of the ramp clears 4.5:1 */
+.v2-num { color: var(--v2-accent) !important; }
+
+.v2-btn { background: var(--v2-accent) !important; color: var(--v2-on-accent) !important; border: none !important; border-radius: var(--v2-radius-sm) !important; box-shadow: var(--v2-glow) !important; }
+.v2-btn-ghost { background: transparent !important; border: 1px solid var(--v2-accent-2) !important; color: var(--v2-text) !important; border-radius: var(--v2-radius-sm) !important; }
+/* Raw --v2-accent-2 violet (#7c3aed) only reaches 3.49:1 on this near-black bg.
+   #b39cfb is the same violet lifted a step, clears 4.5:1 (~8.6:1 measured). */
+.v2-btn-quiet { color: #b39cfb !important; }
+
+.v2-chip { border: 1px solid var(--v2-line) !important; background: var(--v2-surface-2) !important; border-radius: var(--v2-radius-sm) !important; font-family: var(--v2-font-mono) !important; }
+.v2-chip-on { background: var(--v2-accent-soft) !important; border-color: var(--v2-accent) !important; color: var(--v2-accent) !important; }
+
+/* Badge text uses a lighter step of the violet ramp than --v2-accent-2 (#7c3aed),
+   which only reaches 3.14:1 on this near-black surface. #b39cfb keeps the violet
+   identity and clears 4.5:1. The border stays on the darker violet. */
+.v2-badge { border: 1px solid var(--v2-accent-2) !important; color: #b39cfb !important; background: rgba(124,58,237,0.08) !important; border-radius: var(--v2-radius-sm) !important; }
+.v2-frame { border: 1px solid var(--v2-line-2) !important; border-radius: var(--v2-radius) !important; filter: saturate(1.1) contrast(1.05) !important; }
+.v2-rule { background: linear-gradient(90deg, var(--v2-accent-3), var(--v2-accent-2), var(--v2-accent)) !important; height: 1px !important; opacity: 0.7 !important; }
+.v2-kbd { border: 1px solid var(--v2-line-2) !important; background: var(--v2-surface-3) !important; border-radius: 3px !important; }

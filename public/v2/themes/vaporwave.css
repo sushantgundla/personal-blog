@@ -1,0 +1,116 @@
+/* Vaporwave — pastel neon on deep indigo, chrome gradient titles, retro oversized type */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --v2-bg: #180a2e;
+  --v2-bg-2: #1f0f3a;
+  --v2-surface: #23113f;
+  --v2-surface-2: #2c1750;
+  --v2-surface-3: #180a2e;
+  --v2-text: #f5eeff;
+  --v2-muted: rgba(245,238,255,0.72);
+  --v2-faint: rgba(245,238,255,0.4);
+  --v2-line: rgba(1,205,254,0.35);
+  --v2-line-2: rgba(255,113,206,0.55);
+  --v2-accent: #ff71ce;
+  --v2-accent-2: #01cdfe;
+  --v2-accent-3: #b967ff;
+  --v2-accent-soft: rgba(255,113,206,0.12);
+  --v2-on-accent: #180a2e;
+
+  --v2-radius: 16px;
+  --v2-radius-sm: 10px;
+  --v2-radius-lg: 26px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  --v2-shadow-lg: 0 20px 50px -15px rgba(185,103,255,0.5);
+  --v2-glow: 0 0 30px rgba(1,205,254,0.4), 0 0 60px rgba(255,113,206,0.25);
+
+  --v2-font-display: 'Poppins', 'Space Grotesk', system-ui, sans-serif;
+  --v2-font-head: 'Poppins', system-ui, sans-serif;
+  --v2-font-body: 'Poppins', system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 800;
+  --v2-display-tracking: 0.01em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.24em;
+
+  --v2-backdrop: waves;
+  --v2-cursor: ring;
+  --v2-enter: rewind;
+}
+
+body {
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(185,103,255,0.2), transparent 65%),
+    linear-gradient(180deg, #180a2e, #10071f) !important;
+}
+.v2-band { background: var(--v2-bg-2) !important; }
+
+.v2-orb { display: block !important; opacity: 0.6 !important; filter: blur(80px) saturate(180%) !important; }
+.v2-noise { opacity: 0.03 !important; }
+
+.v2-title {
+  background: linear-gradient(180deg, #ffffff 0%, #ffd6f5 35%, #ff9fe3 55%, #7fe9ff 75%, #d6b9ff 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  -webkit-text-stroke: 1px rgba(8,4,20,0.65) !important;
+  text-stroke: 1px rgba(8,4,20,0.65) !important;
+  text-shadow: 0 0 10px rgba(255,113,206,0.3) !important;
+  letter-spacing: 0.02em !important;
+}
+
+.v2-eyebrow { color: var(--v2-accent-2) !important; text-shadow: 0 0 12px rgba(1,205,254,0.6) !important; }
+
+.v2-card,
+.v2-panel {
+  background: linear-gradient(160deg, rgba(255,113,206,0.08), rgba(1,205,254,0.06)) !important;
+  border: 1px solid var(--v2-line-2) !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+.v2-card-lift:hover {
+  border-color: var(--v2-accent-2) !important;
+  box-shadow: var(--v2-glow) !important;
+  transform: translateY(-3px) !important;
+}
+
+.v2-chip {
+  background: rgba(255,113,206,0.1) !important;
+  border: 1px solid var(--v2-line-2) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+.v2-chip-on {
+  background: linear-gradient(90deg, var(--v2-accent), var(--v2-accent-3)) !important;
+  border-color: transparent !important;
+  color: #180a2e !important;
+}
+
+.v2-btn {
+  background: linear-gradient(90deg, var(--v2-accent), var(--v2-accent-3), var(--v2-accent-2)) !important;
+  color: #180a2e !important;
+  border: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  box-shadow: 0 10px 30px -8px rgba(255,113,206,0.5) !important;
+}
+.v2-btn-ghost {
+  background: rgba(1,205,254,0.06) !important;
+  border: 1px solid var(--v2-accent-2) !important;
+  color: var(--v2-accent-2) !important;
+}
+
+.v2-badge {
+  background: rgba(185,103,255,0.14) !important;
+  border: 1px solid var(--v2-accent-3) !important;
+}
+
+.v2-frame {
+  border: 1px solid var(--v2-line-2) !important;
+  box-shadow: var(--v2-glow) !important;
+}
+
+.v2-rule { background: linear-gradient(90deg, var(--v2-accent), var(--v2-accent-2)) !important; }

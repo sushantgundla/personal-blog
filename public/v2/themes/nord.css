@@ -1,0 +1,100 @@
+/* Nord — polar night, snow storm text, frost accents. Calm, quiet, built for reading. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --v2-bg: #2e3440;
+  --v2-bg-2: #272c36;
+  --v2-surface: #3b4252;
+  --v2-surface-2: #434c5e;
+  --v2-surface-3: #4c566a;
+  --v2-text: #eceff4;
+  --v2-muted: rgba(236,239,244,0.75);
+  --v2-faint: rgba(236,239,244,0.36);
+  --v2-line: rgba(236,239,244,0.12);
+  --v2-line-2: rgba(236,239,244,0.22);
+  --v2-accent: #88c0d0;
+  --v2-accent-2: #5e81ac;
+  --v2-accent-3: #a3be8c;
+  --v2-accent-soft: rgba(136,192,208,0.12);
+  --v2-on-accent: #2e3440;
+
+  --v2-radius: 12px;
+  --v2-radius-sm: 8px;
+  --v2-radius-lg: 18px;
+  --v2-radius-pill: 999px;
+  --v2-border-w: 1px;
+  --v2-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  --v2-shadow-lg: 0 20px 44px -18px rgba(0,0,0,0.45);
+  --v2-glow: 0 0 0 3px rgba(136,192,208,0.18);
+
+  --v2-font-display: 'Inter', system-ui, sans-serif;
+  --v2-font-head: 'Inter', system-ui, sans-serif;
+  --v2-font-body: 'Inter', system-ui, sans-serif;
+  --v2-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --v2-display-weight: 700;
+  --v2-display-tracking: -0.02em;
+  --v2-head-transform: none;
+  --v2-head-tracking: 0.08em;
+
+  --v2-backdrop: stars;
+  --v2-cursor: default;
+  --v2-enter: iris;
+}
+
+body { background: var(--v2-bg) !important; }
+.v2-band { background: var(--v2-bg-2) !important; }
+
+.v2-orb { display: none !important; }
+.v2-noise { display: none !important; }
+
+.v2-title,
+.v2-eyebrow { text-shadow: none !important; }
+
+.v2-card,
+.v2-panel {
+  background: var(--v2-surface) !important;
+  border: 1px solid var(--v2-line) !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+.v2-card-lift:hover {
+  border-color: var(--v2-accent) !important;
+  box-shadow: var(--v2-shadow-lg) !important;
+  transform: translateY(-2px) !important;
+}
+
+.v2-chip {
+  background: var(--v2-surface-2) !important;
+  border: 1px solid var(--v2-line) !important;
+}
+.v2-chip-on {
+  background: var(--v2-accent) !important;
+  color: var(--v2-on-accent) !important;
+  border-color: var(--v2-accent) !important;
+}
+
+.v2-btn {
+  background: #496586 !important; /* darkened accent-2 — raw hue is too light for white text at 4.5:1 */
+  color: #eceff4 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.v2-btn:hover { background: var(--v2-accent) !important; color: var(--v2-on-accent) !important; }
+.v2-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--v2-line-2) !important;
+  color: var(--v2-text) !important;
+}
+
+.v2-badge {
+  background: var(--v2-surface-2) !important;
+  border: 1px solid var(--v2-accent-3) !important;
+  color: #b5cc9c !important; /* lightened accent-3 — the raw hue is too dark on surface-2 */
+}
+
+.v2-frame {
+  border: 1px solid var(--v2-line) !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+
+.v2-rule { background: var(--v2-line) !important; }
+.v2-kbd { background: var(--v2-surface-2) !important; border: 1px solid var(--v2-line-2) !important; box-shadow: 0 1px 0 rgba(0,0,0,0.3) !important; }

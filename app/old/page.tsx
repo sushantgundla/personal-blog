@@ -1,9 +1,23 @@
+import type { Metadata } from 'next'
 import { getAllArticles } from '@/lib/articles'
 import { getAllRadarPosts, getAllRadarPicks } from '@/lib/radar'
 import { siteConfig } from '@/lib/config'
 import { projects } from '@/lib/projects'
 import Link from 'next/link'
 import Image from 'next/image'
+
+/**
+ * The previous home page, kept at /old after the redesign shipped to /.
+ *
+ * noindex on purpose: its content is near-identical to the new home page, so
+ * leaving it indexable would split ranking signals between two URLs for the
+ * same content. The canonical points at / for the same reason.
+ */
+export const metadata: Metadata = {
+  title: 'Previous site',
+  robots: { index: false, follow: true },
+  alternates: { canonical: '/' },
+}
 
 export default function Home() {
   const articles = getAllArticles().slice(0, 2)

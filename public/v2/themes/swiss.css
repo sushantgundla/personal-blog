@@ -1,0 +1,61 @@
+/* Swiss — white/black, one red, massive tight grotesk, ruthless grid */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&display=swap');
+
+:root {
+  --v2-bg: #ffffff;
+  --v2-bg-2: #f5f5f5;
+  --v2-surface: #ffffff;
+  --v2-surface-2: #f0f0f0;
+  --v2-surface-3: #e5e5e5;
+  --v2-text: #0a0a0a;
+  --v2-muted: rgba(10,10,10,0.65);
+  --v2-faint: rgba(10,10,10,0.38);
+  --v2-line: rgba(10,10,10,0.85);
+  --v2-line-2: #0a0a0a;
+  --v2-accent: #e2231a;
+  --v2-accent-2: #0a0a0a;
+  --v2-accent-3: #0a0a0a;
+  --v2-accent-soft: rgba(226,35,26,0.08);
+  --v2-on-accent: #ffffff;
+
+  --v2-radius: 0px;
+  --v2-radius-sm: 0px;
+  --v2-radius-lg: 0px;
+  --v2-radius-pill: 0px;
+  --v2-border-w: 1px;
+  --v2-shadow: none;
+  --v2-shadow-lg: none;
+  --v2-glow: none;
+
+  --v2-font-display: 'Archivo', system-ui, sans-serif;
+  --v2-font-head: 'Archivo', system-ui, sans-serif;
+  --v2-font-body: 'Archivo', system-ui, sans-serif;
+  --v2-font-mono: 'Archivo', ui-monospace, monospace;
+  --v2-display-weight: 900;
+  --v2-display-tracking: -0.05em;
+  --v2-head-transform: uppercase;
+  --v2-head-tracking: 0.24em;
+
+  --v2-backdrop: none;
+  --v2-cursor: square;
+  --v2-enter: collapse;
+}
+
+.v2-card, .v2-panel, .v2-frame, .v2-badge, .v2-chip, .v2-kbd {
+  border: 1px solid var(--v2-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--v2-surface) !important;
+}
+.v2-card-lift:hover { box-shadow: none !important; background: var(--v2-surface-2) !important; }
+
+.v2-btn { border-radius: 0 !important; background: var(--v2-accent) !important; color: var(--v2-on-accent) !important; }
+.v2-btn-ghost, .v2-icon-btn { border-radius: 0 !important; border: 1px solid var(--v2-line-2) !important; }
+.v2-chip { border-radius: 0 !important; }
+.v2-chip-on { background: var(--v2-accent) !important; color: var(--v2-on-accent) !important; border-color: var(--v2-line-2) !important; }
+
+.v2-eyebrow { font-size: 0.7em !important; letter-spacing: 0.24em !important; }
+
+.v2-rule { background: var(--v2-line-2) !important; }
+.v2-orb { display: none !important; }
+.v2-noise { display: none !important; }
