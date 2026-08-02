@@ -53,13 +53,15 @@ export default function ArticlesPage() {
       <section className="v2-section" style={{ paddingBottom: 0 }}>
         <div className="v2-wrap">
           <Reveal>
-            <span className="v2-eyebrow">Writing</span>
+            {/* Headline and intro are his own copy, carried over verbatim from
+                the previous designs — do not paraphrase them. */}
+            <span className="v2-eyebrow">Articles</span>
             <h1 className="v2-title" style={{ marginTop: '0.5rem' }}>
-              Notes from the lab
+              Writing
             </h1>
             <p className="v2-body v2-muted" style={{ marginTop: '1.25rem' }}>
-              Deep-dives into the architecture of modern machine intelligence, retrieval systems,
-              and the software built around them.
+              Technical deep-dives into the architecture of modern machine intelligence, retrieval
+              systems, and neural optimization.
             </p>
           </Reveal>
         </div>

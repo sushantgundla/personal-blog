@@ -22,12 +22,12 @@ export default function ProjectsPage() {
     <section className="v2-section">
       <div className="v2-wrap">
         <Reveal>
-          <span className="v2-eyebrow">Track record</span>
+          {/* Headline and intro are his own copy, carried over verbatim from
+              the previous designs — do not paraphrase them. */}
+          <span className="v2-eyebrow">Systems &amp; Prototypes</span>
           <h1 className="v2-title">Projects</h1>
           <p className="v2-body v2-muted" style={{ maxWidth: '640px', marginTop: '16px' }}>
-            Systems I&apos;ve built and shipped to production — agent platforms, chatbots, RAG
-            pipelines, and a language model trained from scratch. Several are under NDA, so
-            what&apos;s shown is what they do, not whose logo is on them.
+            Systems, tools, and experiments from the frontier of AI engineering.
           </p>
         </Reveal>
 
