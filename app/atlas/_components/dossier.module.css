@@ -63,9 +63,14 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1.25rem;
   min-width: 0;
-  flex: 1;
+  /* Capped, not flex:1 full-bleed — the text column used to stretch the
+     whole note's width even though only the name and population actually
+     used it, leaving the space between them and the portrait/rosette empty.
+     Keeping this column to roughly the left half hands the rest of the
+     note over to the ornament layer on purpose. */
+  width: min(56%, 42rem);
   padding-bottom: 1rem;
 }
 
@@ -74,9 +79,14 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  /* Room for the flag seal, which sits above this row rather than in its
-     flow — see .faceSeal below. */
-  padding-right: clamp(3.5rem, 8vw, 5rem);
+  /* Room for the flag seal. .faceNoteInner is capped well short of the
+     note's right edge on desktop (see its own comment), but the flag sits
+     at the note's absolute top-right corner regardless — and at the
+     narrow end of .faceNoteInner's own mobile width:100% override, this
+     row's own right edge reaches exactly where the seal sits. Confirmed
+     live: a country with a long region name ("Insular Oceania") rendered
+     partly hidden behind the flag ring without this. */
+  padding-right: clamp(3.25rem, 7vw, 4.75rem);
 }
 
 /* The flag as an engraved seal — round, ringed, stamped in the note's
@@ -96,6 +106,11 @@
 }
 
 .faceSealImg {
+  /* Plain <img> now (see FaceNote.tsx), not next/image's `fill` — which
+     used to supply this positioning itself. */
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -116,6 +131,34 @@
   align-items: baseline;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* The note's fine-print panel — capital, currency, language, area,
+   independence, ISO codes. A real banknote's engraved issuer details fill
+   exactly this kind of space between the denomination and the ornament;
+   rows with nothing to print are simply omitted by FaceNote.tsx rather than
+   rendered as an em dash, so a sparse country's note still reads as
+   deliberate rather than half-empty. */
+.faceFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 1.5rem;
+}
+
+.factRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.factValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--note-intaglio);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .faceMotto {
@@ -153,13 +196,21 @@
 }
 
 .facePortraitImg {
+  /* Plain <img> now (see FaceNote.tsx), not next/image's `fill`. */
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   filter: grayscale(1) contrast(1.15);
   -webkit-mask-image: radial-gradient(circle, black 55%, transparent 78%);
   mask-image: radial-gradient(circle, black 55%, transparent 78%);
 }
 
-.faceGuilloche {
+/* The rosette's own bounding box — position/size live here, on the
+   wrapper, so .faceEmblem (the coat of arms, seated at its centre) can
+   share the exact same box via inset:0 instead of duplicating every
+   clamp() by hand. */
+.faceRosette {
   position: absolute;
   top: 50%;
   /* A small, deliberate bleed off the right edge — the "cut by the
@@ -173,29 +224,61 @@
   transform: translateY(-50%);
   width: clamp(220px, 32vw, 400px);
   height: clamp(220px, 32vw, 400px);
-  color: var(--note-ink);
 }
 
-.faceGuillocheGrown {
+.faceRosetteGrown {
   right: 6%;
   width: clamp(260px, 40vw, 520px);
   height: clamp(260px, 40vw, 520px);
 }
 
+.faceGuilloche {
+  position: absolute;
+  inset: 0;
+  color: var(--note-ink);
+}
+
+/* The coat of arms, centred inside the rosette's own bounding box like a
+   mint's medallion stamped in the middle of an engraved guilloché. Sized
+   relative to .faceRosette so it scales automatically with the grown
+   (no-portrait) variant instead of needing its own breakpoints. */
+.faceEmblem {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.faceEmblemImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 @media (max-width: 640px) {
+  .faceNoteInner {
+    width: 100%;
+  }
+
   .facePortrait {
     right: 22%;
     width: clamp(100px, 32vw, 170px);
     height: clamp(100px, 32vw, 170px);
   }
 
-  .faceGuilloche {
+  .faceRosette {
     right: 2%;
     width: clamp(140px, 46vw, 240px);
     height: clamp(140px, 46vw, 240px);
   }
 
-  .faceGuillocheGrown {
+  .faceRosetteGrown {
     right: 4%;
     width: clamp(170px, 54vw, 280px);
     height: clamp(170px, 54vw, 280px);

@@ -48,6 +48,35 @@ export function toHttps(url: string | null): string | null {
   return url.startsWith('http://') ? `https://${url.slice(7)}` : url;
 }
 
+/**
+ * A Commons `Special:FilePath/<file>` URL — every image field Wikidata
+ * returns (flags, coats of arms, portraits, landmark photos) — 301-redirects
+ * to `upload.wikimedia.org` and serves the original file verbatim. For an
+ * SVG (every flag) that throws inside `next/image`, which is https-only and
+ * deliberately does not enable `dangerouslyAllowSVG` (arbitrary remote SVG
+ * can carry a `<script>`). Confirmed live: the bare URL for India's flag
+ * 301s straight to a `.svg`; the same URL with `?width=320` appended instead
+ * redirects through Commons' own thumbnailer to a 200 `image/png` response.
+ *
+ * Appending `?width=N` fixes three things at once, for any Special:FilePath
+ * URL: it rasterises SVGs to PNG, it caps the byte size of full-resolution
+ * portrait/landmark photos (some are several megabytes), and it collapses
+ * what was an inconsistent redirect chain into one Commons handles the same
+ * way every time — the portrait watermark rendering once and not the next
+ * traced back to exactly this.
+ *
+ * A non-Commons URL (or one already carrying a query string this function
+ * doesn't recognise) is returned unchanged.
+ */
+export function commonsThumbnail(url: string, width: number): string;
+export function commonsThumbnail(url: string | null, width: number): string | null;
+export function commonsThumbnail(url: string | null, width: number): string | null {
+  if (!url) return null;
+  if (!url.includes('/Special:FilePath/')) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}width=${width}`;
+}
+
 function isMissing(v: number | null | undefined): v is null | undefined {
   return v === null || v === undefined || typeof v !== 'number' || Number.isNaN(v);
 }

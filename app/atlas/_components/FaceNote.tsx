@@ -1,8 +1,7 @@
-import Image from 'next/image'
 import type { CountryDossier } from '@/lib/atlas/types'
 import type { IsoCountry } from '@/lib/atlas/iso-countries'
 import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
-import { formatValue, formatYear, toHttps } from '@/lib/atlas/format'
+import { commonsThumbnail, formatValue, formatYear, toHttps } from '@/lib/atlas/format'
 import styles from './dossier.module.css'
 
 export interface FaceNoteProps {
@@ -26,20 +25,49 @@ function guilloche(iso3: string, size: number) {
   }
 }
 
+/** Wikidata's P571 (inception) comes back as a full ISO datetime; the note
+ * only has room to engrave the year. */
+function inceptionYear(iso: string | null): string | null {
+  if (!iso) return null
+  const year = new Date(iso).getUTCFullYear()
+  return Number.isFinite(year) ? formatYear(year) : null
+}
+
+/** One line of the note's fine-print panel — a mono label over its value,
+ * matching a banknote's engraved issuer details. Rows with no real value
+ * are simply not rendered by the caller, so a sparse country's note never
+ * prints a page of em dashes. */
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={styles.factRow}>
+      <span className="atlas-label">{label}</span>
+      <span className={styles.factValue}>{value}</span>
+    </div>
+  )
+}
+
 /**
- * The headline banknote: the country's name engraved huge, its
- * guilloché rosette bleeding off the right edge, population as the
- * denomination numeral, a watermark portrait, the M49 numeric code as a
- * serial, and the motto as bottom-edge microtext.
+ * The headline banknote: the country's name engraved huge, a fine-print
+ * panel of capital/currency/language/area/independence/ISO facts, population
+ * as the denomination numeral, a watermark portrait, the national emblem
+ * seated inside the guilloché rosette, the M49 numeric code as a serial, and
+ * the motto as bottom-edge microtext.
  */
 export function FaceNote({ dossier, country }: FaceNoteProps) {
-  const population = dossier.worldBank.ok
-    ? dossier.worldBank.data.indicators.find((i) => i.code === 'SP.POP.TOTL') ?? null
-    : null
+  const indicators = dossier.worldBank.ok ? dossier.worldBank.data.indicators : []
+  const population = indicators.find((i) => i.code === 'SP.POP.TOTL') ?? null
   const popYear = population?.year ? formatYear(Number(population.year)) : null
+  const area = indicators.find((i) => i.code === 'AG.SRF.TOTL.K2') ?? null
 
-  const motto = dossier.wikidata.ok ? dossier.wikidata.data.motto : null
-  const flagUrl = dossier.wikidata.ok ? dossier.wikidata.data.flagImageUrl : null
+  const facts = dossier.wikidata.ok ? dossier.wikidata.data : null
+  const motto = facts?.motto ?? null
+  const flagUrl = facts?.flagImageUrl ?? null
+  const emblemUrl = facts?.emblemImageUrl ?? null
+
+  const currency = [facts?.currencyCode, facts?.currencyName].filter(Boolean).join(' · ') || null
+  const languages = facts?.officialLanguages.length ? facts.officialLanguages.join(', ') : null
+  const since = inceptionYear(facts?.independenceDate ?? null)
+  const areaValue = area?.value != null ? `${formatValue(area.value, 'number')} km²` : null
 
   const portrait = dossier.famousPeople.ok
     ? dossier.famousPeople.data.find((p) => p.imageUrl) ?? null
@@ -65,17 +93,25 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
 
         {flagUrl && (
           <div className={`atlas-ornament ${styles.faceSeal}`}>
-            <Image
-              src={toHttps(flagUrl)}
-              alt={`Flag of ${dossier.name}`}
-              fill
-              sizes="72px"
-              className={styles.faceSealImg}
-            />
+            {/* Plain <img>, not next/image: these are decorative and Commons'
+                Special:FilePath redirect chain (see commonsThumbnail's doc
+                comment) intermittently confused next/image's own optimizer.
+                A direct browser fetch of the already-rasterised, width-capped
+                URL is simpler and deterministic. */}
+            <img src={toHttps(flagUrl)} alt={`Flag of ${dossier.name}`} className={styles.faceSealImg} />
           </div>
         )}
 
         <h1 className={`atlas-face-name ${styles.faceName}`}>{dossier.name}</h1>
+
+        <div className={styles.faceFacts}>
+          {facts?.capital && <Fact label="Capital" value={facts.capital} />}
+          {currency && <Fact label="Currency" value={currency} />}
+          {languages && <Fact label="Language" value={languages} />}
+          {areaValue && <Fact label="Area" value={areaValue} />}
+          {since && <Fact label="Since" value={since} />}
+          <Fact label="ISO" value={`${country.iso3} · ${country.iso2}`} />
+        </div>
 
         <div className={styles.faceDenomination}>
           <span className="atlas-label">Population</span>
@@ -95,24 +131,38 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
       <div className={styles.faceOrnamentArea}>
         {hasPortrait && portrait?.imageUrl && (
           <div className={`atlas-watermark ${styles.facePortrait}`}>
-            <Image src={toHttps(portrait.imageUrl)} alt="" fill sizes="260px" className={styles.facePortraitImg} />
+            {/* Famous-people portraits come from the build-time static JSON
+                (see lib/atlas/sources/wikidata.ts's own note on why), so
+                commonsThumbnail is applied here rather than at the source —
+                same Special:FilePath fix, same reason. */}
+            <img
+              src={commonsThumbnail(toHttps(portrait.imageUrl), 640)}
+              alt=""
+              className={styles.facePortraitImg}
+            />
             <span className="sr-only">Watermark portrait: {portrait.name}</span>
           </div>
         )}
 
-        <svg
-          viewBox={`0 0 ${size} ${size}`}
-          aria-hidden="true"
-          className={`atlas-guilloche ${styles.faceGuilloche} ${
-            !hasPortrait ? styles.faceGuillocheGrown : ''
-          }`}
-        >
-          <path
-            d={path}
-            className="atlas-guilloche-path"
-            style={{ ['--atlas-dash-length' as string]: length }}
-          />
-        </svg>
+        <div className={`${styles.faceRosette} ${!hasPortrait ? styles.faceRosetteGrown : ''}`}>
+          <svg viewBox={`0 0 ${size} ${size}`} aria-hidden="true" className={`atlas-guilloche ${styles.faceGuilloche}`}>
+            <path
+              d={path}
+              className="atlas-guilloche-path"
+              style={{ ['--atlas-dash-length' as string]: length }}
+            />
+          </svg>
+
+          {/* The coat of arms, seated inside the rosette the way a mint
+              stamps its own medallion at the centre of an engraved
+              guilloché — a second watermark, alongside the portrait, that
+              resolves to full contrast on hover. */}
+          {emblemUrl && (
+            <div className={`atlas-watermark ${styles.faceEmblem}`}>
+              <img src={emblemUrl} alt={`Coat of arms of ${dossier.name}`} className={styles.faceEmblemImg} />
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )

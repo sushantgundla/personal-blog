@@ -13,7 +13,7 @@
 //   Tuvalu, which has two circulating currencies).
 // - Every fact carries the query's run time as "asOf", per §3.7.
 import type { Person, SourceResult, UnescoSite, WikidataFacts } from "../types";
-import { toHttps } from "../format";
+import { commonsThumbnail, toHttps } from "../format";
 
 const ENDPOINT = "https://query.wikidata.org/sparql";
 const USER_AGENT =
@@ -55,6 +55,12 @@ function str(row: Record<string, { value: string }>, key: string): string | null
 // portraits, anthem audio) come back as literal `http://` routinely, which
 // breaks next/image's https-only remotePatterns. See the doc comment on
 // toHttps for the full trap.
+//
+// commonsThumbnail (also from ../format) is applied on top of every
+// Special:FilePath *image* field below (flag, emblem, UNESCO site photos —
+// never anthemAudioUrl, which isn't Commons media) so Commons rasterises
+// flags to PNG instead of 301-ing to raw SVG, and caps full-res photos to a
+// sane width. See the doc comment on commonsThumbnail for the full trap.
 
 function num(row: Record<string, { value: string }>, key: string): number | null {
   const v = row[key]?.value;
@@ -74,7 +80,7 @@ function parsePoint(wkt: string | null): { lat: number; lng: number } | null {
 function dossierQuery(qid: string): string {
   return `SELECT ?mottoLabel ?anthemLabel ?anthemAudio ?flag ?emblem ?capitalLabel ?capCoord
   ?inception ?languages ?currencyNames ?currencyCodes ?drivingSideLabel ?callingCode
-  ?plate ?tldLabel
+  ?plate ?tldText
   ?highestLabel ?highestElev ?lowestLabel ?lowestElev ?patrons WHERE {
   BIND(wd:${qid} AS ?country)
   OPTIONAL { ?country wdt:P1546 ?motto . }
@@ -90,9 +96,14 @@ function dossierQuery(qid: string): string {
     # variant alongside the plain ASCII one (".in" vs ".bharat" /
     # ".भारत" / etc). ORDER BY + LIMIT 1 picks the ASCII form when one
     # exists rather than an arbitrary script via unordered GROUP_CONCAT.
-    SELECT ?tldLabel WHERE {
-      wd:${qid} wdt:P78 ?tld . ?tld rdfs:label ?tldLabel . FILTER(lang(?tldLabel) = "en")
-    } ORDER BY DESC(REGEX(?tldLabel, "^\\.[A-Za-z]+$")) LIMIT 1
+    # Projected as ?tldText, not ?tldLabel — the query-wide "?xLabel"
+    # naming convention is magic to Wikidata's own label service below
+    # (SERVICE wikibase:label), which silently reclaims and empties any
+    # variable named ?tldLabel even though it's already bound here,
+    # because ?tld itself is only in scope inside this subquery.
+    SELECT ?tldText WHERE {
+      wd:${qid} wdt:P78 ?tld . ?tld rdfs:label ?tldText . FILTER(lang(?tldText) = "en")
+    } ORDER BY DESC(REGEX(?tldText, "^\\\\.[A-Za-z]+$")) LIMIT 1
   }
   OPTIONAL {
     SELECT (GROUP_CONCAT(DISTINCT ?llabel; separator="|") AS ?languages) WHERE {
@@ -149,8 +160,8 @@ export async function fetchDossierFacts(
       motto: str(row, "mottoLabel"),
       anthemName: str(row, "anthemLabel"),
       anthemAudioUrl: toHttps(str(row, "anthemAudio")),
-      flagImageUrl: toHttps(str(row, "flag")),
-      emblemImageUrl: toHttps(str(row, "emblem")),
+      flagImageUrl: commonsThumbnail(toHttps(str(row, "flag")), 320),
+      emblemImageUrl: commonsThumbnail(toHttps(str(row, "emblem")), 320),
       capital: str(row, "capitalLabel"),
       capitalCoordinates: parsePoint(str(row, "capCoord")),
       independenceDate: str(row, "inception"),
@@ -163,7 +174,7 @@ export async function fetchDossierFacts(
       // P78 is modelled as a WikibaseItem per ccTLD (e.g. Q39218 = ".in"),
       // not a plain string — see the dossierQuery subquery above for how
       // the ASCII form is picked when a country has more than one.
-      topLevelDomain: str(row, "tldLabel"),
+      topLevelDomain: str(row, "tldText"),
       highestPoint: str(row, "highestLabel")
         ? { name: str(row, "highestLabel")!, elevationM: num(row, "highestElev") }
         : null,
@@ -196,7 +207,7 @@ export async function fetchUnescoSites(
         qid: siteQid,
         name: str(row, "siteLabel") ?? "Unnamed site",
         description: str(row, "siteDescription"),
-        imageUrl: toHttps(str(row, "image")),
+        imageUrl: commonsThumbnail(toHttps(str(row, "image")), 800),
         coordinates: parsePoint(str(row, "coord")),
       });
     }
