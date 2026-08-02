@@ -77,6 +77,19 @@ export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, 
       <div className={styles.railList}>
         {visible.map((row) => {
           const hasGeometry = onPlate.has(row.iso3)
+          // Fixed 2026-08-03: a `title` tooltip was the only place the "*"
+          // was explained — titles never show on touch and screen readers
+          // handle them inconsistently, so a marker that carries real
+          // meaning ("no shape on the map at this size") wasn't actually
+          // reaching anyone using either. This row now has an explicit
+          // aria-label carrying that same fact in words (which also
+          // overrides the child text for the accessible name, so the "*"
+          // glyph itself doesn't get read as stray punctuation); the "*"
+          // is also aria-hidden directly, belt and braces. `title` stays
+          // as a bonus for mouse users who hover long enough to see it.
+          const accessibleName = `${row.rank ? `Rank ${row.rank}` : 'Unranked'} — ${row.name}${
+            hasGeometry ? '' : ', no shape on the map at this size — open it from this list'
+          } — ${formatValue(row.value, format)}${row.year ? ` in ${formatYear(Number(row.year))}` : ''}`
           return (
             <Link
               key={row.iso3}
@@ -86,12 +99,15 @@ export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, 
               onMouseLeave={() => onHover(null)}
               onFocus={() => onHover(row.iso3)}
               onBlur={() => onHover(null)}
+              aria-label={accessibleName}
               title={hasGeometry ? undefined : `${row.name} has no shape on the plate — reachable here and by search only`}
             >
-              <span className={styles.railRank}>{row.rank ? `#${row.rank}` : '—'}</span>
-              <span className={styles.railName}>
+              <span className={styles.railRank} aria-hidden="true">
+                {row.rank ? `#${row.rank}` : '—'}
+              </span>
+              <span className={styles.railName} aria-hidden="true">
                 {row.name}
-                {!hasGeometry && ' *'}
+                {!hasGeometry && <span> *</span>}
               </span>
               <span className={styles.railValueCol}>
                 <span className={styles.railValue}>
