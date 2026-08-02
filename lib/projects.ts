@@ -1,4 +1,4 @@
-export type ProjectStatus = 'production' | 'confidential' | 'open-source'
+export type ProjectStatus = 'production' | 'confidential' | 'open-source' | 'experiment'
 
 export interface Project {
   slug: string
@@ -33,7 +33,7 @@ export const projects: Project[] = [
     description:
       'A conversational assistant that holds coherent multi-turn conversations, routes each question to the right specialist automatically, and answers grounded in real business data.',
     impact: 'Grounded, multi-tenant conversational AI for retail and petroleum customers',
-    tags: ['Chatbot', 'RAG', 'LLMs', 'Conversational AI'],
+    tags: ['Chatbot', 'RAG', 'LLMs', 'Conversational AI', 'Agentic AI', 'Multi-tenant'],
     status: 'production',
     link: '/articles/a-chatbot-that-remembers',
   },
@@ -45,7 +45,7 @@ export const projects: Project[] = [
     description:
       'The knowledge layer behind MyPDI: it turns messy real-world documents and structured sources into one consistent, queryable knowledge base, resiliently and without manual babysitting.',
     impact: 'Feeds reliable retrieval across the AI platform',
-    tags: ['RAG', 'Ingestion', 'Knowledge Base', 'Data Pipelines'],
+    tags: ['RAG', 'Ingestion', 'Knowledge Base', 'Data Pipelines', 'MLOps'],
     status: 'production',
     link: '/articles/the-ingestion-problem',
   },
@@ -68,7 +68,7 @@ export const projects: Project[] = [
     description:
       'A reusable framework for deploying config-driven AI agents via REST API, with support for memory, multi knowledge base retrieval, tool use, and enterprise integrations.',
     impact: 'Adopted across multiple internal products and teams',
-    tags: ['Agentic AI', 'MCP', 'LLMs', 'FastAPI', 'MLOps'],
+    tags: ['Agentic AI', 'MCP', 'LLMs', 'FastAPI', 'MLOps', 'RAG'],
     status: 'confidential',
   },
   {
@@ -110,9 +110,10 @@ export const projects: Project[] = [
     organization: 'Personal Project',
     period: '2026',
     description:
-      'An interactive world map where every country\'s data is engraved as its own banknote — population, economy, trade, history, famous people, hundreds of numbers, all pulled live from open data.',
+      'An interactive world map where every country\'s data is engraved onto its own banknote. About 150 measures per country — population, economy, trade, health, education, environment, infrastructure — pulled live from the World Bank, Wikidata, Wikipedia, and UN Comtrade. Compare up to five countries side by side, rank every country by any measure, or trace its trade partners as arcs across the map. Each country also has its own story: motto, currency, languages, anthem, famous people, landmarks, history, and neighbours. Every number carries the year it\'s from, and a rank is left blank when too few countries report it.',
+    impact: 'Built so people can learn about the world by poking at it, not by reading a table.',
     tags: ['Next.js', 'Data Visualization', 'Open Data', 'TypeScript'],
-    status: 'open-source',
+    status: 'experiment',
     link: '/atlas',
   },
 ]

@@ -10,9 +10,19 @@ const statusLabels: Record<ProjectStatus, string> = {
   production: 'Production',
   confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
+  experiment: 'Experiments',
 }
 
+// Work statuses first, experiments last — it's a separate kind of thing,
+// built for curiosity rather than for a job, not competing with the work above.
+const statusOrder: ProjectStatus[] = ['production', 'confidential', 'open-source', 'experiment']
+const delayClasses = ['delay-1', 'delay-2', 'delay-3']
+
 export default function ProjectsPage() {
+  const groups = statusOrder
+    .map((status) => ({ status, items: projects.filter((p) => p.status === status) }))
+    .filter((g) => g.items.length > 0)
+
   return (
     <div>
       {/* Header */}
@@ -26,73 +36,90 @@ export default function ProjectsPage() {
         </p>
       </section>
 
-      {projects.length > 0 ? (
-        <section className="animate-fade-up delay-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {projects.map((project) => {
-              const cardContent = (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="font-label text-[11px] uppercase tracking-[0.12em] text-on-surface-variant">
-                      {statusLabels[project.status]}
-                    </span>
-                  </div>
-                  <h3 className="font-headline text-xl font-semibold text-on-surface group-hover:text-primary transition-colors mb-1">
-                    {project.title}
-                  </h3>
-                  <p className="text-primary font-medium text-sm mb-4">
-                    {project.organization}
-                    <span className="text-on-surface-variant/60"> · {project.period}</span>
-                  </p>
-                  <p className="text-on-surface-variant text-sm leading-relaxed font-body mb-4">
-                    {project.description}
-                  </p>
-                  {project.impact && (
-                    <p className="text-on-surface text-sm font-medium mb-5 border-l-2 border-primary/40 pl-3">
-                      {project.impact}
+      {groups.length > 0 ? (
+        groups.map((group, groupIndex) => (
+          <section
+            key={group.status}
+            className={
+              groupIndex === 0
+                ? `animate-fade-up ${delayClasses[groupIndex] ?? 'delay-3'}`
+                : `animate-fade-up ${delayClasses[groupIndex] ?? 'delay-3'} mt-16 pt-12 border-t border-outline-variant/20`
+            }
+          >
+            <span className="block font-label text-[11px] uppercase tracking-[0.12em] text-on-surface-variant mb-6">
+              {statusLabels[group.status]}
+            </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {group.items.map((project) => {
+                // "Read the deep dive" fits an article. The Atlas is an app
+                // you open, not an essay you read, so it gets its own label.
+                const isArticleLink = project.link?.startsWith('/articles')
+                const isAtlasLink = project.link === '/atlas'
+                const linkLabel = isArticleLink
+                  ? 'Read the deep dive'
+                  : isAtlasLink
+                    ? 'Explore the Atlas'
+                    : 'View project'
+
+                const cardContent = (
+                  <>
+                    <h3 className="font-headline text-xl font-semibold text-on-surface group-hover:text-primary transition-colors mb-1">
+                      {project.title}
+                    </h3>
+                    <p className="text-primary font-medium text-sm mb-4">
+                      {project.organization}
+                      <span className="text-on-surface-variant/60"> · {project.period}</span>
                     </p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {project.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-3 py-1.5 rounded-md text-xs font-medium bg-surface-container-highest text-on-surface-variant border border-outline-variant/10"
-                      >
-                        {tag}
+                    <p className="text-on-surface-variant text-sm leading-relaxed font-body mb-4">
+                      {project.description}
+                    </p>
+                    {project.impact && (
+                      <p className="text-on-surface text-sm font-medium mb-5 border-l-2 border-primary/40 pl-3">
+                        {project.impact}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {project.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-3 py-1.5 rounded-md text-xs font-medium bg-surface-container-highest text-on-surface-variant border border-outline-variant/10"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    {project.link && (
+                      <span className="inline-flex items-center gap-1.5 mt-5 text-primary font-label text-xs uppercase tracking-wider group-hover:opacity-80 transition-opacity">
+                        {linkLabel}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
                       </span>
-                    ))}
+                    )}
+                  </>
+                )
+
+                const cardClassName =
+                  'group rounded-2xl border border-outline-variant/20 bg-surface-container p-8 hover:border-primary/30 hover:bg-surface-container-high hover:shadow-lg hover:shadow-primary/5 transition-all'
+
+                const isInternal = project.link?.startsWith('/')
+
+                return project.link ? (
+                  <a
+                    key={project.slug}
+                    href={project.link}
+                    {...(isInternal ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
+                    className={cardClassName}
+                  >
+                    {cardContent}
+                  </a>
+                ) : (
+                  <div key={project.slug} className={cardClassName}>
+                    {cardContent}
                   </div>
-                  {project.link && (
-                    <span className="inline-flex items-center gap-1.5 mt-5 text-primary font-label text-xs uppercase tracking-wider group-hover:opacity-80 transition-opacity">
-                      Read the deep dive
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-                    </span>
-                  )}
-                </>
-              )
-
-              const cardClassName =
-                'group rounded-2xl border border-outline-variant/20 bg-surface-container p-8 hover:border-primary/30 hover:bg-surface-container-high hover:shadow-lg hover:shadow-primary/5 transition-all'
-
-              const isInternal = project.link?.startsWith('/')
-
-              return project.link ? (
-                <a
-                  key={project.slug}
-                  href={project.link}
-                  {...(isInternal ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
-                  className={cardClassName}
-                >
-                  {cardContent}
-                </a>
-              ) : (
-                <div key={project.slug} className={cardClassName}>
-                  {cardContent}
-                </div>
-              )
-            })}
-          </div>
-        </section>
+                )
+              })}
+            </div>
+          </section>
+        ))
       ) : (
         <section className="animate-fade-up delay-1">
           <div className="flex flex-col items-center justify-center py-32 rounded-2xl border border-dashed border-outline-variant/30">
