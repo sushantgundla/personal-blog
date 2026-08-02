@@ -82,6 +82,55 @@
   color: var(--note-void);
 }
 
+.pickerRequired {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+/* "Add up to three more" — native <details>, so choosing a third, fourth
+   or fifth country (and "removing" one by resetting it to "— None —")
+   works with zero JavaScript, the same progressive-disclosure device the
+   dossier's own "ISSUE N MORE" already uses. */
+.pickerMore {
+  width: 100%;
+}
+
+.pickerMoreSummary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px dashed var(--note-seal);
+  border-radius: 999px;
+  color: var(--note-seal);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.pickerMoreSummary::-webkit-details-marker {
+  display: none;
+}
+
+.pickerMoreSummary:hover,
+.pickerMoreSummary:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+.pickerMoreFields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
 /* ---------------------------------------------------------- pair page */
 
 .pairPage {
@@ -101,9 +150,22 @@
   flex-wrap: wrap;
 }
 
+.tooMany {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 520px;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+/* Two to five countries. auto-fit rather than a fixed column count: two
+   stretch to fill the row exactly as the original two-up layout did; five
+   wrap onto a second row instead of squeezing five banknote-scale titles
+   (or five trade ledgers) into a single row where they'd clip or overlap. */
 .faceRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1px;
   background: var(--note-rule);
   border: 1px solid var(--note-rule);
@@ -113,109 +175,214 @@
   aspect-ratio: auto;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 480px) {
   .faceRow {
     grid-template-columns: 1fr;
   }
 }
 
-.sourcesRow {
+/* Three to five countries: the compact identity strip that replaces the
+   full face notes above. Fixed, modest sizing throughout — no viewport-
+   relative clamp like the face note's own name — so it holds at five
+   columns exactly as well as it holds at two. */
+.miniStrip {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1px;
   background: var(--note-rule);
   border: 1px solid var(--note-rule);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 480px) {
+  .miniStrip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.miniCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 1.1rem;
+  background: var(--note-paper);
+}
+
+.miniHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.miniFlag {
+  flex: none;
+  width: 22px;
+  height: auto;
+  border: 1px solid var(--note-rule);
+}
+
+.miniName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--note-ink, var(--note-intaglio));
+}
+
+.miniInkBar {
+  display: block;
+  width: 2.5rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--note-ink, var(--note-seal));
+}
+
+.miniDenominationRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.miniDenomination {
+  font-size: clamp(1.125rem, 2.4vw, 2rem);
+  color: var(--note-intaglio);
+}
+
+.sourcesRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--note-rule);
+  border: 1px solid var(--note-rule);
+}
+
+@media (max-width: 480px) {
   .sourcesRow {
     grid-template-columns: 1fr;
   }
 }
 
-/* ---------------------------------------------------------- compare note */
+/* ---------------------------------------------------------- the ledger */
 
-.compareGrid {
-  grid-template-columns: repeat(2, 1fr) !important;
+/* The whole sheet — header and every section's rows — scrolls
+   horizontally as one unit when five columns don't fit; the page itself
+   never does. This relies on each row below being its own CSS grid with a
+   hard per-column minimum (see CompareSheet.tsx's ledgerColumns): once the
+   sum of those minimums exceeds this wrapper's width, the grid overflows
+   its own box rather than shrinking, and overflow-x here turns that into
+   a scrollbar instead of an overlap. */
+.ledgerScroll {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
 }
 
-@media (max-width: 640px) {
-  .compareGrid {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-.compareNote {
-  min-height: 8.5rem;
-}
-
-.compareTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.compareValues {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.ledgerHeaderRow {
+  display: grid;
+  align-items: end;
   gap: 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--note-rule);
 }
 
-.compareSide {
+.ledgerCorner {
+  position: sticky;
+  left: 0;
+  background: var(--note-void);
+}
+
+.ledgerHeaderCell {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  align-items: flex-start;
+  gap: 0.4rem;
   min-width: 0;
 }
 
-.compareValue {
-  font-size: clamp(1.25rem, 3vw, 1.75rem);
+.ledgerFlag {
+  width: 28px;
+  height: auto;
+  border: 1px solid var(--note-rule);
+}
+
+.ledgerCountryName {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--note-ink, var(--note-intaglio));
+}
+
+.ledgerInkBar {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--note-ink, var(--note-seal));
+}
+
+.ledgerBody {
+  display: flex;
+  flex-direction: column;
+}
+
+.ledgerRow {
+  display: grid;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--note-rule);
+}
+
+.ledgerRow:first-child {
+  border-top: none;
+}
+
+/* Pinned so the indicator label stays put while five columns of values
+   scroll past underneath it on narrow screens. */
+.ledgerRowLabel {
+  position: sticky;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-right: 0.5rem;
+  background: var(--note-void);
+}
+
+.ledgerCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  min-width: 0;
+  text-align: right;
+}
+
+.ledgerValue {
+  font-size: clamp(0.9375rem, 1.6vw, 1.375rem);
   color: var(--note-intaglio-dim);
 }
 
-.noteValueLoser {
-  color: var(--note-intaglio-dim);
+/* The honest-winner rule speaks entirely through colour now that a
+   two-sided lean bar no longer generalises past two columns — see
+   CompareNote's winnerIndex. Paired with `atlas-remarkable` from
+   atlas.css so a winning cell also fluoresces correctly under the UV
+   lamp; that global rule is more specific than this one and wins there,
+   ember is the default everywhere else. */
+.ledgerWinnerValue {
+  color: var(--note-ember);
 }
 
-/* Split security thread — centre is a tie, the filled half leans toward
-   whichever value is numerically larger. */
-.splitTrack {
-  position: relative;
-  height: 2px;
-  background: var(--note-rule);
-  border-radius: 1px;
-  margin-top: 0.25rem;
-}
-
-.splitCenter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--note-intaglio-dim);
-  transform: translate(-50%, -50%);
-}
-
-.splitFillLeft {
-  position: absolute;
-  top: 0;
-  right: 50%;
-  height: 100%;
-  border-radius: 1px 0 0 1px;
-  transition: width 0.7s var(--atlas-ease);
-}
-
-.splitFillRight {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  height: 100%;
-  border-radius: 0 1px 1px 0;
-  transition: width 0.7s var(--atlas-ease);
+.ledgerNoData {
+  opacity: 0.6;
 }
 
 /* ---------------------------------------------------------- trade bond */

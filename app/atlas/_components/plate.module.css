@@ -15,10 +15,27 @@
 
 /* ---------------------------------------------------------- page shell */
 
+/* The /atlas landing page only (not the dossier, compare or rankings routes
+   — they keep scrolling normally through the same app/atlas/layout.tsx) is
+   a fixed, non-scrolling app shell. .page pins itself to exactly the
+   viewport area below the top bar with `position: fixed`, using
+   --atlas-header-h (atlas.css) as the one shared source of truth for the
+   header's height — it never touches or depends on layout.tsx's <main> or
+   .atlas-root, which is what keeps every other /atlas/* route's normal
+   document scrolling completely unaffected. Only .rail (the sidebar)
+   scrolls inside this shell; .mapCol — and the map inside it — stays put.
+   `dvh`, not `vh`, so mobile browser chrome collapsing or expanding doesn't
+   clip the bottom edge. Below 900px this collapses back to a normal, fully
+   scrolling single column (see the media query below): a fixed map makes
+   no sense once the sidebar and map can't share the viewport. */
 .page {
+  position: fixed;
+  top: var(--atlas-header-h, 61px);
+  left: 0;
+  right: 0;
+  height: calc(100dvh - var(--atlas-header-h, 61px));
   display: flex;
   flex-direction: column;
-  gap: 1px;
 }
 
 .layout {
@@ -26,26 +43,15 @@
   grid-template-columns: minmax(220px, 300px) 1fr;
   gap: 1px;
   background: var(--note-rule);
-  min-height: calc(100vh - 61px);
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  /* Mobile: rank rail and search lead, the map is secondary. */
-  .rail {
-    order: 1;
-  }
-  .mapCol {
-    order: 2;
-  }
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .rail {
   background: var(--note-void);
   padding: 1.25rem 1rem;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -57,9 +63,39 @@
   position: relative;
   padding: 1.5rem;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  /* Back to the document's own scrolling — .page rejoins normal flow
+     instead of pinning itself over the viewport. */
+  .page {
+    position: static;
+    height: auto;
+  }
+  .layout {
+    display: block;
+    height: auto;
+  }
+  /* Mobile: rank rail and search lead, the map is secondary. Nothing here
+     is fixed or independently scrollable — the whole page scrolls as one,
+     the ordinary mobile pattern, since there's no room to give the map and
+     the standings their own separate panes on a small screen. */
+  .rail {
+    order: 1;
+    overflow: visible;
+  }
+  .mapCol {
+    order: 2;
+    overflow: visible;
+  }
+  .mapWrap {
+    height: 70vh;
+  }
 }
 
 /* ---------------------------------------------------------- the map itself */
@@ -67,14 +103,37 @@
 .mapWrap {
   position: relative;
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   border: 1px solid var(--note-rule);
+  overflow: hidden;
+  cursor: grab;
+  /* This element owns pan/pinch itself (see Plate.tsx's pointer handlers) —
+     without this the browser's own touch scrolling and pinch-zoom fight it
+     on mobile. */
+  touch-action: none;
+  outline: none;
+}
+
+.mapWrap:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--note-ember);
+}
+
+.mapWrapDragging {
+  cursor: grabbing;
 }
 
 .svg {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 1000 / 500;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .svg {
+    height: auto;
+    aspect-ratio: 1000 / 500;
+  }
 }
 
 .countryLink {
@@ -252,6 +311,70 @@
   white-space: nowrap;
 }
 
+/* ---------------------------------------------------------- zoom controls */
+
+/* The old version sat at ~1.08:1 contrast against .mapCol's own
+   background (--note-paper buttons on --note-plate) — functionally
+   invisible on open ocean. --note-seal is the map's existing "hardware"
+   colour (the registration crosses use it too), so framing the cluster in
+   it reads as more engraved furniture rather than a random new colour, and
+   it sits at 6.27:1 against --note-plate. The button glyphs themselves now
+   use --note-intaglio (the map's brightest text colour, ~13:1) instead of
+   the dim secondary tone. */
+.zoomCluster {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+/* The one quiet line telling a first-time visitor the map responds to
+   more than clicks — nothing else on the plate hints at this. aria-hidden
+   because the map's own aria-label (Plate.tsx) already carries the same
+   instructions for assistive tech. */
+.zoomHint {
+  background: var(--note-plate);
+  padding: 0.15rem 0.45rem;
+  opacity: 0.85;
+}
+
+.zoomControls {
+  display: flex;
+  gap: 1px;
+  background: var(--note-seal);
+  border: 1px solid var(--note-seal);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+.zoomButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.6rem;
+  min-width: 2.25rem;
+  background: var(--note-paper-hi);
+  color: var(--note-intaglio);
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s var(--atlas-ease), background 0.15s var(--atlas-ease);
+}
+
+.zoomButton:hover:not(:disabled),
+.zoomButton:focus-visible {
+  background: var(--note-paper);
+  color: var(--note-ember);
+}
+
+.zoomButton:disabled {
+  color: var(--note-intaglio-dim);
+  cursor: default;
+}
+
 /* ---------------------------------------------------------- metric dial */
 
 .dial {
@@ -260,10 +383,26 @@
   gap: 0.6rem;
 }
 
+/* A 2-column grid, not flex-wrap. Some labels ("Land covered by forest",
+   "Carbon emissions per person") are much longer than others ("Population",
+   "No colour") — flex-wrap let each row size to its own content, so short
+   rows and long rows read as an uneven, lumpy stack. A grid forces every
+   chip to the same column width; a long label just wraps onto a second
+   line inside its own cell, so the wrapping reads as a deliberate grid
+   rather than ragged line breaks. */
 .dialChips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.4rem;
+}
+
+/* MagneticButton (app/v4/_components/MagneticButton.tsx) renders a plain
+   <div> wrapper around each chip — stretch it to fill its grid cell so the
+   button inside can do the same. Targeted by element, not class, since
+   that div's own classes ("v4-magnetic atlas-magnetic") are global names
+   this module has no reason to reach into. */
+.dialChips > div {
+  width: 100%;
 }
 
 .dialChip {
@@ -271,11 +410,15 @@
   font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  padding: 0.4rem 0.7rem;
+  padding: 0.4rem 0.6rem;
   background: var(--note-paper);
   border: 1px solid var(--note-rule);
   color: var(--note-intaglio-dim);
   cursor: pointer;
+  width: 100%;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.3;
   transition: border-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease), background 0.2s var(--atlas-ease);
 }
 
@@ -350,8 +493,10 @@
 }
 
 .railList {
-  overflow-y: auto;
-  max-height: 70vh;
+  /* .rail (the sidebar as a whole) is the one scrolling region now — see
+     the page-shell comment at the top of this file. A second, nested
+     scrollbar in here on top of that would be two scrollbars fighting
+     over the same list. */
   border-top: 1px dashed var(--note-rule);
 }
 
@@ -549,6 +694,10 @@
   }
 
   .dialChip {
+    transition: none !important;
+  }
+
+  .zoomButton {
     transition: none !important;
   }
 }

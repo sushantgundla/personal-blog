@@ -98,6 +98,7 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
                 comment) intermittently confused next/image's own optimizer.
                 A direct browser fetch of the already-rasterised, width-capped
                 URL is simpler and deterministic. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={toHttps(flagUrl)} alt={`Flag of ${dossier.name}`} className={styles.faceSealImg} />
           </div>
         )}
@@ -135,6 +136,7 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
                 (see lib/atlas/sources/wikidata.ts's own note on why), so
                 commonsThumbnail is applied here rather than at the source —
                 same Special:FilePath fix, same reason. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={commonsThumbnail(toHttps(portrait.imageUrl), 640)}
               alt=""
@@ -159,6 +161,7 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
               resolves to full contrast on hover. */}
           {emblemUrl && (
             <div className={`atlas-watermark ${styles.faceEmblem}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={emblemUrl} alt={`Coat of arms of ${dossier.name}`} className={styles.faceEmblemImg} />
             </div>
           )}

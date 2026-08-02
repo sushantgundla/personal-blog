@@ -38,7 +38,7 @@ export function MetricDial({ indicators, active, onChange, nodataCount }: Metric
             aria-pressed={active === null}
             onClick={() => onChange(null)}
           >
-            Engraved
+            No colour
           </button>
         </MagneticButton>
         {indicators.map((indicator) => (

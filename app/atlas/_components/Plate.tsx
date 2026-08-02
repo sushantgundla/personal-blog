@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CountryPath } from '@/lib/atlas/geo/world-paths'
 import { WORLD_VIEWBOX } from '@/lib/atlas/geo/world-paths'
 import type { IsoCountry } from '@/lib/atlas/iso-countries'
@@ -10,6 +10,7 @@ import { formatValue, formatRank } from '@/lib/atlas/format'
 import { Cartouche } from './Cartouche'
 import { MetricDial, METRIC_RAMP } from './MetricDial'
 import { RankRail, type RailRow } from './RankRail'
+import { useMapTransform } from './useMapTransform'
 import styles from './plate.module.css'
 
 export interface PlateProps {
@@ -67,8 +68,132 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
   const [cartouchePos, setCartouchePos] = useState({ x: 0, y: 0 })
 
   const mapWrapRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
   const serialRef = useRef<HTMLSpanElement>(null)
   const serialCount = useRef(0)
+
+  const {
+    transform,
+    isDragging,
+    zoomAt,
+    zoomStep,
+    panByKeys,
+    reset: resetView,
+    beginDrag,
+    dragTo,
+    endDrag,
+    wasDragged,
+    clearDragged,
+    worldToClient,
+    minScale,
+    maxScale,
+  } = useMapTransform(svgRef, VB_W, VB_H)
+
+  // Wheel-to-zoom needs a non-passive native listener — React's own onWheel
+  // prop is registered passive, so calling preventDefault() there is
+  // silently ignored and the page would scroll (or, here, the sidebar next
+  // to it would) at the same time as the map zoomed.
+  useEffect(() => {
+    const node = mapWrapRef.current
+    if (!node) return
+    function handleWheel(e: WheelEvent) {
+      e.preventDefault()
+      const factor = Math.exp(-e.deltaY * 0.0015)
+      zoomAt(e.clientX, e.clientY, factor)
+    }
+    node.addEventListener('wheel', handleWheel, { passive: false })
+    return () => node.removeEventListener('wheel', handleWheel)
+  }, [zoomAt])
+
+  // Tracks every finger/pointer currently down, so two fingers pinch-zoom
+  // while one finger (or the mouse) drag-pans — plain pointer events, no
+  // gesture library, matching the "no runtime library" constraint.
+  const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const pinchStartDist = useRef<number | null>(null)
+
+  function pinchDistance(): number | null {
+    if (activePointers.current.size !== 2) return null
+    const [a, b] = Array.from(activePointers.current.values())
+    return Math.hypot(a.x - b.x, a.y - b.y)
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0 && e.pointerType === 'mouse') return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (activePointers.current.size === 1) {
+      beginDrag(e.clientX, e.clientY)
+    } else if (activePointers.current.size === 2) {
+      pinchStartDist.current = pinchDistance()
+    }
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!activePointers.current.has(e.pointerId)) return
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+    if (activePointers.current.size === 2) {
+      const [a, b] = Array.from(activePointers.current.values())
+      const dist = Math.hypot(a.x - b.x, a.y - b.y)
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+      if (pinchStartDist.current) zoomAt(mid.x, mid.y, dist / pinchStartDist.current)
+      pinchStartDist.current = dist
+    } else if (activePointers.current.size === 1 && e.buttons === 1) {
+      dragTo(e.clientX, e.clientY)
+    }
+  }
+
+  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    activePointers.current.delete(e.pointerId)
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+
+    if (activePointers.current.size === 0) {
+      endDrag()
+    } else if (activePointers.current.size === 1) {
+      pinchStartDist.current = null
+      // One finger lifted out of a pinch — restart the drag baseline from
+      // the remaining finger so panning doesn't jump.
+      const [remaining] = Array.from(activePointers.current.values())
+      beginDrag(remaining.x, remaining.y)
+    }
+  }
+
+  /** A drag that ended up moving the map shouldn't also fire the country
+   * link's navigation underneath the pointer — this runs in the capture
+   * phase, ahead of the <a>'s own click. */
+  function handleClickCapture(e: React.MouseEvent<HTMLDivElement>) {
+    if (wasDragged()) {
+      e.preventDefault()
+      e.stopPropagation()
+      clearDragged()
+    }
+  }
+
+  const PAN_KEYS: Record<string, [number, number]> = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1],
+  }
+
+  function handleMapKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const dir = PAN_KEYS[e.key]
+    if (dir) {
+      e.preventDefault()
+      panByKeys(dir[0], dir[1])
+      return
+    }
+    if (e.key === '+' || e.key === '=') {
+      e.preventDefault()
+      zoomStep(1)
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault()
+      zoomStep(-1)
+    } else if (e.key === '0') {
+      e.preventDefault()
+      resetView()
+    }
+  }
 
   const pathsByIso3 = useMemo(() => new Map(countryPaths.map((c) => [c.iso3, c] as const)), [countryPaths])
   const onPlateSet = useMemo(() => new Set(countryPaths.map((c) => c.iso3)), [countryPaths])
@@ -128,11 +253,12 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
     setHoverIso3(c.iso3)
     setHoverSource('map')
     const rect = mapWrapRef.current?.getBoundingClientRect()
-    if (rect) {
-      setCartouchePos({
-        x: ((c.centroid[0] - VB_X) / VB_W) * rect.width,
-        y: ((c.centroid[1] - VB_Y) / VB_H) * rect.height,
-      })
+    // worldToClient accounts for the current zoom/pan — a plain
+    // percent-of-viewBox calculation (the old code) only lined up with
+    // rect.width/height at scale 1, tx=ty=0.
+    const client = worldToClient(c.centroid[0], c.centroid[1])
+    if (rect && client) {
+      setCartouchePos({ x: client.x - rect.left, y: client.y - rect.top })
     }
   }
 
@@ -191,11 +317,20 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
         </div>
 
         <div
-          className={styles.mapWrap}
+          className={`${styles.mapWrap} ${isDragging ? styles.mapWrapDragging : ''}`}
           ref={mapWrapRef}
           onMouseMove={handleContainerMouseMove}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onClickCapture={handleClickCapture}
+          onKeyDown={handleMapKeyDown}
+          tabIndex={0}
+          aria-label="Map view. Arrow keys pan, plus and minus keys zoom, zero resets. Tab again to reach a country."
         >
           <svg
+            ref={svgRef}
             viewBox={WORLD_VIEWBOX}
             className={styles.svg}
             role="img"
@@ -203,56 +338,107 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
           >
             <rect x={VB_X} y={VB_Y} width={VB_W} height={VB_H} fill="var(--note-plate)" />
 
-            <RegCross x={VB_X + 22} y={VB_Y + 22} />
-            <RegCross x={VB_X + VB_W - 22} y={VB_Y + 22} />
-            <RegCross x={VB_X + 22} y={VB_Y + VB_H - 22} />
-            <RegCross x={VB_X + VB_W - 22} y={VB_Y + VB_H - 22} />
+            <g transform={`translate(${transform.tx} ${transform.ty}) scale(${transform.scale})`}>
+              <RegCross x={VB_X + 22} y={VB_Y + 22} />
+              <RegCross x={VB_X + VB_W - 22} y={VB_Y + 22} />
+              <RegCross x={VB_X + 22} y={VB_Y + VB_H - 22} />
+              <RegCross x={VB_X + VB_W - 22} y={VB_Y + VB_H - 22} />
 
-            {countryPaths.map((c) => {
-              const paint = paintByIso3?.get(c.iso3)
-              const isHover = hoverIso3 === c.iso3
-              const popRow = popByIso3.get(c.iso3)
-              const headline = popRow?.value
-                ? `${c.name} — population ${formatValue(popRow.value, 'number')} (${popRow.year ?? '—'})`
-                : c.name
+              {countryPaths.map((c) => {
+                const paint = paintByIso3?.get(c.iso3)
+                const isHover = hoverIso3 === c.iso3
+                const popRow = popByIso3.get(c.iso3)
+                const headline = popRow?.value
+                  ? `${c.name} — population ${formatValue(popRow.value, 'number')} (${popRow.year ?? '—'})`
+                  : c.name
 
-              const classNames = [
-                styles.countryPath,
-                paint ? styles.painted : 'atlas-hatch',
-                'atlas-vt-map-path',
-                !paint && isHover ? 'is-active' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')
+                const classNames = [
+                  styles.countryPath,
+                  paint ? styles.painted : 'atlas-hatch',
+                  'atlas-vt-map-path',
+                  !paint && isHover ? 'is-active' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')
 
-              return (
-                <a
-                  key={c.iso3}
-                  href={`/atlas/${c.iso3}`}
-                  className={styles.countryLink}
-                  aria-label={headline}
-                >
-                  <path
-                    d={c.d}
-                    className={classNames}
-                    style={
-                      {
-                        fill: paint ? paint.color : undefined,
-                        transitionDelay: paint ? `${paint.delay}ms` : undefined,
-                        '--atlas-vt-name': `atlas-country-${c.iso3}`,
-                      } as React.CSSProperties
-                    }
-                    onMouseEnter={() => handleCountryEnter(c.iso3)}
-                    onMouseLeave={handleCountryLeave}
+                return (
+                  <a
+                    key={c.iso3}
+                    href={`/atlas/${c.iso3}`}
+                    className={styles.countryLink}
+                    aria-label={headline}
+                    // Focus/blur belong on the <a> — it's the SVG element
+                    // Tab actually lands on; the <path> inside it is never
+                    // itself focusable, so handlers placed there (the
+                    // pre-existing code) silently never fired for keyboard
+                    // users. plate.module.css's own
+                    // .countryLink:focus-visible .countryPath rule already
+                    // assumed focus lands here.
                     onFocus={() => handleCountryFocus(c)}
                     onBlur={handleCountryLeave}
                   >
-                    <title>{headline}</title>
-                  </path>
-                </a>
-              )
-            })}
+                    <path
+                      d={c.d}
+                      className={classNames}
+                      style={
+                        {
+                          fill: paint ? paint.color : undefined,
+                          transitionDelay: paint ? `${paint.delay}ms` : undefined,
+                          '--atlas-vt-name': `atlas-country-${c.iso3}`,
+                          // Undo the map's zoom on the hover stroke/focus ring so
+                          // it stays a hairline instead of thickening with scale.
+                          vectorEffect: 'non-scaling-stroke',
+                        } as React.CSSProperties
+                      }
+                      onMouseEnter={() => handleCountryEnter(c.iso3)}
+                      onMouseLeave={handleCountryLeave}
+                    >
+                      <title>{headline}</title>
+                    </path>
+                  </a>
+                )
+              })}
+            </g>
           </svg>
+
+          <div className={styles.zoomCluster}>
+            {/* The map gives no other sign it's more than a static image —
+                this is the one quiet hint that scroll/drag/arrow keys do
+                something. aria-hidden since the svg's own aria-label
+                already spells this out for assistive tech. */}
+            <span className={`atlas-label ${styles.zoomHint}`} aria-hidden="true">
+              Scroll or drag to explore
+            </span>
+            <div className={styles.zoomControls} role="group" aria-label="Zoom map">
+              <button
+                type="button"
+                className={styles.zoomButton}
+                onClick={() => zoomStep(1)}
+                disabled={transform.scale >= maxScale}
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className={styles.zoomButton}
+                onClick={() => zoomStep(-1)}
+                disabled={transform.scale <= minScale}
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className={styles.zoomButton}
+                onClick={resetView}
+                disabled={transform.scale === 1 && transform.tx === 0 && transform.ty === 0}
+                aria-label="Reset map zoom and position"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
 
           {hoveredPath && hoverSource === 'map' && (
             <Cartouche
