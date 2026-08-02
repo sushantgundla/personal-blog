@@ -129,6 +129,12 @@ export default async function RankingPage({ params, searchParams }: RankingPageP
             </p>
           )}
 
+          {withValueCount === 0 && (
+            <p className="atlas-body" style={{ marginTop: '1rem', color: 'var(--note-thread)' }} role="note">
+              The World Bank has no figure for {def.label.toLowerCase()} for any country right now.
+            </p>
+          )}
+
           {withValueCount > 0 && (
             <p style={{ marginTop: '0.75rem' }}>
               <Link

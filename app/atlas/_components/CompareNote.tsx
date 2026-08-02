@@ -49,8 +49,11 @@ function winnerIndex(indicator: IndicatorDef, values: readonly IndicatorValue[])
  * "note" card and its split security thread: a two-sided lean bar doesn't
  * generalise past two countries, so the honest-winner rule now speaks
  * entirely through colour — ember (`atlas-remarkable` + `.ledgerWinnerValue`)
- * on the winning cell, muted everywhere else, "no data" (never zero) for a
- * value that genuinely doesn't exist for that country.
+ * on the winning cell, muted everywhere else, an em dash (never zero, never
+ * highlighted) for a value that genuinely doesn't exist for that country.
+ * `formatValue` itself already renders `null` as `—` — no separate branch
+ * needed here, which is what guarantees the dash is the same character
+ * used for every other missing value on the site.
  */
 export function CompareNote({ indicator, values, names, columns, cascadeIndex }: CompareNoteProps) {
   const win = winnerIndex(indicator, values)
@@ -78,9 +81,7 @@ export function CompareNote({ indicator, values, names, columns, cascadeIndex }:
         return (
           <div key={indicator.code + i} className={styles.ledgerCell}>
             <span className="sr-only">{names[i]}: </span>
-            <span className={valueClass}>
-              {v.value === null ? 'no data' : formatValue(v.value, indicator.format)}
-            </span>
+            <span className={valueClass}>{formatValue(v.value, indicator.format)}</span>
             {v.year && <span className="atlas-serial">{formatYear(Number(v.year))}</span>}
           </div>
         )
