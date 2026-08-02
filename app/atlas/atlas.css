@@ -1,0 +1,575 @@
+/* ============================================================
+   THE ATLAS — "Denomination"
+   Every country is its own banknote; the world map is the uncut
+   printing plate. Security-printing vocabulary throughout: intaglio
+   engraving, guilloché rosettes, microtext, serial numbers, security
+   threads, watermarks, perforations.
+
+   Scoped entirely under .atlas-root so nothing here ever leaks into
+   globals.css or any versioned preview (v2, v4, ...). This file is
+   the single source of visual truth for the whole /atlas app — every
+   component only ever reaches for a class or custom property defined
+   here. Keep it thorough and commented; nothing else documents the
+   design system.
+   ============================================================ */
+
+/* ============================================================
+   1. Tokens — muted ink on dark security paper
+   ============================================================ */
+
+.atlas-root {
+  /* Ground and paper. Notes get progressively lighter as they "raise" off
+     the plate: void (page) < plate (map bg) < paper (note) < paper-hi (hover). */
+  --note-void: #080706;
+  --note-plate: #0f0d0b;
+  --note-paper: #1a1613;
+  --note-paper-hi: #231d18;
+  --note-rule: #2e2721; /* perforations, cutting guides, hairlines */
+
+  --note-intaglio: #e9e1d2; /* engraved highlight, primary text */
+  --note-intaglio-dim: #a2988a; /* secondary text, hatch lines */
+
+  --note-ember: #ff6b2b; /* primary accent — registration marks, denominations, above average */
+  --note-ember-rgb: 255, 107, 43;
+  --note-rust: #c1662f; /* guilloché stroke, section rules */
+  --note-rust-rgb: 193, 102, 47;
+  --note-thread: #7fa6a0; /* security thread, sparklines, below average */
+  --note-thread-rgb: 127, 166, 160;
+  --note-uv: #9b7fd4; /* UV mode only */
+  --note-uv-rgb: 155, 127, 212;
+  --note-seal: #b08d57; /* seals, watermark edges, ornaments */
+  --note-nodata: #191614; /* choropleth "no data" fill */
+
+  /* Per-country ink. lib/atlas/ink.ts derives one hue per ISO3 (a hash
+     clamped to hsl(h, 30-38%, 48-56%), contrast-asserted against
+     --note-paper at build time) and sets it here. Falls back to --note-rust
+     so nothing renders unstyled before a component sets it. Tints one
+     country's guilloché, note edges and section rules only — ember stays
+     the global accent everywhere else. */
+  --note-ink: var(--note-rust);
+  --note-ink-rgb: var(--note-rust-rgb);
+
+  /* Motion. One curve, borrowed from app/v4/v4.css, so the whole site
+     feels like one hand drew it. */
+  --atlas-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  background: var(--note-void);
+  color: var(--note-intaglio);
+  min-height: 100vh;
+}
+
+/* UV lamp — one class on the root swaps the palette into UV mode. Paper
+   darkens further and only the remarkable facts fluoresce. Components
+   read the same custom properties either way: --note-paper, --note-ink,
+   etc. never change name, only value, so no component needs an "is UV"
+   branch of its own beyond opting into --note-uv-glow where it matters. */
+.atlas-root.uv-on {
+  --note-plate: #060508;
+  --note-paper: #0e0c14;
+  --note-paper-hi: #14111c;
+  --note-intaglio: #4a4658;
+  --note-intaglio-dim: #322f3d;
+  --note-ember: #9b7fd4;
+  --note-ember-rgb: 155, 127, 212;
+  --note-rust: #6a5a96;
+  --note-uv-glow: 0 0 12px rgba(155, 127, 212, 0.65), 0 0 2px rgba(155, 127, 212, 0.9);
+  transition: background-color 0.4s ease;
+}
+
+.atlas-root.uv-on * {
+  transition: color 0.4s ease, background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Elements marked "remarkable" (top-10 / bottom-10 world rank) are the
+   only things that fluoresce under the lamp. Everything else just dims
+   with the palette swap above. */
+.atlas-root.uv-on .atlas-remarkable {
+  color: var(--note-uv);
+  text-shadow: var(--note-uv-glow);
+}
+
+/* ============================================================
+   2. Typography — scale ratio 1.5, deliberately dramatic
+   9 / 11 / 16 / 24 / 36 / 54 / 80+
+   ============================================================ */
+
+.atlas-root {
+  --atlas-text-xs: 0.5625rem; /* 9px microtext */
+  --atlas-text-sm: 0.6875rem; /* 11px serials */
+  --atlas-text-base: 1rem; /* 16px */
+  --atlas-text-lg: 1.5rem; /* 24px */
+  --atlas-text-xl: 2.25rem; /* 36px */
+  --atlas-text-2xl: 3.375rem; /* 54px */
+  --atlas-text-3xl: 5rem; /* 80px+, denomination faces clamp past this */
+}
+
+/* Country name — the engraved title on the face note. */
+.atlas-face-name {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(3.5rem, 11vw, 9rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--note-intaglio);
+}
+
+/* Denomination numerals — the value on every note. Tabular so columns
+   of numbers line up like a real ledger. */
+.atlas-denomination {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-size: clamp(2rem, 5vw, 5rem);
+  color: var(--note-intaglio);
+}
+
+/* Note labels — mono, small, wide-tracked uppercase. */
+.atlas-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: var(--atlas-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--note-intaglio-dim);
+}
+
+/* Serials and microtext — decorative only. aria-hidden in markup;
+   never the sole carrier of information. */
+.atlas-serial {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 400;
+  font-size: var(--atlas-text-sm);
+  letter-spacing: 0.08em;
+  color: var(--note-intaglio-dim);
+}
+
+.atlas-microtext {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 400;
+  font-size: 6px;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  color: var(--note-intaglio-dim);
+  user-select: none;
+}
+
+/* Section rules — the "— PEOPLE —" cutting guides between sheets. */
+.atlas-section-rule {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--atlas-text-base);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.atlas-section-rule::before,
+.atlas-section-rule::after {
+  content: '';
+  flex: 1;
+  height: 0;
+  border-top: 1px dashed var(--note-rule);
+}
+
+/* Body copy — history, bios, long-form. */
+.atlas-body {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--note-intaglio);
+}
+
+/* ============================================================
+   3. Surfaces — plate, note, perforation, ornament
+   ============================================================ */
+
+.atlas-plate {
+  background: var(--note-plate);
+}
+
+.atlas-note {
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  transition: background-color 0.3s var(--atlas-ease), border-color 0.3s var(--atlas-ease),
+    transform 0.3s var(--atlas-ease);
+}
+
+.atlas-note:hover,
+.atlas-note:focus-within {
+  background: var(--note-paper-hi);
+  border-color: var(--note-ink);
+}
+
+/* Perforation — a dashed cutting guide simulated with a repeating row of
+   punched circles, the seam between two notes on the uncut sheet. */
+.atlas-perforated {
+  position: relative;
+  border: none;
+}
+
+.atlas-perforated::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, var(--note-void) 1.5px, transparent 1.6px);
+  background-size: 10px 10px;
+  background-position: center;
+  opacity: 0.9;
+}
+
+.atlas-perforated-h {
+  border-top: none;
+  background-image: radial-gradient(circle, var(--note-void) 1.5px, transparent 1.6px);
+  background-size: 10px 10px;
+  background-repeat: repeat-x;
+  background-position: top center;
+  height: 3px;
+}
+
+.atlas-perforated-v {
+  background-image: radial-gradient(circle, var(--note-void) 1.5px, transparent 1.6px);
+  background-size: 10px 10px;
+  background-repeat: repeat-y;
+  background-position: top center;
+  width: 3px;
+}
+
+/* Ornament — seal-coloured corner flourish, reused on note corners and
+   the plate's registration crosses. */
+.atlas-ornament {
+  color: var(--note-seal);
+  opacity: 0.75;
+}
+
+/* ============================================================
+   4. Security thread — the comparison bar, sparklines, ledger balance
+   ============================================================ */
+
+.atlas-thread {
+  position: relative;
+  height: 2px;
+  background: var(--note-rule);
+  border-radius: 1px;
+}
+
+.atlas-thread-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--note-thread);
+  border-radius: 1px;
+  transform-origin: left;
+  transition: transform 0.7s var(--atlas-ease);
+}
+
+/* The WORLD average bead sitting on the thread. */
+.atlas-thread-bead {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--note-intaglio-dim);
+  transform: translate(-50%, -50%);
+}
+
+.atlas-thread-bead.atlas-above-average {
+  background: var(--note-ember);
+}
+
+.atlas-thread-bead.atlas-below-average {
+  background: var(--note-thread);
+}
+
+/* Sparklines drawn as security threads — stroke-dashoffset draw-on,
+   applied to whatever <polyline> or <path> a component renders. */
+.atlas-sparkline-path {
+  fill: none;
+  stroke: var(--note-thread);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.atlas-sparkline-dot {
+  fill: var(--note-ember);
+}
+
+.atlas-sparkline-draw {
+  stroke-dasharray: var(--atlas-dash-length, 1000);
+  stroke-dashoffset: var(--atlas-dash-length, 1000);
+  animation: atlasThreadDraw 900ms var(--atlas-ease) forwards;
+}
+
+@keyframes atlasThreadDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ============================================================
+   5. Hatch pattern helpers — 45° engraving hatch, densifies on hover
+   Components render the actual <pattern> defs once (a hidden inline
+   SVG def block in app/atlas/layout.tsx: #atlas-hatch, #atlas-hatch-dense,
+   #atlas-hatch-ink), then any <path> just switches which pattern it
+   points at by toggling one of these two classes on its fill.
+   ============================================================ */
+
+.atlas-hatch {
+  fill: url(#atlas-hatch);
+  stroke: var(--note-intaglio-dim);
+  stroke-width: 0.5;
+  transition: fill 0.25s var(--atlas-ease), stroke 0.25s var(--atlas-ease);
+}
+
+.atlas-hatch:hover,
+.atlas-hatch:focus-visible,
+.atlas-hatch.is-active {
+  fill: url(#atlas-hatch-dense);
+  stroke: var(--note-ember);
+}
+
+/* Per-country ink variant, used once a country's derived hue is known. */
+.atlas-hatch-ink {
+  fill: url(#atlas-hatch-ink);
+}
+
+/* ============================================================
+   6. Guilloché rosette — draw-on once, then a slow infinite spin
+   ============================================================ */
+
+.atlas-guilloche {
+  transform-origin: center;
+}
+
+.atlas-guilloche-path {
+  fill: none;
+  stroke: var(--note-ink);
+  stroke-width: 0.75;
+  stroke-dasharray: var(--atlas-dash-length, 2000);
+  stroke-dashoffset: var(--atlas-dash-length, 2000);
+  animation: atlasGuillocheDraw 800ms var(--atlas-ease) forwards, atlasGuillocheSpin 90s linear infinite;
+  animation-delay: 0s, 800ms;
+}
+
+@keyframes atlasGuillocheDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes atlasGuillocheSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   7. Intaglio sheen — raking highlight, loops across the surface
+   Reuses the app/v4 .v4-sweep technique: a soft diagonal band of light
+   in overlay blend mode, translated across on a 12s loop.
+   ============================================================ */
+
+.atlas-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.atlas-sheen::after {
+  content: '';
+  position: absolute;
+  inset: -20% -20%;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgba(233, 225, 210, 0.06) 48%,
+    rgba(233, 225, 210, 0.06) 52%,
+    transparent 65%
+  );
+  mix-blend-mode: overlay;
+  transform: translateX(-60%);
+  animation: atlasSheenSweep 12s linear infinite;
+}
+
+@keyframes atlasSheenSweep {
+  from {
+    transform: translateX(-60%);
+  }
+  to {
+    transform: translateX(60%);
+  }
+}
+
+/* ============================================================
+   8. Film grain — a faint fixed overlay across the whole app
+   ============================================================ */
+
+.atlas-grain::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* ============================================================
+   9. The note prints — selection transition from plate to dossier
+   ============================================================ */
+
+.atlas-plate-selecting {
+  transform: scale(0.96);
+  filter: saturate(0.3);
+  transition: transform 0.5s var(--atlas-ease), filter 0.5s var(--atlas-ease);
+}
+
+/* Shared view-transition-name so a country's map path morphs into its own
+   face note. Only takes effect where the browser supports the View
+   Transitions API; everywhere else this is inert and the plain fade
+   below covers the transition instead. */
+@supports (view-transition-name: none) {
+  .atlas-vt-map-path {
+    view-transition-name: var(--atlas-vt-name, none);
+  }
+
+  .atlas-vt-face-note {
+    view-transition-name: var(--atlas-vt-name, none);
+  }
+}
+
+.atlas-fade-in {
+  animation: atlasFadeIn 0.4s var(--atlas-ease) both;
+}
+
+@keyframes atlasFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   10. Note cascade — <details> opening staggers its notes in
+   ============================================================ */
+
+.atlas-cascade > * {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: atlasCascadeIn 0.4s var(--atlas-ease) forwards;
+}
+
+/* Components set --atlas-cascade-i (0, 1, 2, ...) per child; delay is
+   40ms per the spec's stagger. */
+.atlas-cascade > * {
+  animation-delay: calc(var(--atlas-cascade-i, 0) * 40ms);
+}
+
+@keyframes atlasCascadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   11. Watermark portraits — resolve from faint to full on hover
+   ============================================================ */
+
+.atlas-watermark {
+  opacity: 0.12;
+  filter: contrast(0.4);
+  transition: opacity 0.5s var(--atlas-ease), filter 0.5s var(--atlas-ease);
+}
+
+.atlas-watermark:hover,
+.atlas-watermark:focus-visible {
+  opacity: 1;
+  filter: contrast(1);
+}
+
+/* ============================================================
+   12. Magnetic controls — reuse app/v4/_components/MagneticButton.tsx;
+   this class only supplies the transition, the component supplies the
+   transform via inline style.
+   ============================================================ */
+
+.atlas-magnetic {
+  display: inline-block;
+  transition: transform 0.25s var(--atlas-ease);
+}
+
+/* ============================================================
+   13. Reduced motion — one block, kills every animation above and
+   pins each element to its finished, fully visible state.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-sparkline-draw {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .atlas-guilloche-path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .atlas-sheen::after {
+    animation: none !important;
+    display: none !important;
+  }
+
+  .atlas-plate-selecting {
+    transition: none !important;
+  }
+
+  .atlas-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .atlas-cascade > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .atlas-watermark {
+    transition: none !important;
+  }
+
+  .atlas-magnetic {
+    transition: none !important;
+  }
+
+  .atlas-note,
+  .atlas-hatch,
+  .atlas-thread-fill,
+  .atlas-root.uv-on,
+  .atlas-root.uv-on * {
+    transition: none !important;
+  }
+
+  @supports (view-transition-name: none) {
+    .atlas-vt-map-path,
+    .atlas-vt-face-note {
+      view-transition-name: none !important;
+    }
+  }
+}

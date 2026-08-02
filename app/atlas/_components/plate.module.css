@@ -1,0 +1,451 @@
+/* Opts into the browser's Cross-Document View Transitions API (Chrome/Edge
+   126+; inert, no error, everywhere else) so a click on a map path can morph
+   into the dossier's face note via the shared --atlas-vt-name each element
+   sets. Top-level at-rule, deliberately outside any class scope. */
+@view-transition {
+  navigation: auto;
+}
+
+/* ============================================================
+   Plate — layout and positioning only. Every colour, font and
+   surface effect comes from ../atlas.css; this file exists purely
+   for the grid/flex layout and absolute positioning that atlas.css
+   (a shared, component-agnostic tokens file) has no reason to own.
+   ============================================================ */
+
+/* ---------------------------------------------------------- page shell */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 1px;
+  background: var(--note-rule);
+  min-height: calc(100vh - 61px);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  /* Mobile: rank rail and search lead, the map is secondary. */
+  .rail {
+    order: 1;
+  }
+  .mapCol {
+    order: 2;
+  }
+}
+
+.rail {
+  background: var(--note-void);
+  padding: 1.25rem 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.mapCol {
+  background: var(--note-plate);
+  position: relative;
+  padding: 1.5rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ---------------------------------------------------------- the map itself */
+
+.mapWrap {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--note-rule);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1000 / 500;
+}
+
+.countryLink {
+  outline: none;
+}
+
+.countryPath {
+  cursor: pointer;
+  transition: fill 0.5s var(--atlas-ease), stroke 0.25s var(--atlas-ease), filter 0.2s var(--atlas-ease);
+}
+
+.countryLink:focus-visible .countryPath {
+  stroke: var(--note-ember);
+  stroke-width: 1.25;
+  filter: brightness(1.25);
+}
+
+.countryPath.painted:hover,
+.countryLink:focus-visible .countryPath.painted {
+  filter: brightness(1.3);
+}
+
+/* Registration crosses, four corners of the plate. Decorative. */
+.regCross {
+  stroke: var(--note-seal);
+  stroke-width: 1;
+  opacity: 0.8;
+}
+
+/* ---------------------------------------------------------- plate furniture */
+
+.furnitureRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.serialBox {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.microtextLine {
+  text-align: center;
+  padding: 0.25rem 0;
+  border-top: 1px dashed var(--note-rule);
+}
+
+.denomPanel {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.denomPanel .figure {
+  line-height: 1;
+}
+
+.denomPanel .caption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* ---------------------------------------------------------- cartouche */
+
+.cartouche {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  min-width: 190px;
+  background: var(--note-paper);
+  border: 1px solid var(--note-ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.15s var(--atlas-ease);
+  will-change: transform;
+}
+
+.cartoucheGuilloche {
+  flex: none;
+  color: var(--note-ink);
+}
+
+.cartoucheBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.cartoucheName {
+  font-size: 1.15rem;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.cartoucheRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.cartoucheValue {
+  font-size: 0.95rem;
+}
+
+/* ---------------------------------------------------------- metric dial */
+
+.dial {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dialChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dialChip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0.4rem 0.7rem;
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  color: var(--note-intaglio-dim);
+  cursor: pointer;
+  transition: border-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease), background 0.2s var(--atlas-ease);
+}
+
+.dialChip:hover,
+.dialChip:focus-visible {
+  border-color: var(--note-ink);
+  color: var(--note-intaglio);
+}
+
+.dialChipActive {
+  background: var(--note-paper-hi);
+  border-color: var(--note-ember);
+  color: var(--note-ember);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.legendRamp {
+  display: flex;
+  height: 8px;
+  width: 120px;
+  border: 1px solid var(--note-rule);
+}
+
+.legendStop {
+  flex: 1;
+}
+
+.legendNodata {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--note-nodata);
+  border: 1px solid var(--note-rule);
+}
+
+/* ---------------------------------------------------------- rank rail */
+
+.railHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.railList {
+  overflow-y: auto;
+  max-height: 70vh;
+  border-top: 1px dashed var(--note-rule);
+}
+
+.railRow {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.25rem;
+  text-decoration: none;
+  color: var(--note-intaglio);
+  border-bottom: 1px solid var(--note-rule);
+  transition: background 0.15s var(--atlas-ease);
+}
+
+.railRow:hover,
+.railRow:focus-visible,
+.railRowActive {
+  background: var(--note-paper-hi);
+}
+
+.railRank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--note-intaglio-dim);
+}
+
+.railName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+}
+
+.railValueCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  min-width: 4.5rem;
+}
+
+.railValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.railThread {
+  width: 100%;
+}
+
+.railMore {
+  padding: 0.6rem 0.25rem;
+}
+
+.railMoreButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px dashed var(--note-rule);
+  color: var(--note-intaglio-dim);
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  cursor: pointer;
+}
+
+.railMoreButton:hover {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- search */
+
+.search {
+  position: relative;
+  width: 100%;
+}
+
+.searchInput {
+  width: 100%;
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  color: var(--note-intaglio);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.65rem;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--note-ember);
+}
+
+.searchListbox {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--note-paper);
+  border: 1px solid var(--note-ink);
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+.searchOption {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--note-intaglio);
+}
+
+.searchOption[data-active='true'],
+.searchOption:hover {
+  background: var(--note-paper-hi);
+  color: var(--note-ember);
+}
+
+.searchOptionCode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--note-intaglio-dim);
+}
+
+.searchFallback {
+  margin-top: 0.75rem;
+}
+
+.searchFallbackList {
+  columns: 2;
+  column-gap: 1rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+
+.searchFallbackList li {
+  break-inside: avoid;
+  padding: 0.15rem 0;
+}
+
+.searchFallbackList a {
+  color: var(--note-intaglio);
+  text-decoration: none;
+}
+
+.searchFallbackList a:hover {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- reduced motion
+   atlas.css's global block already handles its own animation classes; this
+   file adds the transition-delay choropleth sweep and cartouche fade this
+   component introduces, so it needs its own matching override. */
+@media (prefers-reduced-motion: reduce) {
+  .countryPath {
+    transition: none !important;
+    transition-delay: 0s !important;
+  }
+
+  .cartouche {
+    transition: none !important;
+  }
+
+  .railRow {
+    transition: none !important;
+  }
+
+  .dialChip {
+    transition: none !important;
+  }
+}
