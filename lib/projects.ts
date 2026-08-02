@@ -1,4 +1,4 @@
-export type ProjectStatus = 'production' | 'confidential' | 'open-source'
+export type ProjectStatus = 'production' | 'confidential' | 'open-source' | 'experiment'
 
 export interface Project {
   slug: string
@@ -103,5 +103,17 @@ export const projects: Project[] = [
     impact: '5%+ gain on downstream NLP tasks',
     tags: ['Transformers', 'PyTorch', 'NLP', 'RoBERTa'],
     status: 'confidential',
+  },
+  {
+    slug: 'the-atlas',
+    title: 'The Atlas',
+    organization: 'Personal Project',
+    period: '2026',
+    description:
+      'An interactive world map where every country\'s data is engraved onto its own banknote. About 150 measures per country — population, economy, trade, health, education, environment, infrastructure — pulled live from the World Bank, Wikidata, Wikipedia, and UN Comtrade. Compare up to five countries side by side, rank every country by any measure, or trace its trade partners as arcs across the map. Each country also has its own story: motto, currency, languages, anthem, famous people, landmarks, history, and neighbours. Every number carries the year it\'s from, and a rank is left blank when too few countries report it.',
+    impact: 'Built so people can learn about the world by poking at it, not by reading a table.',
+    tags: ['Next.js', 'Data Visualization', 'Open Data', 'TypeScript'],
+    status: 'experiment',
+    link: '/atlas',
   },
 ]

@@ -1,0 +1,659 @@
+/* ============================================================
+   Dossier — layout and positioning only. Every colour, font and
+   surface effect comes from ../atlas.css; this file exists purely for
+   the grid/flex layout, sizing and absolute positioning that atlas.css
+   (a shared, component-agnostic tokens file) has no reason to own.
+   Mirrors the split already established by plate.module.css.
+   ============================================================ */
+
+/* ---------------------------------------------------------- page shell */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.pageToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.backLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- face note */
+
+.faceNote {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.5rem, 4cqw, 3rem);
+  aspect-ratio: 5 / 2;
+  display: flex;
+  /* Everything below sized in vw used to mean "the country name is 11% of
+     the viewport" even when the note itself was only half that wide (the
+     two-country compare screen) — the name (and the rosette, the flag
+     seal, the portrait) rendered for a full-width note regardless of how
+     wide this particular one actually was, and clipped whatever didn't
+     fit. `cqw` below measures against this container's own width instead,
+     so the same clamp() shrinks correctly when the note is narrower. On
+     the full-width dossier this box's width already tracks the viewport,
+     so nothing here changes there. */
+  container-type: inline-size;
+}
+
+@media (max-width: 640px) {
+  .faceNote {
+    aspect-ratio: auto;
+    min-height: 24rem;
+  }
+}
+
+/* Two-country compare only (FaceNote's `compact` prop) — never applied on
+   the full-width dossier. A fixed 5:2 aspect ratio has no spare height for
+   a long name ("Democratic Republic of the Congo") wrapping onto two or
+   three lines, so this trades the fixed ratio for organic height: the note
+   grows to fit whatever the name actually needs instead of clipping it. */
+.faceNoteCompact {
+  aspect-ratio: auto;
+  min-height: 18rem;
+}
+
+.faceNoteInner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  min-width: 0;
+  /* Capped, not flex:1 full-bleed — the text column used to stretch the
+     whole note's width even though only the name and population actually
+     used it, leaving the space between them and the portrait/rosette empty.
+     Keeping this column to roughly the left half hands the rest of the
+     note over to the ornament layer on purpose. */
+  width: min(56%, 42rem);
+  padding-bottom: 1rem;
+}
+
+.faceHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  /* Room for the flag seal. .faceNoteInner is capped well short of the
+     note's right edge on desktop (see its own comment), but the flag sits
+     at the note's absolute top-right corner regardless — and at the
+     narrow end of .faceNoteInner's own mobile width:100% override, this
+     row's own right edge reaches exactly where the seal sits. Confirmed
+     live: a country with a long region name ("Insular Oceania") rendered
+     partly hidden behind the flag ring without this. */
+  padding-right: clamp(3.25rem, 7cqw, 4.75rem);
+}
+
+/* The flag as an engraved seal — round, ringed, stamped in the note's
+   top-right corner the way a banknote's seal of authenticity sits. */
+.faceSeal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  width: clamp(2.75rem, 5cqw, 4rem);
+  height: clamp(2.75rem, 5cqw, 4rem);
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--note-seal);
+  box-shadow: 0 0 0 3px var(--note-paper), 0 0 0 4px var(--note-seal);
+  opacity: 0.92;
+}
+
+.faceSealImg {
+  /* Plain <img> now (see FaceNote.tsx), not next/image's `fill` — which
+     used to supply this positioning itself. */
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.faceName {
+  margin: 0;
+  max-width: 85%;
+  word-break: break-word;
+}
+
+/* Two-country compare only (FaceNote's `compact` prop). Two classes here
+   (.faceName.faceNameCompact) so this reliably outranks both .faceName's
+   own font-size, if it ever gets one, and atlas.css's global
+   .atlas-face-name — a single-class rule can't be trusted to win the
+   cascade against another single-class rule regardless of file order.
+   `cqw` (not `vw`) measures against .faceNote's own width, which
+   .faceNoteCompact and the compare grid have already made genuinely half
+   the page rather than the full-width dossier's — see .faceNote's own
+   comment. --face-name-scale (set inline per-name in FaceNote.tsx) trims
+   long names down further so they wrap onto two or three lines instead of
+   five, not so they fit on one — word-break: break-word above still does
+   the actual wrapping. */
+.faceName.faceNameCompact {
+  font-size: clamp(1.5rem, calc(var(--face-name-scale, 1) * 11cqw), 9rem);
+}
+
+.faceDenomination {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.figureRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* The note's fine-print panel — capital, currency, language, area,
+   independence, ISO codes. A real banknote's engraved issuer details fill
+   exactly this kind of space between the denomination and the ornament;
+   rows with nothing to print are simply omitted by FaceNote.tsx rather than
+   rendered as an em dash, so a sparse country's note still reads as
+   deliberate rather than half-empty. */
+.faceFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 1.5rem;
+}
+
+.factRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.factValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--note-intaglio);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.faceMotto {
+  position: absolute;
+  left: clamp(1.5rem, 4cqw, 3rem);
+  right: clamp(1.5rem, 4cqw, 3rem);
+  bottom: 0.75rem;
+  z-index: 2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+}
+
+.faceOrnamentArea {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.facePortrait {
+  position: absolute;
+  top: 50%;
+  /* Centred over the note's empty middle third, not shoved into the
+     corner — a banknote watermark sits in the body of the note, not at
+     its edge. Closes the dead space between the name/population block
+     and the guilloché. */
+  right: 30%;
+  transform: translateY(-50%);
+  width: clamp(150px, 20cqw, 260px);
+  height: clamp(150px, 20cqw, 260px);
+  pointer-events: auto;
+}
+
+.facePortraitImg {
+  /* Plain <img> now (see FaceNote.tsx), not next/image's `fill`. */
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.15);
+  -webkit-mask-image: radial-gradient(circle, black 55%, transparent 78%);
+  mask-image: radial-gradient(circle, black 55%, transparent 78%);
+}
+
+/* The rosette's own bounding box — position/size live here, on the
+   wrapper, so .faceEmblem (the coat of arms, seated at its centre) can
+   share the exact same box via inset:0 instead of duplicating every
+   clamp() by hand. */
+.faceRosette {
+  position: absolute;
+  top: 50%;
+  /* A small, deliberate bleed off the right edge — the "cut by the
+     frame" look of an engraved banknote ornament — not the ~40% clip
+     the old -12% caused, which chopped the closed rosette into
+     disconnected arcs (worse once the 90s spin animation is running,
+     since the visible sliver keeps changing). Positive/near-zero keeps
+     the whole ring inside .faceNote's overflow:hidden so it always
+     reads as one complete, balanced rosette. */
+  right: 4%;
+  transform: translateY(-50%);
+  width: clamp(220px, 32cqw, 400px);
+  height: clamp(220px, 32cqw, 400px);
+}
+
+.faceRosetteGrown {
+  right: 6%;
+  width: clamp(260px, 40cqw, 520px);
+  height: clamp(260px, 40cqw, 520px);
+}
+
+.faceGuilloche {
+  position: absolute;
+  inset: 0;
+  color: var(--note-ink);
+}
+
+/* The coat of arms, centred inside the rosette's own bounding box like a
+   mint's medallion stamped in the middle of an engraved guilloché. Sized
+   relative to .faceRosette so it scales automatically with the grown
+   (no-portrait) variant instead of needing its own breakpoints. */
+.faceEmblem {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.faceEmblemImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 640px) {
+  .faceNoteInner {
+    width: 100%;
+  }
+
+  .facePortrait {
+    right: 22%;
+    width: clamp(100px, 32cqw, 170px);
+    height: clamp(100px, 32cqw, 170px);
+  }
+
+  .faceRosette {
+    right: 2%;
+    width: clamp(140px, 46cqw, 240px);
+    height: clamp(140px, 46cqw, 240px);
+  }
+
+  .faceRosetteGrown {
+    right: 4%;
+    width: clamp(170px, 54cqw, 280px);
+    height: clamp(170px, 54cqw, 280px);
+  }
+}
+
+/* ---------------------------------------------------------- the sheet */
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--note-rule);
+  border: 1px solid var(--note-rule);
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.issue {
+  align-self: center;
+}
+
+.issueSummary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.2rem;
+  border: 1px dashed var(--note-seal);
+  border-radius: 999px;
+  color: var(--note-seal);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.issueSummary::-webkit-details-marker {
+  display: none;
+}
+
+.issueSummary:hover,
+.issueSummary:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+.issueGrid {
+  margin-top: 1px;
+}
+
+/* Pads a row's trailing, otherwise-empty cell(s) so .grid's own seam
+   colour never shows through as a stray solid rectangle — see
+   NoteSheet.tsx's GridFillers. Invisible at every breakpoint by default;
+   each instance opts back in only at the one breakpoint (desktop or
+   tablet) where its row actually falls short, via the data attribute
+   NoteSheet computed for it. Mobile is always a single column, so it
+   never has a remainder and is never targeted here. */
+.noteFiller {
+  display: none;
+}
+
+@media (min-width: 1101px) {
+  .noteFiller[data-need-desktop='true'] {
+    display: block;
+    background: var(--note-paper);
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 641px) {
+  .noteFiller[data-need-tablet='true'] {
+    display: block;
+    background: var(--note-paper);
+  }
+}
+
+/* Stands in for all ten sections when a country has no World Bank data
+   at all (Taiwan, Western Sahara, Vatican City) — see NoteSheet.tsx.
+   Same quiet register as .sectionEmpty, but centred and roomier since
+   it is the only thing here, not one line among nine other sections. */
+.sheetNoData {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  color: var(--note-intaglio-dim);
+  text-align: center;
+  max-width: 32rem;
+  margin: 1rem auto;
+  padding: 1.5rem;
+  border: 1px dashed var(--note-rule);
+  border-radius: 4px;
+}
+
+/* A section with nothing worth printing collapses to this single quiet
+   line instead of a grid of blank notes — see NoteSheet.tsx. */
+.sectionEmpty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--note-rule);
+  border-radius: 4px;
+}
+
+/* The honest "N of M unavailable" line under a section that printed some
+   but not all of its notes. Quieter than .sectionEmpty — it's a footnote,
+   not the whole story. */
+.sectionPartial {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+  text-align: right;
+}
+
+/* ---------------------------------------------------------- one note */
+
+.note {
+  position: relative;
+  padding: 1.1rem 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 9.5rem;
+}
+
+.noteTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-right: 1rem;
+}
+
+.noteValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.noteMeta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.noteCorner {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+}
+
+.noteChart {
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+/* ---------------------------------------------------------- security thread */
+
+.threadRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.threadTrack {
+  position: relative;
+  flex: 1;
+}
+
+.threadCaption {
+  font-size: 0.5625rem;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- sources panel */
+
+.sources {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.sourcesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.sourceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.sourceLink {
+  color: var(--note-intaglio-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s var(--atlas-ease);
+  overflow-wrap: break-word;
+}
+
+.sourceLink:hover,
+.sourceLink:focus-visible {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- UV lamp */
+
+.uvButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--note-rule);
+  background: var(--note-paper);
+  color: var(--note-intaglio-dim);
+  cursor: pointer;
+  transition: border-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease),
+    background-color 0.2s var(--atlas-ease);
+}
+
+.uvButton:hover,
+.uvButton:focus-visible {
+  color: var(--note-intaglio);
+  border-color: var(--note-ink);
+}
+
+.uvButtonOn {
+  border-color: var(--note-uv, var(--note-ember));
+  color: var(--note-uv, var(--note-ember));
+  background: var(--note-paper-hi);
+}
+
+/* ---------------------------------------------------------- refresh button */
+
+.refreshRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.refreshAsOf {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+}
+
+.refreshButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--note-rule);
+  background: var(--note-paper);
+  color: var(--note-intaglio-dim);
+  cursor: pointer;
+  transition: border-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease),
+    background-color 0.2s var(--atlas-ease);
+}
+
+.refreshButton:hover:not(:disabled),
+.refreshButton:focus-visible:not(:disabled) {
+  color: var(--note-intaglio);
+  border-color: var(--note-ink);
+}
+
+.refreshButton:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.refreshLog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+}
+
+.refreshOk {
+  color: var(--note-thread);
+}
+
+.refreshFail {
+  color: var(--note-ember);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+}
+
+/* ---------------------------------------------------------- not found */
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  min-height: 60vh;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}

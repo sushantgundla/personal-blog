@@ -18,6 +18,7 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
   production: 'Production',
   confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
+  experiment: 'Experiments',
 }
 
 /** Turns "2026-03-12" into "12 Mar 2026". Falls back to the raw string if it doesn't parse. */

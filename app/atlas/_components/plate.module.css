@@ -1,0 +1,756 @@
+/* Opts into the browser's Cross-Document View Transitions API (Chrome/Edge
+   126+; inert, no error, everywhere else) so a click on a map path can morph
+   into the dossier's face note via the shared --atlas-vt-name each element
+   sets. Top-level at-rule, deliberately outside any class scope. */
+@view-transition {
+  navigation: auto;
+}
+
+/* ============================================================
+   Plate — layout and positioning only. Every colour, font and
+   surface effect comes from ../atlas.css; this file exists purely
+   for the grid/flex layout and absolute positioning that atlas.css
+   (a shared, component-agnostic tokens file) has no reason to own.
+   ============================================================ */
+
+/* ---------------------------------------------------------- page shell */
+
+/* The /atlas landing page only (not the dossier, compare or rankings routes
+   — they keep scrolling normally through the same app/atlas/layout.tsx) is
+   a fixed, non-scrolling app shell. .page pins itself to exactly the
+   viewport area below the top bar with `position: fixed`, using
+   --atlas-header-h (atlas.css) as the one shared source of truth for the
+   header's height — it never touches or depends on layout.tsx's <main> or
+   .atlas-root, which is what keeps every other /atlas/* route's normal
+   document scrolling completely unaffected. Only .rail (the sidebar)
+   scrolls inside this shell; .mapCol — and the map inside it — stays put.
+   `dvh`, not `vh`, so mobile browser chrome collapsing or expanding doesn't
+   clip the bottom edge. Below 900px this collapses back to a normal, fully
+   scrolling single column (see the media query below): a fixed map makes
+   no sense once the sidebar and map can't share the viewport. */
+.page {
+  position: fixed;
+  top: var(--atlas-header-h, 61px);
+  left: 0;
+  right: 0;
+  height: calc(100dvh - var(--atlas-header-h, 61px));
+  display: flex;
+  flex-direction: column;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 1px;
+  background: var(--note-rule);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.rail {
+  background: var(--note-void);
+  padding: 1.25rem 1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.mapCol {
+  background: var(--note-plate);
+  position: relative;
+  padding: 1.5rem;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  /* Back to the document's own scrolling — .page rejoins normal flow
+     instead of pinning itself over the viewport. */
+  .page {
+    position: static;
+    height: auto;
+  }
+  .layout {
+    display: block;
+    height: auto;
+  }
+  /* Mobile: rank rail and search lead, the map is secondary. Nothing here
+     is fixed or independently scrollable — the whole page scrolls as one,
+     the ordinary mobile pattern, since there's no room to give the map and
+     the standings their own separate panes on a small screen. */
+  .rail {
+    order: 1;
+    overflow: visible;
+  }
+  .mapCol {
+    order: 2;
+    overflow: visible;
+  }
+  .mapWrap {
+    height: 70vh;
+  }
+}
+
+/* ---------------------------------------------------------- the map itself */
+
+.mapWrap {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 1px solid var(--note-rule);
+  overflow: hidden;
+  cursor: grab;
+  /* This element owns pan/pinch itself (see Plate.tsx's pointer handlers) —
+     without this the browser's own touch scrolling and pinch-zoom fight it
+     on mobile. */
+  touch-action: none;
+  outline: none;
+}
+
+.mapWrap:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--note-ember);
+}
+
+.mapWrapDragging {
+  cursor: grabbing;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .svg {
+    height: auto;
+    aspect-ratio: 1000 / 500;
+  }
+}
+
+.countryLink {
+  outline: none;
+}
+
+.countryPath {
+  cursor: pointer;
+  transition: fill 0.5s var(--atlas-ease), stroke 0.25s var(--atlas-ease), filter 0.2s var(--atlas-ease);
+}
+
+.countryLink:focus-visible .countryPath {
+  stroke: var(--note-ember);
+  stroke-width: 1.25;
+  filter: brightness(1.25);
+}
+
+.countryPath.painted:hover,
+.countryLink:focus-visible .countryPath.painted {
+  filter: brightness(1.3);
+}
+
+/* Registration crosses, four corners of the plate. Decorative. */
+.regCross {
+  stroke: var(--note-seal);
+  stroke-width: 1;
+  opacity: 0.8;
+}
+
+/* ---------------------------------------------------------- landing intro */
+
+.intro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  background: var(--note-void);
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--note-rule);
+}
+
+.introText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+/* The page had no heading at all before — just a paragraph. This is the
+   plate's own title, so it borrows the face note's own typeface
+   (atlas-face-name, Bodoni Moda) rather than a generic H1 style, just at a
+   fraction of the face note's own huge size — this sits in a slim intro
+   bar, not full-bleed, and the intro bar's height comes straight out of
+   .page's fixed budget (see the page-shell comment above), so it can't be
+   allowed to balloon. */
+.introTitle {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1;
+}
+
+.introLine {
+  margin: 0;
+  max-width: 46rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--note-intaglio-dim);
+}
+
+.introLinks {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.introLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--note-ember);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--note-ember);
+  padding-bottom: 0.1rem;
+}
+
+.introLink:hover,
+.introLink:focus-visible {
+  color: var(--note-intaglio);
+  border-color: var(--note-intaglio);
+}
+
+@media (max-width: 640px) {
+  .intro {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---------------------------------------------------------- plate furniture
+
+   The map's top strip. Fixed 2026-08-03: this used to hold a serial number
+   that incremented with the pointer on one side and the country counts on
+   the other, with a wide empty gap between them — pure decoration the
+   owner said he didn't understand. The serial is gone outright; the metric
+   dial (.dial, in MetricDial.tsx) now fills that gap as a single thin row,
+   and the counts (.denomPanel) are down to one small mono line instead of
+   a big denomination numeral + two-line caption, so the whole strip reads
+   as one quiet line of furniture, not two unrelated blocks. */
+
+.furnitureRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  /* .dial can shrink a long way (its own chip row scrolls internally —
+     see .dialChips) before this needs to wrap, but on a narrow phone
+     screen even that has a floor. Falling back to a second line here
+     beats forcing the whole strip into horizontal overflow. */
+  flex-wrap: wrap;
+}
+
+.microtextLine {
+  text-align: center;
+  padding: 0.25rem 0;
+  border-top: 1px dashed var(--note-rule);
+}
+
+.denomPanel {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- cartouche */
+
+.cartouche {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  min-width: 190px;
+  background: var(--note-paper);
+  border: 1px solid var(--note-ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.15s var(--atlas-ease);
+  will-change: transform;
+}
+
+.cartoucheGuilloche {
+  flex: none;
+  color: var(--note-ink);
+}
+
+.cartoucheBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.cartoucheName {
+  font-size: 1.15rem;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.cartoucheRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.cartoucheValue {
+  font-size: 0.95rem;
+}
+
+.cartoucheHint {
+  margin-top: 0.15rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--note-ember);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- corner cluster
+   Bottom-right map furniture: the search box (floating variant — see
+   AtlasSearch.tsx's `floating` prop), the zoom hint and the zoom buttons,
+   stacked search-on-top so the search dropdown (which opens upward here,
+   see .searchListboxUp) has clear room above it instead of opening into
+   the zoom buttons below. */
+
+/* The old zoom-button version sat at ~1.08:1 contrast against .mapCol's own
+   background (--note-paper buttons on --note-plate) — functionally
+   invisible on open ocean. --note-seal is the map's existing "hardware"
+   colour (the registration crosses use it too), so framing the cluster in
+   it reads as more engraved furniture rather than a random new colour, and
+   it sits at 6.27:1 against --note-plate. The button glyphs themselves now
+   use --note-intaglio (the map's brightest text colour, ~13:1) instead of
+   the dim secondary tone. */
+.cornerCluster {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  /* Fixed 2026-08-03: 220px clipped the search input's own placeholder —
+     "Search a country — press /" lost its trailing "/". Widened just
+     enough for that text to render whole. */
+  max-width: min(260px, calc(100% - 1.5rem));
+}
+
+/* The one quiet line telling a first-time visitor the map responds to
+   more than clicks — nothing else on the plate hints at this. aria-hidden
+   because the map's own aria-label (Plate.tsx) already carries the same
+   instructions for assistive tech. */
+.zoomHint {
+  background: var(--note-plate);
+  padding: 0.15rem 0.45rem;
+  opacity: 0.85;
+}
+
+.zoomControls {
+  display: flex;
+  gap: 1px;
+  background: var(--note-seal);
+  border: 1px solid var(--note-seal);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+.zoomButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.6rem;
+  min-width: 2.25rem;
+  background: var(--note-paper-hi);
+  color: var(--note-intaglio);
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s var(--atlas-ease), background 0.15s var(--atlas-ease);
+}
+
+.zoomButton:hover:not(:disabled),
+.zoomButton:focus-visible {
+  background: var(--note-paper);
+  color: var(--note-ember);
+}
+
+.zoomButton:disabled {
+  color: var(--note-intaglio-dim);
+  cursor: default;
+}
+
+/* ---------------------------------------------------------- metric dial
+
+   Third try at where this lives, 2026-08-03. First the rail, then a
+   bordered card floating over the map's top-left corner — the owner
+   looked at that and said plainly he didn't want "a rectangle". This is a
+   single thin bar of plate furniture instead, filling the gap in
+   .furnitureRow left by the deleted serial number: label, then the chips,
+   then the legend, all one line if the width allows it. None of this
+   changes *how* it works — MetricDial.tsx's active/onChange/nodataCount
+   props and Plate.tsx's paintByIso3 + transitionDelay sweep are untouched;
+   this is a layout change only. */
+.dial {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* flex-wrap: nowrap, not a grid or a wrapping row — a thin bar can't grow
+   downward. If the chips don't all fit at once, this scrolls horizontally
+   on its own (overflow-x) rather than wrapping into a second line, which
+   is what would turn a thin bar back into a block. */
+.dialChips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* room for the focus ring / hover state without clipping it against the
+     scroll container's edge */
+  padding: 2px;
+}
+
+.dialChip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  flex: none;
+  padding: 0.35rem 0.6rem;
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  color: var(--note-intaglio-dim);
+  cursor: pointer;
+  transition: border-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease), background 0.2s var(--atlas-ease);
+}
+
+.dialChip:hover,
+.dialChip:focus-visible {
+  border-color: var(--note-ink);
+  color: var(--note-intaglio);
+}
+
+.dialChipActive {
+  background: var(--note-paper-hi);
+  border-color: var(--note-ember);
+  color: var(--note-ember);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: none;
+  gap: 0.5rem;
+}
+
+.legendRamp {
+  display: flex;
+  height: 8px;
+  width: 120px;
+  border: 1px solid var(--note-rule);
+}
+
+.legendStop {
+  flex: 1;
+}
+
+.legendNodata {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--note-nodata);
+  border: 1px solid var(--note-rule);
+}
+
+/* ---------------------------------------------------------- rank rail */
+
+.railHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.railHeaderTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.railFullLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s var(--atlas-ease);
+}
+
+.railFullLink:hover,
+.railFullLink:focus-visible {
+  color: var(--note-ember);
+}
+
+.railList {
+  /* .rail (the sidebar as a whole) is the one scrolling region now — see
+     the page-shell comment at the top of this file. A second, nested
+     scrollbar in here on top of that would be two scrollbars fighting
+     over the same list. */
+  border-top: 1px dashed var(--note-rule);
+}
+
+.railRow {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr auto 0.9rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.25rem;
+  text-decoration: none;
+  color: var(--note-intaglio);
+  border-bottom: 1px solid var(--note-rule);
+  transition: background 0.15s var(--atlas-ease);
+}
+
+.railRow:hover,
+.railRow:focus-visible,
+.railRowActive {
+  background: var(--note-paper-hi);
+}
+
+/* A quiet arrow that only warms up on hover/focus — the row (a <Link>)
+   is already the whole clickable target; this just makes that visible
+   instead of relying on cursor alone. */
+.railChevron {
+  color: var(--note-intaglio-dim);
+  font-size: 0.9rem;
+  line-height: 1;
+  opacity: 0.5;
+  transition: color 0.15s var(--atlas-ease), opacity 0.15s var(--atlas-ease);
+}
+
+.railRow:hover .railChevron,
+.railRow:focus-visible .railChevron {
+  color: var(--note-ember);
+  opacity: 1;
+}
+
+.railRank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--note-intaglio-dim);
+}
+
+.railName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+}
+
+.railValueCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  min-width: 4.5rem;
+}
+
+.railValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.railThread {
+  width: 100%;
+}
+
+.railMore {
+  padding: 0.6rem 0.25rem;
+}
+
+.railMoreButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px dashed var(--note-rule);
+  color: var(--note-intaglio-dim);
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  cursor: pointer;
+}
+
+.railMoreButton:hover {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- search */
+
+.search {
+  position: relative;
+  width: 100%;
+}
+
+.searchInput {
+  width: 100%;
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  color: var(--note-intaglio);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.65rem;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--note-ember);
+}
+
+.searchListbox {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--note-paper);
+  border: 1px solid var(--note-ink);
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* The floating variant (AtlasSearch.tsx's `floating` prop) — search
+   relocated from the header onto the map, bottom-right, as
+   .cornerCluster's top-most item. Framed like the rest of the corner
+   cluster/dial furniture rather than the plain header input. */
+.searchFloating {
+  width: 100%;
+}
+
+.searchInputFloating {
+  background: var(--note-paper-hi);
+  border-color: var(--note-seal);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+/* Sitting at the bottom of the map, this input's dropdown has to open
+   upward — opening it downward (the header variant's default) would run
+   past .mapWrap's own edge and get clipped by its overflow: hidden (needed
+   for the zoom/pan clipping). Opening upward also means it grows away from
+   .cornerCluster's zoom buttons below, rather than over them. */
+.searchListboxUp {
+  top: auto;
+  bottom: calc(100% + 2px);
+}
+
+.searchOption {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--note-intaglio);
+}
+
+.searchOption[data-active='true'],
+.searchOption:hover {
+  background: var(--note-paper-hi);
+  color: var(--note-ember);
+}
+
+.searchOptionCode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--note-intaglio-dim);
+}
+
+.searchFallback {
+  margin-top: 0.75rem;
+}
+
+.searchFallbackList {
+  columns: 2;
+  column-gap: 1rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+
+.searchFallbackList li {
+  break-inside: avoid;
+  padding: 0.15rem 0;
+}
+
+.searchFallbackList a {
+  color: var(--note-intaglio);
+  text-decoration: none;
+}
+
+.searchFallbackList a:hover {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- reduced motion
+   atlas.css's global block already handles its own animation classes; this
+   file adds the transition-delay choropleth sweep and cartouche fade this
+   component introduces, so it needs its own matching override. */
+@media (prefers-reduced-motion: reduce) {
+  .countryPath {
+    transition: none !important;
+    transition-delay: 0s !important;
+  }
+
+  .cartouche {
+    transition: none !important;
+  }
+
+  .railRow {
+    transition: none !important;
+  }
+
+  .dialChip {
+    transition: none !important;
+  }
+
+  .zoomButton {
+    transition: none !important;
+  }
+}

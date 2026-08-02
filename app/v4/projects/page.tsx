@@ -12,9 +12,12 @@ const statusLabels: Record<ProjectStatus, string> = {
   production: 'Production',
   confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
+  experiment: 'Experiments',
 }
 
-const statusOrder: ProjectStatus[] = ['production', 'confidential', 'open-source']
+// Work statuses first, experiments last — it's a separate kind of thing
+// (built for curiosity, not for a job), not competing with the work above.
+const statusOrder: ProjectStatus[] = ['production', 'confidential', 'open-source', 'experiment']
 
 export default function V4Projects() {
   const groups = statusOrder
@@ -53,9 +56,11 @@ export default function V4Projects() {
             {group.items.map((project) => {
               const delay = (rowIndex++ % 4) * 60
               const isArticleLink = project.link?.startsWith('/articles')
+              const isAtlasLink = project.link === '/atlas'
+              const linkLabel = isArticleLink ? 'Read the deep dive' : isAtlasLink ? 'Explore the Atlas' : 'View project'
               const isExternal = !!project.link && !project.link.startsWith('/')
               const href = project.link
-                ? project.link.startsWith('/')
+                ? project.link.startsWith('/') && !project.link.startsWith('/atlas')
                   ? `/v4${project.link}`
                   : project.link
                 : undefined
@@ -96,7 +101,7 @@ export default function V4Projects() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 mt-5 font-mono text-xs uppercase tracking-widest text-primary group-hover:opacity-80 transition-opacity"
                         >
-                          {isArticleLink ? 'Read the deep dive' : 'View project'}
+                          {linkLabel}
                           <span aria-hidden="true" className="motion-safe:group-hover:translate-x-1 transition-transform">→</span>
                         </a>
                       ) : (
@@ -104,7 +109,7 @@ export default function V4Projects() {
                           href={href}
                           className="inline-flex items-center gap-1.5 mt-5 font-mono text-xs uppercase tracking-widest text-primary group-hover:opacity-80 transition-opacity"
                         >
-                          {isArticleLink ? 'Read the deep dive' : 'View project'}
+                          {linkLabel}
                           <span aria-hidden="true" className="motion-safe:group-hover:translate-x-1 transition-transform">→</span>
                         </Link>
                       ))}
