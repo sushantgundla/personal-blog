@@ -8,6 +8,24 @@
 // thread ember (above average, "good") or thread teal (below average). Many
 // indicators are genuinely neutral (null) — population is not "better" when
 // higher.
+//
+// Audited entry-by-entry 2026-08 (compare screen's honest-winner rule).
+// `null` is reserved for indicators with no defensible universal direction:
+// pure demographic/geographic facts (population, land area, density, age
+// structure, birth/death rate — all confounded by population age structure
+// or simply descriptive), economic *structure* shares (agriculture/industry/
+// services % of GDP or employment — a country isn't "better" for having
+// fewer farmers, it's just further along a structural transition), and
+// genuinely double-edged policy choices (government spending/revenue/debt
+// ratios, tax revenue, military spending, interest rates, current account
+// balance, energy import dependence, nuclear power share). Absolute-count
+// metrics that scale with country size but still read as a real economic or
+// scientific achievement (exports, patents, journal articles, tourism)
+// follow the same convention already established for absolute GDP: `true`.
+// Absolute counts that are pure geography/infrastructure-extent (rail
+// network km, forest area km², port/air traffic volume) stay `null` — the
+// normalised version of the same fact (forest cover %, say) already carries
+// the honest signal.
 import type { AtlasFormat, AtlasSection, IndicatorDef } from "./types";
 
 function def(
@@ -158,10 +176,10 @@ export const INDICATORS: IndicatorDef[] = [
   def("IS.RRS.PASG.KM", "Rail passengers", "million passenger-km", "CONNECTED", "number", null),
   def("IS.SHP.GOOD.TU", "Container port traffic", "TEU", "CONNECTED", "number", null),
   def("GB.XPD.RSDV.GD.ZS", "Research and development spending", "% of GDP", "CONNECTED", "percent", true),
-  def("IP.PAT.RESD", "Patent applications by residents", "count", "CONNECTED", "number", null),
-  def("IP.JRN.ARTC.SC", "Scientific journal articles published", "count", "CONNECTED", "number", null),
-  def("ST.INT.ARVL", "Tourists arriving", "count", "CONNECTED", "number", null),
-  def("ST.INT.RCPT.CD", "Money earned from tourism", "current US$", "CONNECTED", "currency", null),
+  def("IP.PAT.RESD", "Patent applications by residents", "count", "CONNECTED", "number", true),
+  def("IP.JRN.ARTC.SC", "Scientific journal articles published", "count", "CONNECTED", "number", true),
+  def("ST.INT.ARVL", "Tourists arriving", "count", "CONNECTED", "number", true),
+  def("ST.INT.RCPT.CD", "Money earned from tourism", "current US$", "CONNECTED", "currency", true),
 
   // ----------------------------------------------------------------- LAND
   def("AG.LND.FRST.ZS", "Land covered by forest", "% of land area", "LAND", "percent", true, true),
@@ -176,7 +194,7 @@ export const INDICATORS: IndicatorDef[] = [
   def("EN.GHG.ALL.MT.CE.AR5", "Greenhouse gas emissions", "Mt CO2-equivalent", "NATURE", "number", false),
   def("ER.LND.PTLD.ZS", "Protected land", "% of land area", "NATURE", "percent", true),
   def("ER.MRN.PTMR.ZS", "Protected coastal waters", "% of territorial waters", "NATURE", "percent", true),
-  def("ER.H2O.FWTL.ZS", "Freshwater withdrawn", "% of internal resources", "NATURE", "percent", null),
+  def("ER.H2O.FWTL.ZS", "Freshwater withdrawn", "% of internal resources", "NATURE", "percent", false),
   def("ER.H2O.INTR.PC", "Renewable water available per person", "m³ per person", "NATURE", "number", true),
   def("EG.FEC.RNEW.ZS", "Renewable energy use", "% of final energy consumption", "NATURE", "percent", true, true),
   def("EG.ELC.RNEW.ZS", "Electricity from renewables", "% of total", "NATURE", "percent", true),
