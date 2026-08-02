@@ -7,6 +7,7 @@ import type { IsoCountry } from '@/lib/atlas/iso-countries'
 import type { IndicatorDef, Ranking } from '@/lib/atlas/types'
 import { INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
 import { formatValue, formatRank } from '@/lib/atlas/format'
+import { AtlasSearch } from './AtlasSearch'
 import { Cartouche } from './Cartouche'
 import { MetricDial, METRIC_RAMP } from './MetricDial'
 import { RankRail, type RailRow } from './RankRail'
@@ -69,8 +70,6 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
 
   const mapWrapRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
-  const serialRef = useRef<HTMLSpanElement>(null)
-  const serialCount = useRef(0)
 
   const {
     transform,
@@ -238,8 +237,6 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
   }, [railRanking, allCountries])
 
   function handleContainerMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    serialCount.current += 1
-    if (serialRef.current) serialRef.current.textContent = String(serialCount.current).padStart(8, '0')
     const rect = mapWrapRef.current?.getBoundingClientRect()
     if (rect) setCartouchePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
   }
@@ -279,13 +276,11 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
 
   return (
     <div className={styles.layout}>
+      {/* The metric dial used to live here — moved into the map's own top
+          furniture strip below, where the serial number used to sit, so
+          the control is on the plate, next to the thing it changes.
+          Removing it gives the standings the rail's full height. */}
       <aside className={styles.rail}>
-        <MetricDial
-          indicators={dialIndicators}
-          active={activeMetric}
-          onChange={setActiveMetric}
-          nodataCount={nodataCount}
-        />
         <RankRail
           rows={railRows}
           indicator={activeIndicatorDef}
@@ -298,20 +293,24 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
       </aside>
 
       <section className={styles.mapCol}>
+        {/* Fixed 2026-08-03: the serial number here used to increment with
+            the pointer — pure decoration that carried no information, and
+            the owner said plainly he didn't understand what it was. Deleted
+            outright rather than explained; the metric dial takes its place
+            as a thin, single-line bar instead of the floating panel it was
+            a moment ago, with the country counts tightened alongside it so
+            the whole strip still reads as one quiet line of plate
+            furniture. */}
         <div className={styles.furnitureRow}>
-          <div className={styles.serialBox}>
-            <span className="atlas-label">Serial</span>
-            <span className="atlas-serial" ref={serialRef} aria-hidden="true">
-              00000000
-            </span>
-          </div>
+          <MetricDial
+            indicators={dialIndicators}
+            active={activeMetric}
+            onChange={setActiveMetric}
+            nodataCount={nodataCount}
+          />
           <div className={styles.denomPanel}>
-            <span className={`atlas-denomination ${styles.figure}`} style={{ fontSize: '1.75rem' }}>
-              {allCountries.length}
-            </span>
-            <span className={styles.caption}>
-              <span className="atlas-label">Countries catalogued</span>
-              <span className="atlas-serial">{countryPaths.length} engraved on the plate</span>
+            <span className="atlas-serial">
+              {allCountries.length} catalogued · {countryPaths.length} engraved
             </span>
           </div>
         </div>
@@ -401,7 +400,13 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
             </g>
           </svg>
 
-          <div className={styles.zoomCluster}>
+          <div className={styles.cornerCluster}>
+            {/* Search moved here from the header — see AtlasSearch.tsx's
+                doc comment for why it only ever renders on /atlas now.
+                Sits above the zoom hint/buttons so its dropdown (opens
+                upward — .searchListboxUp) has clear room and never covers
+                them. */}
+            <AtlasSearch countries={allCountries} />
             {/* The map gives no other sign it's more than a static image —
                 this is the one quiet hint that scroll/drag/arrow keys do
                 something. aria-hidden since the svg's own aria-label
@@ -462,6 +467,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
               x={cartouchePos.x}
               y={cartouchePos.y}
               visible={true}
+              containerRef={mapWrapRef}
             />
           )}
         </div>

@@ -194,7 +194,7 @@ export default async function ComparePage({ params }: { params: { countries: str
                 ['--note-ink-rgb' as string]: hexToRgbString(inks[i].hex),
               }}
             >
-              <FaceNote dossier={dossiers[i]} country={country} />
+              <FaceNote dossier={dossiers[i]} country={country} compact />
             </div>
           ))}
         </div>

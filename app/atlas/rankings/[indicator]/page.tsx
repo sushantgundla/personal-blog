@@ -1,15 +1,34 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CHART_INDICATOR_CODES, INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
+import { CHART_INDICATOR_CODES, INDICATORS, INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
 import { getRanking } from '@/lib/atlas/rankings'
 import { formatValue, formatYear } from '@/lib/atlas/format'
+import { IndicatorPicker } from '../../_components/IndicatorPicker'
 import dossierStyles from '../../_components/dossier.module.css'
 
 export const revalidate = 604800 // World Bank indicators move a few times a year
 
+/** Below this many countries with a value, buildRanking (lib/atlas/rankings.ts)
+ * withholds rank/percentile/worldAverage — kept here only for the wording
+ * below, not for any ranking math (that stays owned by rankings.ts). */
+const MIN_RANKABLE_COUNTRIES = 30
+
+const PICKER_OPTIONS = INDICATORS.map((i) => ({ code: i.code, label: i.label, section: i.section }))
+
 interface RankingPageProps {
   params: { indicator: string }
+  searchParams?: { dir?: string }
+}
+
+/** Which end of the distribution sorts first, in plain words — describes
+ * `dir`, not the ranking itself (rank numbers never change with this). */
+function orderNote(higherIsBetter: boolean | null, dir: 'asc' | 'desc'): string {
+  if (higherIsBetter === null) {
+    return dir === 'asc' ? 'no best or worst — smallest to largest' : 'no best or worst — largest to smallest'
+  }
+  if (dir === 'asc') return 'showing the worst first'
+  return higherIsBetter ? 'higher ranks first' : 'lower ranks first'
 }
 
 /**
@@ -31,11 +50,43 @@ export async function generateMetadata({ params }: RankingPageProps): Promise<Me
   }
 }
 
-export default async function RankingPage({ params }: RankingPageProps) {
+export default async function RankingPage({ params, searchParams }: RankingPageProps) {
   const def = INDICATORS_BY_CODE[params.indicator]
   if (!def) notFound()
 
   const result = await getRanking(params.indicator)
+  const dir: 'asc' | 'desc' = searchParams?.dir === 'asc' ? 'asc' : 'desc'
+
+  // Presentation only — never touches lib/atlas/rankings.ts's rank/percentile
+  // math. Below MIN_RANKABLE_COUNTRIES that module leaves rows in fetch
+  // order (no rank assigned), so they are re-sorted here purely so the
+  // table reads sensibly; the "—" in the Rank column still tells the truth.
+  let displayRows = result.ok ? result.data.rows : []
+  if (result.ok) {
+    const withValue = result.data.rows.filter(
+      (r): r is typeof r & { value: number } => r.value !== null
+    )
+    const withoutValue = result.data.rows.filter((r) => r.value === null)
+    const sorted = [...withValue].sort((a, b) =>
+      def.higherIsBetter === false ? a.value - b.value : b.value - a.value
+    )
+    const ordered = dir === 'asc' ? sorted.reverse() : sorted
+    displayRows = [...ordered, ...withoutValue]
+  }
+
+  const totalCountries = result.ok ? result.data.rows.length : 0
+  const withValueCount = result.ok ? result.data.rows.filter((r) => r.value !== null).length : 0
+  const rankable = result.ok && result.data.worldAverage !== null
+
+  const nextDir = dir === 'asc' ? 'desc' : 'asc'
+  const flipLabel =
+    def.higherIsBetter === null
+      ? nextDir === 'asc'
+        ? 'Show smallest first'
+        : 'Show largest first'
+      : nextDir === 'asc'
+        ? 'Show worst first'
+        : 'Show best first'
 
   return (
     <div className="atlas-fade-in" style={{ maxWidth: '52rem', margin: '0 auto', padding: '2.5rem 1.5rem 4rem' }}>
@@ -48,10 +99,10 @@ export default async function RankingPage({ params }: RankingPageProps) {
         {def.label}
       </h1>
       <p className="atlas-body" style={{ color: 'var(--note-intaglio-dim)', marginTop: '0.25rem' }}>
-        {def.unit}
-        {def.higherIsBetter === true && ' · higher ranks first'}
-        {def.higherIsBetter === false && ' · lower ranks first'}
+        {def.unit} · {orderNote(def.higherIsBetter, dir)}
       </p>
+
+      <IndicatorPicker options={PICKER_OPTIONS} current={params.indicator} />
 
       {!result.ok ? (
         <p className="atlas-body" style={{ marginTop: '2rem' }}>
@@ -60,9 +111,33 @@ export default async function RankingPage({ params }: RankingPageProps) {
         </p>
       ) : (
         <>
-          {result.data.worldAverage !== null && (
-            <p className="atlas-serial" style={{ marginTop: '0.75rem' }}>
+          <p className="atlas-serial" style={{ marginTop: '0.75rem' }}>
+            {withValueCount} of {totalCountries} countries report a figure for {def.label.toLowerCase()}
+            {withValueCount > 0 && !rankable && ` — fewer than ${MIN_RANKABLE_COUNTRIES}, so no rank is shown`}
+          </p>
+
+          {rankable && result.data.worldAverage !== null && (
+            <p className="atlas-serial" style={{ marginTop: '0.25rem' }}>
               World average: {formatValue(result.data.worldAverage, def.format)}
+            </p>
+          )}
+
+          {!rankable && withValueCount > 0 && (
+            <p className="atlas-body" style={{ marginTop: '1rem', color: 'var(--note-thread)' }} role="note">
+              Too few countries report {def.label.toLowerCase()} for a rank or a world average to mean anything —
+              below is just what each country that has a figure actually reported, and the year it's from.
+            </p>
+          )}
+
+          {withValueCount > 0 && (
+            <p style={{ marginTop: '0.75rem' }}>
+              <Link
+                href={`/atlas/rankings/${params.indicator}?dir=${nextDir}`}
+                className="atlas-label"
+                style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
+              >
+                {flipLabel}
+              </Link>
             </p>
           )}
 
@@ -77,7 +152,7 @@ export default async function RankingPage({ params }: RankingPageProps) {
               </tr>
             </thead>
             <tbody>
-              {result.data.rows.map((row) => (
+              {displayRows.map((row) => (
                 <tr
                   key={row.iso3}
                   style={{ borderTop: '1px solid var(--note-rule)' }}
