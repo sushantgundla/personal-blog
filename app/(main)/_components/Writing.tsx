@@ -39,12 +39,13 @@ function ProjectCard({ project, lead }: ProjectCardProps): JSX.Element {
       style={{ height: '100%', justifyContent: 'space-between', paddingBlock: 'clamp(16px, 2.4vw, 24px)' }}
     >
       <div className="v2-col" style={{ gap: '0.6rem' }}>
-        <div className="v2-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'nowrap' }}>
+        {/* Badge above the title, not beside it — "Enterprise / Confidential"
+            is too long to share a row and was overflowing the card while
+            squashing the title into the left half. Same fix as ProjectsGrid. */}
+        <div className="v2-col" style={{ alignItems: 'flex-start', gap: '0.5rem' }}>
+          <span className="v2-badge">{STATUS_LABEL[project.status]}</span>
           <span className={lead ? 'v2-sub' : 'v2-body'} style={{ fontWeight: 700 }}>
             {project.title}
-          </span>
-          <span className="v2-badge" style={{ flexShrink: 0 }}>
-            {STATUS_LABEL[project.status]}
           </span>
         </div>
         <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>
