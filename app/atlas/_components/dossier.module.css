@@ -379,6 +379,24 @@
   }
 }
 
+/* Stands in for all ten sections when a country has no World Bank data
+   at all (Taiwan, Western Sahara, Vatican City) — see NoteSheet.tsx.
+   Same quiet register as .sectionEmpty, but centred and roomier since
+   it is the only thing here, not one line among nine other sections. */
+.sheetNoData {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  color: var(--note-intaglio-dim);
+  text-align: center;
+  max-width: 32rem;
+  margin: 1rem auto;
+  padding: 1.5rem;
+  border: 1px dashed var(--note-rule);
+  border-radius: 4px;
+}
+
 /* A section with nothing worth printing collapses to this single quiet
    line instead of a grid of blank notes — see NoteSheet.tsx. */
 .sectionEmpty {
