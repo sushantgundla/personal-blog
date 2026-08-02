@@ -46,35 +46,67 @@ export function Contact(): JSX.Element {
         </Reveal>
 
         <Reveal delay={80}>
-          <div className="v2-row" style={{ marginTop: 'clamp(32px, 5vw, 56px)', gap: '16px' }}>
+          <div className="v2-grid" data-cols="2" style={{ marginTop: 'clamp(32px, 5vw, 56px)' }}>
+            <div className="v2-panel v2-card-lift v2-col" style={{ gap: '20px' }}>
+              <div className="v2-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <span className="v2-eyebrow">Email</span>
+                <span className="v2-mono v2-muted" style={{ fontSize: '0.78em' }}>Direct</span>
+              </div>
+              <a
+                href={`mailto:${siteConfig.email}`}
+                className="v2-link"
+                style={{
+                  fontFamily: 'var(--v2-font-head)',
+                  fontSize: 'clamp(1.35rem, 3vw, 2.1rem)',
+                  fontWeight: 700,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {siteConfig.email}
+              </a>
+              <button
+                type="button"
+                className="v2-btn-ghost"
+                onClick={handleCopy}
+                aria-label={copied ? 'Email copied to clipboard' : 'Copy email address'}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                {copied ? 'Copied ✓' : 'Copy address'}
+              </button>
+            </div>
+
             <a
-              href={`mailto:${siteConfig.email}`}
-              className="v2-link"
-              style={{ fontFamily: 'var(--v2-font-head)', fontSize: 'clamp(1.25rem, 3vw, 2rem)', fontWeight: 600 }}
+              href={siteConfig.social.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'block', height: '100%', textDecoration: 'none', color: 'inherit' }}
             >
-              {siteConfig.email}
+              <div className="v2-panel v2-card-lift v2-col" style={{ gap: '20px', height: '100%' }}>
+                <div className="v2-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <span className="v2-eyebrow">LinkedIn</span>
+                  <span className="v2-mono v2-muted" style={{ fontSize: '0.78em' }}>↗</span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: 'var(--v2-font-head)',
+                    fontSize: 'clamp(1.35rem, 3vw, 2.1rem)',
+                    fontWeight: 700,
+                  }}
+                >
+                  Connect on LinkedIn
+                </span>
+                <span className="v2-body v2-muted">Fastest way to reach me about roles, projects, and work.</span>
+              </div>
             </a>
-            <button
-              type="button"
-              className="v2-icon-btn"
-              onClick={handleCopy}
-              aria-label={copied ? 'Email copied to clipboard' : 'Copy email address'}
-              style={{ width: 'auto', paddingInline: '0.9em', fontSize: '0.8rem', fontFamily: 'var(--v2-font-mono)' }}
-            >
-              {copied ? 'Copied' : 'Copy'}
-            </button>
           </div>
         </Reveal>
 
         <Reveal delay={140}>
-          <div className="v2-row" style={{ marginTop: '32px', gap: '12px' }}>
-            <a href={siteConfig.social.github} target="_blank" rel="noopener noreferrer" className="v2-btn-ghost">
+          <div className="v2-row" style={{ marginTop: '28px', gap: '24px' }}>
+            <a href={siteConfig.social.github} target="_blank" rel="noopener noreferrer" className="v2-btn-quiet">
               GitHub
             </a>
-            <a href={siteConfig.social.linkedin} target="_blank" rel="noopener noreferrer" className="v2-btn-ghost">
-              LinkedIn
-            </a>
-            <a href={siteConfig.social.twitter} target="_blank" rel="noopener noreferrer" className="v2-btn-ghost">
+            <a href={siteConfig.social.twitter} target="_blank" rel="noopener noreferrer" className="v2-btn-quiet">
               X
             </a>
           </div>

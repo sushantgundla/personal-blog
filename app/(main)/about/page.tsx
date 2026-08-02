@@ -22,19 +22,27 @@ const SKILL_GROUPS: { title: string; labels: string[] }[] = [
     labels: [
       'Agentic AI', 'RAG', 'MCP', 'LLMs', 'NLP', 'Computer Vision', 'PyTorch',
       'Transformers', 'Fine-tuning', 'Prompt Engineering', 'Hugging Face', 'Evals',
+      'Sentence Transformers', 'OCR', 'Multi-Agent Systems', 'Conversational AI',
+      'Agent Orchestration', 'RoBERTa',
     ],
   },
   {
     title: 'Frameworks & Tools',
-    labels: ['Agno', 'LiteLLM', 'FastAPI', 'Claude Code', 'MLOps', 'LangGraph', 'LangChain', 'Python', 'Django'],
+    labels: [
+      'Agno', 'LiteLLM', 'FastAPI', 'Claude Code', 'MLOps', 'LangGraph', 'LangChain',
+      'Python', 'Django', 'Next.js', 'TypeScript', 'LLM Gateway',
+    ],
   },
   {
     title: 'Data & Retrieval',
-    labels: ['Vector Databases', 'Embeddings', 'Semantic Search', 'Postgres', 'Redis'],
+    labels: [
+      'Vector Databases', 'Embeddings', 'Semantic Search', 'Postgres', 'Redis',
+      'Data Visualization', 'Document Ingestion', 'Knowledge Bases', 'Information Retrieval',
+    ],
   },
   {
     title: 'Infrastructure',
-    labels: ['AWS', 'Kubernetes', 'Docker'],
+    labels: ['AWS', 'Kubernetes', 'Docker', 'Model Deployment'],
   },
 ]
 
@@ -63,7 +71,7 @@ export default function AboutPage(): JSX.Element {
             className="v2-row"
             style={{ alignItems: 'flex-start', gap: 'clamp(32px, 6vw, 80px)', flexWrap: 'wrap' }}
           >
-            <div className="v2-col" style={{ flex: '1 1 420px', minWidth: '300px', gap: '1.5rem' }}>
+            <div className="v2-col" style={{ flex: '1 1 380px', minWidth: '300px', gap: '1.5rem' }}>
               <Reveal>
                 <span className="v2-eyebrow">Technical Lead, AI/ML · PDI Technologies</span>
                 <h1 className="v2-title v2-title-xl v2-about-title" style={{ marginTop: '16px' }}>
@@ -74,7 +82,7 @@ export default function AboutPage(): JSX.Element {
               <div className="v2-col" style={{ gap: '1.1rem', maxWidth: 'var(--v2-measure)' }}>
                 {bioParagraphs.map((paragraph, i) => (
                   <Reveal key={i} delay={80 + i * 60}>
-                    <p className="v2-body v2-muted">{paragraph}</p>
+                    <p className="v2-body v2-muted v2-about-bio" lang="en">{paragraph}</p>
                   </Reveal>
                 ))}
               </div>
@@ -97,24 +105,33 @@ export default function AboutPage(): JSX.Element {
               </Reveal>
             </div>
 
-            <div style={{ flex: '1.1 1 400px', minWidth: '320px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ flex: '0 1 auto', minWidth: '340px', display: 'flex', justifyContent: 'center' }}>
               <Reveal delay={60}>
                 {/* Self-sizing width, not width:100%. Reveal renders a plain
                     div that becomes a flex item here, so it sizes to content —
                     a percentage width resolved against zero and collapsed the
                     frame to 2x3px, hiding the portrait entirely. This is the
                     most important element on the page — it must read as a
-                    co-equal presence next to the headline, not a thumbnail. */}
+                    co-equal presence next to the headline, not an accessory,
+                    so it runs up to 620px wide (was 500px). The row item above
+                    uses flex: '0 1 auto' (not flex-grow) so the box tracks the
+                    frame's own content width exactly — a growing flex item
+                    with fixed-width content just wastes space as blank
+                    padding around a centered image, it doesn't make the photo
+                    bigger. The text column (flex: '1 1 380px') is the only
+                    item that grows, so it gets everything this frame doesn't
+                    use — see v2-about-title below for the arithmetic that
+                    depends on this. */}
                 <div
                   className="v2-frame"
-                  style={{ position: 'relative', width: 'min(500px, 70vw)', aspectRatio: '4 / 5' }}
+                  style={{ position: 'relative', width: 'min(620px, 44vw)', aspectRatio: '4 / 5' }}
                 >
                   <Image
                     src="/portrait.jpg"
                     alt={`Portrait of ${siteConfig.name}`}
                     fill
                     priority
-                    sizes="(max-width: 900px) 70vw, 500px"
+                    sizes="(max-width: 900px) 70vw, 620px"
                     style={{ objectFit: 'cover' }}
                   />
                 </div>
@@ -316,17 +333,40 @@ export default function AboutPage(): JSX.Element {
         dangerouslySetInnerHTML={{
           __html: `
         /* The portrait is the priority element on this page — it now runs
-           up to 500px wide. .v2-title-xl's default clamp(3rem, 11vw, 9rem)
-           was sized for a headline with no photo competing for width, so we
-           trim its top end here. Headline text itself is untouched. */
-        /* 7.5vw resolved to 108px at a 1440 viewport, where "Architecting" —
-           one unbreakable word — needed 694px against a 629px column and was
-           clipped mid-word. 6vw leaves headroom. overflow-wrap is a guard so
-           it can never clip again at an awkward width. */
+           up to 620px wide (was 500px, then 500px again — this is the third
+           pass). .v2-title-xl's default clamp(3rem, 11vw, 9rem) was sized for
+           a headline with no photo competing for width, so we trim its top
+           end here. Headline text itself is untouched. */
+        /* Recomputed for the 620px portrait. The text column above uses
+           flex: 1 1 380px against a photo column at flex: 0 1 auto, so the
+           text column width is simply: wrap width − row gap − rendered
+           photo width. Row gap and side gutters are the site's own
+           clamp(32px,6vw,80px) and clamp(16px,3.5vw,72px), photo width is
+           min(620px, 44vw). Worst case (narrowest column) is the smallest
+           reference viewport:
+             1280px → column ≈ 550px   1440px → column ≈ 639px   1728px → column ≈ 907px
+           "Architecting" — one unbreakable word — measured 694px wide at a
+           108px font-size in this font/tracking (the prior clipping
+           incident), i.e. ≈ 6.43px of word-width per 1px of font-size. At
+           5.75vw the worst case (1280px) renders a 73.6px headline needing
+           ≈ 473px, against a 550px column — an ~14% margin, growing at every
+           wider breakpoint since the photo caps out at 620px while the
+           column keeps widening. overflow-wrap stays as a hard guard so it
+           can never clip again even if this arithmetic is off. */
         .v2-about-title {
-          font-size: clamp(2.5rem, 6vw, 6rem);
+          font-size: clamp(2.5rem, 5.75vw, 6rem);
           line-height: 0.94;
           overflow-wrap: break-word;
+        }
+
+        /* Justified bio prose only — short text (labels, chips, headings,
+           experience highlights) stays left-aligned; justifying short lines
+           produces uneven word spacing, not straight edges. hyphens: auto
+           plus lang="en" on the <p> (set in the JSX) prevents the ragged
+           gaps ("rivers") justification causes without hyphenation. */
+        .v2-about-bio {
+          text-align: justify;
+          hyphens: auto;
         }
 
         .v2-work-role {
