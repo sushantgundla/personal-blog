@@ -21,6 +21,16 @@ import type { IndicatorValue, Ranking, RankingRow, SourceResult } from "./types"
 
 type CountryValueRow = { iso3: string; name: string; value: number | null; year: string | null };
 
+/**
+ * Below this many countries with a value, a rank or a world average is not
+ * honest — "#7 of 9" reads like a world ranking but is really a ranking
+ * across whichever handful of countries happened to report. Under this
+ * threshold, buildRanking still returns the value/year for a country that
+ * has one, but leaves rank, percentile and worldAverage null so nothing
+ * claims a comparison it can't support.
+ */
+const MIN_RANKABLE_COUNTRIES = 30;
+
 function buildRanking(
   code: string,
   rows: readonly CountryValueRow[],
@@ -43,18 +53,23 @@ function buildRanking(
   );
   const withoutValue = realCountryRows.filter((r) => r.value === null);
 
-  const worldAverage =
-    withValue.length > 0
-      ? withValue.reduce((sum, r) => sum + r.value, 0) / withValue.length
-      : null;
+  // Below MIN_RANKABLE_COUNTRIES, neither a rank nor a world average is
+  // honest for this indicator — see MIN_RANKABLE_COUNTRIES above.
+  const rankable = withValue.length >= MIN_RANKABLE_COUNTRIES;
+
+  const worldAverage = rankable
+    ? withValue.reduce((sum, r) => sum + r.value, 0) / withValue.length
+    : null;
 
   // Rank 1 is always "best" for the given indicator: ascending when lower
   // is better, descending otherwise. A neutral (null) indicator still
   // gets an ordering (descending) so a rank number exists, but the UI
   // should not colour it as "good"/"bad".
-  const sorted = [...withValue].sort((a, b) =>
-    higherIsBetter === false ? a.value - b.value : b.value - a.value
-  );
+  const sorted = rankable
+    ? [...withValue].sort((a, b) =>
+        higherIsBetter === false ? a.value - b.value : b.value - a.value
+      )
+    : [];
 
   const n = sorted.length;
   const rankedRows: RankingRow[] = sorted.map((r, i) => {
@@ -69,6 +84,20 @@ function buildRanking(
       percentile,
     };
   });
+  if (!rankable) {
+    // Still surface the value/year a country has — just without a rank,
+    // percentile or the comparison bar that a rank would otherwise feed.
+    for (const r of withValue) {
+      rankedRows.push({
+        iso3: r.iso3,
+        name: BY_ISO3[r.iso3]?.name ?? r.name,
+        value: r.value,
+        year: r.year,
+        rank: null,
+        percentile: null,
+      });
+    }
+  }
   for (const r of withoutValue) {
     rankedRows.push({
       iso3: r.iso3,

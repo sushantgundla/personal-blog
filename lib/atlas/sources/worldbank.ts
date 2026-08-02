@@ -35,10 +35,25 @@ const MAX_CONCURRENT = 4;
  * ~295 countries at `mrv=1` runs ~2.1-2.2MB of JSON — over Next's 2MB
  * fetch-cache write limit, so those responses were silently uncached (still
  * returned correctly, just refetched from the World Bank every time instead
- * of served from Next's data cache). 15 indicators keeps every batch safely
- * under 2MB. Confirmed live 2026-08-02.
+ * of served from Next's data cache). 10 indicators keeps every batch safely
+ * under 2MB even with `RANKING_MRV` (see below) — confirmed live 2026-08-02,
+ * a 10-code batch at `mrv=3` runs ~1.8MB.
  */
-const RANKING_BATCH_SIZE = 15;
+const RANKING_BATCH_SIZE = 10;
+
+/**
+ * How many of each country's most recent periods `fetchIndicatorsAllCountries`
+ * pulls per indicator, per country, before reducing to the latest non-null
+ * one. Indicators that lag (education, health) don't all get reported in
+ * the same calendar year, so `mrv=1` on `country/all` — "the most recent 1
+ * year of the query, across every country" — silently drops every country
+ * that didn't report in that exact latest year. `mrv=3` fixed a live case
+ * where a lagging education indicator went from 9 countries (`mrv=1`) to
+ * 201 (`mrv=3`) — confirmed live 2026-08-02. Every country still contributes
+ * its own latest value; this only widens the window each one is allowed to
+ * report within.
+ */
+const RANKING_MRV = 3;
 
 /**
  * Caps how many World Bank requests are in flight at once, across every
@@ -313,15 +328,23 @@ export async function fetchAllCountries(
 }
 
 /**
- * Fetch `mrv=1` rows for many indicators, every country, in one batched call
- * per `RANKING_BATCH_SIZE` codes — the `country/all` equivalent of what
- * `fetchLatestIndicators` already does for a single country. This is what
- * lets rankings.ts fetch all ~150 indicators' rankings in ~10 requests
+ * Fetch `mrv=RANKING_MRV` rows for many indicators, every country, in one
+ * batched call per `RANKING_BATCH_SIZE` codes — the `country/all` equivalent
+ * of what `fetchLatestIndicators` already does for a single country. This is
+ * what lets rankings.ts fetch all ~150 indicators' rankings in ~15 requests
  * instead of ~150 one-indicator-at-a-time `fetchAllCountries` calls.
  *
- * Batches run through `fetchBatchesSettled`, so one throttled batch of 15
- * indicators just means those codes come back with no ranking data — never
- * a thrown error for the other ~135.
+ * `mrv=RANKING_MRV` returns up to `RANKING_MRV` periods per country per
+ * indicator (not just non-null ones), so this reduces each country down to
+ * its own single latest non-null value before returning — a country that
+ * reported 3 years ago and a country that reported this year both end up
+ * with exactly one row, dated honestly to whichever year that row is from.
+ * A country with no non-null value anywhere in the window keeps one null
+ * row, so callers can still tell "no data" apart from "not in the list".
+ *
+ * Batches run through `fetchBatchesSettled`, so one throttled batch of
+ * `RANKING_BATCH_SIZE` indicators just means those codes come back with no
+ * ranking data — never a thrown error for the rest.
  */
 export async function fetchIndicatorsAllCountries(
   codes: readonly string[]
@@ -338,33 +361,72 @@ export async function fetchIndicatorsAllCountries(
     const urls = batches.map(
       (batch) =>
         `${BASE}/country/all/indicator/${batch.map(encodeURIComponent).join(";")}` +
-        `?source=2&format=json&mrv=1&per_page=20000`
+        `?source=2&format=json&mrv=${RANKING_MRV}&per_page=20000`
     );
     const results = await fetchBatchesSettled(urls);
     if (results.length === 0 && urls.length > 0) {
       return { ok: false, reason: `All ${urls.length} World Bank ranking batch(es) failed` };
     }
 
-    const byCode = new Map<
+    // code -> iso3 -> the best row seen so far for that country (highest
+    // year with a non-null value; a null row only if nothing better shows up).
+    const latestByCodeAndCountry = new Map<
       string,
-      { rows: { iso3: string; name: string; value: number | null; year: string | null }[]; lastUpdated: string | null }
+      Map<string, { iso3: string; name: string; value: number | null; year: string | null }>
     >();
-    for (const code of codes) byCode.set(code, { rows: [], lastUpdated: null });
+    for (const code of codes) latestByCodeAndCountry.set(code, new Map());
+
+    const lastUpdatedByCode = new Map<string, string | null>();
+    for (const code of codes) lastUpdatedByCode.set(code, null);
 
     for (const resp of results) {
       const meta = metaFromResponse(resp);
       for (const row of rowsFromResponse(resp)) {
         if ((row.country as { value: string }).value === "Aggregates") continue;
-        const entry = byCode.get(row.indicator.id);
-        if (!entry) continue; // a code the World Bank doesn't recognise for this batch
-        entry.rows.push({
-          iso3: row.countryiso3code,
+        const perCountry = latestByCodeAndCountry.get(row.indicator.id);
+        if (!perCountry) continue; // a code the World Bank doesn't recognise for this batch
+        if (!lastUpdatedByCode.get(row.indicator.id) && meta.lastupdated) {
+          lastUpdatedByCode.set(row.indicator.id, meta.lastupdated);
+        }
+
+        const iso3 = row.countryiso3code;
+        const existing = perCountry.get(iso3);
+        const candidate = {
+          iso3,
           name: row.country.value,
           value: row.value,
           year: row.date ?? null,
-        });
-        if (!entry.lastUpdated && meta.lastupdated) entry.lastUpdated = meta.lastupdated;
+        };
+        if (!existing) {
+          perCountry.set(iso3, candidate);
+          continue;
+        }
+        // Keep whichever row is more useful: a non-null value beats a null
+        // one, and among non-null values the more recent year wins.
+        const existingYear = existing.year ? Number(existing.year) : -Infinity;
+        const candidateYear = candidate.year ? Number(candidate.year) : -Infinity;
+        if (existing.value === null && candidate.value !== null) {
+          perCountry.set(iso3, candidate);
+        } else if (
+          existing.value !== null &&
+          candidate.value !== null &&
+          candidateYear > existingYear
+        ) {
+          perCountry.set(iso3, candidate);
+        }
       }
+    }
+
+    const byCode = new Map<
+      string,
+      { rows: { iso3: string; name: string; value: number | null; year: string | null }[]; lastUpdated: string | null }
+    >();
+    for (const code of codes) {
+      const perCountry = latestByCodeAndCountry.get(code)!;
+      byCode.set(code, {
+        rows: Array.from(perCountry.values()),
+        lastUpdated: lastUpdatedByCode.get(code) ?? null,
+      });
     }
 
     return { ok: true, data: byCode };

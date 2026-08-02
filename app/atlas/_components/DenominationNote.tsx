@@ -47,6 +47,11 @@ function CornerOrnament() {
 export function DenominationNote({ indicator, value, timeSeries, cascadeIndex }: DenominationNoteProps) {
   const year = value.year ? Number(value.year) : null
   const remarkable = isRemarkable(value.rank, value.outOf)
+  // A value with no rank isn't always "no data" — it can mean too few
+  // countries reported this indicator to honestly rank against (see
+  // MIN_RANKABLE_COUNTRIES in lib/atlas/rankings.ts). Say that plainly
+  // instead of showing a bare "—", which reads as "nothing here at all".
+  const rankSuppressed = value.value !== null && value.rank === null
 
   const style: CSSProperties | undefined =
     cascadeIndex !== undefined ? { ['--atlas-cascade-i' as string]: cascadeIndex } : undefined
@@ -68,7 +73,7 @@ export function DenominationNote({ indicator, value, timeSeries, cascadeIndex }:
 
       <div className={styles.noteMeta}>
         <span className={`atlas-serial ${remarkable ? 'atlas-remarkable' : ''}`}>
-          {formatRank(value.rank, value.outOf ?? 0)}
+          {rankSuppressed ? 'not enough data to rank' : formatRank(value.rank, value.outOf ?? 0)}
         </span>
         <span className="atlas-serial">{formatYear(year)}</span>
       </div>
