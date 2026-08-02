@@ -20,6 +20,9 @@
   left: clamp(16px, 3vw, 32px);
   bottom: clamp(16px, 3vw, 32px);
   z-index: 9000;
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
 }
 
 .v2-hud-btn {
@@ -123,12 +126,345 @@
   .v2-hud-btn-sub   { font-size: 9px; }
 }
 
+/*
+ * Gallery trigger + dialog — the "browse all 30" control.
+ *
+ * Same rule as the shuffle button above: this stays a legible dark-glass
+ * surface on every dimension. The only theme colour it borrows is
+ * var(--v2-accent), and only for small highlights (focus rings, the
+ * "current" marker) — never for the panel background or body text, or it
+ * goes unreadable on the light-background themes.
+ */
+
+.v2-hud-gallery-trigger {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(14, 14, 16, 0.72);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.10) inset,
+    0 10px 30px -8px rgba(0, 0, 0, 0.55);
+
+  color: rgba(244, 242, 239, 0.85);
+  cursor: pointer;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s ease,
+    color 0.2s ease;
+}
+
+.v2-hud-gallery-trigger svg rect {
+  fill: currentColor;
+}
+
+.v2-hud-gallery-trigger:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.26);
+  color: #f4f2ef;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 16px 40px -10px rgba(0, 0, 0, 0.65);
+}
+
+.v2-hud-gallery-trigger:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.v2-hud-gallery-trigger:focus-visible,
+.v2-hud-gallery-close:focus-visible,
+.v2-hud-gallery-filter:focus-visible,
+.v2-hud-gallery-option:focus-visible {
+  outline: 2px solid var(--v2-accent, #ff6b35);
+  outline-offset: 2px;
+}
+
+.v2-hud-gallery-trigger[aria-expanded="true"] {
+  border-color: var(--v2-accent, #ff6b35);
+  color: #f4f2ef;
+}
+
+/* Overlay + panel */
+
+.v2-hud-gallery-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9010;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 32px) !important;
+  margin: 0 !important;
+
+  background: rgba(6, 5, 4, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: v2-hud-gallery-fade 0.2s ease both;
+}
+
+.v2-hud-gallery-panel {
+  display: flex !important;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(640px, 84vh);
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  background: rgba(16, 15, 14, 0.94);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 30px 80px -20px rgba(0, 0, 0, 0.75);
+  color: #f4f2ef;
+  font-family: var(--v2-font-body, system-ui, sans-serif);
+  overflow: hidden;
+  animation: v2-hud-gallery-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes v2-hud-gallery-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes v2-hud-gallery-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.v2-hud-gallery-head {
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+  padding: 16px 16px 12px !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+}
+
+.v2-hud-gallery-filter {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px !important;
+  margin: 0 !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f4f2ef;
+  font-family: var(--v2-font-body, system-ui, sans-serif);
+  font-size: 13px;
+}
+
+.v2-hud-gallery-filter::placeholder {
+  color: rgba(244, 242, 239, 0.4);
+}
+
+.v2-hud-gallery-close {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(244, 242, 239, 0.8);
+  cursor: pointer;
+}
+
+.v2-hud-gallery-close svg path {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.v2-hud-gallery-close:hover {
+  color: #f4f2ef;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.v2-hud-gallery-count {
+  padding: 0 16px 10px !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+
+  font-family: var(--v2-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: rgba(244, 242, 239, 0.45);
+}
+
+.v2-hud-gallery-list {
+  display: flex !important;
+  flex-direction: column;
+  gap: 4px !important;
+  padding: 0 10px 10px !important;
+  margin: 0 !important;
+
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.v2-hud-gallery-empty {
+  padding: 24px 12px !important;
+  margin: 0 !important;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(244, 242, 239, 0.5);
+}
+
+.v2-hud-gallery-option {
+  display: flex !important;
+  align-items: center;
+  gap: 12px !important;
+  padding: 9px 10px !important;
+  margin: 0 !important;
+  width: 100%;
+
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.v2-hud-gallery-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.v2-hud-gallery-option.is-current {
+  border-color: var(--v2-accent, #ff6b35);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.v2-hud-gallery-swatch {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(135deg,
+      var(--v2-hud-swatch-a1, rgba(255, 255, 255, 0.16)) 0%,
+      var(--v2-hud-swatch-a1, rgba(255, 255, 255, 0.16)) 34%,
+      var(--v2-hud-swatch-bg, rgba(255, 255, 255, 0.08)) 34%,
+      var(--v2-hud-swatch-bg, rgba(255, 255, 255, 0.08)) 66%,
+      var(--v2-hud-swatch-a2, rgba(255, 255, 255, 0.16)) 66%,
+      var(--v2-hud-swatch-a2, rgba(255, 255, 255, 0.16)) 100%);
+}
+
+.v2-hud-gallery-swatch.is-empty {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.v2-hud-gallery-option-text {
+  display: flex !important;
+  flex-direction: column;
+  gap: 2px !important;
+  min-width: 0;
+}
+
+.v2-hud-gallery-option-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--v2-font-head, system-ui, sans-serif);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v2-hud-gallery-option-tag {
+  flex-shrink: 0;
+  padding: 1px 7px !important;
+  margin: 0 !important;
+  border-radius: 999px;
+  background: var(--v2-accent, #ff6b35);
+  color: #0a0908;
+  font-family: var(--v2-font-mono, ui-monospace, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.v2-hud-gallery-option-blurb {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: rgba(244, 242, 239, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .v2-hud-gallery-overlay {
+    padding: 0 !important;
+    align-items: stretch;
+  }
+  .v2-hud-gallery-panel {
+    width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+    border-width: 0;
+  }
+  .v2-hud-gallery-option-blurb {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 480px) {
+  .v2-hud-gallery-trigger {
+    width: 34px;
+    height: 34px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .v2-hud-btn,
   .v2-hud-btn:hover,
-  .v2-hud-btn:active {
+  .v2-hud-btn:active,
+  .v2-hud-gallery-trigger,
+  .v2-hud-gallery-trigger:hover,
+  .v2-hud-gallery-trigger:active {
     transform: none;
     transition: none;
   }
   .v2-hud-btn-spark { animation: none; }
+  .v2-hud-gallery-overlay,
+  .v2-hud-gallery-panel {
+    animation: none;
+  }
+  .v2-hud-gallery-option {
+    transition: none;
+  }
 }

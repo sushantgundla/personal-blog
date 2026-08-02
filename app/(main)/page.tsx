@@ -2,7 +2,6 @@ import { getAllArticles } from '@/lib/articles'
 import { getAllRadarPosts, getAllRadarPicks } from '@/lib/radar'
 import { Hero } from './_components/Hero'
 import { Signal } from './_components/Signal'
-import { Work } from './_components/Work'
 import { Writing, type ArticleCard } from './_components/Writing'
 import { RadarHome } from './_components/RadarHome'
 import { Contact } from './_components/Contact'
@@ -34,7 +33,6 @@ export default function V2Page() {
     <>
       <Hero />
       <Signal />
-      <Work />
       <Writing articles={articles} />
       <RadarHome latestPost={radarPosts[0] ?? null} picks={radarPicks.slice(0, 4)} />
       <Contact />

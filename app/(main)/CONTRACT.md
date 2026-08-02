@@ -259,6 +259,31 @@ Article → `{ slug, title, date, description, tags[], readingTime }`
 
 ---
 
+## 7b. The `<style>` hydration trap — read this before writing one
+
+**Never render CSS as a text child of `<style>`:**
+
+```tsx
+<style>{`  .thing { content: ''; }  `}</style>   // ← BREAKS
+```
+
+React escapes `"` to `&quot;` and `'` to `&#x27;` inside a `<style>` text child
+on the server but **not** on the client. Any quote — in a selector like
+`[data-tags*="|AI|"]`, in `content: ''`, or even in a code comment — makes the
+two renders differ, and React throws away the entire server-rendered tree with
+*"Text content does not match server-rendered HTML"*. It is silent apart from
+the console, so it ships easily.
+
+This has already broken `/articles` and `/about`. Always write:
+
+```tsx
+<style dangerouslySetInnerHTML={{ __html: `...` }} />
+```
+
+It is not "dangerous" here — the CSS is a literal you wrote, not user input.
+
+---
+
 ## 8. Code rules
 
 - TypeScript strict. Next.js 14 App Router. React 18.
