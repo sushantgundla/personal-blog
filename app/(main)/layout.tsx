@@ -2,6 +2,7 @@ import DimensionEngine from './_components/DimensionEngine'
 import { DimensionHUD } from './_components/DimensionHUD'
 import Backdrop from './_components/Backdrop'
 import Cursor from './_components/Cursor'
+import { Nav } from './_components/Nav'
 import './v2.css'
 
 // No metadata export here on purpose. This is now the live home page, so it
@@ -35,6 +36,11 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
 
       <Backdrop />
       <DimensionEngine />
+
+      {/* Nav sits outside #v2-shell so it stays put while the shell tears
+          itself apart during a dimension transition — same reason the
+          dimension button is outside it. */}
+      <Nav />
 
       <div id="v2-shell">{children}</div>
 
