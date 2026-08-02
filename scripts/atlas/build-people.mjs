@@ -36,6 +36,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Wikidata's Special:FilePath values come back as http:// routinely, which
+// broke next/image (next.config.js only allows https:// in
+// images.remotePatterns). Same fix as lib/atlas/sources/wikidata.ts.
+function toHttps(url) {
+  if (!url) return null;
+  return url.startsWith("http://") ? `https://${url.slice(7)}` : url;
+}
+
 /** Pull {iso3, qid, name} out of iso-countries.ts without compiling TS. */
 function loadCountries() {
   const src = readFileSync(ISO_PATH, "utf-8");
@@ -75,7 +83,7 @@ async function fetchPeople(qid) {
       qid: row.person.value.split("/").pop(),
       name: row.personLabel?.value ?? "Unknown",
       description: row.personDescription?.value ?? null,
-      imageUrl: row.image?.value ?? null,
+      imageUrl: toHttps(row.image?.value ?? null),
       occupations: [],
     }));
   } finally {
@@ -83,10 +91,30 @@ async function fetchPeople(qid) {
   }
 }
 
+/** Fixes http:// image URLs already captured on disk from before toHttps()
+ * existed, so a rerun heals the file instead of leaving old entries broken. */
+function normalizeExisting(data) {
+  let fixed = 0;
+  for (const people of Object.values(data)) {
+    for (const person of people) {
+      if (person.imageUrl && person.imageUrl.startsWith("http://")) {
+        person.imageUrl = toHttps(person.imageUrl);
+        fixed++;
+      }
+    }
+  }
+  return fixed;
+}
+
 async function loadExisting() {
   try {
     const raw = await readFile(OUT_PATH, "utf-8");
-    return JSON.parse(raw);
+    const data = JSON.parse(raw);
+    const fixed = normalizeExisting(data);
+    if (fixed > 0) {
+      console.log(`Normalized ${fixed} http:// image URL(s) already on disk to https://.`);
+    }
+    return data;
   } catch {
     return {};
   }
@@ -107,6 +135,7 @@ async function main() {
   const countries = loadCountries();
 
   const data = await loadExisting();
+  await save(data); // persist any http:// -> https:// fixes even if nothing new gets fetched below
   let processed = 0;
 
   for (const country of countries) {

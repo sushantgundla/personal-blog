@@ -7,84 +7,118 @@
 // for this indicator — not once per country. That is why it is a separate
 // module from dossier.ts rather than one of the "5-7 calls per country page"
 // in the request budget.
+//
+// Fixed 2026-08-02: this used to call fetchAllCountries(code) once per
+// indicator — ~150 separate `country/all` requests for one dossier, which
+// the World Bank throttled hard (see fetchIndicatorsAllCountries's doc
+// comment). Every indicator's ranking is now built from one shared batched
+// fetch (~10 requests for all ~150 codes), computed once per process/ISR
+// window and reused by getRanking, getCountryRank and attachRankings alike.
 import { BY_ISO3 } from "./iso-countries";
-import { INDICATORS_BY_CODE } from "./indicators";
-import { fetchAllCountries } from "./sources/worldbank";
+import { ALL_INDICATOR_CODES, INDICATORS_BY_CODE } from "./indicators";
+import { fetchIndicatorsAllCountries } from "./sources/worldbank";
 import type { IndicatorValue, Ranking, RankingRow, SourceResult } from "./types";
 
-const rankingCache = new Map<string, Promise<SourceResult<Ranking>>>();
+type CountryValueRow = { iso3: string; name: string; value: number | null; year: string | null };
+
+function buildRanking(
+  code: string,
+  rows: readonly CountryValueRow[],
+  lastUpdated: string | null
+): Ranking {
+  const def = INDICATORS_BY_CODE[code];
+  const higherIsBetter = def?.higherIsBetter ?? null;
+
+  const withValue = rows.filter(
+    (r): r is CountryValueRow & { value: number } => r.value !== null
+  );
+  const withoutValue = rows.filter((r) => r.value === null);
+
+  const worldAverage =
+    withValue.length > 0
+      ? withValue.reduce((sum, r) => sum + r.value, 0) / withValue.length
+      : null;
+
+  // Rank 1 is always "best" for the given indicator: ascending when lower
+  // is better, descending otherwise. A neutral (null) indicator still
+  // gets an ordering (descending) so a rank number exists, but the UI
+  // should not colour it as "good"/"bad".
+  const sorted = [...withValue].sort((a, b) =>
+    higherIsBetter === false ? a.value - b.value : b.value - a.value
+  );
+
+  const n = sorted.length;
+  const rankedRows: RankingRow[] = sorted.map((r, i) => {
+    const rank = i + 1;
+    const percentile = n > 1 ? Math.round(((n - rank) / (n - 1)) * 100) : 100;
+    return {
+      iso3: r.iso3,
+      name: BY_ISO3[r.iso3]?.name ?? r.name,
+      value: r.value,
+      year: r.year,
+      rank,
+      percentile,
+    };
+  });
+  for (const r of withoutValue) {
+    rankedRows.push({
+      iso3: r.iso3,
+      name: BY_ISO3[r.iso3]?.name ?? r.name,
+      value: null,
+      year: null,
+      rank: null,
+      percentile: null,
+    });
+  }
+
+  return { code, asOfNote: lastUpdated, worldAverage, rows: rankedRows };
+}
+
+/**
+ * Every indicator's ranking, computed once from one shared batched
+ * `fetchIndicatorsAllCountries(ALL_INDICATOR_CODES)` call — ~10 World Bank
+ * requests for the whole catalogue, not ~150. This promise is created on
+ * first use and reused for the life of the server process (each request
+ * inside it still carries its own `next: { revalidate }`, so Next's fetch
+ * cache — not this module — is what makes it free across separate
+ * processes/deploys once warm).
+ */
+let allRankingsPromise: Promise<Map<string, SourceResult<Ranking>>> | null = null;
+
+async function loadAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
+  const batch = await fetchIndicatorsAllCountries(ALL_INDICATOR_CODES);
+  const out = new Map<string, SourceResult<Ranking>>();
+
+  if (!batch.ok) {
+    for (const code of ALL_INDICATOR_CODES) out.set(code, batch);
+    return out;
+  }
+
+  for (const code of ALL_INDICATOR_CODES) {
+    const entry = batch.data.get(code);
+    if (!entry || entry.rows.length === 0) {
+      out.set(code, { ok: false, reason: `World Bank returned no ranking rows for ${code}` });
+      continue;
+    }
+    out.set(code, { ok: true, data: buildRanking(code, entry.rows, entry.lastUpdated) });
+  }
+
+  return out;
+}
+
+function getAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
+  if (!allRankingsPromise) allRankingsPromise = loadAllRankings();
+  return allRankingsPromise;
+}
 
 /**
  * All-country ranking for one indicator: rank, percentile (100 = best end
  * of the distribution) and the world average, aggregate rows already
- * filtered out by fetchAllCountries.
+ * filtered out.
  */
 export async function getRanking(code: string): Promise<SourceResult<Ranking>> {
-  const cached = rankingCache.get(code);
-  if (cached) return cached;
-
-  const promise = (async (): Promise<SourceResult<Ranking>> => {
-    const result = await fetchAllCountries(code);
-    if (!result.ok) return result;
-
-    const def = INDICATORS_BY_CODE[code];
-    const higherIsBetter = def?.higherIsBetter ?? null;
-
-    const withValue = result.data.rows.filter(
-      (r): r is typeof r & { value: number } => r.value !== null
-    );
-    const withoutValue = result.data.rows.filter((r) => r.value === null);
-
-    const worldAverage =
-      withValue.length > 0
-        ? withValue.reduce((sum, r) => sum + r.value, 0) / withValue.length
-        : null;
-
-    // Rank 1 is always "best" for the given indicator: ascending when lower
-    // is better, descending otherwise. A neutral (null) indicator still
-    // gets an ordering (descending) so a rank number exists, but the UI
-    // should not colour it as "good"/"bad".
-    const sorted = [...withValue].sort((a, b) =>
-      higherIsBetter === false ? a.value - b.value : b.value - a.value
-    );
-
-    const n = sorted.length;
-    const rows: RankingRow[] = sorted.map((r, i) => {
-      const rank = i + 1;
-      const percentile = n > 1 ? Math.round(((n - rank) / (n - 1)) * 100) : 100;
-      return {
-        iso3: r.iso3,
-        name: BY_ISO3[r.iso3]?.name ?? r.name,
-        value: r.value,
-        year: r.year,
-        rank,
-        percentile,
-      };
-    });
-    for (const r of withoutValue) {
-      rows.push({
-        iso3: r.iso3,
-        name: BY_ISO3[r.iso3]?.name ?? r.name,
-        value: null,
-        year: null,
-        rank: null,
-        percentile: null,
-      });
-    }
-
-    return {
-      ok: true,
-      data: {
-        code,
-        asOfNote: result.data.lastUpdated,
-        worldAverage,
-        rows,
-      },
-    };
-  })();
-
-  rankingCache.set(code, promise);
-  return promise;
+  const all = await getAllRankings();
+  return all.get(code) ?? { ok: false, reason: `${code} is not in the indicator catalogue` };
 }
 
 /** This one country's row within an indicator's ranking, or null if it has no value. */
@@ -100,10 +134,10 @@ export async function getCountryRank(
 
 /**
  * Enrich a set of already-fetched IndicatorValue rows (from
- * fetchLatestIndicators) with rank / outOf / worldAverage / percentile,
- * for exactly the codes given — call this for the notes about to render,
- * not all ~150 at once, since each code is its own `country/all` fetch
- * (cheap once warm, but still a request).
+ * fetchLatestIndicators) with rank / outOf / worldAverage / percentile, for
+ * exactly the codes given. Safe to call for every indicator a country has
+ * (~150), since they all resolve against the one shared
+ * `getAllRankings()` batch rather than one `country/all` fetch each.
  */
 export async function attachRankings(
   iso3: string,
@@ -111,21 +145,15 @@ export async function attachRankings(
   codes: readonly string[]
 ): Promise<IndicatorValue[]> {
   const codeSet = new Set(codes);
-  const rankings = await Promise.allSettled(
-    codes.map((code) => getRanking(code))
-  );
-  const byCode = new Map<string, Ranking>();
-  rankings.forEach((settled, i) => {
-    if (settled.status === "fulfilled" && settled.value.ok) {
-      byCode.set(codes[i], settled.value.data);
-    }
-  });
+  const all = await getAllRankings();
 
   return indicators.map((indicator) => {
     if (!codeSet.has(indicator.code)) return indicator;
-    const ranking = byCode.get(indicator.code);
-    const row = ranking?.rows.find((r) => r.iso3 === iso3);
-    if (!ranking || !row) return indicator;
+    const result = all.get(indicator.code);
+    if (!result || !result.ok) return indicator;
+    const ranking = result.data;
+    const row = ranking.rows.find((r) => r.iso3 === iso3);
+    if (!row) return indicator;
     return {
       ...indicator,
       rank: row.rank,

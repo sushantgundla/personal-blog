@@ -61,7 +61,7 @@ export async function getDossier(iso3: string): Promise<CountryDossier> {
       fetchTimeSeries(iso3, CHART_INDICATOR_CODES),
       iso ? fetchDossierFacts(iso.qid) : notInIsoTable<WikidataFacts>(iso3),
       iso ? fetchSummary(iso.wikiTitle) : notInIsoTable<WikipediaSummary>(iso3),
-      fetchTradeSummary(iso3, iso?.m49),
+      fetchTradeSummary(iso3),
       loadFamousPeople(iso3),
     ]).then(
       ([wb, ts, wd, wp, tr, fp]) =>

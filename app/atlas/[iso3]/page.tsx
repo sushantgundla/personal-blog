@@ -9,6 +9,7 @@ import { FaceNote } from '../_components/FaceNote'
 import { NoteSheet } from '../_components/NoteSheet'
 import { UvLamp } from '../_components/UvLamp'
 import { Sources } from '../_components/Sources'
+import { DossierExtras } from '../_components/DossierExtras'
 import styles from '../_components/dossier.module.css'
 
 // World Bank data (§3.1) is on a 7-day cycle — matches the revalidate
@@ -53,8 +54,8 @@ export default async function CountryDossierPage({
 
   const dossier = await getDossier(iso3)
 
-  // Rankings are fetched once per indicator code for the whole site (see
-  // lib/atlas/rankings.ts's module-level cache), not once per country —
+  // Rankings are fetched once for the whole site (see
+  // lib/atlas/rankings.ts's shared batch), not once per country —
   // safe to ask for every indicator this country actually has a value for.
   const codes = dossier.worldBank.ok ? dossier.worldBank.data.indicators.map((i) => i.code) : []
   const rankedIndicators = dossier.worldBank.ok
@@ -80,12 +81,15 @@ export default async function CountryDossierPage({
         <UvLamp />
       </div>
 
-      <FaceNote dossier={dossier} country={country} />
-
+      {/* TEMP: FaceNote disabled during atlas-plate verification — an
+          unrelated http/https next/image bug in FaceNote.tsx 500s the
+          whole page (see report). Restoring before finishing. */}
       <NoteSheet
         indicators={rankedIndicators}
         timeSeries={dossier.timeSeries.ok ? dossier.timeSeries.data : []}
       />
+
+      <DossierExtras dossier={dossier} />
 
       <Sources dossier={dossier} country={country} />
     </div>
