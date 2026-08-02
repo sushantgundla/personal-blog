@@ -289,6 +289,11 @@ html:has(.v2-root) body {
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--v2-text);
+  transition: color var(--v2-dur-fast) var(--v2-ease);
+}
+
+.v2-num:hover {
+  color: var(--v2-accent);
 }
 
 
@@ -367,11 +372,21 @@ html:has(.v2-root) body {
   cursor: pointer;
 }
 
-.v2-card-lift:hover {
-  transform: translateY(-6px);
+.v2-card-lift:hover,
+.v2-card-lift:focus-visible {
   border-color: var(--v2-line-2);
   background: var(--v2-surface-2);
-  box-shadow: var(--v2-shadow-lg);
+  box-shadow: var(--v2-glow), var(--v2-shadow-lg);
+}
+
+@media (hover: hover) {
+  .v2-card-lift:hover {
+    transform: translateY(-6px);
+  }
+}
+
+.v2-card-lift:focus-visible {
+  transform: translateY(-6px);
 }
 
 .v2-panel {
@@ -406,10 +421,20 @@ html:has(.v2-root) body {
     background var(--v2-dur-fast) var(--v2-ease);
 }
 
-.v2-btn:hover {
-  transform: translateY(-2px);
+.v2-btn:hover,
+.v2-btn:focus-visible {
   background: var(--v2-accent-2);
   box-shadow: var(--v2-glow), var(--v2-shadow-lg);
+}
+
+@media (hover: hover) {
+  .v2-btn:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.v2-btn:focus-visible {
+  transform: translateY(-2px);
 }
 
 .v2-btn:active {
@@ -435,9 +460,19 @@ html:has(.v2-root) body {
     transform var(--v2-dur-fast) var(--v2-ease);
 }
 
-.v2-btn-ghost:hover {
+.v2-btn-ghost:hover,
+.v2-btn-ghost:focus-visible {
   border-color: var(--v2-accent);
   background: var(--v2-accent-soft);
+}
+
+@media (hover: hover) {
+  .v2-btn-ghost:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.v2-btn-ghost:focus-visible {
   transform: translateY(-2px);
 }
 
@@ -459,9 +494,14 @@ html:has(.v2-root) body {
     border-color var(--v2-dur-fast) var(--v2-ease);
 }
 
-.v2-btn-quiet:hover {
+.v2-btn-quiet:hover,
+.v2-btn-quiet:focus-visible {
   color: var(--v2-text);
   border-color: var(--v2-line-2);
+}
+
+.v2-btn-quiet:active {
+  color: var(--v2-accent);
 }
 
 .v2-btn:focus-visible,
@@ -486,18 +526,46 @@ html:has(.v2-root) body {
   letter-spacing: 0.01em;
   transition: border-color var(--v2-dur-fast) var(--v2-ease),
     color var(--v2-dur-fast) var(--v2-ease),
-    background var(--v2-dur-fast) var(--v2-ease);
+    background var(--v2-dur-fast) var(--v2-ease),
+    box-shadow var(--v2-dur-fast) var(--v2-ease),
+    transform var(--v2-dur-fast) var(--v2-ease);
 }
 
-.v2-chip:hover {
+.v2-chip:hover,
+.v2-chip:focus-visible {
   border-color: var(--v2-line-2);
   color: var(--v2-text);
+  background: var(--v2-surface-3);
+}
+
+@media (hover: hover) {
+  .v2-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--v2-shadow);
+  }
+}
+
+.v2-chip:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: var(--v2-shadow);
+}
+
+.v2-chip:active {
+  transform: translateY(0);
 }
 
 .v2-chip-on {
   background: var(--v2-accent-soft);
   border-color: var(--v2-accent);
   color: var(--v2-accent);
+}
+
+.v2-chip-on:hover,
+.v2-chip-on:focus-visible {
+  background: var(--v2-accent-soft);
+  border-color: var(--v2-accent-2);
+  color: var(--v2-accent-2);
+  box-shadow: var(--v2-glow);
 }
 
 .v2-link {
@@ -512,7 +580,8 @@ html:has(.v2-root) body {
     background-size var(--v2-dur) var(--v2-ease);
 }
 
-.v2-link:hover {
+.v2-link:hover,
+.v2-link:focus-visible {
   color: var(--v2-accent);
   background-size: 0% 1px;
 }
@@ -532,10 +601,21 @@ html:has(.v2-root) body {
     transform var(--v2-dur-fast) var(--v2-ease);
 }
 
-.v2-icon-btn:hover {
+.v2-icon-btn:hover,
+.v2-icon-btn:focus-visible {
   border-color: var(--v2-accent);
   background: var(--v2-accent-soft);
   color: var(--v2-accent);
+  box-shadow: var(--v2-glow);
+}
+
+@media (hover: hover) {
+  .v2-icon-btn:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.v2-icon-btn:focus-visible {
   transform: translateY(-2px);
 }
 
@@ -561,6 +641,15 @@ html:has(.v2-root) body {
   border-radius: 50%;
   background: var(--v2-accent);
   flex: none;
+  transition: transform var(--v2-dur-fast) var(--v2-ease),
+    box-shadow var(--v2-dur-fast) var(--v2-ease);
+}
+
+@media (hover: hover) {
+  .v2-dot:hover {
+    transform: scale(1.4);
+    box-shadow: var(--v2-glow);
+  }
 }
 
 .v2-frame {
@@ -569,6 +658,7 @@ html:has(.v2-root) body {
   overflow: hidden;
   background: var(--v2-surface);
   box-shadow: var(--v2-shadow-lg);
+  transition: border-color var(--v2-dur) var(--v2-ease);
 }
 
 .v2-frame img,
@@ -576,6 +666,24 @@ html:has(.v2-root) body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform var(--v2-dur) var(--v2-ease);
+}
+
+.v2-frame:hover,
+.v2-frame:focus-visible {
+  border-color: var(--v2-line-2);
+}
+
+@media (hover: hover) {
+  .v2-frame:hover img,
+  .v2-frame:hover video {
+    transform: scale(1.04);
+  }
+}
+
+.v2-frame:focus-visible img,
+.v2-frame:focus-visible video {
+  transform: scale(1.04);
 }
 
 .v2-badge {
@@ -592,6 +700,13 @@ html:has(.v2-root) body {
   font-weight: 700;
   text-transform: var(--v2-head-transform);
   letter-spacing: var(--v2-head-tracking);
+  transition: border-color var(--v2-dur-fast) var(--v2-ease),
+    box-shadow var(--v2-dur-fast) var(--v2-ease);
+}
+
+.v2-badge:hover {
+  border-color: var(--v2-accent-2);
+  box-shadow: var(--v2-glow);
 }
 
 .v2-kbd {
@@ -608,6 +723,13 @@ html:has(.v2-root) body {
   font-family: var(--v2-font-mono);
   font-size: 0.78rem;
   box-shadow: var(--v2-shadow);
+  transition: border-color var(--v2-dur-fast) var(--v2-ease),
+    color var(--v2-dur-fast) var(--v2-ease);
+}
+
+.v2-kbd:hover {
+  border-color: var(--v2-accent);
+  color: var(--v2-accent);
 }
 
 /* --- Marquee ---------------------------------------------------------- */
@@ -657,6 +779,11 @@ html:has(.v2-root) body {
   color: var(--v2-muted);
   opacity: 0.75;
   white-space: nowrap;
+  transition: opacity var(--v2-dur) var(--v2-ease);
+}
+
+.v2-marquee:hover .v2-marquee-track span {
+  opacity: 1;
 }
 
 @keyframes v2-marquee-scroll {
@@ -738,9 +865,22 @@ html:has(.v2-root) body {
   }
 
   .v2-card-lift:hover,
+  .v2-card-lift:focus-visible,
   .v2-btn:hover,
+  .v2-btn:focus-visible,
   .v2-btn-ghost:hover,
-  .v2-icon-btn:hover {
+  .v2-btn-ghost:focus-visible,
+  .v2-icon-btn:hover,
+  .v2-icon-btn:focus-visible,
+  .v2-chip:hover,
+  .v2-chip:focus-visible,
+  .v2-chip-on:hover,
+  .v2-chip-on:focus-visible,
+  .v2-dot:hover,
+  .v2-frame:hover img,
+  .v2-frame:hover video,
+  .v2-frame:focus-visible img,
+  .v2-frame:focus-visible video {
     transform: none;
   }
 

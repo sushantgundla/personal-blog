@@ -63,10 +63,10 @@ export default function AboutPage(): JSX.Element {
             className="v2-row"
             style={{ alignItems: 'flex-start', gap: 'clamp(32px, 6vw, 80px)', flexWrap: 'wrap' }}
           >
-            <div className="v2-col" style={{ flex: '1.3 1 480px', minWidth: '300px', gap: '1.5rem' }}>
+            <div className="v2-col" style={{ flex: '1 1 420px', minWidth: '300px', gap: '1.5rem' }}>
               <Reveal>
                 <span className="v2-eyebrow">Technical Lead, AI/ML · PDI Technologies</span>
-                <h1 className="v2-title v2-title-xl" style={{ marginTop: '16px' }}>
+                <h1 className="v2-title v2-title-xl v2-about-title" style={{ marginTop: '16px' }}>
                   Architecting the <span style={{ color: 'var(--v2-accent)' }}>Latent Space</span>.
                 </h1>
               </Reveal>
@@ -97,22 +97,24 @@ export default function AboutPage(): JSX.Element {
               </Reveal>
             </div>
 
-            <div style={{ flex: '1 1 300px', minWidth: '240px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ flex: '1.1 1 400px', minWidth: '320px', display: 'flex', justifyContent: 'center' }}>
               <Reveal delay={60}>
                 {/* Self-sizing width, not width:100%. Reveal renders a plain
                     div that becomes a flex item here, so it sizes to content —
                     a percentage width resolved against zero and collapsed the
-                    frame to 2x3px, hiding the portrait entirely. */}
+                    frame to 2x3px, hiding the portrait entirely. This is the
+                    most important element on the page — it must read as a
+                    co-equal presence next to the headline, not a thumbnail. */}
                 <div
                   className="v2-frame"
-                  style={{ position: 'relative', width: 'min(340px, 70vw)', aspectRatio: '4 / 5' }}
+                  style={{ position: 'relative', width: 'min(500px, 70vw)', aspectRatio: '4 / 5' }}
                 >
                   <Image
                     src="/portrait.jpg"
                     alt={`Portrait of ${siteConfig.name}`}
                     fill
                     priority
-                    sizes="(max-width: 900px) 70vw, 340px"
+                    sizes="(max-width: 900px) 70vw, 500px"
                     style={{ objectFit: 'cover' }}
                   />
                 </div>
@@ -146,10 +148,10 @@ export default function AboutPage(): JSX.Element {
               }}
               aria-hidden="true"
             />
-            <div className="v2-stack" style={{ gap: '20px' }}>
+            <div className="v2-stack v2-work-stack" style={{ gap: '20px' }}>
               {work.map((entry, i) => (
                 <Reveal key={entry.company} delay={i * 70}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr', gap: '16px', alignItems: 'start' }}>
+                  <div className="v2-work-role" style={{ display: 'grid', gridTemplateColumns: '24px 1fr', gap: '16px', alignItems: 'start' }}>
                     <div style={{ position: 'relative', height: '100%' }}>
                       <span
                         className="v2-dot"
@@ -157,7 +159,14 @@ export default function AboutPage(): JSX.Element {
                       />
                     </div>
 
-                    <div className="v2-card" style={{ paddingBlock: 'clamp(18px, 2.6vw, 26px)' }}>
+                    <a
+                      href={siteConfig.social.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`View ${entry.role} at ${entry.company} on LinkedIn`}
+                      className="v2-card v2-work-link"
+                      style={{ display: 'block', paddingBlock: 'clamp(18px, 2.6vw, 26px)', textDecoration: 'none', color: 'inherit' }}
+                    >
                       <div
                         className="v2-row"
                         style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}
@@ -185,7 +194,12 @@ export default function AboutPage(): JSX.Element {
                           </div>
                         ))}
                       </div>
-                    </div>
+
+                      <div className="v2-work-cta">
+                        View on LinkedIn
+                        <span className="v2-work-cta-arrow" aria-hidden="true">→</span>
+                      </div>
+                    </a>
                   </div>
                 </Reveal>
               ))}
@@ -208,7 +222,7 @@ export default function AboutPage(): JSX.Element {
           <div className="v2-grid" data-cols="2" style={{ marginTop: '18px' }}>
             {education.map((edu, i) => (
               <Reveal key={edu.school} delay={i * 60}>
-                <div className="v2-card" style={{ padding: '18px' }}>
+                <div className="v2-card v2-about-edu" style={{ padding: '18px' }}>
                   <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>{edu.period}</span>
                   <div className="v2-body" style={{ marginTop: '8px', fontWeight: 600 }}>{edu.degree}</div>
                   <div className="v2-muted" style={{ fontSize: '0.92em', marginTop: '2px' }}>
@@ -240,7 +254,7 @@ export default function AboutPage(): JSX.Element {
                 <span className="v2-mono v2-muted" style={{ fontSize: '0.85rem' }}>{group.title}</span>
                 <div className="v2-row">
                   {group.skills.map((skill) => (
-                    <span key={skill.label} className="v2-chip">{skill.label}</span>
+                    <span key={skill.label} className="v2-chip v2-about-chip">{skill.label}</span>
                   ))}
                 </div>
               </div>
@@ -288,6 +302,120 @@ export default function AboutPage(): JSX.Element {
           </Reveal>
         </div>
       </section>
+
+      {/* Scoped hover/focus behaviour for this page only — all colour and
+          timing come from the --v2-* tokens so every theme reskins it for
+          free. No structural properties (width/height/margin) are touched,
+          only transform/colour, so nothing shifts layout on hover. */}
+      {/* dangerouslySetInnerHTML, not a text child. React escapes double quotes
+          and apostrophes to &quot; / &#x27; inside a <style> text child on the
+          server but not on the client, and the mismatch throws away the whole
+          server render. Any comment or selector in here containing a quote
+          triggers it — which it did. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        /* The portrait is the priority element on this page — it now runs
+           up to 500px wide. .v2-title-xl's default clamp(3rem, 11vw, 9rem)
+           was sized for a headline with no photo competing for width, so we
+           trim its top end here. Headline text itself is untouched. */
+        /* 7.5vw resolved to 108px at a 1440 viewport, where "Architecting" —
+           one unbreakable word — needed 694px against a 629px column and was
+           clipped mid-word. 6vw leaves headroom. overflow-wrap is a guard so
+           it can never clip again at an awkward width. */
+        .v2-about-title {
+          font-size: clamp(2.5rem, 6vw, 6rem);
+          line-height: 0.94;
+          overflow-wrap: break-word;
+        }
+
+        .v2-work-role {
+          transition: opacity var(--v2-dur) var(--v2-ease), transform var(--v2-dur) var(--v2-ease);
+        }
+        .v2-work-stack:hover .v2-work-role:not(:hover):not(:focus-within),
+        .v2-work-stack:focus-within .v2-work-role:not(:focus-within) {
+          opacity: 0.55;
+          transform: scale(0.985);
+        }
+        .v2-work-link:hover,
+        .v2-work-link:focus-visible {
+          transform: translateY(-4px);
+          border-color: var(--v2-accent);
+          background: var(--v2-surface-2);
+          box-shadow: var(--v2-glow), var(--v2-shadow-lg);
+        }
+        .v2-work-cta {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35em;
+          margin-top: 14px;
+          font-family: var(--v2-font-head);
+          font-weight: 600;
+          font-size: 0.82rem;
+          letter-spacing: 0.01em;
+          color: var(--v2-muted);
+          opacity: 0.75;
+          transition: color var(--v2-dur-fast) var(--v2-ease), opacity var(--v2-dur-fast) var(--v2-ease);
+        }
+        .v2-work-link:hover .v2-work-cta,
+        .v2-work-link:focus-visible .v2-work-cta {
+          color: var(--v2-accent);
+          opacity: 1;
+        }
+        .v2-work-cta-arrow {
+          display: inline-block;
+          transition: transform var(--v2-dur-fast) var(--v2-ease);
+        }
+        .v2-work-link:hover .v2-work-cta-arrow,
+        .v2-work-link:focus-visible .v2-work-cta-arrow {
+          transform: translateX(4px);
+        }
+
+        .v2-about-edu {
+          transition: transform var(--v2-dur-fast) var(--v2-ease), border-color var(--v2-dur-fast) var(--v2-ease),
+            background var(--v2-dur-fast) var(--v2-ease), box-shadow var(--v2-dur-fast) var(--v2-ease);
+        }
+        .v2-about-edu:hover {
+          transform: translateY(-3px);
+          border-color: var(--v2-accent);
+          background: var(--v2-surface-2);
+          box-shadow: var(--v2-glow), var(--v2-shadow);
+        }
+
+        .v2-about-chip {
+          transition: transform var(--v2-dur-fast) var(--v2-ease), border-color var(--v2-dur-fast) var(--v2-ease),
+            background var(--v2-dur-fast) var(--v2-ease), color var(--v2-dur-fast) var(--v2-ease),
+            box-shadow var(--v2-dur-fast) var(--v2-ease);
+        }
+        .v2-about-chip:hover {
+          transform: translateY(-2px);
+          border-color: var(--v2-accent);
+          background: var(--v2-accent-soft);
+          color: var(--v2-accent);
+          box-shadow: var(--v2-glow);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .v2-work-role,
+          .v2-work-link,
+          .v2-work-cta,
+          .v2-work-cta-arrow,
+          .v2-about-edu,
+          .v2-about-chip {
+            transition: none !important;
+          }
+          .v2-work-stack:hover .v2-work-role:not(:hover):not(:focus-within),
+          .v2-work-stack:focus-within .v2-work-role:not(:focus-within),
+          .v2-work-link:hover,
+          .v2-work-link:focus-visible,
+          .v2-about-edu:hover,
+          .v2-about-chip:hover {
+            transform: none;
+          }
+        }
+      `,
+        }}
+      />
     </>
   )
 }

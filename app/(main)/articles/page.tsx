@@ -246,13 +246,23 @@ export default function ArticlesPage() {
                 }
                 .v2-articles-card {
                   cursor: pointer;
+                  transition: opacity var(--v2-dur) var(--v2-ease),
+                              filter var(--v2-dur) var(--v2-ease);
                 }
+                /* Selecting a tag EMPHASISES the matches rather than hiding the
+                   rest: every article stays on the page and keeps its slot in
+                   the grid, and non-matching ones simply recede. Hiding them
+                   made the grid jump and buried writing the reader might still
+                   want. Same behaviour as the status filter on /projects. */
                 ${uniqueTags
                   .map(
                     (tag) =>
-                      `.v2-articles-scope:has(#v2-tag-${slugifyTag(tag)}:checked) .v2-articles-card:not([data-tags*="|${tag}|"]) { display: none; }`
+                      `.v2-articles-scope:has(#v2-tag-${slugifyTag(tag)}:checked) .v2-articles-card:not([data-tags*="|${tag}|"]) { opacity: 0.3; filter: saturate(0.4); }`
                   )
                   .join('\n                ')}
+                @media (prefers-reduced-motion: reduce) {
+                  .v2-articles-card { transition: none; }
+                }
               `,
                 }}
               />

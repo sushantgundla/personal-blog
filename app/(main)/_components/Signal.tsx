@@ -7,8 +7,7 @@ import { Reveal } from './Reveal'
 
 /**
  * "What I do" section. Renders the AI platform as a layered system diagram
- * built entirely from .v2-card, plus a filterable skill cloud and three
- * headline numbers pulled from real work history.
+ * built entirely from .v2-card, plus a filterable skill cloud.
  */
 
 type Group = 'all' | 'ai' | 'infra' | 'data' | 'lang'
@@ -94,12 +93,6 @@ function groupOf(label: string): Group {
   if (LANG.has(label)) return 'lang'
   return 'ai'
 }
-
-const STATS = [
-  { num: '7+', eyebrow: 'Years', body: 'Across Generative AI, NLP, and Computer Vision' },
-  { num: '60%', eyebrow: 'Faster resolution', body: 'Cut ticket resolution time with an agentic recommender at ConnectWise' },
-  { num: '300M+', eyebrow: 'Documents queried', body: 'Curie, a RAG system that answers in under 10 seconds at that scale' },
-]
 
 type ConnectorVariant = 'single' | 'spread' | 'merge'
 
@@ -218,7 +211,7 @@ export function Signal(): JSX.Element {
           </div>
         </div>
 
-        {/* Part C — capability chips + headline numbers */}
+        {/* Part C — capability chips */}
         <div className="v2-col" style={{ gap: '1.25rem' }}>
           <Reveal>
             <div className="v2-col" style={{ gap: '0.75rem' }}>
@@ -255,22 +248,6 @@ export function Signal(): JSX.Element {
                   )
                 })}
               </div>
-            </div>
-          </Reveal>
-
-          <Reveal delay={60}>
-            <div className="v2-grid" data-cols="3">
-              {STATS.map((s) => (
-                <div
-                  key={s.eyebrow}
-                  className="v2-card v2-col"
-                  style={{ gap: '0.4rem', paddingBlock: 'clamp(14px, 2vw, 18px)' }}
-                >
-                  <span className="v2-num">{s.num}</span>
-                  <span className="v2-eyebrow">{s.eyebrow}</span>
-                  <p className="v2-body v2-muted" style={{ margin: 0 }}>{s.body}</p>
-                </div>
-              ))}
             </div>
           </Reveal>
         </div>
