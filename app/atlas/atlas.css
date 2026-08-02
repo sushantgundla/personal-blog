@@ -484,6 +484,23 @@
   }
 }
 
+/* app/atlas/loading.tsx's label while an on-demand route (a dossier
+   outside PRERENDER_ISO3, any compare pair, an uncached rankings page)
+   fetches its data. Turned off under reduced motion below. */
+.atlas-loading-pulse {
+  animation: atlasLoadingPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes atlasLoadingPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ============================================================
    10. Note cascade — <details> opening staggers its notes in
    ============================================================ */
@@ -576,6 +593,11 @@
 
   .atlas-magnetic {
     transition: none !important;
+  }
+
+  .atlas-loading-pulse {
+    animation: none !important;
+    opacity: 1 !important;
   }
 
   .atlas-note,

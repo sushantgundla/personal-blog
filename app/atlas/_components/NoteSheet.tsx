@@ -81,6 +81,29 @@ export function NoteSheet({ indicators, timeSeries, countryName }: NoteSheetProp
   const seriesByCode = new Map(timeSeries.map((s) => [s.code, s] as const))
   const who = countryName ?? 'this country'
 
+  // A handful of entities — Taiwan, Western Sahara, Vatican City — aren't
+  // World Bank reporting members at all, so every one of the ten sections
+  // below would come back with zero values: ten "0 of N unavailable"
+  // cards in a row, which reads as a broken page rather than an honest
+  // gap in one source. Detected from the data itself (never a hardcoded
+  // ISO3 list), so it applies to whichever country this happens to be
+  // true for. A country with merely patchy coverage still falls through
+  // to the per-section handling below, unchanged.
+  const hasAnyWorldBankData = SECTION_ORDER.some((section) =>
+    indicatorsBySection(section).some((def) => hasValue(byCode.get(def.code)))
+  )
+
+  if (!hasAnyWorldBankData) {
+    return (
+      <div className={styles.sheet}>
+        <p className={styles.sheetNoData}>
+          The World Bank does not publish figures for {who}, so this note carries no economic or social
+          statistics.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.sheet}>
       {SECTION_ORDER.map((section) => {
