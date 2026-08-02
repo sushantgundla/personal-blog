@@ -74,6 +74,29 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
+  /* Room for the flag seal, which sits above this row rather than in its
+     flow — see .faceSeal below. */
+  padding-right: clamp(3.5rem, 8vw, 5rem);
+}
+
+/* The flag as an engraved seal — round, ringed, stamped in the note's
+   top-right corner the way a banknote's seal of authenticity sits. */
+.faceSeal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  width: clamp(2.75rem, 5vw, 4rem);
+  height: clamp(2.75rem, 5vw, 4rem);
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--note-seal);
+  box-shadow: 0 0 0 3px var(--note-paper), 0 0 0 4px var(--note-seal);
+  opacity: 0.92;
+}
+
+.faceSealImg {
+  object-fit: cover;
 }
 
 .faceName {
@@ -118,7 +141,11 @@
 .facePortrait {
   position: absolute;
   top: 50%;
-  right: 10%;
+  /* Centred over the note's empty middle third, not shoved into the
+     corner — a banknote watermark sits in the body of the note, not at
+     its edge. Closes the dead space between the name/population block
+     and the guilloché. */
+  right: 30%;
   transform: translateY(-50%);
   width: clamp(150px, 20vw, 260px);
   height: clamp(150px, 20vw, 260px);
@@ -135,7 +162,14 @@
 .faceGuilloche {
   position: absolute;
   top: 50%;
-  right: -12%;
+  /* A small, deliberate bleed off the right edge — the "cut by the
+     frame" look of an engraved banknote ornament — not the ~40% clip
+     the old -12% caused, which chopped the closed rosette into
+     disconnected arcs (worse once the 90s spin animation is running,
+     since the visible sliver keeps changing). Positive/near-zero keeps
+     the whole ring inside .faceNote's overflow:hidden so it always
+     reads as one complete, balanced rosette. */
+  right: 4%;
   transform: translateY(-50%);
   width: clamp(220px, 32vw, 400px);
   height: clamp(220px, 32vw, 400px);
@@ -143,28 +177,28 @@
 }
 
 .faceGuillocheGrown {
-  right: -8%;
-  width: clamp(260px, 44vw, 560px);
-  height: clamp(260px, 44vw, 560px);
+  right: 6%;
+  width: clamp(260px, 40vw, 520px);
+  height: clamp(260px, 40vw, 520px);
 }
 
 @media (max-width: 640px) {
   .facePortrait {
-    right: 2%;
+    right: 22%;
     width: clamp(100px, 32vw, 170px);
     height: clamp(100px, 32vw, 170px);
   }
 
   .faceGuilloche {
-    right: -22%;
+    right: 2%;
     width: clamp(140px, 46vw, 240px);
     height: clamp(140px, 46vw, 240px);
   }
 
   .faceGuillocheGrown {
-    right: -16%;
-    width: clamp(170px, 58vw, 300px);
-    height: clamp(170px, 58vw, 300px);
+    right: 4%;
+    width: clamp(170px, 54vw, 280px);
+    height: clamp(170px, 54vw, 280px);
   }
 }
 
@@ -235,6 +269,54 @@
 
 .issueGrid {
   margin-top: 1px;
+}
+
+/* Pads a row's trailing, otherwise-empty cell(s) so .grid's own seam
+   colour never shows through as a stray solid rectangle — see
+   NoteSheet.tsx's GridFillers. Invisible at every breakpoint by default;
+   each instance opts back in only at the one breakpoint (desktop or
+   tablet) where its row actually falls short, via the data attribute
+   NoteSheet computed for it. Mobile is always a single column, so it
+   never has a remainder and is never targeted here. */
+.noteFiller {
+  display: none;
+}
+
+@media (min-width: 1101px) {
+  .noteFiller[data-need-desktop='true'] {
+    display: block;
+    background: var(--note-paper);
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 641px) {
+  .noteFiller[data-need-tablet='true'] {
+    display: block;
+    background: var(--note-paper);
+  }
+}
+
+/* A section with nothing worth printing collapses to this single quiet
+   line instead of a grid of blank notes — see NoteSheet.tsx. */
+.sectionEmpty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--note-rule);
+  border-radius: 4px;
+}
+
+/* The honest "N of M unavailable" line under a section that printed some
+   but not all of its notes. Quieter than .sectionEmpty — it's a footnote,
+   not the whole story. */
+.sectionPartial {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+  text-align: right;
 }
 
 /* ---------------------------------------------------------- one note */

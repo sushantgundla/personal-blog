@@ -39,6 +39,7 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
   const popYear = population?.year ? formatYear(Number(population.year)) : null
 
   const motto = dossier.wikidata.ok ? dossier.wikidata.data.motto : null
+  const flagUrl = dossier.wikidata.ok ? dossier.wikidata.data.flagImageUrl : null
 
   const portrait = dossier.famousPeople.ok
     ? dossier.famousPeople.data.find((p) => p.imageUrl) ?? null
@@ -61,6 +62,18 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
           <span className="atlas-serial">SERIAL · {country.m49}</span>
           {country.region && <span className="atlas-serial">{country.region}</span>}
         </div>
+
+        {flagUrl && (
+          <div className={`atlas-ornament ${styles.faceSeal}`}>
+            <Image
+              src={toHttps(flagUrl)}
+              alt={`Flag of ${dossier.name}`}
+              fill
+              sizes="72px"
+              className={styles.faceSealImg}
+            />
+          </div>
+        )}
 
         <h1 className={`atlas-face-name ${styles.faceName}`}>{dossier.name}</h1>
 

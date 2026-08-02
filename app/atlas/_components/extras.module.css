@@ -12,6 +12,15 @@
   gap: 1.75rem;
 }
 
+/* Groups TradeArcs and TradeBond into one vertical stack on the dossier
+   page (app/atlas/[iso3]/page.tsx) — same gap rhythm as .extrasSection,
+   kept as its own class since this pair isn't part of DossierExtras. */
+.tradeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
 /* A panel that has nothing to show. Every extra needs one of these —
    dashed rule, dim text, no border-box drama. Never looks like an error. */
 .emptyState {

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { CHART_INDICATOR_CODES, INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
 import { getRanking } from '@/lib/atlas/rankings'
 import { formatValue, formatYear } from '@/lib/atlas/format'
+import dossierStyles from '../../_components/dossier.module.css'
 
 export const revalidate = 604800 // World Bank indicators move a few times a year
 
@@ -38,11 +39,11 @@ export default async function RankingPage({ params }: RankingPageProps) {
 
   return (
     <div className="atlas-fade-in" style={{ maxWidth: '52rem', margin: '0 auto', padding: '2.5rem 1.5rem 4rem' }}>
-      <p className="atlas-label">
-        <Link href="/atlas" style={{ color: 'inherit' }}>
-          ← the plate
+      <div className={dossierStyles.pageToolbar} style={{ width: '100%' }}>
+        <Link href="/atlas" className={dossierStyles.backLink}>
+          ← Back to the plate
         </Link>
-      </p>
+      </div>
       <h1 className="atlas-face-name" style={{ fontSize: 'clamp(2rem, 6vw, 4rem)', marginTop: '0.5rem' }}>
         {def.label}
       </h1>

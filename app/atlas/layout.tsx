@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import Link from 'next/link'
+import { ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
+import { AtlasSearch } from './_components/AtlasSearch'
 import './atlas.css'
 
 /**
@@ -80,11 +82,14 @@ export default function AtlasLayout({ children }: { children: React.ReactNode })
           ← sushantgundla.com
         </Link>
 
-        {/* Search slot — another agent builds the Search component
-            (app/atlas/_components/Search.tsx) and renders it here in
-            place of this placeholder. Do not remove the wrapper id;
-            it is the agreed hook for that work. */}
-        <div id="atlas-search-slot" data-atlas-slot="search" className="flex-1 max-w-sm" />
+        {/* One search control, rendered directly here — every /atlas/*
+            route shares this header, so this is the single place a
+            visitor can jump to any country from anywhere in the Atlas.
+            See AtlasSearch.tsx for why this replaced an earlier
+            DOM-relocation hack that produced a duplicate search box. */}
+        <div className="flex-1 max-w-sm">
+          <AtlasSearch countries={ISO_COUNTRIES} />
+        </div>
       </header>
 
       <main className="flex-1">{children}</main>

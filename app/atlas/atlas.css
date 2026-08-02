@@ -211,12 +211,22 @@
 .atlas-perforated {
   position: relative;
   border: none;
+  /* Confines the ::after's negative z-index to this note only, so "behind
+     the type" (below) means behind THIS card's numerals, not behind the
+     whole page. Without this, z-index: -1 escapes to the nearest ancestor
+     stacking context and can paint under other cards entirely. */
+  isolation: isolate;
 }
 
 .atlas-perforated::after {
   content: '';
   position: absolute;
   inset: 0;
+  /* The punched-circle texture is paper grain, not a badge — it must sit
+     behind the note's own text. Non-positioned in-flow content (the label,
+     denomination numeral, rank line, etc.) always paints above a negative
+     z-index sibling, so this alone stops the dots from speckling the type. */
+  z-index: -1;
   pointer-events: none;
   background-image: radial-gradient(circle, var(--note-void) 1.5px, transparent 1.6px);
   background-size: 10px 10px;
@@ -356,6 +366,16 @@
   stroke-dashoffset: var(--atlas-dash-length, 2000);
   animation: atlasGuillocheDraw 800ms var(--atlas-ease) forwards, atlasGuillocheSpin 90s linear infinite;
   animation-delay: 0s, 800ms;
+  /* atlasGuillocheSpin rotates THIS element, not the parent <svg> that
+     `.atlas-guilloche`'s transform-origin above targets — an SVG child's
+     own transform-origin otherwise defaults to the view-box's (0, 0),
+     the top-left corner. Rotating a 400x400 circle around its corner
+     instead of its centre swings the whole rosette in and out of the
+     fixed view-box every cycle, which is what read as "clipped into
+     scattered arcs": most of the shape was briefly outside the box, at
+     every point in the spin except the very start. */
+  transform-box: view-box;
+  transform-origin: center;
 }
 
 @keyframes atlasGuillocheDraw {

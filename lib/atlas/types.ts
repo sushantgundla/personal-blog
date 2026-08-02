@@ -137,6 +137,10 @@ export interface WikidataFacts {
   currencyCode: string | null;
   drivingSide: "left" | "right" | null;
   callingCode: string | null;
+  /** Wikidata P395 — vehicle registration / licence plate code, e.g. "IND". */
+  licencePlateCode: string | null;
+  /** Wikidata P78 — internet ccTLD, e.g. ".in". */
+  topLevelDomain: string | null;
   highestPoint: { name: string; elevationM: number | null } | null;
   lowestPoint: { name: string; elevationM: number | null } | null;
   /** P417 — real Wikidata property, direction country -> saint. Populated

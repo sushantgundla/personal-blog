@@ -6,11 +6,16 @@ import { getDossier } from '@/lib/atlas/dossier'
 import { attachRankings } from '@/lib/atlas/rankings'
 import { countryInk } from '@/lib/atlas/ink'
 import { FaceNote } from '../_components/FaceNote'
+import { CountryStory } from '../_components/CountryStory'
+import { FactsPanel } from '../_components/FactsPanel'
 import { NoteSheet } from '../_components/NoteSheet'
+import { TradeArcs } from '../_components/TradeArcs'
+import { TradeBond } from '../_components/TradeBond'
 import { UvLamp } from '../_components/UvLamp'
 import { Sources } from '../_components/Sources'
 import { DossierExtras } from '../_components/DossierExtras'
 import styles from '../_components/dossier.module.css'
+import extrasStyles from '../_components/extras.module.css'
 
 // World Bank data (§3.1) is on a 7-day cycle — matches the revalidate
 // window every lib/atlas/sources client already fetches with.
@@ -97,10 +102,20 @@ export default async function CountryDossierPage({
 
       <FaceNote dossier={dossier} country={country} />
 
+      <CountryStory wikipedia={dossier.wikipedia} countryName={country.name} />
+
+      <FactsPanel wikidata={dossier.wikidata} countryName={country.name} />
+
       <NoteSheet
         indicators={rankedIndicators}
         timeSeries={dossier.timeSeries.ok ? dossier.timeSeries.data : []}
+        countryName={country.name}
       />
+
+      <div className={extrasStyles.tradeGroup}>
+        <TradeArcs iso3={country.iso3} countryName={country.name} trade={dossier.trade} />
+        <TradeBond trade={dossier.trade} countryName={country.name} />
+      </div>
 
       <DossierExtras dossier={dossier} />
 

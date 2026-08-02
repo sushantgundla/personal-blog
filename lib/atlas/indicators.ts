@@ -173,7 +173,7 @@ export const INDICATORS: IndicatorDef[] = [
   // --------------------------------------------------------------- NATURE
   def("EN.GHG.CO2.PC.CE.AR5", "Carbon emissions per person", "tonnes per person", "NATURE", "number", false, true),
   def("EN.GHG.CO2.MT.CE.AR5", "Carbon emissions", "Mt CO2", "NATURE", "number", false),
-  def("EN.GHG.TOTL.MT.CE.AR5", "Greenhouse gas emissions", "Mt CO2-equivalent", "NATURE", "number", false),
+  def("EN.GHG.ALL.MT.CE.AR5", "Greenhouse gas emissions", "Mt CO2-equivalent", "NATURE", "number", false),
   def("ER.LND.PTLD.ZS", "Protected land", "% of land area", "NATURE", "percent", true),
   def("ER.MRN.PTMR.ZS", "Protected coastal waters", "% of territorial waters", "NATURE", "percent", true),
   def("ER.H2O.FWTL.ZS", "Freshwater withdrawn", "% of internal resources", "NATURE", "percent", null),

@@ -74,6 +74,7 @@ function parsePoint(wkt: string | null): { lat: number; lng: number } | null {
 function dossierQuery(qid: string): string {
   return `SELECT ?mottoLabel ?anthemLabel ?anthemAudio ?flag ?emblem ?capitalLabel ?capCoord
   ?inception ?languages ?currencyNames ?currencyCodes ?drivingSideLabel ?callingCode
+  ?plate ?tldLabel
   ?highestLabel ?highestElev ?lowestLabel ?lowestElev ?patrons WHERE {
   BIND(wd:${qid} AS ?country)
   OPTIONAL { ?country wdt:P1546 ?motto . }
@@ -82,6 +83,17 @@ function dossierQuery(qid: string): string {
   OPTIONAL { ?country wdt:P94 ?emblem . }
   OPTIONAL { ?country wdt:P36 ?capital . OPTIONAL { ?capital wdt:P625 ?capCoord . } }
   OPTIONAL { ?country wdt:P571 ?inception . }
+  OPTIONAL { ?country wdt:P395 ?plate . }
+  OPTIONAL {
+    # P78 is a WikibaseItem per ccTLD, not a plain string, and several
+    # countries (India among them) carry more than one delegated IDN
+    # variant alongside the plain ASCII one (".in" vs ".bharat" /
+    # ".भारत" / etc). ORDER BY + LIMIT 1 picks the ASCII form when one
+    # exists rather than an arbitrary script via unordered GROUP_CONCAT.
+    SELECT ?tldLabel WHERE {
+      wd:${qid} wdt:P78 ?tld . ?tld rdfs:label ?tldLabel . FILTER(lang(?tldLabel) = "en")
+    } ORDER BY DESC(REGEX(?tldLabel, "^\\.[A-Za-z]+$")) LIMIT 1
+  }
   OPTIONAL {
     SELECT (GROUP_CONCAT(DISTINCT ?llabel; separator="|") AS ?languages) WHERE {
       wd:${qid} wdt:P37 ?lang . ?lang rdfs:label ?llabel . FILTER(lang(?llabel) = "en")
@@ -147,6 +159,11 @@ export async function fetchDossierFacts(
       currencyCode: str(row, "currencyCodes")?.split("|")[0] ?? null,
       drivingSide: driveSide(str(row, "drivingSideLabel")),
       callingCode: str(row, "callingCode"),
+      licencePlateCode: str(row, "plate"),
+      // P78 is modelled as a WikibaseItem per ccTLD (e.g. Q39218 = ".in"),
+      // not a plain string — see the dossierQuery subquery above for how
+      // the ASCII form is picked when a country has more than one.
+      topLevelDomain: str(row, "tldLabel"),
       highestPoint: str(row, "highestLabel")
         ? { name: str(row, "highestLabel")!, elevationM: num(row, "highestElev") }
         : null,

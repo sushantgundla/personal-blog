@@ -104,6 +104,59 @@
   opacity: 0.8;
 }
 
+/* ---------------------------------------------------------- landing intro */
+
+.intro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  background: var(--note-void);
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--note-rule);
+}
+
+.introLine {
+  margin: 0;
+  max-width: 46rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--note-intaglio-dim);
+}
+
+.introLinks {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.introLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--note-ember);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--note-ember);
+  padding-bottom: 0.1rem;
+}
+
+.introLink:hover,
+.introLink:focus-visible {
+  color: var(--note-intaglio);
+  border-color: var(--note-intaglio);
+}
+
+@media (max-width: 640px) {
+  .intro {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* ---------------------------------------------------------- plate furniture */
 
 .furnitureRow {
@@ -190,6 +243,15 @@
   font-size: 0.95rem;
 }
 
+.cartoucheHint {
+  margin-top: 0.15rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--note-ember);
+  white-space: nowrap;
+}
+
 /* ---------------------------------------------------------- metric dial */
 
 .dial {
@@ -263,6 +325,30 @@
   gap: 0.5rem;
 }
 
+.railHeaderTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.railFullLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s var(--atlas-ease);
+}
+
+.railFullLink:hover,
+.railFullLink:focus-visible {
+  color: var(--note-ember);
+}
+
 .railList {
   overflow-y: auto;
   max-height: 70vh;
@@ -271,7 +357,7 @@
 
 .railRow {
   display: grid;
-  grid-template-columns: 2.4rem 1fr auto;
+  grid-template-columns: 2.4rem 1fr auto 0.9rem;
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.25rem;
@@ -285,6 +371,23 @@
 .railRow:focus-visible,
 .railRowActive {
   background: var(--note-paper-hi);
+}
+
+/* A quiet arrow that only warms up on hover/focus — the row (a <Link>)
+   is already the whole clickable target; this just makes that visible
+   instead of relying on cursor alone. */
+.railChevron {
+  color: var(--note-intaglio-dim);
+  font-size: 0.9rem;
+  line-height: 1;
+  opacity: 0.5;
+  transition: color 0.15s var(--atlas-ease), opacity 0.15s var(--atlas-ease);
+}
+
+.railRow:hover .railChevron,
+.railRow:focus-visible .railChevron {
+  color: var(--note-ember);
+  opacity: 1;
 }
 
 .railRank {
