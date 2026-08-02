@@ -31,29 +31,43 @@ const REVALIDATE_WEEK = 604800;
 const MAX_CONCURRENT = 4;
 
 /**
- * Smaller batch just for `fetchIndicatorsAllCountries`: 25 indicators x
- * ~295 countries at `mrv=1` runs ~2.1-2.2MB of JSON — over Next's 2MB
- * fetch-cache write limit, so those responses were silently uncached (still
- * returned correctly, just refetched from the World Bank every time instead
- * of served from Next's data cache). 10 indicators keeps every batch safely
- * under 2MB even with `RANKING_MRV` (see below) — confirmed live 2026-08-02,
- * a 10-code batch at `mrv=3` runs ~1.8MB.
+ * Batch size for `fetchIndicatorsAllCountries`. Kept small on purpose — see
+ * `RANKING_LOOKBACK_YEARS` below for why this fetches a date *range* rather
+ * than `mrv`, and a multi-year range multiplies row count (and so response
+ * size) by roughly the number of years, not just the number of indicators.
+ * Confirmed live 2026-08-03: 3 indicators x ~295 countries x the 10-year
+ * range below runs ~1.8MB, comfortably under Next's 2MB fetch-cache write
+ * limit; 4 indicators over the same range was already measured at ~2.5MB
+ * (over it) in testing. Re-measure before raising this.
  */
-const RANKING_BATCH_SIZE = 10;
+const RANKING_BATCH_SIZE = 3;
 
 /**
- * How many of each country's most recent periods `fetchIndicatorsAllCountries`
- * pulls per indicator, per country, before reducing to the latest non-null
- * one. Indicators that lag (education, health) don't all get reported in
- * the same calendar year, so `mrv=1` on `country/all` — "the most recent 1
- * year of the query, across every country" — silently drops every country
- * that didn't report in that exact latest year. `mrv=3` fixed a live case
- * where a lagging education indicator went from 9 countries (`mrv=1`) to
- * 201 (`mrv=3`) — confirmed live 2026-08-02. Every country still contributes
- * its own latest value; this only widens the window each one is allowed to
- * report within.
+ * Fixed 2026-08-03: `mrv=N` on a *batched*, multi-indicator `country/all`
+ * call does not pick each indicator's own N most recent periods — it was
+ * observed live to return zero rows for any indicator whose real data
+ * stopped 2019-2022 when batched alongside indicators still reporting
+ * through 2024-2025 (13 of 150 codes, confirmed via
+ * `/private/tmp/.../scratchpad/confirm-mrv-bug.mjs`: `mrv=3` gave those 13
+ * codes 0 countries each, while an explicit date range recovered 84-229
+ * countries for the same codes in the same request). `mrv`'s window appears
+ * to be resolved once for the whole batched request, not per indicator, so
+ * a laggard sharing a batch with fresher codes gets filtered out entirely —
+ * bumping `mrv` (3 was itself a fix for an earlier, narrower version of this
+ * same problem) only shifts which laggards fall outside the window, it
+ * doesn't fix the mechanism.
+ *
+ * The real fix, matching what `fetchLatestIndicators`/`fetchTimeSeries`
+ * already do for the single-country case: fetch an explicit date range and
+ * reduce to each country's own latest non-null value in code (see the
+ * reduction logic in `fetchIndicatorsAllCountries` below, unchanged) rather
+ * than trusting the API's own "most recent" heuristic on a multi-indicator
+ * request. 10 years reaches back to the oldest laggard seen (2019, against
+ * a "current year" of 2026) with margin; if a future indicator lags more
+ * than this, it will again show 0 countries and this constant is the first
+ * place to check.
  */
-const RANKING_MRV = 3;
+const RANKING_LOOKBACK_YEARS = 10;
 
 /**
  * Caps how many World Bank requests are in flight at once, across every
@@ -328,19 +342,21 @@ export async function fetchAllCountries(
 }
 
 /**
- * Fetch `mrv=RANKING_MRV` rows for many indicators, every country, in one
- * batched call per `RANKING_BATCH_SIZE` codes — the `country/all` equivalent
- * of what `fetchLatestIndicators` already does for a single country. This is
- * what lets rankings.ts fetch all ~150 indicators' rankings in ~15 requests
- * instead of ~150 one-indicator-at-a-time `fetchAllCountries` calls.
+ * Fetch a `RANKING_LOOKBACK_YEARS`-wide date range for many indicators,
+ * every country, in one batched call per `RANKING_BATCH_SIZE` codes — the
+ * `country/all` equivalent of what `fetchTimeSeries` already does for a
+ * single country. This is what lets rankings.ts fetch all ~150 indicators'
+ * rankings in ~50 requests instead of ~150 one-indicator-at-a-time
+ * `fetchAllCountries` calls.
  *
- * `mrv=RANKING_MRV` returns up to `RANKING_MRV` periods per country per
- * indicator (not just non-null ones), so this reduces each country down to
- * its own single latest non-null value before returning — a country that
- * reported 3 years ago and a country that reported this year both end up
- * with exactly one row, dated honestly to whichever year that row is from.
- * A country with no non-null value anywhere in the window keeps one null
- * row, so callers can still tell "no data" apart from "not in the list".
+ * An explicit date range (not `mrv`, see `RANKING_LOOKBACK_YEARS`'s doc
+ * comment for why) returns every period in that range per country per
+ * indicator, so this reduces each country down to its own single latest
+ * non-null value before returning — a country that reported several years
+ * ago and a country that reported this year both end up with exactly one
+ * row, dated honestly to whichever year that row is from. A country with no
+ * non-null value anywhere in the window keeps one null row, so callers can
+ * still tell "no data" apart from "not in the list".
  *
  * Batches run through `fetchBatchesSettled`, so one throttled batch of
  * `RANKING_BATCH_SIZE` indicators just means those codes come back with no
@@ -358,10 +374,12 @@ export async function fetchIndicatorsAllCountries(
 > {
   try {
     const batches = chunk(codes, RANKING_BATCH_SIZE);
+    const toYear = new Date().getFullYear();
+    const fromYear = toYear - RANKING_LOOKBACK_YEARS;
     const urls = batches.map(
       (batch) =>
         `${BASE}/country/all/indicator/${batch.map(encodeURIComponent).join(";")}` +
-        `?source=2&format=json&mrv=${RANKING_MRV}&per_page=20000`
+        `?source=2&format=json&date=${fromYear}:${toYear}&per_page=20000`
     );
     const results = await fetchBatchesSettled(urls);
     if (results.length === 0 && urls.length > 0) {
