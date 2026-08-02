@@ -43,14 +43,17 @@ function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element 
     >
       <div className="v2-col" style={{ gap: '0.6rem' }}>
         <div
-          className="v2-row"
-          style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'nowrap', gap: '10px' }}
+          className="v2-col"
+          style={{ alignItems: 'flex-start', gap: '10px' }}
         >
+          {/* Badge above the title on its own line, not beside it.
+              "Enterprise / Confidential" is far too long to share a row: with
+              flexWrap: nowrap it pushed out past the card edge, and it squeezed
+              the title into the left half while the right sat empty. Stacking
+              gives the title the full width and keeps the badge inside. */}
+          <span className="v2-badge">{STATUS_LABEL[project.status]}</span>
           <span className="v2-sub" style={{ fontWeight: 700 }}>
             {project.title}
-          </span>
-          <span className="v2-badge" style={{ flexShrink: 0 }}>
-            {STATUS_LABEL[project.status]}
           </span>
         </div>
         <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>

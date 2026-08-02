@@ -70,26 +70,33 @@ const LAYERS: LayerItem[][] = [
       tag: 'knowledge.base',
     },
   ],
-  [
-    {
-      id: 'providers',
-      label: 'Model Providers',
-      desc: 'OpenAI, Anthropic and Bedrock behind one interface, swappable per task',
-      tag: 'models',
-    },
-    {
-      id: 'infra',
-      label: 'Infrastructure',
-      desc: 'EC2, ECS, Kubernetes and Docker — what the whole platform runs on',
-      tag: 'infra',
-    },
-    {
-      id: 'ingestion',
-      label: 'Data & Ingestion',
-      desc: 'Pipelines that turn messy real-world sources into retrievable data',
-      tag: 'ingestion',
-    },
-  ],
+]
+
+// The foundation is deliberately NOT another row of cards. Three cards under
+// three cards implies a one-to-one mapping that does not exist — infrastructure
+// does not sit under the MCP gateway specifically, it carries the entire
+// platform. So it renders as a single band spanning the full width, holding the
+// external things everything above depends on: providers we call, infra we run
+// on, and data arriving from outside.
+const FOUNDATION: LayerItem[] = [
+  {
+    id: 'providers',
+    label: 'Model Providers',
+    desc: 'OpenAI, Anthropic and Bedrock behind one interface, swappable per task',
+    tag: 'models',
+  },
+  {
+    id: 'infra',
+    label: 'Infrastructure',
+    desc: 'EC2, ECS, Kubernetes and Docker — what the whole platform runs on',
+    tag: 'infra',
+  },
+  {
+    id: 'ingestion',
+    label: 'Data & Ingestion',
+    desc: 'Source data arriving from outside, made retrievable',
+    tag: 'ingestion',
+  },
 ]
 
 const FILTERS: { id: Group; label: string }[] = [
@@ -121,7 +128,7 @@ function groupOf(label: string): Group {
   return 'ai'
 }
 
-type ConnectorVariant = 'single' | 'spread' | 'spread3' | 'merge' | 'parallel3'
+type ConnectorVariant = 'single' | 'spread' | 'spread3' | 'merge' | 'support'
 
 /**
  * Given the item counts of the row above and the row being connected into,
@@ -129,10 +136,6 @@ type ConnectorVariant = 'single' | 'spread' | 'spread3' | 'merge' | 'parallel3'
  * `spread3` (1 forks to 3), or `merge` (2+ cards come back to 1).
  */
 function connectorVariant(prevCount: number, count: number): ConnectorVariant {
-  // Same count above and below means the columns simply continue — draw
-  // straight parallel lines rather than merging them into one and fanning
-  // back out, which would misconnect each column to the wrong neighbour.
-  if (prevCount === 3 && count === 3) return 'parallel3'
   if (prevCount > 1) return 'merge'
   if (count === 3) return 'spread3'
   if (count > 1) return 'spread'
@@ -163,8 +166,10 @@ function Connector({ variant }: { variant: ConnectorVariant }): JSX.Element {
         ? 'M100,0 L100,22 L40,60 M100,22 L160,60'
         : variant === 'spread3'
           ? 'M100,0 L100,18 L30,60 M100,18 L100,60 M100,18 L170,60'
-          : variant === 'parallel3'
-            ? 'M30,0 L30,60 M100,0 L100,60 M170,0 L170,60'
+          : variant === 'support'
+            // A wide bracket: everything above rests on the band below, so the
+            // line spans the full width rather than picking out columns.
+            ? 'M8,60 L8,34 L192,34 L192,60 M40,34 L40,0 M100,34 L100,0 M160,34 L160,0'
             : 'M40,0 L100,38 L100,60 M160,0 L100,38'
 
   return (
@@ -256,6 +261,35 @@ export function Signal(): JSX.Element {
                 </Reveal>
               </div>
             ))}
+
+            {/* Foundation band. Spans the full width because everything above
+                rests on it — this is not a fourth column-aligned row. */}
+            <Connector variant="support" />
+            <Reveal delay={LAYERS.length * 90}>
+              <div className="v2-panel v2-col" style={{ gap: '0.9rem' }}>
+                <span className="v2-eyebrow">Runs on</span>
+                <div className="v2-grid" data-cols="3">
+                  {FOUNDATION.map((item) => (
+                    <div
+                      key={item.id}
+                      className="v2-col"
+                      style={{
+                        gap: '0.3rem',
+                        opacity: hoveredId !== null && hoveredId !== item.id ? 0.55 : 1,
+                        transition: 'opacity var(--v2-dur-fast) var(--v2-ease)',
+                      }}
+                      onMouseEnter={() => setHoveredId(item.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                    >
+                      <span className="v2-sub">{item.label}</span>
+                      <p className="v2-body v2-muted" style={{ margin: 0 }}>
+                        {item.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
           </div>
         </div>
 
