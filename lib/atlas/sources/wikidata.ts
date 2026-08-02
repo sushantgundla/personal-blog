@@ -13,6 +13,7 @@
 //   Tuvalu, which has two circulating currencies).
 // - Every fact carries the query's run time as "asOf", per §3.7.
 import type { Person, SourceResult, UnescoSite, WikidataFacts } from "../types";
+import { toHttps } from "../format";
 
 const ENDPOINT = "https://query.wikidata.org/sparql";
 const USER_AGENT =
@@ -49,18 +50,11 @@ function str(row: Record<string, { value: string }>, key: string): string | null
   return row[key]?.value ?? null;
 }
 
-/**
- * Wikidata's `Special:FilePath` values (flags, emblems, portraits, anthem
- * audio) come back as `http://commons.wikimedia.org/...` routinely, not
- * `https://` — confirmed live: this broke `next/image` outright, since
- * `next.config.js` only allows `https://` in `images.remotePatterns` and
- * next/image throws rather than degrading on an `http://` src. Applied to
- * every URL field this module returns, not patched on one call site.
- */
-function toHttps(url: string | null): string | null {
-  if (!url) return null;
-  return url.startsWith("http://") ? `https://${url.slice(7)}` : url;
-}
+// toHttps (imported above from ../format) normalises every URL field this
+// module returns — Wikidata's `Special:FilePath` values (flags, emblems,
+// portraits, anthem audio) come back as literal `http://` routinely, which
+// breaks next/image's https-only remotePatterns. See the doc comment on
+// toHttps for the full trap.
 
 function num(row: Record<string, { value: string }>, key: string): number | null {
   const v = row[key]?.value;

@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { Person } from '@/lib/atlas/types'
 import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
+import { toHttps } from '@/lib/atlas/format'
 import styles from './extras.module.css'
 
 export interface PeopleWatermarksProps {
@@ -26,15 +27,6 @@ export interface PeopleWatermarksProps {
  * with a Wikidata ID instead of a name looks broken, not composed. */
 function hasRealName(person: Person): boolean {
   return !/^Q\d+$/.test(person.name.trim())
-}
-
-/** Wikidata image properties are serialised as literal "http://" URLs even
- * though Commons is https-only — next/image's https-only remotePatterns
- * (next.config.js) 500s on the raw value. Confirmed live on /atlas/twn
- * (Chiang Kai-shek's portrait). Fixed locally rather than in
- * next.config.js or wikidata.ts, neither owned here. */
-function toHttps(url: string): string {
-  return url.startsWith('http://') ? `https://${url.slice(7)}` : url
 }
 
 export function PeopleWatermarks({ people, iso3, countryName }: PeopleWatermarksProps) {

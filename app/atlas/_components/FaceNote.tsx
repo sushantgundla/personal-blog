@@ -2,7 +2,7 @@ import Image from 'next/image'
 import type { CountryDossier } from '@/lib/atlas/types'
 import type { IsoCountry } from '@/lib/atlas/iso-countries'
 import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
-import { formatValue, formatYear } from '@/lib/atlas/format'
+import { formatValue, formatYear, toHttps } from '@/lib/atlas/format'
 import styles from './dossier.module.css'
 
 export interface FaceNoteProps {
@@ -82,7 +82,7 @@ export function FaceNote({ dossier, country }: FaceNoteProps) {
       <div className={styles.faceOrnamentArea}>
         {hasPortrait && portrait?.imageUrl && (
           <div className={`atlas-watermark ${styles.facePortrait}`}>
-            <Image src={portrait.imageUrl} alt="" fill sizes="260px" className={styles.facePortraitImg} />
+            <Image src={toHttps(portrait.imageUrl)} alt="" fill sizes="260px" className={styles.facePortraitImg} />
             <span className="sr-only">Watermark portrait: {portrait.name}</span>
           </div>
         )}

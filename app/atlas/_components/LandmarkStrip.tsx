@@ -1,22 +1,11 @@
 import Image from 'next/image'
 import type { UnescoSite } from '@/lib/atlas/types'
+import { toHttps } from '@/lib/atlas/format'
 import styles from './extras.module.css'
 
 export interface LandmarkStripProps {
   sites: readonly UnescoSite[]
   countryName: string
-}
-
-/** Wikidata's P18 (and every other image/media property) comes back as a
- * literal "http://commons.wikimedia.org/..." URL — that is simply how
- * Wikidata serialises the property, regardless of the fact that Commons
- * itself is https-only. next/image's remotePatterns in next.config.js is
- * (correctly) https-only, so passing the value straight through 500s the
- * page — confirmed live on /atlas/twn. Upgrading the scheme here, not in
- * next.config.js or wikidata.ts (neither owned by this component), is the
- * safe local fix. */
-function toHttps(url: string): string {
-  return url.startsWith('http://') ? `https://${url.slice(7)}` : url
 }
 
 function commonsFilePage(imageUrl: string): string | null {

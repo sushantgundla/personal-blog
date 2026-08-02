@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
+import { toHttps } from '@/lib/atlas/format'
 import styles from './extras.module.css'
 
 export interface NeighboursProps {
@@ -14,16 +15,6 @@ const TIMEOUT_MS = 20_000
 const REVALIDATE_DAY = 86400
 
 const QID_TO_COUNTRY = new Map(ISO_COUNTRIES.map((c) => [c.qid, c] as const))
-
-/** Wikidata's P41 (flag) comes back as a literal "http://commons..." URL —
- * that is how Wikidata serialises the property regardless of Commons
- * being https-only. next/image's remotePatterns (next.config.js) is
- * https-only, so the raw value 500s the page; confirmed live via the same
- * failure mode on /atlas/twn's portrait image. Fixed locally, not in
- * next.config.js or wikidata.ts, neither owned here. */
-function toHttps(url: string): string {
-  return url.startsWith('http://') ? `https://${url.slice(7)}` : url
-}
 
 interface NeighbourRow {
   iso3: string
