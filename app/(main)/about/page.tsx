@@ -23,26 +23,29 @@ const SKILL_GROUPS: { title: string; labels: string[] }[] = [
       'Agentic AI', 'RAG', 'MCP', 'LLMs', 'NLP', 'Computer Vision', 'PyTorch',
       'Transformers', 'Fine-tuning', 'Prompt Engineering', 'Hugging Face', 'Evals',
       'Sentence Transformers', 'OCR', 'Multi-Agent Systems', 'Conversational AI',
-      'Agent Orchestration', 'RoBERTa',
+      'Agent Orchestration', 'RoBERTa', 'Statistics', 'Model Context Protocol',
+      'AI Code Review',
     ],
   },
   {
     title: 'Frameworks & Tools',
     labels: [
       'Agno', 'LiteLLM', 'FastAPI', 'Claude Code', 'MLOps', 'LangGraph', 'LangChain',
-      'Python', 'Django', 'Next.js', 'TypeScript', 'LLM Gateway',
+      'Python', 'Django', 'LLM Gateway', 'Cursor', 'GitHub Copilot', 'Codex',
+      'Agent SDKs', 'Claude Agent SDK', 'Agentic Coding', 'Backend Architecture',
+      'REST APIs', 'Async Python',
     ],
   },
   {
     title: 'Data & Retrieval',
     labels: [
       'Vector Databases', 'Embeddings', 'Semantic Search', 'Postgres', 'Redis',
-      'Data Visualization', 'Document Ingestion', 'Knowledge Bases', 'Information Retrieval',
+      'Document Ingestion', 'Knowledge Bases', 'Information Retrieval',
     ],
   },
   {
     title: 'Infrastructure',
-    labels: ['AWS', 'Kubernetes', 'Docker', 'Model Deployment'],
+    labels: ['AWS', 'Kubernetes', 'Docker', 'Model Deployment', 'Bedrock', 'OpenAI API', 'Anthropic API'],
   },
 ]
 
