@@ -11,41 +11,31 @@ export interface AtlasSearchProps {
 
 /**
  * The keyboard and mobile path onto the plate — never a consolation prize.
- * The real, enhanced control (type-ahead, arrow keys, Enter) is relocated
- * into the `#atlas-search-slot` that app/atlas/layout.tsx reserves in the
- * header, once mounted. (This project has no `@types/react-dom` and we may
- * not add dependencies, so this moves the rendered node with plain
- * `Node.appendChild` after mount instead of `createPortal` — React does not
- * care where in the DOM a node it owns physically lives, only that it keeps
- * the same node identity across renders, which `appendChild` preserves.)
- * Below it, always rendered server-side and independent of that move, sits
- * a plain `<form method="get">` + `<select>` that works with JavaScript
- * off: submitting it hits `/atlas?c=IND`, which page.tsx reads from
- * `searchParams` and redirects from, server-side, to `/atlas/IND`.
+ * Rendered once, directly inside app/atlas/layout.tsx's header, so the same
+ * control is available on every /atlas/* route (the plate, a dossier,
+ * compare, rankings), not only the landing page.
+ *
+ * An earlier version rendered this inline in app/atlas/page.tsx and then
+ * relocated its root node into a `#atlas-search-slot` in the header with a
+ * plain `Node.appendChild` after mount — a `createPortal` stand-in, since
+ * this project has no `@types/react-dom`. That produced a visibly
+ * duplicated search box (the inline copy briefly present before the move,
+ * and inconsistently after) and only ever worked on `/atlas` in the first
+ * place. Rendering this component directly where it belongs removes the
+ * DOM-moving hack entirely — there is exactly one search box, one root.
+ *
+ * Below the enhanced control, always rendered server-side, sits a plain
+ * `<form method="get">` + `<select>` wrapped in `<noscript>` — it works
+ * with JavaScript off: submitting it hits `/atlas?c=IND`, which
+ * app/atlas/page.tsx reads from `searchParams` and redirects from,
+ * server-side, to `/atlas/IND`.
  */
 export function AtlasSearch({ countries }: AtlasSearchProps) {
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const movableRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => setMounted(true), [])
-
-  // Once the enhanced UI has rendered client-side, relocate its root node
-  // into the header's search slot. Runs after `mounted` flips true, so the
-  // node already exists in the DOM (rendered inline, see below) by the time
-  // this fires.
-  useEffect(() => {
-    if (!mounted) return
-    const slot = document.getElementById('atlas-search-slot')
-    const el = movableRef.current
-    if (slot && el && el.parentElement !== slot) {
-      slot.appendChild(el)
-    }
-  }, [mounted])
 
   // "/" focuses search from anywhere on the page, unless the visitor is
   // already typing into some other field.
@@ -153,38 +143,43 @@ export function AtlasSearch({ countries }: AtlasSearchProps) {
 
   return (
     <>
-      {mounted && (
-        <div ref={movableRef} data-atlas-search-enhanced="true">
-          {searchUi}
-        </div>
-      )}
-      <details className={styles.searchFallback}>
-        <summary className="atlas-label" style={{ cursor: 'pointer' }}>
-          Search without JavaScript
-        </summary>
-        <form
-          action="/atlas"
-          method="get"
-          style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}
-        >
-          <label htmlFor="atlas-plain-search-select" style={{ position: 'absolute', left: '-9999px' }}>
-            Choose a country
-          </label>
-          <select id="atlas-plain-search-select" name="c" className={styles.searchInput} defaultValue="">
-            <option value="" disabled>
-              Choose a country…
-            </option>
-            {sortedCountries.map((c) => (
-              <option key={c.iso3} value={c.iso3}>
-                {c.name}
+      {searchUi}
+      {/* A real <noscript> tag, not a React/CSS toggle — the browser itself
+          decides whether to render this, based on whether scripting is on,
+          before any hydration happens. That's what keeps this fallback from
+          ever leaking into the normal, JavaScript-on experience (it used to
+          render unconditionally, as a raw, unstyled disclosure at the top
+          of the page — see the design review). It still degrades further:
+          `<details>` and `<form method="get">` need no JS of their own. */}
+      <noscript>
+        <details className={styles.searchFallback} open>
+          <summary className="atlas-label" style={{ cursor: 'pointer' }}>
+            Search without JavaScript
+          </summary>
+          <form
+            action="/atlas"
+            method="get"
+            style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}
+          >
+            <label htmlFor="atlas-plain-search-select" style={{ position: 'absolute', left: '-9999px' }}>
+              Choose a country
+            </label>
+            <select id="atlas-plain-search-select" name="c" className={styles.searchInput} defaultValue="">
+              <option value="" disabled>
+                Choose a country…
               </option>
-            ))}
-          </select>
-          <button type="submit" className={styles.dialChip}>
-            Go →
-          </button>
-        </form>
-      </details>
+              {sortedCountries.map((c) => (
+                <option key={c.iso3} value={c.iso3}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className={styles.dialChip}>
+              Go →
+            </button>
+          </form>
+        </details>
+      </noscript>
     </>
   )
 }

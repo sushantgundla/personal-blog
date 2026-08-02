@@ -167,6 +167,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
           hoveredIso3={hoverIso3}
           onHover={handleRailHover}
           onPlate={onPlateSet}
+          metricCode={railMetricCode}
         />
       </aside>
 
@@ -179,10 +180,10 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
             </span>
           </div>
           <div className={styles.denomPanel}>
-            <span className="atlas-denomination figure" style={{ fontSize: '1.75rem' }}>
+            <span className={`atlas-denomination ${styles.figure}`} style={{ fontSize: '1.75rem' }}>
               {allCountries.length}
             </span>
-            <span className="caption">
+            <span className={styles.caption}>
               <span className="atlas-label">Countries catalogued</span>
               <span className="atlas-serial">{countryPaths.length} engraved on the plate</span>
             </span>

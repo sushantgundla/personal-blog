@@ -69,6 +69,10 @@ export function Cartouche({
           <span className="atlas-label">{secondaryLabel}</span>
           <span className={`atlas-denomination ${styles.cartoucheValue}`}>{secondaryValue}</span>
         </div>
+        {/* The map itself has no visible chrome to say it's clickable — this
+            is the affordance a visitor sees the moment they hover any
+            country, on top of the cursor already changing to a pointer. */}
+        <div className={styles.cartoucheHint}>Click to open its note →</div>
       </div>
     </div>
   )

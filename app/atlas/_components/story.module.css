@@ -1,0 +1,60 @@
+/* ============================================================
+   CountryStory — layout only. Colour, font and surface effects come
+   from ../atlas.css; this file is purely the grid/spacing this one
+   card needs. Same split as dossier.module.css / extras.module.css.
+   ============================================================ */
+
+.story {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+/* The short Wikipedia description ("a country in South Asia") — a
+   tagline under the section rule, not a heading in its own right. */
+.description {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  color: var(--note-intaglio);
+}
+
+/* Readable body copy — Inter, capped at 68ch per the spec so a long
+   intro paragraph never runs edge-to-edge on a wide screen. */
+.body {
+  max-width: 68ch;
+}
+
+.attribution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.attributionLink {
+  color: var(--note-intaglio-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.attributionLink:hover,
+.attributionLink:focus-visible {
+  color: var(--note-ember);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 5rem;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px dashed var(--note-rule);
+  color: var(--note-intaglio-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+}

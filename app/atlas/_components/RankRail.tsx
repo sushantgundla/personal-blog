@@ -23,6 +23,10 @@ export interface RankRailProps {
   onHover: (iso3: string | null) => void
   /** Countries with geometry on the plate — used to flag the 76 without it. */
   onPlate: ReadonlySet<string>
+  /** The indicator code this rail is currently sorted by (population when
+   *  nothing is picked on the dial) — used only to link "Full rankings"
+   *  at /atlas/rankings/[indicator], the same ledger the choropleth reads. */
+  metricCode: string
 }
 
 /** Rendering all ~250 rows is fine for React, but a 70vh scroll box of 250
@@ -31,7 +35,7 @@ export interface RankRailProps {
  * let a plain button reveal the rest — no virtualisation library needed. */
 const INITIAL_ROWS = 60
 
-export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, onPlate }: RankRailProps) {
+export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, onPlate, metricCode }: RankRailProps) {
   const [expanded, setExpanded] = useState(false)
 
   const sorted = useMemo(() => {
@@ -48,7 +52,12 @@ export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, 
   return (
     <div>
       <div className={styles.railHeader}>
-        <div className="atlas-label">The standings</div>
+        <div className={styles.railHeaderTop}>
+          <div className="atlas-label">The standings — ranked by {indicator ? indicator.label.toLowerCase() : 'population'}</div>
+          <Link href={`/atlas/rankings/${metricCode}`} className={styles.railFullLink}>
+            Full rankings →
+          </Link>
+        </div>
         <div className="atlas-serial">
           {indicator ? indicator.label : 'Population'} · {sorted.length} countries
           {worldAverage !== null && ` · world avg ${formatValue(worldAverage, format)}`}
@@ -84,6 +93,9 @@ export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, 
                     style={{ transform: `scaleX(${(row.percentile ?? 0) / 100})` }}
                   />
                 </span>
+              </span>
+              <span className={styles.railChevron} aria-hidden="true">
+                ›
               </span>
             </Link>
           )

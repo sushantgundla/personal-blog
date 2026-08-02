@@ -29,10 +29,19 @@ function buildRanking(
   const def = INDICATORS_BY_CODE[code];
   const higherIsBetter = def?.higherIsBetter ?? null;
 
-  const withValue = rows.filter(
+  // World Bank's `country/all` rows mix in ~78 non-country aggregates
+  // ("World", "IDA & IBRD total", "Middle income", ...). The API's own
+  // `region.value !== "Aggregates"` marker isn't reliably present on the
+  // batched indicator endpoints these rows come from, so instead we only
+  // keep rows whose ISO3 is a real country in BY_ISO3 — aggregates use
+  // non-country codes (WLD, IBT, LMY, MIC, IBD, EAP, ...) that never
+  // appear there, so this drops them by construction.
+  const realCountryRows = rows.filter((r) => BY_ISO3[r.iso3] !== undefined);
+
+  const withValue = realCountryRows.filter(
     (r): r is CountryValueRow & { value: number } => r.value !== null
   );
-  const withoutValue = rows.filter((r) => r.value === null);
+  const withoutValue = realCountryRows.filter((r) => r.value === null);
 
   const worldAverage =
     withValue.length > 0

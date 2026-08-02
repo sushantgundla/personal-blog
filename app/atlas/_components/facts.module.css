@@ -1,0 +1,89 @@
+/* ============================================================
+   FactsPanel — layout only. Colour, font and surface effects come from
+   ../atlas.css; this file is purely the ledger grid and the emblem
+   seal this one card needs.
+   ============================================================ */
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerRule {
+  flex: 1;
+}
+
+/* The coat of arms as a seal — FaceNote already renders the flag, so
+   this is the one Wikidata image this panel is responsible for. */
+.emblemSeal {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--note-seal);
+  box-shadow: 0 0 0 3px var(--note-paper), 0 0 0 4px var(--note-seal);
+}
+
+.emblemSealImg {
+  object-fit: cover;
+}
+
+/* A dense engraved ledger — two newspaper-style columns on wide
+   screens, one on mobile, each row struck through with a dashed rule
+   like an accountant's page. */
+.ledger {
+  column-count: 1;
+  column-gap: 2rem;
+}
+
+@media (min-width: 640px) {
+  .ledger {
+    column-count: 2;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed var(--note-rule);
+  break-inside: avoid;
+}
+
+.rowLabel {
+  white-space: nowrap;
+}
+
+.rowValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--note-intaglio);
+  text-align: right;
+  overflow-wrap: break-word;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 5rem;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px dashed var(--note-rule);
+  color: var(--note-intaglio-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+}
