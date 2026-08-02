@@ -19,9 +19,10 @@ interface LayerItem {
   tag: string
 }
 
-// Three layers, top to bottom on screen: what you build with agents, the
-// agentic framework that runs them, and the substrate underneath it. A row
-// with more than one item renders side by side.
+// Four layers, top to bottom on screen: what you build with agents, the
+// agentic framework that runs them, the gateways and knowledge that serve it,
+// and the foundation everything ultimately rests on. A row with more than one
+// item renders side by side.
 //
 // Descriptions and mono tags are written as generic capability statements —
 // what this kind of system does and what can be built with it — not as
@@ -69,6 +70,26 @@ const LAYERS: LayerItem[][] = [
       tag: 'knowledge.base',
     },
   ],
+  [
+    {
+      id: 'providers',
+      label: 'Model Providers',
+      desc: 'OpenAI, Anthropic and Bedrock behind one interface, swappable per task',
+      tag: 'models',
+    },
+    {
+      id: 'infra',
+      label: 'Infrastructure',
+      desc: 'EC2, ECS, Kubernetes and Docker — what the whole platform runs on',
+      tag: 'infra',
+    },
+    {
+      id: 'ingestion',
+      label: 'Data & Ingestion',
+      desc: 'Pipelines that turn messy real-world sources into retrievable data',
+      tag: 'ingestion',
+    },
+  ],
 ]
 
 const FILTERS: { id: Group; label: string }[] = [
@@ -84,9 +105,13 @@ const AI_SYSTEMS = new Set([
   'LangGraph', 'LangChain', 'Fine-tuning', 'Prompt Engineering', 'Hugging Face',
   'Evals', 'Vector Databases', 'Embeddings', 'Semantic Search', 'Transformers',
 ])
-const INFRA = new Set(['LiteLLM', 'AWS', 'Kubernetes', 'Docker', 'MLOps'])
-const DATA = new Set(['Postgres', 'Redis'])
-const LANG = new Set(['Python', 'FastAPI', 'Django', 'Claude Code', 'PyTorch'])
+const INFRA = new Set(['LiteLLM', 'AWS', 'Kubernetes', 'Docker', 'MLOps', 'Bedrock', 'OpenAI API', 'Anthropic API', 'Model Deployment'])
+const DATA = new Set(['Postgres', 'Redis', 'Knowledge Bases', 'Document Ingestion', 'Information Retrieval'])
+const LANG = new Set([
+  'Python', 'FastAPI', 'Django', 'Claude Code', 'PyTorch', 'Cursor',
+  'GitHub Copilot', 'Codex', 'Agent SDKs', 'Claude Agent SDK', 'Agentic Coding',
+  'Backend Architecture', 'REST APIs', 'Async Python',
+])
 
 function groupOf(label: string): Group {
   if (AI_SYSTEMS.has(label)) return 'ai'
@@ -96,7 +121,7 @@ function groupOf(label: string): Group {
   return 'ai'
 }
 
-type ConnectorVariant = 'single' | 'spread' | 'spread3' | 'merge'
+type ConnectorVariant = 'single' | 'spread' | 'spread3' | 'merge' | 'parallel3'
 
 /**
  * Given the item counts of the row above and the row being connected into,
@@ -104,6 +129,10 @@ type ConnectorVariant = 'single' | 'spread' | 'spread3' | 'merge'
  * `spread3` (1 forks to 3), or `merge` (2+ cards come back to 1).
  */
 function connectorVariant(prevCount: number, count: number): ConnectorVariant {
+  // Same count above and below means the columns simply continue — draw
+  // straight parallel lines rather than merging them into one and fanning
+  // back out, which would misconnect each column to the wrong neighbour.
+  if (prevCount === 3 && count === 3) return 'parallel3'
   if (prevCount > 1) return 'merge'
   if (count === 3) return 'spread3'
   if (count > 1) return 'spread'
@@ -134,7 +163,9 @@ function Connector({ variant }: { variant: ConnectorVariant }): JSX.Element {
         ? 'M100,0 L100,22 L40,60 M100,22 L160,60'
         : variant === 'spread3'
           ? 'M100,0 L100,18 L30,60 M100,18 L100,60 M100,18 L170,60'
-          : 'M40,0 L100,38 L100,60 M160,0 L100,38'
+          : variant === 'parallel3'
+            ? 'M30,0 L30,60 M100,0 L100,60 M170,0 L170,60'
+            : 'M40,0 L100,38 L100,60 M160,0 L100,38'
 
   return (
     <svg {...common}>
