@@ -209,6 +209,11 @@
   display: flex;
   gap: 1.25rem;
   flex-wrap: wrap;
+  /* .introLinkStrong below is a framed chip and so is taller than its two
+     underlined siblings. Without this the flex default (stretch) would
+     drag those two to the chip's height and drop their underline to the
+     bottom of it; centred, the three sit on one line. */
+  align-items: center;
 }
 
 .introLink {
@@ -227,6 +232,37 @@
 .introLink:focus-visible {
   color: var(--note-intaglio);
   border-color: var(--note-intaglio);
+}
+
+/* Added 2026-08-04: the way into the learning section from the plate.
+   /atlas/learn used to be reachable only from the "the training floor →"
+   link in app/atlas/layout.tsx's top bar, which is the same small mono
+   line as the "← sushantgundla.com" link next to it and is easy to read
+   straight past.
+
+   It rides in this same nav, third after "Full rankings →", but framed
+   rather than underlined: the other two are more views of this same map,
+   this one is a different room, and it was asked for as a button. The
+   frame is the one the metric dial's own selected chip already wears
+   (.dialChipActive — ember border on raised paper), so this is existing
+   plate vocabulary rather than a new kind of control. */
+.introLinkStrong {
+  padding: 0.4rem 0.7rem;
+  background: var(--note-paper-hi);
+  border: 1px solid var(--note-ember);
+  transition: background 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease),
+    border-color 0.2s var(--atlas-ease);
+}
+
+/* Fills solid on hover — the row's other two only change colour, so the
+   chip has somewhere brighter to go and stays the loudest thing in it.
+   Must come after .introLink:hover above, which it overrides at equal
+   specificity. */
+.introLinkStrong:hover,
+.introLinkStrong:focus-visible {
+  background: var(--note-ember);
+  border-color: var(--note-ember);
+  color: var(--note-void);
 }
 
 @media (max-width: 640px) {
@@ -751,6 +787,10 @@
   }
 
   .zoomButton {
+    transition: none !important;
+  }
+
+  .introLinkStrong {
     transition: none !important;
   }
 }

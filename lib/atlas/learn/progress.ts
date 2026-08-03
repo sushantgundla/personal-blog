@@ -86,34 +86,179 @@ export interface Grade {
 }
 
 /**
- * The grade ladder, from §8 of the design doc. Ascending by `at` — `gradeFor`
- * below walks it backwards and relies on that order.
+ * The grade ladder — the one source of truth for every rank on the floor.
+ * Nothing else in the codebase may hard-code a rung name or a threshold; a
+ * component that wants "what grade is this / what's next / how far" asks
+ * `gradeFor`, `nextGrade`, `gradeProgress` or `ladderWindow` below.
+ *
+ * **Fifteen real trades, not invented ranks.** The section's whole conceit is
+ * that the visitor is an apprentice at a mint, so the ladder walks an actual
+ * security-printing career: the ink and the press first, then the engraving
+ * bench, then the plate, then the offices that sign for it. A siderographer
+ * transfers a finished engraving onto the printing plate; a rose-engine
+ * turner cuts the guilloché lace. Both are jobs someone really held.
+ *
+ * **The thresholds are the game.** They are tight at the bottom and widen
+ * hard at the top, and that shape is deliberate:
+ *
+ *  - The first promotion lands at 8 correct — inside a first run of ten for
+ *    a decent player, inside a second run for anybody. The old ladder put
+ *    the first rung at 25, so a new player finished a whole run, got four
+ *    right, and the seal did not move at all. That is the bug this fixes.
+ *  - The steps then grow 8, 12, 20, 30, 40, 50, 65, 75, 100, 125, 175, 250,
+ *    350, 500. Early runs each move you up; by the middle a rung is a few
+ *    sittings; the summit at 1800 is a genuinely long haul.
+ *
+ * Ascending by `at`, and `GRADES[0].at` must stay 0 — `gradeFor` relies on
+ * both, and on there always being a rung a score of zero already holds.
+ *
+ * Changing a threshold is safe for existing players: the ladder is read-only
+ * over the lifetime counts already in `atlas.learn.v1` and stores nothing of
+ * its own, so a visitor simply re-reads their same number against the new
+ * rungs. It can move someone's grade, never their score.
  */
 export const GRADES: readonly Grade[] = [
   { name: 'Apprentice', at: 0 },
-  { name: 'Engraver', at: 25 },
-  { name: 'Plate-maker', at: 75 },
-  { name: 'Inspector', at: 200 },
-  { name: 'Master of the Mint', at: 500 },
+  { name: 'Ink-hand', at: 8 },
+  { name: 'Press-feeder', at: 20 },
+  { name: 'Pressman', at: 40 },
+  { name: 'Proof-puller', at: 70 },
+  { name: 'Die-sinker', at: 110 },
+  { name: 'Engraver', at: 160 },
+  { name: 'Rose-engine Turner', at: 225 },
+  { name: 'Siderographer', at: 300 },
+  { name: 'Plate-maker', at: 400 },
+  { name: 'Inspector', at: 525 },
+  { name: 'Assayer', at: 700 },
+  { name: 'Chief Engraver', at: 950 },
+  { name: 'Warden of the Mint', at: 1300 },
+  { name: 'Master of the Mint', at: 1800 },
 ];
 
-/** The grade a given number of lifetime correct answers has earned. */
-export function gradeFor(correct: number): Grade {
-  const n = Number.isFinite(correct) ? correct : 0;
-  let earned = GRADES[0];
-  for (const grade of GRADES) {
-    if (n >= grade.at) earned = grade;
+/** The top rung. Held once `lifetimeCorrect` reaches its `at`. */
+export const TOP_GRADE: Grade = GRADES[GRADES.length - 1];
+
+/** A count that is safe to compare against a threshold. */
+function safeCorrect(correct: number): number {
+  return Number.isFinite(correct) && correct > 0 ? Math.floor(correct) : 0;
+}
+
+/** The index of the grade a given lifetime-correct count has earned. */
+function gradeIndexFor(correct: number): number {
+  const n = safeCorrect(correct);
+  let earned = 0;
+  for (let i = 0; i < GRADES.length; i += 1) {
+    if (n >= GRADES[i].at) earned = i;
   }
   return earned;
 }
 
+/** The grade a given number of lifetime correct answers has earned. */
+export function gradeFor(correct: number): Grade {
+  return GRADES[gradeIndexFor(correct)];
+}
+
 /** The next rung up, or `null` at the top of the ladder. */
 export function nextGrade(correct: number): Grade | null {
-  const n = Number.isFinite(correct) ? correct : 0;
+  const n = safeCorrect(correct);
   for (const grade of GRADES) {
     if (n < grade.at) return grade;
   }
   return null;
+}
+
+/**
+ * Everything a component needs to say about where a visitor stands, worked
+ * out once, here.
+ *
+ * The point is that no component does this arithmetic itself. A view that
+ * subtracts `next.at - correct` on its own prints "NaN more to undefined"
+ * the day someone reaches the top rung — this returns `next: null`,
+ * `remaining: 0` and `climbed: 1` for that case, so the caller only has to
+ * choose a different sentence, never guard a sum.
+ */
+export interface GradeProgress {
+  /** The grade held right now. Never null — everyone holds `GRADES[0]`. */
+  grade: Grade;
+  /** The rung above, or `null` at the summit. */
+  next: Grade | null;
+  /** 1-based rung number, for "Rung 4 of 15". */
+  rung: number;
+  /** How many rungs the ladder has. */
+  rungs: number;
+  /** Correct answers still needed for `next`. 0 at the summit. */
+  remaining: number;
+  /** How far across the current rung, 0..1. 1 at the summit. */
+  climbed: number;
+  /** True once the top grade is held. */
+  atTop: boolean;
+}
+
+export function gradeProgress(correct: number): GradeProgress {
+  const n = safeCorrect(correct);
+  const index = gradeIndexFor(n);
+  const grade = GRADES[index];
+  const next = index + 1 < GRADES.length ? GRADES[index + 1] : null;
+  const span = next ? next.at - grade.at : 0;
+  return {
+    grade,
+    next,
+    rung: index + 1,
+    rungs: GRADES.length,
+    remaining: next ? Math.max(0, next.at - n) : 0,
+    climbed: span > 0 ? Math.min(1, Math.max(0, (n - grade.at) / span)) : 1,
+    atTop: next === null,
+  };
+}
+
+/** One printed row of the shortened ladder. */
+export interface LadderRow {
+  grade: Grade;
+  /** 1-based rung number on the full ladder. */
+  rung: number;
+  /** Already reached. */
+  earned: boolean;
+  /** The rung held right now. */
+  held: boolean;
+  /** Rungs were skipped between the row above and this one. */
+  gapBefore: boolean;
+}
+
+/**
+ * The few rungs worth printing: the one below, the one held, the next two,
+ * and the summit.
+ *
+ * Fifteen rows is a wall of text and it overflows a phone. What a climber
+ * actually wants is where they are, what is immediately next, and what they
+ * are ultimately climbing towards — so this window follows them up the
+ * ladder and `gapBefore` marks the stretch it skipped, which the panel draws
+ * as a break rather than pretending the rungs are adjacent.
+ *
+ * Always returns at least one row, and never a duplicate.
+ */
+export function ladderWindow(correct: number): LadderRow[] {
+  const n = safeCorrect(correct);
+  const held = gradeIndexFor(n);
+  const last = GRADES.length - 1;
+
+  // A Set because the windows overlap at both ends: near the bottom
+  // `held - 1` falls off, near the top the neighbours *are* the summit.
+  const wanted = new Set<number>([held, last]);
+  if (held > 0) wanted.add(held - 1);
+  if (held + 1 <= last) wanted.add(held + 1);
+  if (held + 2 <= last) wanted.add(held + 2);
+  // At the summit the two rungs below are the interesting ones — otherwise
+  // the panel would print a single lonely line.
+  if (held === last && last >= 2) wanted.add(last - 2);
+
+  const indices = Array.from(wanted).sort((a, b) => a - b);
+  return indices.map((index, position) => ({
+    grade: GRADES[index],
+    rung: index + 1,
+    earned: n >= GRADES[index].at,
+    held: index === held,
+    gapBefore: position > 0 && index - indices[position - 1] > 1,
+  }));
 }
 
 function emptyStat(): GameStat {

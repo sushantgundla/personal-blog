@@ -87,6 +87,48 @@ const MIN_REPORTING_COUNTRIES = 30;
 /** Flags render small; 320px wide is plenty and caps the bytes. */
 const FLAG_WIDTH = 320;
 
+/**
+ * Indicators that never enter the deck, whatever the >= 30 bar says.
+ *
+ * These are not bad data — the dossier still shows every one of them, and
+ * should. They are measures whose *cross-country comparison* is meaningless,
+ * which is a problem unique to a quiz. A dossier displays a number next to
+ * the country it belongs to. A quiz asserts: "which of these two is greater",
+ * "this country ranks 3rd on Earth". If the ordering underneath that claim is
+ * an artefact rather than a fact, the question cannot be answered by knowing
+ * anything, and the design doc's rule applies — never ask a question the data
+ * cannot honestly support (§6).
+ *
+ * Add to this list rather than writing a one-off `if` somewhere. The next
+ * measure that fails this test should be one line here.
+ */
+const EXCLUDED_INDICATOR_CODES = new Map([
+  [
+    "PA.NUS.FCRF",
+    // "Exchange rate", local currency per US$. The level is an artefact of how
+    // each currency was denominated, nothing about the country. It was
+    // producing cards like "Oman — 3rd lowest on Earth for Exchange rate —
+    // 0.38" and "Iran — 2nd highest — 42,000". The yen against the pound is
+    // not a fact about Japan. Unanswerable by knowledge in higher-or-lower,
+    // and untestable as a forged statement.
+    "cross-country comparison is meaningless — the level is a denomination artefact",
+  ],
+  [
+    "TT.PRI.MRCH.XD.WD",
+    // "Terms of trade", unit "index". Checked against the snapshot before
+    // dropping it: 206 countries report, the median is 101.7 and 100 of them
+    // sit between 90 and 110, with a min of 52.9 and a max of 168.9. That is
+    // the signature of each country being indexed to 100 in its own base
+    // year. So the base is shared in name only — ranking countries by it
+    // really ranks "who moved most since the base year", which is not what
+    // "Terms of trade — index" says to a player. This repo also records no
+    // base year at all (lib/atlas/indicators.ts:97 has unit "index" flat),
+    // so a question could not state one even if we wanted to, and the
+    // reported years are mixed across 2018/2021/2024.
+    "an index with no base year the deck can state — the ranking measures change, not level",
+  ],
+]);
+
 /** ISO3 -> the ISO table row. The membership test for rule 2 above. */
 const BY_ISO3 = new Map(ISO_COUNTRIES.map((c) => [c.iso3, c]));
 
@@ -215,6 +257,13 @@ function buildIndicators(rankingsFile) {
     const def = INDICATORS_BY_CODE[code];
     if (!def) {
       dropped.push({ code, reason: "not in the indicator catalogue" });
+      continue;
+    }
+    // Checked before anything else, so an excluded code can never end up in
+    // `indicators` or in `values` — there is no later path back in.
+    const excluded = EXCLUDED_INDICATOR_CODES.get(code);
+    if (excluded) {
+      dropped.push({ code, reason: `excluded on purpose: ${excluded}` });
       continue;
     }
     if (!result?.ok) {

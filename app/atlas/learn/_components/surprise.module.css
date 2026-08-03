@@ -1,0 +1,645 @@
+/* ============================================================
+   Surprise me — the dealt card, and the room it is dealt into.
+
+   Everything here belongs to SurpriseModal.tsx and the floor card in
+   SurpriseCard.tsx. floor.module.css is deliberately untouched: the four
+   cards on the floor share it, and this feature only ever adds.
+
+   Same rule as the rest of the app — every colour, font and easing curve
+   comes from ../../atlas.css. Nothing here invents a palette.
+
+   The vocabulary of this file:
+     - the *overlay* is the darkened, blurred room,
+     - the *scene* holds the perspective the card is seen in 3D through,
+     - the *flipper* is the thing that actually rotates,
+     - a *face* is one printed side of the note, front or reverse.
+   ============================================================ */
+
+/* ---------------------------------------------------------- the room */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  /* Above .atlas-grain::before (z-index 60 in atlas.css), which is the
+     highest thing the app otherwise paints. */
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.75rem, 3vw, 2rem);
+  /* A tall card on a short window scrolls the room, not the page — the
+     page itself is locked while this is open. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  /* The fallback FIRST, and it is a real design, not a degradation: a
+     browser that refuses backdrop-filter (or has it switched off) still
+     gets a properly dark, readable room. Only browsers that can actually
+     blur get the lighter veil, because only there is the blur doing the
+     work of separating the card from the page. */
+  background: rgba(8, 7, 6, 0.9);
+  animation: surpriseVeil 0.28s var(--atlas-ease) both;
+}
+
+@supports ((backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px))) {
+  .overlay {
+    background: rgba(8, 7, 6, 0.62);
+    -webkit-backdrop-filter: blur(14px) saturate(0.6);
+    backdrop-filter: blur(14px) saturate(0.6);
+  }
+}
+
+@keyframes surpriseVeil {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------- the dialog */
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2vw, 1.1rem);
+  width: min(38rem, 100%);
+  margin: auto;
+  outline: none;
+  animation: surpriseRise 0.32s var(--atlas-ease) both;
+}
+
+.dialog:focus-visible {
+  outline: none;
+}
+
+@keyframes surpriseRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.dialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialogTitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: var(--atlas-text-sm, 0.6875rem);
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+}
+
+/* The close control. A struck ring, so it reads as part of the mint
+   rather than as a browser chrome "x". */
+.close {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--note-rule);
+  background: transparent;
+  color: var(--note-intaglio-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.close:hover,
+.close:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- the stage */
+
+/* The fixed-height slot the card, the loading line and any error all sit
+   in. Fixed on purpose: dealing another card must not make the room jump
+   a hand's width taller or shorter between deals. */
+.stage {
+  position: relative;
+  perspective: 1600px;
+  width: 100%;
+  height: clamp(21rem, 62vh, 26rem);
+}
+
+/* ---------------------------------------------------------- the flip */
+
+.flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.75s var(--atlas-ease);
+  cursor: pointer;
+}
+
+.flipper:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 4px;
+}
+
+.isFlipped {
+  transform: rotateY(180deg);
+}
+
+/* One printed side of the note. `backface-visibility: hidden` is what
+   makes the reverse genuinely hidden mid-turn rather than showing through
+   the paper.
+
+   `overflow: hidden`, not `auto`: the rosette below deliberately bleeds
+   off the bottom-right corner, and on a scrolling box that bleed would
+   raise scrollbars instead of being trimmed by the card's edge. The
+   content scrolls in .faceScroll inside it instead. */
+.face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--note-paper);
+  border: 1px solid var(--note-ink, var(--note-rule));
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* The card is lifted off the plate, so it casts one. */
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(var(--note-ink-rgb), 0.18);
+}
+
+/* The inner cutting guide, printed just inside the note's own edge —
+   the same dashed rule every card on the floor carries. Above the type
+   in paint order, but it sits at 6px and the type starts a whole padding
+   in, so the two never actually meet. */
+.face::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--note-rule);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* The scrolling column of actual content. A very long country name on a
+   very short window scrolls here rather than being cut off. */
+.faceScroll {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: clamp(1.1rem, 4vw, 1.6rem);
+}
+
+.back {
+  transform: rotateY(180deg);
+}
+
+/* ---------------------------------------------------------- the front */
+
+.faceTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+/* The flag as a small struck seal — the same ringed treatment the face
+   note gives it, at card size. */
+.flag {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--note-seal);
+  opacity: 0.92;
+}
+
+.flagImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.name {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 6vw, 2.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--note-intaglio);
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The remarkable fact itself, floated into the middle of the paper. Three
+   auto margins on this column (above it, below it, and above the foot)
+   share out whatever height is left, so a one-line headline sits about a
+   third of the way down instead of hanging off the top edge with a hand's
+   width of blank note under it. */
+.faceMiddle {
+  margin-block: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.headline {
+  position: relative;
+  z-index: 1;
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.0625rem, 3.6vw, 1.5rem);
+  line-height: 1.25;
+  color: var(--note-intaglio);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.detail {
+  position: relative;
+  z-index: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--note-intaglio-dim);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  /* A long detail string wraps; it never widens the card. */
+  overflow-wrap: anywhere;
+}
+
+/* Pushed to the foot of whichever face it is on. */
+.faceFoot {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-top: 1px dashed var(--note-rule);
+}
+
+/* "Turn it over" printed on the card itself, so the gesture is discovered
+   without reading the controls below. */
+.hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--atlas-text-xs, 0.5625rem);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--note-ember);
+  margin: 0;
+}
+
+/* The country's own rosette, bleeding off the bottom-right corner. Only a
+   small bleed — most of the closed curve has to stay on the card for the
+   shape to read as an engraved ornament rather than stray arcs. */
+.rosette {
+  position: absolute;
+  right: -3.5rem;
+  bottom: -3.5rem;
+  width: 17rem;
+  height: 17rem;
+  z-index: 0;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* On the reverse the same rosette is a watermark instead: centred, larger,
+   fainter, sitting behind the fine print the way a portrait would. */
+.rosetteWatermark {
+  position: absolute;
+  right: auto;
+  bottom: auto;
+  top: 50%;
+  left: 50%;
+  width: 22rem;
+  height: 22rem;
+  transform: translate(-50%, -50%);
+  opacity: 0.16;
+}
+
+/* Decorative engraved marginalia along the foot of the front. Clipped, not
+   wrapped, so it can never widen the card at 375px. */
+.microStrip {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0.6;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------- the reverse */
+
+.backTitle {
+  position: relative;
+  z-index: 1;
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  color: var(--note-intaglio);
+  margin: 0;
+}
+
+/* The fine-print panel: a mono label against its value, one row each, the
+   same shape the face note's issuer details use. */
+.facts {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.factRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed var(--note-rule);
+}
+
+.factLabel {
+  flex: none;
+}
+
+.factValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--note-intaglio);
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.dossierLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--note-ember);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.dossierLink:hover,
+.dossierLink:focus-visible {
+  border-bottom-color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- waiting and failing */
+
+/* Both fill the stage exactly, so the room never shows an empty slot where
+   a card should be. */
+.panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  text-align: center;
+  padding: clamp(1.25rem, 5vw, 2rem);
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.notice {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--note-intaglio-dim);
+  max-width: 34ch;
+  margin: 0;
+}
+
+.noticeError {
+  color: var(--note-ember);
+}
+
+/* The plate the card is about to be struck from — three engraved rules
+   pulsing while the mint answers. */
+.waiting {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(18rem, 100%);
+}
+
+.waitingRule {
+  height: 0.55rem;
+  background: var(--note-paper-hi);
+  border: 1px solid var(--note-rule);
+  animation: surprisePulse 1.5s ease-in-out infinite;
+}
+
+.waitingRule:nth-child(2) {
+  width: 76%;
+  animation-delay: 0.18s;
+}
+
+.waitingRule:nth-child(3) {
+  width: 52%;
+  animation-delay: 0.36s;
+}
+
+@keyframes surprisePulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------- the controls */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.control {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-intaglio);
+  background: transparent;
+  border: 1px solid var(--note-rule);
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.control:hover:not(:disabled),
+.control:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+.control:disabled {
+  cursor: progress;
+  opacity: 0.5;
+}
+
+/* The primary of the two — dealing again is what a visitor comes back for. */
+.controlPrimary {
+  color: var(--note-ember);
+  border-color: rgba(var(--note-ember-rgb), 0.55);
+}
+
+/* The keyboard note under the controls. */
+.keys {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--atlas-text-xs, 0.5625rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  margin: 0 0 0 auto;
+  opacity: 0.8;
+}
+
+/* ---------------------------------------------------------- the floor card */
+
+/* The button that opens all of the above. Deliberately the same treatment
+   as the record line on the three game cards beside it. */
+.openRow {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.openButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-intaglio);
+  background: transparent;
+  border: 1px solid var(--note-rule);
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.openButton:hover,
+.openButton:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+.openButton:focus-visible,
+.control:focus-visible,
+.close:focus-visible,
+.dossierLink:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- screen-reader only */
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------- narrow screens */
+
+@media (max-width: 26rem) {
+  /* At 375px the two controls sit one under the other rather than being
+     squeezed to a few characters each. */
+  .control {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .keys {
+    flex: 1 1 100%;
+    margin: 0;
+    text-align: center;
+  }
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+/* The card still turns over — it simply swaps sides instead of spinning,
+   and the room stops fading in. Nothing here removes a capability. */
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .dialog {
+    animation: none !important;
+  }
+
+  .flipper {
+    transition: none !important;
+  }
+
+  .waitingRule {
+    animation: none !important;
+    opacity: 0.7 !important;
+  }
+
+  .control,
+  .close,
+  .openButton {
+    transition: none !important;
+  }
+}
