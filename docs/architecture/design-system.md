@@ -170,9 +170,9 @@ The only classes a theme file may target. Build every section out of these — a
 
 ### Structural IDs
 
-Used by `transitions.css` to target specific page regions during a theme swap. Must exist exactly as named wherever referenced: `#v2-shell` (wraps all page content, set in `app/(main)/layout.tsx`), `#v2-hero`, `#v2-signal`, `#v2-work`, `#v2-writing`, `#v2-contact`, `#v2-hud`.
+Used by `transitions.css` to target specific page regions during a theme swap. Must exist exactly as named wherever referenced: `#v2-shell` (wraps all page content, set in `app/(main)/layout.tsx`), `#v2-hero`, `#v2-signal`, `#v2-writing`, `#v2-radar`, `#v2-contact`, `#v2-hud`.
 
-`#v2-hero`, `#v2-signal`, `#v2-writing`, `#v2-contact` render on the home page today. `#v2-work` (`Work.tsx`) exists in the codebase and is targeted by the "shatter" transition, but is not currently imported by `app/(main)/page.tsx` — the shatter effect simply has one fewer section to fly apart until/unless it's wired back in.
+`#v2-hero`, `#v2-signal`, `#v2-writing`, `#v2-radar` and `#v2-contact` render on the home page, and all five are targeted by the "shatter" transition. `#v2-work` no longer exists: the work timeline was removed from the home page (it lives on `/about`), so `Work.tsx` was deleted and the shatter rule that pointed at it now points at `#v2-radar`, which had been missing from the choreography. Recover the old component from git history if it is ever wanted back.
 
 ## 4. Theme file rules
 

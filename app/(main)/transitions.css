@@ -86,7 +86,7 @@ body.v2-fx-shatter #v2-hero {
 body.v2-fx-shatter #v2-signal {
   animation: v2-shatter-signal 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-body.v2-fx-shatter #v2-work {
+body.v2-fx-shatter #v2-radar {
   animation: v2-shatter-work 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 body.v2-fx-shatter #v2-writing {
@@ -243,7 +243,7 @@ body.v2-fx-collapse #v2-shell {
   body.v2-fx-tear #v2-shell,
   body.v2-fx-shatter #v2-hero,
   body.v2-fx-shatter #v2-signal,
-  body.v2-fx-shatter #v2-work,
+  body.v2-fx-shatter #v2-radar,
   body.v2-fx-shatter #v2-writing,
   body.v2-fx-shatter #v2-contact,
   body.v2-fx-scanline #v2-shell,
