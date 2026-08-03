@@ -95,8 +95,6 @@ const BUTTON_LABELS = [
   'Nothing is fixed',
 ] as const
 
-const LABEL_ROTATE_MS = 4200
-
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -122,18 +120,17 @@ function DimensionHUD() {
     });
   }, []);
 
-  // Rotate the label on a slow timer once mounted. Paused while the gallery is
-  // open so the text is not shifting under someone reading it, and disabled
-  // entirely under prefers-reduced-motion.
+  // Pick a random label once, after mount. It then only changes when pressed —
+  // a label cycling on a timer moves in your peripheral vision while you are
+  // reading the page, which is distracting for no benefit.
+  //
+  // The randomising has to happen here rather than during render: the server
+  // always emits index 0, and choosing randomly while rendering would make the
+  // server and client HTML disagree and React would discard the page.
   useEffect(() => {
-    if (!mounted || galleryOpen) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const id = window.setInterval(
-      () => setLabelIndex((i) => (i + 1) % BUTTON_LABELS.length),
-      LABEL_ROTATE_MS
-    );
-    return () => window.clearInterval(id);
-  }, [mounted, galleryOpen]);
+    if (!mounted) return;
+    setLabelIndex(Math.floor(Math.random() * BUTTON_LABELS.length));
+  }, [mounted]);
 
   const onShuffle = useCallback(() => {
     // The transition runs ~640ms. Swallow clicks during it so an impatient
@@ -141,8 +138,11 @@ function DimensionHUD() {
     setBusy((isBusy) => {
       if (isBusy) return isBusy;
       shuffleDimension();
-      // Advance the label too, so every press reads as a fresh invitation.
-      setLabelIndex((i) => (i + 1) % BUTTON_LABELS.length);
+      // New label on every press, never the same one twice in a row.
+      setLabelIndex((i) => {
+        const next = Math.floor(Math.random() * (BUTTON_LABELS.length - 1));
+        return next >= i ? next + 1 : next;
+      });
       window.setTimeout(() => setBusy(false), 700);
       return true;
     });
