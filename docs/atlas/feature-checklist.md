@@ -3,7 +3,16 @@
 Every feature agreed with the owner, and whether it works in the browser.
 **"Works" means seen working on a running server, not present in the codebase.**
 
-Last verified 2026-08-02 against `http://localhost:3456`.
+Last verified 2026-08-02 against `http://localhost:3456`. Moved here from
+`docs/superpowers/specs/atlas-feature-checklist.md`; content unchanged except this note.
+
+> **One entry below is now stale.** "Known limits" says cold page loads take 30–90 seconds and
+> that only 25 countries plus 21 leaderboards are prerendered. The 25/21 prerender figures are
+> still accurate. The 30–90s cold-load number is not: it was fixed the next day (2026-08-03) by
+> committing `content/atlas/snapshot/*` and reading it before any live call — see
+> [`build-pipeline.md`](./build-pipeline.md). A country not yet in the snapshot still falls back
+> to a live fetch, so a cold load is still possible for a genuinely uncaptured country, just no
+> longer the normal case.
 
 ## Agreed features
 

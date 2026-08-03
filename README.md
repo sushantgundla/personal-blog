@@ -1,68 +1,69 @@
 # sushantgundla.com
 
-Personal blog built with Next.js, Tailwind CSS, and MDX.
+Sushant Gundla's personal site: articles, projects, and a home page that can swap between
+thirty different visual designs ("dimensions") at runtime. Built with Next.js App Router,
+hand-written CSS, and MDX content.
 
-## Quick Start
+**Live:** [sushantgundla.com](https://sushantgundla.com)
+
+## Quick start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000). Full setup notes:
+[`docs/guides/local-development.md`](docs/guides/local-development.md).
 
-## Writing a New Post
+## Documentation
 
-1. Create a file in `content/articles/your-post-slug.mdx`
-2. Add frontmatter:
+Start at [`docs/README.md`](docs/README.md) — it indexes everything: architecture, the Atlas
+country-explorer feature, how-to guides, and project history. Common starting points:
 
-```mdx
----
-title: "Your Post Title"
-date: "2026-03-20"
-description: "A short description that appears in the article listing."
-tags: ["AI", "Engineering"]
----
+- Publish an article → [`docs/guides/writing-content.md`](docs/guides/writing-content.md)
+- Add a new design → [`docs/guides/adding-a-dimension.md`](docs/guides/adding-a-dimension.md)
+- Ship to production → [`docs/guides/deployment.md`](docs/guides/deployment.md)
+- Why the site looks the way it does → [`docs/history/redesign-2026-08.md`](docs/history/redesign-2026-08.md)
 
-Your content here. Supports **bold**, *italic*, `code`, 
-## headings, lists, blockquotes, and code blocks.
-```
-
-3. `git add . && git commit -m "new post" && git push`
-4. Vercel auto-deploys in ~45 seconds.
-
-## Project Structure
+## Directory layout
 
 ```
 ├── app/
-│   ├── layout.tsx          # Root layout (header, footer, fonts)
-│   ├── page.tsx            # Homepage
-│   ├── globals.css         # Design system + typography
-│   ├── articles/
-│   │   ├── page.tsx        # Articles listing
-│   │   └── [slug]/page.tsx # Individual article
-│   └── about/page.tsx      # About page
-├── components/
-│   ├── Header.tsx          # Nav + dark mode toggle
-│   ├── Footer.tsx
-│   ├── ArticleCard.tsx     # Article preview card
-│   └── ThemeProvider.tsx   # Dark mode provider
+│   ├── (main)/            # Current site — home, /about, /articles, /projects, /radar
+│   │   ├── v2.css         # Design token + shared class vocabulary (the "dimension" contract)
+│   │   ├── _components/    # Shared page sections (Hero, Signal, RadarView, Writing, ...)
+│   │   └── _lib/           # Route-group-local helpers
+│   ├── atlas/              # Country-explorer feature (/atlas)
+│   ├── old/                # Previous home page design, kept at /old, noindex'd
+│   ├── v4/                 # An earlier design iteration, predates the dimension redesign
+│   ├── layout.tsx          # Root layout
+│   └── globals.css         # Base global styles
+├── components/              # Shared components (SiteFrame, etc.)
 ├── content/
-│   └── articles/           # Your MDX blog posts go here
+│   ├── articles/            # Blog post MDX
+│   ├── radar/                # Radar (Pulses/Picks) MDX
+│   └── atlas/                 # Atlas content
 ├── lib/
-│   ├── articles.ts         # MDX reading utilities
-│   └── config.ts           # Site configuration (edit this!)
-└── public/                 # Static assets (favicon, images)
+│   ├── config.ts             # Site metadata, bio, social links, skills, work history
+│   ├── articles.ts           # MDX reading + frontmatter parsing
+│   ├── projects.ts           # Project data
+│   ├── radar.ts              # Radar data
+│   └── atlas/                 # Atlas data layer
+├── public/v2/themes/         # The 30 design theme stylesheets
+└── docs/                     # All documentation — start at docs/README.md
 ```
 
-## Customization
+## Dev commands
 
-Edit `lib/config.ts` to update your name, bio, social links, and work history.
+```bash
+npm run dev      # Start dev server at localhost:3000
+npm run build    # Production build
+npm run lint     # ESLint
+```
 
 ## Deploy
 
-Push to GitHub. Connect to [Vercel](https://vercel.com). Done.
-
-## Domain
-
-Connect `sushantgundla.com` via Vercel project settings > Domains.
+Push to GitHub → Vercel auto-deploys, usually within a minute. Domain
+`sushantgundla.com` is connected via Vercel project settings > Domains. Details:
+[`docs/guides/deployment.md`](docs/guides/deployment.md).

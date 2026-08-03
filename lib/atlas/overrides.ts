@@ -12,7 +12,7 @@
 // designed-for empty state, not a bug.
 //
 // Populated 2026-08-02 for the G20 plus a couple of others, verified via
-// live web search that day (see docs/superpowers/research — the process
+// live web search that day (see docs/atlas/data-sources.md — the process
 // this file's initial entries came from). Re-verify before relying on this
 // for anything beyond the Atlas demo, and re-check periodically: several of
 // these (France, Japan, South Korea, Canada, Germany) have changed more

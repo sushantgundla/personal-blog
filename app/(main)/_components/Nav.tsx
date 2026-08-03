@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 /**
  * Fixed top bar: wordmark on the left, four section links on the right.
  *
- * Built entirely from the CONTRACT.md §2 class vocabulary (.v2-mono,
+ * Built entirely from the docs/architecture/design-system.md §3 class vocabulary (.v2-mono,
  * .v2-btn-quiet, .v2-link) so every one of the 30 theme files repaints it
  * for free. Only structural concerns — fixed positioning, flex layout,
  * gaps, z-index, the scroll-driven hide/show transform — are set inline or

@@ -24,7 +24,7 @@ function commonsFilePage(imageUrl: string): string | null {
 
 /**
  * The mandatory attribution panel at the foot of every dossier — see
- * docs/superpowers/specs/2026-08-02-country-explorer-design.md §3.7.
+ * docs/atlas/design.md §3.7.
  * Every line is conditional on that source having actually succeeded for
  * this country: a dead source just means one fewer credit, never a
  * broken link or a claim the page can't back up.

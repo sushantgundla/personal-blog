@@ -1,6 +1,6 @@
 // World Bank v2 API client.
 //
-// Every trap in docs/superpowers/specs/2026-08-02-country-explorer-design.md
+// Every trap in docs/atlas/design.md
 // §3.6 is handled here:
 // - `source=2` is mandatory on every multi-indicator call.
 // - Batch at 25 indicators per call (40 works, 60 is rejected).

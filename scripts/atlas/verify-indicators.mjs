@@ -2,7 +2,7 @@
 // Pre-ship sweep of every indicator code in lib/atlas/indicators.ts.
 //
 // Runs codes in batches of 20, 10+ seconds apart (the World Bank throttles
-// hard — see docs/superpowers/research/country-numbers-catalog.md), against
+// hard — see docs/atlas/data-sources.md), against
 // a sample of 8 varied countries: a rich one (IND), a sparse one (TUV), one
 // entirely absent from the World Bank (TWN, expected to return nothing),
 // and five more spanning income levels and regions. Prints which codes
