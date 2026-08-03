@@ -2,7 +2,36 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-type Mode = 'none' | 'grid' | 'dots' | 'rain' | 'stars' | 'embed' | 'scan' | 'waves'
+type Mode =
+  | 'none'
+  | 'grid'
+  | 'dots'
+  | 'rain'
+  | 'stars'
+  | 'embed'
+  | 'scan'
+  | 'waves'
+  | 'sonar'
+  | 'flow'
+  | 'halftone'
+  | 'sun'
+  | 'weave'
+
+const MODES: Mode[] = [
+  'none',
+  'grid',
+  'dots',
+  'rain',
+  'stars',
+  'embed',
+  'scan',
+  'waves',
+  'sonar',
+  'flow',
+  'halftone',
+  'sun',
+  'weave',
+]
 
 type Colors = {
   accent: string
@@ -26,11 +55,7 @@ const MAX_DPR = 2
 function readVars(): { mode: Mode; colors: Colors } {
   const styles = getComputedStyle(document.documentElement)
   const rawMode = styles.getPropertyValue('--prism-backdrop').trim()
-  const mode: Mode = (
-    ['none', 'grid', 'dots', 'rain', 'stars', 'embed', 'scan', 'waves'].includes(rawMode)
-      ? rawMode
-      : 'none'
-  ) as Mode
+  const mode: Mode = ((MODES as string[]).includes(rawMode) ? rawMode : 'none') as Mode
   const accent = styles.getPropertyValue('--prism-accent').trim() || DEFAULT_COLORS.accent
   const accent2 = styles.getPropertyValue('--prism-accent-2').trim() || DEFAULT_COLORS.accent2
   const accent3 = styles.getPropertyValue('--prism-accent-3').trim() || DEFAULT_COLORS.accent3
@@ -44,6 +69,9 @@ type DotP = { x: number; y: number; r: number; vy: number; phase: number; hueMix
 type RainP = { x: number; y: number; len: number; speed: number; alpha: number }
 type StarP = { x: number; y: number; r: number; alpha: number; twinkleSpeed: number; twinklePhase: number }
 type EmbedP = { x: number; y: number; vx: number; vy: number; hueMix: number }
+type BlipP = { angle: number; dist: number; lit: number }
+type BlobP = { x: number; y: number; vx: number; vy: number; r: number; hueMix: number }
+type MoteP = { x: number; y: number; r: number; vy: number; phase: number; alpha: number }
 
 export default function Backdrop() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -82,6 +110,14 @@ export default function Backdrop() {
     let stars: StarP[] = []
     let embed: EmbedP[] = []
     let embedLinksBuilt = false
+    let blips: BlipP[] = []
+    let blobs: BlobP[] = []
+    let motes: MoteP[] = []
+
+    let sweepAngle = 0
+    let halftoneT = 0
+    // Starts part-drawn so the first frame already shows a figure.
+    let kolamProgress = 0.3
 
     let pointerX = -9999
     let pointerY = -9999
@@ -143,6 +179,32 @@ export default function Backdrop() {
         }
       })
       embedLinksBuilt = true
+
+      // Sonar contacts: fixed bearings and ranges, so the sweep finds the same
+      // objects on every pass the way a real display would.
+      blips = Array.from({ length: 9 }, () => ({
+        angle: Math.random() * Math.PI * 2,
+        dist: 0.18 + Math.random() * 0.72,
+        lit: 0,
+      }))
+
+      blobs = Array.from({ length: 7 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.28,
+        vy: (Math.random() - 0.5) * 0.28,
+        r: Math.min(width, height) * (0.14 + Math.random() * 0.2),
+        hueMix: Math.random(),
+      }))
+
+      motes = Array.from({ length: Math.min(70, count) }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: 0.6 + Math.random() * 1.6,
+        vy: 0.08 + Math.random() * 0.22,
+        phase: Math.random() * Math.PI * 2,
+        alpha: 0.15 + Math.random() * 0.5,
+      }))
     }
 
     function resize() {
@@ -357,6 +419,262 @@ export default function Backdrop() {
       ctx.globalAlpha = 1
     }
 
+    /**
+     * Sonar — a slow bearing sweep over range rings, with contacts that light
+     * when the beam crosses them and decay afterwards. The wedge is a single
+     * conic-free arc fill; the decay is what sells it, so the sweep is
+     * deliberately slower than any other mode here.
+     */
+    function drawSonar() {
+      ctx.clearRect(0, 0, width, height)
+      const cx = width * 0.5
+      const cy = height * 0.5
+      const maxR = Math.max(width, height) * 0.62
+
+      ctx.strokeStyle = colors.line
+      ctx.lineWidth = 1
+      for (let i = 1; i <= 4; i++) {
+        ctx.globalAlpha = 0.4
+        ctx.beginPath()
+        ctx.arc(cx, cy, (maxR / 4) * i, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+      ctx.globalAlpha = 0.25
+      for (let i = 0; i < 4; i++) {
+        const a = (Math.PI / 2) * i
+        ctx.beginPath()
+        ctx.moveTo(cx, cy)
+        ctx.lineTo(cx + Math.cos(a) * maxR, cy + Math.sin(a) * maxR)
+        ctx.stroke()
+      }
+
+      sweepAngle = (sweepAngle + 0.012) % (Math.PI * 2)
+
+      // Trailing wedge, drawn as stacked slices so it fades behind the beam.
+      const slices = 26
+      const spread = 0.85
+      for (let i = 0; i < slices; i++) {
+        const t = i / slices
+        ctx.globalAlpha = 0.1 * (1 - t)
+        ctx.fillStyle = colors.accent
+        ctx.beginPath()
+        ctx.moveTo(cx, cy)
+        ctx.arc(
+          cx,
+          cy,
+          maxR,
+          sweepAngle - spread * t - spread / slices,
+          sweepAngle - spread * t
+        )
+        ctx.closePath()
+        ctx.fill()
+      }
+
+      ctx.globalAlpha = 0.7
+      ctx.strokeStyle = colors.accent
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.moveTo(cx, cy)
+      ctx.lineTo(cx + Math.cos(sweepAngle) * maxR, cy + Math.sin(sweepAngle) * maxR)
+      ctx.stroke()
+
+      for (const b of blips) {
+        let delta = sweepAngle - b.angle
+        while (delta < 0) delta += Math.PI * 2
+        while (delta > Math.PI * 2) delta -= Math.PI * 2
+        if (delta < 0.05) b.lit = 1
+        b.lit *= 0.985
+        if (b.lit < 0.01) continue
+        const bx = cx + Math.cos(b.angle) * maxR * b.dist
+        const by = cy + Math.sin(b.angle) * maxR * b.dist
+        ctx.globalAlpha = b.lit * 0.85
+        ctx.fillStyle = colors.accent2
+        ctx.beginPath()
+        ctx.arc(bx, by, 2.5, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.globalAlpha = b.lit * 0.25
+        ctx.beginPath()
+        ctx.arc(bx, by, 9 - b.lit * 4, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.globalAlpha = 1
+    }
+
+    /**
+     * Flow — soft drifting masses in additive blend. No real metaball field
+     * (that needs a per-pixel pass); overlapping radial falloffs under
+     * 'lighter' read the same at this scale for a fraction of the cost.
+     */
+    function drawFlow() {
+      ctx.clearRect(0, 0, width, height)
+      ctx.globalCompositeOperation = 'lighter'
+      for (const b of blobs) {
+        b.x += b.vx
+        b.y += b.vy
+        if (b.x < -b.r || b.x > width + b.r) b.vx *= -1
+        if (b.y < -b.r || b.y > height + b.r) b.vy *= -1
+        const wobble = 1 + Math.sin(driftT * 0.6 + b.hueMix * 6) * 0.12
+        const r = b.r * wobble
+        const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r)
+        const tint = mixColor(colors.accent, colors.accent3, b.hueMix)
+        grad.addColorStop(0, tint)
+        grad.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.globalAlpha = 0.3
+        ctx.fillStyle = grad
+        ctx.beginPath()
+        ctx.arc(b.x, b.y, r, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.globalAlpha = 1
+    }
+
+    /**
+     * Halftone — a fixed print lattice whose dot gain rides a slow diagonal
+     * wave. The lattice never moves; only the dot size does, which is what
+     * separates it from the existing `dots` field.
+     */
+    function drawHalftone() {
+      ctx.clearRect(0, 0, width, height)
+      halftoneT += 0.01
+      const pitch = 22
+      const maxR = pitch * 0.34
+      ctx.fillStyle = colors.line
+      for (let y = pitch / 2; y < height + pitch; y += pitch) {
+        for (let x = pitch / 2; x < width + pitch; x += pitch) {
+          const wave =
+            Math.sin(x * 0.006 + halftoneT) * 0.5 +
+            Math.sin(y * 0.009 - halftoneT * 0.7) * 0.5
+          const r = maxR * (0.25 + 0.75 * ((wave + 1) / 2))
+          if (r < 0.3) continue
+          ctx.globalAlpha = 0.55
+          ctx.beginPath()
+          ctx.arc(x, y, r, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+      ctx.globalAlpha = 1
+    }
+
+    /**
+     * Sun — angled light shafts drifting across the page with dust rising
+     * through them. The only mode built for a light dimension: everything is
+     * additive warmth rather than a mark on a dark field.
+     */
+    function drawSun() {
+      ctx.clearRect(0, 0, width, height)
+
+      // Light must be LIGHTER than the page it falls on. Painting the raw
+      // accent at low alpha onto a cream ground darkens it, which reads as a
+      // smudge rather than a shaft — so the accent is blended most of the way
+      // to white first. Still theme-derived, just the light end of it.
+      const tint = mixColor(colors.accent2, '#ffffff', 0.68)
+      const shafts = [
+        { offset: 0.1, w: 0.18, speed: 0.13 },
+        { offset: 0.44, w: 0.28, speed: 0.09 },
+        { offset: 0.76, w: 0.15, speed: 0.17 },
+      ]
+      // The shafts lean. The gradient has to lean with them: drawing an
+      // axis-aligned gradient inside a skewed polygon clips it against the
+      // slanted edges and leaves a hard diagonal seam down the page.
+      const lean = 0.42
+      ctx.save()
+      ctx.transform(1, 0, -lean, 1, 0, 0)
+      for (const s of shafts) {
+        const drift = ((driftT * s.speed) % 1.8) - 0.4
+        const x = (s.offset + drift * 0.1) * width
+        const w = s.w * width
+        const grad = ctx.createLinearGradient(x, 0, x + w, 0)
+        grad.addColorStop(0, 'rgba(0,0,0,0)')
+        grad.addColorStop(0.5, tint)
+        grad.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.globalAlpha = 0.3
+        ctx.fillStyle = grad
+        // Widened vertically so the skew still covers the whole viewport.
+        ctx.fillRect(x, -lean * height, w, height * (1 + lean * 2))
+      }
+      ctx.restore()
+
+      for (const m of motes) {
+        m.y -= m.vy
+        m.x += Math.sin(driftT * 0.4 + m.phase) * 0.25
+        if (m.y < -6) {
+          m.y = height + 6
+          m.x = Math.random() * width
+        }
+        // Dust is seen against the light, so it takes the darker accent.
+        ctx.globalAlpha = m.alpha * 0.4
+        ctx.fillStyle = colors.accent
+        ctx.beginPath()
+        ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.globalAlpha = 1
+    }
+
+    /**
+     * Weave — a kolam. A pulli (dot) lattice with a single continuous line
+     * looping around the dots, drawn progressively as though by hand, then
+     * held and restarted. Segment count is derived from the lattice so it
+     * scales with the viewport without re-seeding.
+     */
+    function drawWeave() {
+      ctx.clearRect(0, 0, width, height)
+      const pitch = 74
+      const cols = Math.ceil(width / pitch) + 1
+      const rows = Math.ceil(height / pitch) + 1
+      const ox = (width - (cols - 1) * pitch) / 2
+      const oy = (height - (rows - 1) * pitch) / 2
+
+      ctx.fillStyle = colors.line
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          ctx.globalAlpha = 0.8
+          ctx.beginPath()
+          ctx.arc(ox + c * pitch, oy + r * pitch, 1.8, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+
+      const loops = (cols - 1) * (rows - 1)
+      // ~7s for a full figure, then a short hold, then it starts over. The
+      // first draft took ~26s, which meant the page sat on a bare background
+      // for the whole time anyone was actually looking at it.
+      kolamProgress += 1 / (loops * 0.45 + 40)
+      // Never restart from empty — a kolam is swept away and redrawn, but the
+      // threshold is not bare while you watch.
+      if (kolamProgress > 1.3) kolamProgress = 0.3
+      const drawn = Math.floor(Math.min(1, kolamProgress) * loops)
+
+      // Rounded diamonds on a checkerboard, each one looping around a pulli and
+      // meeting its neighbours at the corners — the interlocking sikku figure.
+      // The first attempt drew a 270-degree arc in every cell, which filled the
+      // page with identical C shapes and read as wallpaper rather than a drawn
+      // line. Half the cells, a finer stroke and a closed figure fixed it.
+      ctx.strokeStyle = colors.accent
+      ctx.lineWidth = 1.1
+      ctx.lineJoin = 'round'
+      const R = pitch * 0.5
+      const k = R * 0.62
+      for (let i = 0; i < drawn; i++) {
+        const c = i % (cols - 1)
+        const r = Math.floor(i / (cols - 1))
+        if ((c + r) % 2 !== 0) continue
+        const x = ox + c * pitch + pitch / 2
+        const y = oy + r * pitch + pitch / 2
+        // Age the stroke so the leading edge is brightest.
+        ctx.globalAlpha = 0.14 + 0.26 * Math.min(1, (i + 1) / Math.max(1, drawn))
+        ctx.beginPath()
+        ctx.moveTo(x, y - R)
+        ctx.quadraticCurveTo(x + k, y - k, x + R, y)
+        ctx.quadraticCurveTo(x + k, y + k, x, y + R)
+        ctx.quadraticCurveTo(x - k, y + k, x - R, y)
+        ctx.quadraticCurveTo(x - k, y - k, x, y - R)
+        ctx.stroke()
+      }
+      ctx.globalAlpha = 1
+    }
+
     function drawFrame() {
       driftT += 0.016
       switch (mode) {
@@ -380,6 +698,21 @@ export default function Backdrop() {
           break
         case 'waves':
           drawWaves()
+          break
+        case 'sonar':
+          drawSonar()
+          break
+        case 'flow':
+          drawFlow()
+          break
+        case 'halftone':
+          drawHalftone()
+          break
+        case 'sun':
+          drawSun()
+          break
+        case 'weave':
+          drawWeave()
           break
         default:
           ctx.clearRect(0, 0, width, height)

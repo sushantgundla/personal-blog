@@ -47,3 +47,28 @@
 .prism-card-lift:hover { box-shadow: var(--prism-shadow-lg), var(--prism-glow) !important; }
 .prism-btn:hover { box-shadow: var(--prism-glow) !important; }
 .prism-btn-ghost:hover { border-color: var(--prism-accent) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Ember is the default and the first thing anyone sees, so it carries the
+   slowest, least mannered entrance in the set: a long warm rise on the base
+   easing, nothing else. Everything expressive is left to the other twenty-nine.
+   Also restores --prism-faint to the base 0.45. This file had kept the old
+   0.30, which is the value the base deliberately raised for contrast. */
+:root {
+  --prism-faint: rgba(245, 240, 234, 0.45);
+
+  --prism-reveal-y: 30px;
+  --prism-reveal-dur: 1s;
+  --prism-lift: -8px;
+
+  --prism-texture-opacity: 0.05;
+  --prism-orb-opacity: 0.3;
+
+  /* Fraunces is variable and ships a SOFT axis; softening the terminals is
+     what keeps a 900-weight display face from reading as a slab. */
+  --prism-title-variation: 'SOFT' 40, 'WONK' 0;
+  --prism-body-leading: 1.7;
+}
+
+.prism-panel { background-image: radial-gradient(120% 100% at 50% 0%, rgba(255,107,53,0.05), transparent 60%) !important; }
+.prism-eyebrow { color: var(--prism-accent-2) !important; }

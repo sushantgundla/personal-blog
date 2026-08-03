@@ -1,6 +1,6 @@
 # Adding a Dimension
 
-How to add a 31st visual theme ("dimension") to the site. Dimensions are the site's
+How to add a 37th visual theme ("dimension") to the site. Dimensions are the site's
 signature feature: the whole homepage repaints from one CSS file swap, no page reload.
 Full rules live in `docs/architecture/design-system.md` (the original build contract) —
 this guide is the practical walkthrough. Read that doc too before you start; it is the
@@ -31,13 +31,75 @@ That discipline is what makes a same-page, no-reload repaint possible.
    ```
    `tier: 'core'` shows in the always-visible row; `tier: 'more'` sits behind "More
    realities…". Pick `more` unless you have a reason to promote it — the core row is
-   deliberately short (currently 8 of 30 dimensions).
+   deliberately short (currently 11 of 36 dimensions).
 3. **Write the tokens** — see **Tokens to re-set** below.
 4. **Add the theme-only rules** — the `!important` overrides for what tokens can't express.
 5. **Verify** against the checklist at the end before shipping.
 
 No other file needs to change. The picker UI (`DimensionHUD.tsx`, the "Design curious?"
 button in the bottom-left) reads `DIMENSIONS` directly.
+
+## Motion identity, material and density
+
+A palette is not a design language. These three groups are what separate one dimension from
+another once the colours are set, and a new dimension should use them deliberately rather
+than inheriting the defaults.
+
+### Motion identity
+
+Every dimension authors its own entrance. Pick **one** gesture — travel, or scale, or blur —
+and let it follow from the material. Terminal and Xerox hard-cut with no travel at all;
+Bauhaus slides in along the composition axis; Glass resolves out of focus; Brutalist drops
+and bounces. Two gestures at once nearly always reads as fussy.
+
+| Token | Default | Note |
+|---|---|---|
+| `--prism-reveal-y` | `24px` | Vertical travel. Negative enters from above (Matrix). |
+| `--prism-reveal-x` | `0px` | Lateral travel. |
+| `--prism-reveal-scale` | `1` | Below 1 grows into place, above 1 settles down onto it. |
+| `--prism-reveal-blur` | `0px` | Glass, Latent and Monsoon; expensive, so use it on purpose. |
+| `--prism-reveal-dur` | `0.8s` | Range in use: `0.16s` (Terminal) to `1.4s` (Sonar). |
+| `--prism-reveal-ease` | `var(--prism-ease)` | `steps(n, end)` for anything that redraws rather than moves. |
+| `--prism-lift` / `--prism-lift-x` | `-6px` / `0px` | Hover travel. **Positive presses in** — Brutalist and Xerox push into their hard shadow. |
+| `--prism-lift-sm` / `--prism-lift-sm-x` | `-2px` / `0px` | Same, for buttons and chips. |
+
+### Material
+
+Page grain and card fill are tokens now, not `!important` overrides. Do not re-add a
+`.prism-noise` or `.prism-orb` rule to a theme file — those were all retired, and an
+`!important` rule in the theme silently beats the token.
+
+| Token | Default | Note |
+|---|---|---|
+| `--prism-texture` | fractal-noise SVG | Page grain. `none` turns it off. |
+| `--prism-texture-size` / `-opacity` / `-blend` | `auto` / `0.045` / `overlay` | |
+| `--prism-surface-texture` | `none` | Card and panel fill: halftone, ruled lines, a specular sweep. |
+| `--prism-surface-texture-size` / `-blend` | `auto` / `normal` | |
+| `--prism-orb-opacity` / `-blur` / `-saturate` / `-blend` | `0.28` / `80px` / `100%` / `normal` | Set opacity to `0` instead of hiding the element. |
+
+Because `--prism-surface-texture` is a background *image*, `.prism-card` sets
+`background-color` and `background-image` separately. **Never use the `background` shorthand
+on a card or panel in a theme file** — it resets the image and wipes the texture.
+
+### Letterform and edge
+
+| Token | Default | Note |
+|---|---|---|
+| `--prism-title-transform` | `none` | `uppercase` for Swiss, Bauhaus, Sonar. |
+| `--prism-title-leading` / `-leading-xl` | `0.98` / `0.88` | |
+| `--prism-title-style` | `normal` | |
+| `--prism-title-variation` | `normal` | `font-variation-settings`. Fraunces ships `SOFT` and `WONK`. |
+| `--prism-title-shadow` | `none` | Riso's misregistration, Synthwave's chrome. |
+| `--prism-title-stroke` / `-stroke-color` | `0` / `transparent` | Outline display type. |
+| `--prism-body-leading` | `1.65` | |
+| `--prism-border-style` | `solid` | `dashed` (Blueprint), `dotted` (Kolam). Applies to every container at once. |
+| `--prism-card-clip` / `--prism-btn-clip` | `none` | Corner cuts — Cyberpunk's bevel. |
+
+### Density
+
+`--prism-density` (default `1`) multiplies `--prism-section-y`. It is the only layout token a
+theme may set. Broadsheet runs `0.6` because newsprint is dense; Sonar runs `1.2` because
+nothing at that depth is close together. Stay roughly inside `0.6`–`1.3`.
 
 ## Tokens to re-set
 
@@ -46,7 +108,9 @@ Full table is in `docs/architecture/design-system.md` §1 — the categories are
 `--prism-text`, `--prism-accent`, etc.), shape & depth (`--prism-radius`, `--prism-shadow`, …), type
 (`--prism-font-display`, `--prism-font-body`, `--prism-display-weight`, …), and motion
 (`--prism-ease`, `--prism-dur`). Do **not** touch the layout tokens (`--prism-max`, `--prism-gutter`,
-`--prism-section-y`) — those are structural and themes never override them.
+`--prism-section-y`) — those are structural and themes never override them. The one
+exception is `--prism-density`, a multiplier on the section rhythm; see **Motion identity,
+material and density** below.
 
 ### The three JS-read tokens
 
@@ -55,7 +119,7 @@ use one of the listed values exactly — a typo silently falls back to a default
 
 | Token | Read by | Valid values |
 |---|---|---|
-| `--prism-backdrop` | background effect behind the page | `none`, `grid`, `dots`, `rain`, `stars`, `embed`, `scan`, `waves` |
+| `--prism-backdrop` | background effect behind the page | `none`, `grid`, `dots`, `rain`, `stars`, `embed`, `scan`, `waves`, `sonar`, `flow`, `halftone`, `sun`, `weave` |
 | `--prism-cursor` | custom cursor style | `default`, `ring`, `square`, `block`, `crosshair` |
 | `--prism-enter` | transition played when switching *into* this theme | `tear`, `shatter`, `scanline`, `pixelate`, `iris`, `rewind`, `collapse` |
 

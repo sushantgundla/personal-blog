@@ -1,0 +1,145 @@
+/* Broadsheet — morning edition. Newsprint stock, hairline column rules, one
+   spot red. The only dense dimension in the set: everything else is airy, so
+   this one earns its place by tightening leading, killing radius and shadow
+   entirely, and letting rules rather than boxes do the dividing. */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Libre+Franklin:wght@400;600;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap');
+
+:root {
+  --prism-bg: #e9e4d8;
+  --prism-bg-2: #e0dacb;
+  --prism-surface: #f2eee4;
+  --prism-surface-2: #e6e1d3;
+  --prism-surface-3: #d8d2c0;
+  --prism-text: #14120f;
+  --prism-muted: rgba(20, 18, 15, 0.68);
+  --prism-faint: rgba(20, 18, 15, 0.5);
+  --prism-line: rgba(20, 18, 15, 0.22);
+  --prism-line-2: rgba(20, 18, 15, 0.55);
+  --prism-accent: #a4201b;
+  --prism-accent-2: #1c3f6e;
+  --prism-accent-3: #6b6255;
+  --prism-accent-soft: rgba(164, 32, 27, 0.09);
+  --prism-on-accent: #f7f4ec;
+
+  /* Print has no corners and no elevation. Depth here is ink weight only. */
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 0px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: none;
+  --prism-glow: 0 0 0 rgba(0, 0, 0, 0);
+
+  --prism-font-display: 'Playfair Display', Georgia, serif;
+  --prism-font-head: 'Libre Franklin', 'Helvetica Neue', sans-serif;
+  --prism-font-body: 'Source Serif 4', Georgia, serif;
+  --prism-font-mono: 'Libre Franklin', ui-monospace, monospace;
+  --prism-display-weight: 900;
+  --prism-display-tracking: -0.028em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.14em;
+
+  --prism-title-leading: 0.9;
+  --prism-title-leading-xl: 0.84;
+  --prism-body-leading: 1.52;
+
+  --prism-ease: cubic-bezier(0.2, 0, 0, 1);
+  --prism-dur: 0.28s;
+  --prism-dur-fast: 0.14s;
+
+  /* The press stops, the ink is on the page. Short, hard, barely any travel. */
+  --prism-reveal-y: 7px;
+  --prism-reveal-dur: 0.3s;
+  --prism-reveal-ease: cubic-bezier(0.2, 0, 0, 1);
+  --prism-lift: 0px;
+  --prism-lift-sm: 0px;
+
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.14;
+  --prism-texture-blend: multiply;
+  /* Halftone rosette in the card fills — the screen a photo is printed with. */
+  --prism-surface-texture: radial-gradient(circle, rgba(20, 18, 15, 0.075) 0.9px, transparent 1.3px);
+  --prism-surface-texture-size: 5px 5px;
+  --prism-surface-texture-blend: multiply;
+  --prism-orb-opacity: 0;
+
+  --prism-backdrop: halftone;
+  --prism-cursor: default;
+  --prism-enter: pixelate;
+
+  --prism-density: 0.6;
+}
+
+body { background: var(--prism-bg) !important; }
+
+/* Column rules, not boxes. A card is defined by the hairline down its left and
+   the rule across its top — the way a newspaper divides a page. */
+.prism-card {
+  border: none !important;
+  border-top: 2px solid var(--prism-line-2) !important;
+  padding-top: clamp(14px, 2vw, 20px) !important;
+}
+
+.prism-card-lift:hover { background-color: var(--prism-surface-2) !important; }
+
+.prism-panel {
+  border: 1px solid var(--prism-line-2) !important;
+  border-width: 3px 1px 1px 1px !important;
+}
+
+.prism-rule { height: 3px !important; background: var(--prism-text) !important; }
+
+/* Masthead treatment: the display face is the only thing allowed to be big. */
+.prism-title { color: var(--prism-text) !important; }
+.prism-head { font-weight: 800 !important; letter-spacing: -0.015em !important; }
+
+.prism-eyebrow {
+  color: var(--prism-accent) !important;
+  font-weight: 800 !important;
+  border-bottom: 2px solid var(--prism-accent) !important;
+  padding-bottom: 0.3em !important;
+}
+
+.prism-btn {
+  background: var(--prism-text) !important;
+  color: var(--prism-bg) !important;
+  border: none !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  font-size: 0.8rem !important;
+}
+.prism-btn:hover { background: var(--prism-accent) !important; }
+
+.prism-btn-ghost {
+  border: 2px solid var(--prism-text) !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  font-size: 0.8rem !important;
+}
+.prism-btn-ghost:hover { background: var(--prism-text) !important; color: var(--prism-bg) !important; }
+
+.prism-chip {
+  color: var(--prism-text) !important;
+  border: none !important;
+  border-left: 1px solid var(--prism-line-2) !important;
+  background: transparent !important;
+  font-size: 0.74rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+.prism-chip-on { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; }
+
+.prism-badge {
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
+  border: none !important;
+  font-weight: 800 !important;
+}
+
+.prism-frame { border: 1px solid var(--prism-line-2) !important; filter: contrast(1.12) saturate(0.35) !important; }
+.prism-kbd { border: 1px solid var(--prism-text) !important; box-shadow: none !important; }
+.prism-num { font-family: var(--prism-font-display) !important; font-weight: 900 !important; }

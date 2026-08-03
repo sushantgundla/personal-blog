@@ -43,14 +43,6 @@
 
 body { background: var(--prism-bg) !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise {
-  display: block !important;
-  opacity: 0.12 !important;
-  background: repeating-linear-gradient(0deg, rgba(0, 255, 213, 0.5) 0px, rgba(0, 255, 213, 0.5) 1px, transparent 1px, transparent 3px) !important;
-  mix-blend-mode: screen !important;
-}
-
 .prism-card, .prism-panel {
   background: var(--prism-surface) !important;
   border: 1px solid var(--prism-line) !important;
@@ -120,4 +112,22 @@ body { background: var(--prism-bg) !important; }
 .prism-dot {
   background: var(--prism-accent) !important;
   box-shadow: 0 0 6px rgba(0, 255, 213, 0.8) !important;
+}
+
+/* --- Motion identity & material ------------------------------------
+   The trace sweeps left to right at constant speed. Linear, always linear —
+   a beam does not ease. */
+:root {
+  --prism-reveal-x: -36px;
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.5s;
+  --prism-reveal-ease: linear;
+  --prism-lift: -2px;
+  --prism-body-leading: 1.58;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture: repeating-linear-gradient(0deg, rgba(0,255,213,0.5) 0px, rgba(0,255,213,0.5) 1px, transparent 1px, transparent 3px);
+  --prism-texture-opacity: 0.12;
+  --prism-texture-blend: screen;
 }

@@ -44,9 +44,6 @@
 body { background: var(--prism-bg) !important; }
 .prism-band { background: var(--prism-bg-2) !important; }
 
-.prism-orb { display: block !important; opacity: 0.5 !important; filter: blur(90px) saturate(200%) !important; mix-blend-mode: screen !important; }
-.prism-noise { opacity: 0.05 !important; }
-
 .prism-title {
   text-shadow:
     0 0 8px rgba(255,0,128,0.8),
@@ -113,3 +110,23 @@ body { background: var(--prism-bg) !important; }
 }
 
 .prism-dot { box-shadow: 0 0 10px currentColor !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Read through wet glass: a slow rise with a little haze burning off. */
+:root {
+  --prism-reveal-y: 34px;
+  --prism-reveal-blur: 7px;
+  --prism-reveal-dur: 0.95s;
+  --prism-lift: -8px;
+
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.07;
+  --prism-texture-size: 420px;
+  --prism-texture-blend: screen;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0.5;
+  --prism-orb-blur: 90px;
+  --prism-orb-saturate: 200%;
+  --prism-orb-blend: screen;
+}

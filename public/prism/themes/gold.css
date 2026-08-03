@@ -42,18 +42,15 @@
 
 body { background: var(--prism-bg) !important; }
 
-.prism-orb { display: none !important; }
-
 .prism-card, .prism-panel {
-  background: var(--prism-surface) !important;
+  background-color: var(--prism-surface) !important;
   box-shadow: none !important;
 }
 .prism-card-lift:hover {
   border-color: var(--prism-line-2) !important;
-  background: var(--prism-surface-2) !important;
+  background-color: var(--prism-surface-2) !important;
   box-shadow: none !important;
-  transform: none !important;
-}
+  }
 
 .prism-btn {
   background: transparent !important;
@@ -64,7 +61,6 @@ body { background: var(--prism-bg) !important; }
 .prism-btn:hover {
   background: var(--prism-accent) !important;
   color: var(--prism-on-accent) !important;
-  transform: none !important;
   box-shadow: var(--prism-glow) !important;
 }
 
@@ -73,7 +69,7 @@ body { background: var(--prism-bg) !important; }
   border: 1px solid var(--prism-line) !important;
   color: var(--prism-muted) !important;
 }
-.prism-btn-ghost:hover { border-color: var(--prism-line-2) !important; transform: none !important; }
+.prism-btn-ghost:hover { border-color: var(--prism-line-2) !important; }
 
 .prism-chip {
   background: transparent !important;
@@ -87,7 +83,7 @@ body { background: var(--prism-bg) !important; }
 }
 
 .prism-icon-btn { box-shadow: none !important; }
-.prism-icon-btn:hover { transform: none !important; box-shadow: none !important; }
+.prism-icon-btn:hover { box-shadow: none !important; }
 
 .prism-frame { box-shadow: none !important; }
 
@@ -105,3 +101,25 @@ body { background: var(--prism-bg) !important; }
 .prism-rule { background: var(--prism-line) !important; }
 
 .prism-dot { background: var(--prism-accent) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Restraint as luxury: the slowest plain rise in the set, no scale, no blur.
+   Expensive things move slowly and do not fidget. */
+:root {
+  --prism-reveal-y: 22px;
+  --prism-reveal-dur: 1.25s;
+  --prism-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Bookbinding cloth. */
+  --prism-surface-texture:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.03) 0 2px, transparent 2px 4px);
+  --prism-body-leading: 1.75;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: 0px;
+  --prism-lift-sm: 0px;
+}

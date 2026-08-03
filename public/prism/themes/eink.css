@@ -43,9 +43,6 @@
 
 body { background: var(--prism-bg) !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise { display: none !important; }
-
 .prism-card,
 .prism-panel {
   background: transparent !important;
@@ -55,8 +52,7 @@ body { background: var(--prism-bg) !important; }
   background: transparent !important;
   border-color: var(--prism-line-2) !important;
   box-shadow: none !important;
-  transform: none !important;
-}
+  }
 
 .prism-btn {
   background: var(--prism-text) !important;
@@ -65,7 +61,6 @@ body { background: var(--prism-bg) !important; }
 }
 .prism-btn:hover {
   background: var(--prism-accent-2) !important;
-  transform: none !important;
   box-shadow: none !important;
 }
 
@@ -76,8 +71,7 @@ body { background: var(--prism-bg) !important; }
 }
 .prism-btn-ghost:hover {
   background: var(--prism-accent-soft) !important;
-  transform: none !important;
-}
+  }
 
 .prism-btn-quiet:hover { color: var(--prism-text) !important; }
 
@@ -96,8 +90,7 @@ body { background: var(--prism-bg) !important; }
 .prism-icon-btn:hover {
   background: var(--prism-accent-soft) !important;
   border-color: var(--prism-text) !important;
-  transform: none !important;
-}
+  }
 
 .prism-frame { box-shadow: none !important; }
 
@@ -115,3 +108,23 @@ body { background: var(--prism-bg) !important; }
 .prism-rule { background: var(--prism-line-2) !important; }
 
 .prism-dot { background: var(--prism-text) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   An e-ink panel refreshes in discrete passes and then holds. Stepped easing
+   reproduces that; no travel, no lift, no hover float anywhere. */
+:root {
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.3s;
+  --prism-reveal-ease: steps(2, end);
+
+  --prism-texture-opacity: 0.03;
+  --prism-texture-blend: multiply;
+  --prism-body-leading: 1.75;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: 0px;
+  --prism-lift-sm: 0px;
+}

@@ -50,6 +50,12 @@ export const DIMENSIONS: Dimension[] = [
   { slug: 'descent', name: 'Gradient Descent', blurb: 'Loss-landscape contours, cool to warm as loss drops.', tier: 'more' },
   { slug: 'xerox', name: 'Xerox', blurb: 'Fifth-generation photocopy, dithered, punk zine grit.', tier: 'more' },
   { slug: 'chalk', name: 'Chalk', blurb: 'Dark green slate, chalk dust, lecture hall hush.', tier: 'more' },
+  { slug: 'daylight', name: 'Daylight', blurb: 'Nine in the morning, sun across a white wall.', tier: 'core' },
+  { slug: 'ferro', name: 'Ferrofluid', blurb: 'Black liquid metal, surface tension, one raking highlight.', tier: 'core' },
+  { slug: 'kolam', name: 'Kolam', blurb: 'Rice flour on a swept threshold, drawn in one unbroken line.', tier: 'core' },
+  { slug: 'broadsheet', name: 'Broadsheet', blurb: 'Morning edition. Newsprint, hairline rules, one spot red.', tier: 'more' },
+  { slug: 'sonar', name: 'Sonar', blurb: 'Six hundred metres down. Slow returns, nothing in a hurry.', tier: 'more' },
+  { slug: 'marginalia', name: 'Marginalia', blurb: 'Aged stock, iron-gall ink, every label written by hand.', tier: 'more' },
 ];
 
 const STORAGE_KEY = 'prism-dimension';

@@ -3,7 +3,7 @@
    ============================================================================
    This file is the foundation for /v2. It declares every design token,
    implements every class in the CONTRACT.md §2 vocabulary, and nothing else.
-   22 theme files (public/prism/themes/*.css) re-set the :root variables and
+   36 theme files (public/prism/themes/*.css) re-set the :root variables and
    layer a small amount of !important skin on top of these classes.
 
    DISCIPLINE RULES (see CONTRACT.md):
@@ -96,6 +96,71 @@
   --prism-dur: 0.5s;
   --prism-dur-fast: 0.2s;
 
+  /* --- Motion identity --------------------------------------------------
+     The entrance is part of a design language, not a global default. Before
+     these existed every one of the thirty dimensions rose 24px and faded in
+     with the same curve, so a hard-edged press aesthetic and a soft glass one
+     arrived on screen identically. A theme now authors its own single moment:
+     Bauhaus slides in from the side, Glass resolves out of blur, E-Ink and
+     Xerox hard-cut with no travel at all.
+     Keep it to ONE gesture — travel OR scale OR blur, rarely two. */
+  --prism-reveal-y: 24px;
+  --prism-reveal-x: 0px;
+  --prism-reveal-scale: 1;
+  --prism-reveal-blur: 0px;
+  --prism-reveal-dur: 0.8s;
+  --prism-reveal-ease: var(--prism-ease);
+  /* Hover travel. Negative rises; a theme with a hard printed shadow can set
+     this positive so the card presses INTO the page instead of floating. */
+  --prism-lift: -6px;
+  --prism-lift-sm: -2px;
+  /* Horizontal companion. A hard-shadow theme presses diagonally into its own
+     drop shadow rather than straight down, so hover travel needs both axes. */
+  --prism-lift-x: 0px;
+  --prism-lift-sm-x: 0px;
+
+  /* --- Material ---------------------------------------------------------
+     The page grain used to be one hardcoded SVG turbulence that themes could
+     only hide or re-opacity. It is now a token, so a theme states its own
+     stock: newsprint fibre, halftone rosette, toner speckle, slate dust, or
+     nothing at all. --prism-surface-texture is the same idea for card fills,
+     which is why .prism-card sets background-color and background-image
+     separately rather than the background shorthand. */
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --prism-texture-size: auto;
+  --prism-texture-opacity: 0.045;
+  --prism-texture-blend: overlay;
+  --prism-surface-texture: none;
+  --prism-surface-texture-size: auto;
+  --prism-surface-texture-blend: normal;
+  --prism-orb-opacity: 0.28;
+  --prism-orb-blur: 80px;
+  --prism-orb-saturate: 100%;
+  --prism-orb-blend: normal;
+
+  /* --- Letterform -------------------------------------------------------
+     Beyond which face: how it is set. --prism-title-variation drives
+     font-variation-settings, which matters because the default display face
+     (Fraunces) is variable and ships SOFT and WONK axes that no theme could
+     reach. --prism-title-stroke gives outline display type without a theme
+     hand-rolling -webkit-text-stroke behind an !important. */
+  --prism-title-transform: none;
+  --prism-title-leading: 0.98;
+  --prism-title-leading-xl: 0.88;
+  --prism-title-style: normal;
+  --prism-title-variation: normal;
+  --prism-title-shadow: none;
+  --prism-title-stroke: 0;
+  --prism-title-stroke-color: transparent;
+  --prism-body-leading: 1.65;
+
+  /* --- Edge -------------------------------------------------------------
+     Border style and corner cuts were the two things a theme could only
+     express with an !important override on every container in turn. */
+  --prism-border-style: solid;
+  --prism-card-clip: none;
+  --prism-btn-clip: none;
+
   /* --- JS-read mode tokens ---------------------------------------------- */
   --prism-backdrop: dots;
   --prism-cursor: ring;
@@ -113,7 +178,14 @@
   --prism-gutter: clamp(16px, 3.5vw, 72px);
   /* Max line length for long-form prose only (paragraphs, not layout). */
   --prism-measure: 68ch;
-  --prism-section-y: clamp(80px, 12vh, 160px);
+  /* Vertical rhythm multiplier — the ONE layout knob a theme may turn.
+     Everything else in this group stays structural. Density is part of a design
+     language: a broadsheet is dense and a sunlit page is airy, and forcing both
+     through identical section padding made every dimension feel the same
+     regardless of its palette. Keep it inside roughly 0.6–1.3; below that
+     sections collide, above it the page stops holding together. */
+  --prism-density: 1;
+  --prism-section-y: calc(clamp(80px, 12vh, 160px) * var(--prism-density));
 }
 
 
@@ -219,15 +291,20 @@ html:has(.prism-root) body {
 .prism-title {
   font-family: var(--prism-font-display);
   font-weight: var(--prism-display-weight);
+  font-style: var(--prism-title-style);
+  font-variation-settings: var(--prism-title-variation);
   letter-spacing: var(--prism-display-tracking);
-  line-height: 0.98;
+  text-transform: var(--prism-title-transform);
+  line-height: var(--prism-title-leading);
   font-size: clamp(2rem, 5vw, 3.5rem);
   color: var(--prism-text);
+  text-shadow: var(--prism-title-shadow);
+  -webkit-text-stroke: var(--prism-title-stroke) var(--prism-title-stroke-color);
 }
 
 .prism-title-xl {
   font-size: clamp(3rem, 11vw, 9rem);
-  line-height: 0.88;
+  line-height: var(--prism-title-leading-xl);
 }
 
 .prism-head {
@@ -263,7 +340,7 @@ html:has(.prism-root) body {
 .prism-body {
   font-family: var(--prism-font-body);
   font-size: clamp(0.98rem, 1.1vw, 1.08rem);
-  line-height: 1.65;
+  line-height: var(--prism-body-leading);
   color: var(--prism-text);
   /* Cap the LINE, not the layout. The page is full-bleed by design, but a
      paragraph running the full width of a 1728px display is unreadable — the
@@ -356,16 +433,24 @@ html:has(.prism-root) body {
 /* ============================================================================
    6. CONTAINERS
    ============================================================================ */
+/* background-color and background-image are set separately, never via the
+   background shorthand — the shorthand resets background-image, which would
+   wipe --prism-surface-texture on every hover and in every theme rule that
+   only meant to change the fill. */
 .prism-card {
-  background: var(--prism-surface);
-  border: var(--prism-border-w) solid var(--prism-line);
+  background-color: var(--prism-surface);
+  background-image: var(--prism-surface-texture);
+  background-size: var(--prism-surface-texture-size);
+  background-blend-mode: var(--prism-surface-texture-blend);
+  border: var(--prism-border-w) var(--prism-border-style) var(--prism-line);
   border-radius: var(--prism-radius);
+  clip-path: var(--prism-card-clip);
   padding: clamp(20px, 3vw, 32px);
   box-shadow: var(--prism-shadow);
   transition: transform var(--prism-dur) var(--prism-ease),
     box-shadow var(--prism-dur) var(--prism-ease),
     border-color var(--prism-dur) var(--prism-ease),
-    background var(--prism-dur) var(--prism-ease);
+    background-color var(--prism-dur) var(--prism-ease);
 }
 
 .prism-card-lift {
@@ -375,24 +460,28 @@ html:has(.prism-root) body {
 .prism-card-lift:hover,
 .prism-card-lift:focus-visible {
   border-color: var(--prism-line-2);
-  background: var(--prism-surface-2);
+  background-color: var(--prism-surface-2);
   box-shadow: var(--prism-glow), var(--prism-shadow-lg);
 }
 
 @media (hover: hover) {
   .prism-card-lift:hover {
-    transform: translateY(-6px);
+    transform: translate(var(--prism-lift-x), var(--prism-lift));
   }
 }
 
 .prism-card-lift:focus-visible {
-  transform: translateY(-6px);
+  transform: translate(var(--prism-lift-x), var(--prism-lift));
 }
 
 .prism-panel {
-  background: var(--prism-surface);
-  border: var(--prism-border-w) solid var(--prism-line);
+  background-color: var(--prism-surface);
+  background-image: var(--prism-surface-texture);
+  background-size: var(--prism-surface-texture-size);
+  background-blend-mode: var(--prism-surface-texture-blend);
+  border: var(--prism-border-w) var(--prism-border-style) var(--prism-line);
   border-radius: var(--prism-radius-lg);
+  clip-path: var(--prism-card-clip);
   padding: clamp(28px, 4vw, 48px);
   box-shadow: var(--prism-shadow);
 }
@@ -414,7 +503,8 @@ html:has(.prism-root) body {
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.01em;
-  border: var(--prism-border-w) solid transparent;
+  border: var(--prism-border-w) var(--prism-border-style) transparent;
+  clip-path: var(--prism-btn-clip);
   box-shadow: var(--prism-shadow);
   transition: transform var(--prism-dur-fast) var(--prism-ease),
     box-shadow var(--prism-dur) var(--prism-ease),
@@ -429,12 +519,12 @@ html:has(.prism-root) body {
 
 @media (hover: hover) {
   .prism-btn:hover {
-    transform: translateY(-2px);
+    transform: translate(var(--prism-lift-sm-x), var(--prism-lift-sm));
   }
 }
 
 .prism-btn:focus-visible {
-  transform: translateY(-2px);
+  transform: translate(var(--prism-lift-sm-x), var(--prism-lift-sm));
 }
 
 .prism-btn:active {
@@ -454,7 +544,8 @@ html:has(.prism-root) body {
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.01em;
-  border: var(--prism-border-w) solid var(--prism-line-2);
+  border: var(--prism-border-w) var(--prism-border-style) var(--prism-line-2);
+  clip-path: var(--prism-btn-clip);
   transition: border-color var(--prism-dur-fast) var(--prism-ease),
     background var(--prism-dur-fast) var(--prism-ease),
     transform var(--prism-dur-fast) var(--prism-ease);
@@ -468,12 +559,12 @@ html:has(.prism-root) body {
 
 @media (hover: hover) {
   .prism-btn-ghost:hover {
-    transform: translateY(-2px);
+    transform: translate(var(--prism-lift-sm-x), var(--prism-lift-sm));
   }
 }
 
 .prism-btn-ghost:focus-visible {
-  transform: translateY(-2px);
+  transform: translate(var(--prism-lift-sm-x), var(--prism-lift-sm));
 }
 
 .prism-btn-ghost:active {
@@ -519,7 +610,7 @@ html:has(.prism-root) body {
   padding: 0.45em 0.95em;
   border-radius: var(--prism-radius-pill);
   background: var(--prism-surface-2);
-  border: var(--prism-border-w) solid var(--prism-line);
+  border: var(--prism-border-w) var(--prism-border-style) var(--prism-line);
   color: var(--prism-muted);
   font-family: var(--prism-font-mono);
   font-size: 0.82rem;
@@ -594,7 +685,7 @@ html:has(.prism-root) body {
   height: 2.75em;
   border-radius: var(--prism-radius-sm);
   background: var(--prism-surface-2);
-  border: var(--prism-border-w) solid var(--prism-line);
+  border: var(--prism-border-w) var(--prism-border-style) var(--prism-line);
   color: var(--prism-text);
   transition: border-color var(--prism-dur-fast) var(--prism-ease),
     background var(--prism-dur-fast) var(--prism-ease),
@@ -611,12 +702,12 @@ html:has(.prism-root) body {
 
 @media (hover: hover) {
   .prism-icon-btn:hover {
-    transform: translateY(-2px);
+    transform: translate(var(--prism-lift-sm-x), var(--prism-lift-sm));
   }
 }
 
 .prism-icon-btn:focus-visible {
-  transform: translateY(-2px);
+  transform: translate(var(--prism-lift-sm-x), var(--prism-lift-sm));
 }
 
 .prism-icon-btn:active {
@@ -801,9 +892,10 @@ html:has(.prism-root) body {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.045;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--prism-texture-opacity);
+  mix-blend-mode: var(--prism-texture-blend);
+  background-image: var(--prism-texture);
+  background-size: var(--prism-texture-size);
   /* Same reason as the backdrop canvas: a fixed, full-viewport layer that is
      not GPU-promoted gets repainted on every scroll frame — and this one also
      carries mix-blend-mode, so each repaint re-blends against the whole page
@@ -817,7 +909,8 @@ html:has(.prism-root) body {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  filter: blur(80px);
+  filter: blur(var(--prism-orb-blur)) saturate(var(--prism-orb-saturate));
+  mix-blend-mode: var(--prism-orb-blend);
   z-index: 0;
   width: clamp(280px, 40vw, 560px);
   height: clamp(280px, 40vw, 560px);
@@ -827,22 +920,35 @@ html:has(.prism-root) body {
     var(--prism-accent-3) 45%,
     transparent 72%
   );
-  opacity: 0.28;
+  /* Themes used to reach for `display: none` here because opacity was fixed.
+     Dimming to 0 via the token keeps the element in flow and lets a theme dial
+     the wash rather than choose between full bloom and nothing. */
+  opacity: var(--prism-orb-opacity);
 }
 
 
 /* ============================================================================
    9. MOTION — scroll reveal base states
    ============================================================================ */
+/* The entrance is theme-authored — see the Motion identity tokens in §1.
+   Every fixed-position element on the page (Backdrop, Nav, .prism-noise, the
+   HUD, Cursor) is rendered OUTSIDE #prism-shell, so nothing revealed here can
+   contain one. That is what makes the filter below safe: a non-none filter
+   establishes a containing block for fixed descendants, and there are none. */
 .prism-reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.8s var(--prism-ease), transform 0.8s var(--prism-ease);
+  transform: translate(var(--prism-reveal-x), var(--prism-reveal-y))
+    scale(var(--prism-reveal-scale));
+  filter: blur(var(--prism-reveal-blur));
+  transition: opacity var(--prism-reveal-dur) var(--prism-reveal-ease),
+    transform var(--prism-reveal-dur) var(--prism-reveal-ease),
+    filter var(--prism-reveal-dur) var(--prism-reveal-ease);
 }
 
 .prism-reveal.prism-in {
   opacity: 1;
   transform: none;
+  filter: blur(0px);
 }
 
 
@@ -862,6 +968,9 @@ html:has(.prism-root) body {
   .prism-reveal {
     opacity: 1;
     transform: none;
+    /* Themes may set --prism-reveal-blur; with animation duration crushed to
+       0.001ms a leftover blur would simply never resolve. */
+    filter: none;
   }
 
   .prism-card-lift:hover,
@@ -912,6 +1021,6 @@ html:has(.prism-root) body {
   .prism-orb {
     width: clamp(180px, 60vw, 320px);
     height: clamp(180px, 60vw, 320px);
-    filter: blur(60px);
+    filter: blur(calc(var(--prism-orb-blur) * 0.75)) saturate(var(--prism-orb-saturate));
   }
 }

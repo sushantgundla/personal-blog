@@ -51,9 +51,6 @@ body {
 
 .prism-band { background: rgba(139, 92, 246, 0.05) !important; }
 
-.prism-noise { display: none !important; }
-.prism-orb { opacity: 0.85 !important; filter: blur(90px) saturate(150%) !important; }
-
 .prism-card, .prism-panel {
   background: linear-gradient(155deg, rgba(139, 92, 246, 0.14), rgba(6, 182, 212, 0.05)) !important;
   border: 1px solid var(--prism-line) !important;
@@ -104,4 +101,25 @@ body {
 .prism-dot {
   background: var(--prism-accent-3) !important;
   box-shadow: 0 0 8px rgba(244, 114, 182, 0.7) !important;
+}
+
+/* --- Motion identity & material ------------------------------------
+   Points resolve out of the embedding cloud: scale up from slightly small,
+   out of blur, slowly. */
+:root {
+  --prism-reveal-scale: 0.955;
+  --prism-reveal-blur: 11px;
+  --prism-reveal-y: 10px;
+  --prism-reveal-dur: 1.1s;
+  --prism-lift: -8px;
+
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.08;
+  --prism-texture-size: 380px;
+  --prism-texture-blend: screen;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0.85;
+  --prism-orb-blur: 90px;
+  --prism-orb-saturate: 150%;
 }

@@ -51,9 +51,6 @@ body {
 
 .prism-band { background: rgba(255,255,255,0.03) !important; }
 
-.prism-orb { display: block !important; opacity: 0.9 !important; filter: blur(70px) saturate(160%) !important; }
-.prism-noise { display: none !important; }
-
 .prism-card,
 .prism-panel {
   background: linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)) !important;
@@ -67,8 +64,7 @@ body {
 
 .prism-card-lift:hover {
   box-shadow: var(--prism-shadow-lg), var(--prism-glow), inset 0 1px 0 rgba(255,255,255,0.4) !important;
-  transform: translateY(-4px) !important;
-}
+  }
 
 .prism-chip {
   background: rgba(255,255,255,0.1) !important;
@@ -106,3 +102,24 @@ body {
 }
 
 .prism-rule { background: rgba(255,255,255,0.2) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   The one dimension where blur IS the material, so the entrance resolves out
+   of focus rather than moving. This is the signature use of
+   --prism-reveal-blur; other themes should not copy it. */
+:root {
+  --prism-reveal-blur: 16px;
+  --prism-reveal-y: 14px;
+  --prism-reveal-scale: 1.02;
+  --prism-reveal-dur: 0.95s;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0.9;
+  --prism-orb-blur: 70px;
+  --prism-orb-saturate: 160%;
+  --prism-texture: none;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: -10px;
+  --prism-lift-sm: -4px;
+}

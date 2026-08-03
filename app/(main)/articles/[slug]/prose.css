@@ -1,7 +1,7 @@
 /* ============================================================
    .prism-prose — reading styles for rendered MDX article content.
    Every colour, font and border comes from a --prism-* token (see
-   CONTRACT.md §1) so all 30 dimensions restyle the article body
+   CONTRACT.md §1) so all 36 dimensions restyle the article body
    along with everything else.
 
    Selectors are prefixed `.prism-root .prism-prose` rather than just

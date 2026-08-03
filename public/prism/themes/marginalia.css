@@ -1,0 +1,134 @@
+/* Marginalia — a working manuscript. Aged stock, iron-gall ink, rubric red for
+   anything that matters, and every small label set in a hand.
+
+   The trick here: --prism-font-mono is a handwriting face. That token feeds
+   .prism-eyebrow, .prism-chip, .prism-badge and .prism-num, so all the small
+   apparatus of the page turns into notes written in the margin, while the body
+   stays properly typeset. Chalk is the only other handmade dimension and it is
+   a surface treatment; this one is about two hands on one page. */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Caveat:wght@500;600;700&display=swap');
+
+:root {
+  --prism-bg: #ece3cf;
+  --prism-bg-2: #e3d8bf;
+  --prism-surface: #f5eeda;
+  --prism-surface-2: #efe6cd;
+  --prism-surface-3: #e0d4b6;
+  --prism-text: #2b2216;
+  --prism-muted: rgba(43, 34, 22, 0.68);
+  --prism-faint: rgba(43, 34, 22, 0.5);
+  --prism-line: rgba(43, 34, 22, 0.18);
+  --prism-line-2: rgba(43, 34, 22, 0.42);
+  --prism-accent: #9d2f24;
+  --prism-accent-2: #3d4a6b;
+  --prism-accent-3: #4a4a1f;
+  --prism-accent-soft: rgba(157, 47, 36, 0.08);
+  --prism-on-accent: #f5eeda;
+
+  --prism-radius: 2px;
+  --prism-radius-sm: 2px;
+  --prism-radius-lg: 3px;
+  --prism-radius-pill: 3px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 1px 2px rgba(70, 55, 30, 0.12);
+  --prism-shadow-lg: 0 12px 28px -14px rgba(70, 55, 30, 0.4);
+  --prism-glow: 0 0 0 rgba(0, 0, 0, 0);
+
+  --prism-font-display: 'EB Garamond', Georgia, serif;
+  --prism-font-head: 'EB Garamond', Georgia, serif;
+  --prism-font-body: 'EB Garamond', Georgia, serif;
+  --prism-font-mono: 'Caveat', ui-monospace, monospace;
+  --prism-display-weight: 600;
+  --prism-display-tracking: -0.005em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.01em;
+
+  --prism-title-leading: 1.02;
+  --prism-title-leading-xl: 0.94;
+  --prism-body-leading: 1.68;
+
+  --prism-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --prism-dur: 0.55s;
+  --prism-dur-fast: 0.22s;
+
+  /* Ink drying: a short settle out of a soft edge, no travel to speak of. */
+  --prism-reveal-y: 7px;
+  --prism-reveal-blur: 3px;
+  --prism-reveal-dur: 0.7s;
+  --prism-lift: -2px;
+  --prism-lift-sm: -1px;
+
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.2;
+  --prism-texture-blend: multiply;
+  /* Ruled lines through every card — the page underneath the writing. */
+  --prism-surface-texture: repeating-linear-gradient(0deg, transparent 0 26px, rgba(61, 74, 107, 0.1) 26px 27px);
+  --prism-surface-texture-blend: multiply;
+  --prism-orb-opacity: 0;
+
+  --prism-backdrop: dots;
+  --prism-cursor: default;
+  --prism-enter: tear;
+
+  --prism-density: 0.82;
+}
+
+body { background: var(--prism-bg) !important; }
+
+.prism-card,
+.prism-panel { border: 1px solid var(--prism-line) !important; }
+.prism-card-lift:hover { border-color: var(--prism-accent) !important; }
+
+/* Rubrication: the initial gesture of a manuscript page is red. */
+.prism-title { color: var(--prism-text) !important; }
+.prism-head { color: var(--prism-accent) !important; font-weight: 600 !important; }
+.prism-sub { font-style: italic !important; font-weight: 400 !important; }
+
+.prism-eyebrow {
+  color: var(--prism-accent-2) !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  transform: rotate(-1.4deg) !important;
+}
+
+.prism-body { font-size: clamp(1.05rem, 1.2vw, 1.18rem) !important; }
+
+.prism-btn {
+  border: 1px solid var(--prism-text) !important;
+  font-family: var(--prism-font-mono) !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+}
+.prism-btn-ghost {
+  border: 1px solid var(--prism-line-2) !important;
+  font-family: var(--prism-font-mono) !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+}
+.prism-btn-quiet { font-family: var(--prism-font-mono) !important; font-size: 1.05rem !important; }
+
+.prism-chip {
+  background: transparent !important;
+  border: 1px solid var(--prism-line) !important;
+  font-size: 1.02rem !important;
+  font-weight: 600 !important;
+  color: var(--prism-accent-3) !important;
+}
+.prism-chip-on { color: var(--prism-accent) !important; border-color: var(--prism-accent) !important; }
+
+.prism-badge {
+  color: var(--prism-accent) !important;
+  background: transparent !important;
+  border: 1px solid var(--prism-accent) !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  transform: rotate(-1deg) !important;
+}
+
+/* A red rule, drawn by hand and therefore not quite level. */
+.prism-rule { background: var(--prism-accent) !important; opacity: 0.5 !important; height: 1px !important; }
+.prism-frame { border: 1px solid var(--prism-line-2) !important; filter: sepia(0.28) contrast(1.04) !important; }
+.prism-kbd { border: 1px solid var(--prism-line-2) !important; font-size: 1rem !important; box-shadow: none !important; }
+.prism-num { font-weight: 700 !important; letter-spacing: 0 !important; }
+.prism-link { text-decoration-color: var(--prism-accent) !important; }

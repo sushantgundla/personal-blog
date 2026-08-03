@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
  * Fixed top bar: wordmark on the left, four section links on the right.
  *
  * Built entirely from the docs/architecture/design-system.md §3 class vocabulary (.prism-mono,
- * .prism-btn-quiet, .prism-link) so every one of the 30 theme files repaints it
+ * .prism-btn-quiet, .prism-link) so every one of the 36 theme files repaints it
  * for free. Only structural concerns — fixed positioning, flex layout,
  * gaps, z-index, the scroll-driven hide/show transform — are set inline or
  * in the scoped <style> block below; every colour, border and font comes

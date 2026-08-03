@@ -48,9 +48,6 @@ body {
 }
 .prism-band { background: var(--prism-bg-2) !important; }
 
-.prism-orb { display: block !important; opacity: 0.6 !important; filter: blur(80px) saturate(180%) !important; }
-.prism-noise { opacity: 0.03 !important; }
-
 .prism-title {
   background: linear-gradient(180deg, #ffffff 0%, #ffd6f5 35%, #ff9fe3 55%, #7fe9ff 75%, #d6b9ff 100%) !important;
   -webkit-background-clip: text !important;
@@ -74,8 +71,7 @@ body {
 .prism-card-lift:hover {
   border-color: var(--prism-accent-2) !important;
   box-shadow: var(--prism-glow) !important;
-  transform: translateY(-3px) !important;
-}
+  }
 
 .prism-chip {
   background: rgba(255,113,206,0.1) !important;
@@ -114,3 +110,24 @@ body {
 }
 
 .prism-rule { background: linear-gradient(90deg, var(--prism-accent), var(--prism-accent-2)) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Nothing is in a hurry in a dead mall. The longest entrance in the set. */
+:root {
+  --prism-reveal-y: 42px;
+  --prism-reveal-scale: 1.04;
+  --prism-reveal-dur: 1.3s;
+  --prism-reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --prism-title-leading: 0.84;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0.6;
+  --prism-orb-blur: 80px;
+  --prism-orb-saturate: 180%;
+  --prism-texture-opacity: 0.03;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: -7px;
+  --prism-lift-sm: -3px;
+}

@@ -1,7 +1,7 @@
 /*
  * DimensionHUD — one small button, bottom-left. Self-contained styling.
  *
- * This is the only control on /v2, and it has to stay legible on all 30
+ * This is the only control on /v2, and it has to stay legible on all 36
  * dimensions — including the ones that flip to a light background or push
  * contrast to extremes. So unlike the rest of the page it deliberately does
  * NOT hook into the themeable surface/text tokens (--prism-surface, --prism-text,
@@ -138,7 +138,7 @@
 }
 
 /*
- * Gallery trigger + dialog — the "browse all 30" control.
+ * Gallery trigger + dialog — the "browse all 36" control.
  *
  * Same rule as the shuffle button above: this stays a legible dark-glass
  * surface on every dimension. The only theme colour it borrows is

@@ -48,11 +48,9 @@ body {
     var(--prism-bg) !important;
 }
 .prism-band { background: var(--prism-bg-2) !important; }
-.prism-orb { opacity: 0.4 !important; filter: blur(50px) !important; }
-.prism-noise { opacity: 0.06 !important; }
 
 .prism-card, .prism-panel {
-  background: var(--prism-surface) !important;
+  background-color: var(--prism-surface) !important;
   border: 1px dashed var(--prism-line-2) !important;
   border-radius: 18px 12px 20px 10px / 10px 20px 12px 18px !important;
   box-shadow: var(--prism-shadow) !important;
@@ -66,10 +64,31 @@ body {
 .prism-btn-ghost { border: 1px dashed var(--prism-line-2) !important; color: var(--prism-text) !important; background: transparent !important; border-radius: var(--prism-radius-pill) !important; }
 .prism-btn-quiet { color: var(--prism-accent-2) !important; }
 
-.prism-chip { border: 1px dashed var(--prism-line-2) !important; background: var(--prism-surface-2) !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-chip { border: 1px dashed var(--prism-line-2) !important; background-color: var(--prism-surface-2) !important; border-radius: var(--prism-radius-pill) !important; }
 .prism-chip-on { background: var(--prism-accent-soft) !important; border-color: var(--prism-accent) !important; color: var(--prism-accent) !important; }
 
 .prism-badge { border: 1px dashed var(--prism-accent-2) !important; color: var(--prism-accent-2) !important; background: rgba(246,168,168,0.08) !important; border-radius: var(--prism-radius-pill) !important; }
 .prism-frame { border: 1px dashed var(--prism-line-2) !important; border-radius: 20px 10px 24px 12px / 12px 24px 10px 20px !important; }
 .prism-rule { background: repeating-linear-gradient(90deg, var(--prism-line-2) 0 6px, transparent 6px 10px) !important; height: 2px !important; opacity: 0.7 !important; }
-.prism-kbd { border: 1px dashed var(--prism-line) !important; background: var(--prism-surface-3) !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-kbd { border: 1px dashed var(--prism-line) !important; background-color: var(--prism-surface-3) !important; border-radius: var(--prism-radius-sm) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Written, not placed: a short rise out of a soft edge, the way chalk dust
+   settles a moment after the stroke. */
+:root {
+  --prism-reveal-y: 9px;
+  --prism-reveal-blur: 5px;
+  --prism-reveal-dur: 0.62s;
+  --prism-lift: -3px;
+
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.11;
+  --prism-texture-blend: screen;
+  --prism-surface-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-surface-texture-blend: soft-light;
+  --prism-body-leading: 1.7;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0.4;
+  --prism-orb-blur: 50px;
+}

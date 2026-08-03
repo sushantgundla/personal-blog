@@ -49,7 +49,6 @@
   transition: transform var(--prism-dur-fast) var(--prism-ease), box-shadow var(--prism-dur-fast) var(--prism-ease) !important;
 }
 .prism-card-lift:hover {
-  transform: translate(4px, 4px) !important;
   box-shadow: 2px 2px 0 #0a0a0a !important;
 }
 
@@ -61,7 +60,7 @@
   color: var(--prism-on-accent) !important;
   transition: transform var(--prism-dur-fast) var(--prism-ease), box-shadow var(--prism-dur-fast) var(--prism-ease) !important;
 }
-.prism-btn:hover { transform: translate(3px, 3px) !important; box-shadow: 3px 3px 0 #0a0a0a !important; }
+.prism-btn:hover { box-shadow: 3px 3px 0 #0a0a0a !important; }
 .prism-btn-ghost, .prism-icon-btn { border: 3px solid var(--prism-line-2) !important; border-radius: 0 !important; }
 .prism-chip { border: 2px solid var(--prism-line-2) !important; border-radius: 0 !important; }
 .prism-chip-on { background: var(--prism-accent) !important; color: var(--prism-accent-2) !important; border-color: var(--prism-line-2) !important; }
@@ -77,4 +76,25 @@
 .prism-body { color: var(--prism-muted) !important; }
 
 .prism-rule { background: var(--prism-line-2) !important; }
-.prism-orb { display: none !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Slabs land. A short overshoot curve gives the drop a bounce off the floor,
+   and --prism-lift is POSITIVE: on hover the card presses down into its hard
+   shadow instead of floating away from it, which is what a physical block
+   sitting on paper actually does. */
+:root {
+  --prism-reveal-y: 44px;
+  --prism-reveal-dur: 0.34s;
+  --prism-reveal-ease: cubic-bezier(0.2, 1.5, 0.4, 1);
+
+  --prism-title-leading: 0.86;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: 4px;
+  --prism-lift-sm: 3px;
+  --prism-lift-x: 4px;
+  --prism-lift-sm-x: 3px;
+}

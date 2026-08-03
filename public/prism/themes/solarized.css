@@ -44,9 +44,6 @@
 body { background: var(--prism-bg) !important; }
 .prism-band { background: var(--prism-bg-2) !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise { opacity: 0.02 !important; }
-
 .prism-eyebrow { color: #e29c7f !important; } /* raw #cb4b16 reads 3.26:1 on bg — lightened to match the chip-cycle tint */
 .prism-title { color: #eee8d5 !important; }
 
@@ -106,3 +103,18 @@ body { background: var(--prism-bg) !important; }
 .prism-frame { border: 1px solid var(--prism-line-2) !important; border-radius: var(--prism-radius-sm) !important; }
 .prism-rule { background: var(--prism-line) !important; }
 .prism-kbd { background: var(--prism-surface-2) !important; border: 1px solid var(--prism-line-2) !important; border-radius: 3px !important; color: #eee8d5 !important; }
+
+/* --- Motion identity & material ------------------------------------
+   An editor repaints a pane; it does not animate it. Almost no travel, and
+   quick. */
+:root {
+  --prism-reveal-y: 0px;
+  --prism-reveal-scale: 0.99;
+  --prism-reveal-dur: 0.28s;
+  --prism-lift: -2px;
+  --prism-body-leading: 1.6;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture-opacity: 0.02;
+}

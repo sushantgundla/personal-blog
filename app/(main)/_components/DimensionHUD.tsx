@@ -12,7 +12,7 @@ import './hud.css';
  * corner — one press, one new design, its transition plays. That is the
  * whole idea and it stays exactly as it was.
  *
- * Next to it sits a second, smaller button that opens a gallery of all 30
+ * Next to it sits a second, smaller button that opens a gallery of all 36
  * designs, for a visitor who wants to browse and pick rather than gamble.
  * The gallery is additive: it does not touch the shuffle button's behaviour,
  * and it stays closed until asked for.
@@ -22,7 +22,7 @@ import './hud.css';
  * every change.
  *
  * Both controls keep their own dark-glass look instead of using the theme
- * tokens, so they stay legible across all 30 dimensions.
+ * tokens, so they stay legible across all 36 dimensions.
  */
 
 type ThemeColors = { bg: string; accent: string; accent2: string };
@@ -89,7 +89,7 @@ const BUTTON_LABELS = [
   'Break the theme',
   'Shuffle the design',
   'Roll the dice',
-  'Thirty looks',
+  'Thirty-six looks',
   'Pick a reality',
   'Feeling adventurous?',
   'Nothing is fixed',
@@ -181,7 +181,7 @@ function DimensionHUD() {
         ref={galleryTriggerRef}
         className="prism-hud-gallery-trigger"
         onClick={openGallery}
-        aria-label="Browse all 30 designs"
+        aria-label={`Browse all ${DIMENSIONS.length} designs`}
         aria-haspopup="dialog"
         aria-expanded={galleryOpen}
         aria-controls="prism-hud-gallery-dialog"
@@ -231,7 +231,7 @@ function DesignGallery({ currentSlug, onPick, onClose }: DesignGalleryProps) {
   }, [filter]);
 
   // Focus the filter field on open, and fetch every theme's swatch colours
-  // once. 30 tiny stylesheets is cheap, and this only runs when a visitor
+  // once. 36 tiny stylesheets is cheap, and this only runs when a visitor
   // has deliberately opened the gallery.
   useEffect(() => {
     inputRef.current?.focus();

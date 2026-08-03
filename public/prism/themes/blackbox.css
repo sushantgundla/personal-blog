@@ -43,8 +43,6 @@
 
 body { background: #000000 !important; }
 .prism-band { background: var(--prism-bg-2) !important; border-top: 1px solid var(--prism-line) !important; border-bottom: 1px solid var(--prism-line) !important; }
-.prism-orb { display: none !important; }
-.prism-noise { opacity: 0.06 !important; }
 
 .prism-card, .prism-panel {
   position: relative !important;
@@ -94,3 +92,18 @@ body { background: #000000 !important; }
 .prism-frame { border: 2px solid var(--prism-accent) !important; border-radius: 0 !important; filter: contrast(1.1) saturate(0.9) !important; }
 .prism-rule { background: repeating-linear-gradient(45deg, var(--prism-accent-2) 0 6px, #000 6px 12px) !important; height: 4px !important; }
 .prism-kbd { border: 1px solid var(--prism-line-2) !important; background: #000 !important; color: var(--prism-accent) !important; border-radius: 0 !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Instrument power-on: panels come up at once, fast, with no travel. */
+:root {
+  --prism-reveal-y: 0px;
+  --prism-reveal-scale: 0.98;
+  --prism-reveal-dur: 0.24s;
+  --prism-reveal-ease: linear;
+  --prism-lift: -2px;
+  --prism-title-transform: uppercase;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture-opacity: 0.06;
+}
