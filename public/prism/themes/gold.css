@@ -38,6 +38,9 @@
   --prism-backdrop: stars;
   --prism-cursor: default;
   --prism-enter: collapse;
+
+  /* Restraint reads as a title page: name, rule, then everything under it. */
+  --prism-hero: masthead;
 }
 
 body { background: var(--prism-bg) !important; }

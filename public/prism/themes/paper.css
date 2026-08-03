@@ -40,6 +40,9 @@
   --prism-backdrop: none;
   --prism-cursor: default;
   --prism-enter: pixelate;
+
+  /* A letterpress sheet is a block of type with the plate below it. */
+  --prism-hero: masthead;
 }
 
 .prism-card, .prism-panel, .prism-frame, .prism-badge, .prism-chip, .prism-kbd {

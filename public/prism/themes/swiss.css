@@ -39,6 +39,9 @@
   --prism-backdrop: none;
   --prism-cursor: square;
   --prism-enter: collapse;
+
+  /* Grid modernism sets the name as a full-measure banner, not beside a picture. */
+  --prism-hero: masthead;
 }
 
 .prism-card, .prism-panel, .prism-frame, .prism-badge, .prism-chip, .prism-kbd {

@@ -39,6 +39,9 @@
   --prism-backdrop: none;
   --prism-cursor: default;
   --prism-enter: pixelate;
+
+  /* Built for reading, so the reading column gets the width. */
+  --prism-hero: masthead;
 }
 
 body { background: var(--prism-bg) !important; }

@@ -70,6 +70,9 @@
   --prism-cursor: default;
   --prism-enter: tear;
 
+  /* The text block runs wide and the portrait sits in the margin. */
+  --prism-hero: masthead;
+
   --prism-density: 0.82;
 }
 

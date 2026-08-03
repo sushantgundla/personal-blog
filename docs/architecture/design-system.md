@@ -154,6 +154,40 @@ set `background-color` and `background-image` separately. A theme that writes th
 | `--prism-card-clip` | `clip-path` on cards and panels | `none` |
 | `--prism-btn-clip` | `clip-path` on buttons | `none` |
 
+### Composition
+
+| Token | Meaning | Base default |
+|---|---|---|
+| `--prism-hero` | hero arrangement: `split`, `masthead` or `stack` | `split` |
+
+The only token that changes the page's **shape** rather than its skin. Before it existed all
+thirty-six dimensions rendered the identical hero — name left, portrait right — so Broadsheet
+was newsprint colour applied to a portfolio layout rather than an actual masthead.
+
+`Hero.tsx` renders four named parts (`.prism-hero-status`, `.prism-hero-name`,
+`.prism-hero-lede`, `.prism-hero-media`) and positions none of them; §5b of `prism.css` places
+them with `grid-template-areas` per archetype. A theme file still never writes a layout rule —
+it picks a value. **Nothing in `Hero.tsx` may carry an inline positioning style**, because an
+inline style would beat the archetype's CSS.
+
+Selection uses a **CSS style query** (`@container style(--prism-hero: masthead)`), not
+JavaScript. Reading the token with `getComputedStyle` after a swap races the stylesheet load
+and flashes the previous composition; a style query is correct on the frame the sheet applies.
+A browser without style-query support falls through to `split`, which is what every dimension
+had before.
+
+| Archetype | Arrangement | Used by |
+|---|---|---|
+| `split` | identity left, portrait right | the default — 22 dimensions |
+| `masthead` | name full-bleed across the top with a rule under it, then lede beside a square portrait | `broadsheet`, `swiss`, `paper`, `marginalia`, `gold`, `eink`, `blueprint` |
+| `stack` | one centred column: status, name, portrait, lede | `brutalist`, `bauhaus`, `vaporwave`, `riso`, `kolam`, `synthwave`, `thermal` |
+
+Two sizing constraints the archetypes are tuned against, both found by measuring:
+`stack` centres with `justify-items`, which shrink-wraps every cell — the media cell needs its
+own width or the portrait collapses to a few pixels. And the `stack` portrait is capped at
+228px so the primary button still clears an 800px laptop viewport; at 300px every stack
+dimension pushed the call to action below the fold.
+
 ### JS-read mode tokens
 
 These three carry no CSS effect of their own — they are read out of `getComputedStyle` by JavaScript, so a theme file must always declare all three even though they look inert in the CSS.

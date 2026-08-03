@@ -68,6 +68,9 @@
   --prism-cursor: default;
   --prism-enter: pixelate;
 
+  /* A masthead is the entire point of a newspaper front page. */
+  --prism-hero: masthead;
+
   --prism-density: 0.6;
 }
 

@@ -39,6 +39,9 @@
   --prism-backdrop: dots;
   --prism-cursor: default;
   --prism-enter: shatter;
+
+  /* A printed zine page is one centred column of registered layers. */
+  --prism-hero: stack;
 }
 
 body { background: var(--prism-bg) !important; }

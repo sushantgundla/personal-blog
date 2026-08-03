@@ -39,6 +39,9 @@
   --prism-backdrop: waves;
   --prism-cursor: ring;
   --prism-enter: rewind;
+
+  /* Album-cover framing: name, image, caption, centred. */
+  --prism-hero: stack;
 }
 
 body {
