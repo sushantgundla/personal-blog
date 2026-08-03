@@ -1,0 +1,65 @@
+/* Cyberpunk — acid yellow + electric cyan, notched clip-paths, neon glow */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --prism-bg: #09090b;
+  --prism-bg-2: #0d0d10;
+  --prism-surface: #111114;
+  --prism-surface-2: #18181c;
+  --prism-surface-3: #222227;
+  --prism-text: #f4f4f5;
+  --prism-muted: rgba(244,244,245,0.62);
+  --prism-faint: rgba(244,244,245,0.52);
+  --prism-line: rgba(0,240,255,0.3);
+  --prism-line-2: rgba(0,240,255,0.65);
+  --prism-accent: #fcee0a;
+  --prism-accent-2: #00f0ff;
+  --prism-accent-3: #ff2079;
+  --prism-accent-soft: rgba(252,238,10,0.12);
+  --prism-on-accent: #09090b;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 0px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: 0 0 30px rgba(0,240,255,0.25);
+  --prism-glow: 0 0 18px rgba(252,238,10,0.5);
+
+  --prism-font-display: 'Rajdhani', system-ui, sans-serif;
+  --prism-font-head: 'Rajdhani', system-ui, sans-serif;
+  --prism-font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: 0em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.16em;
+
+  --prism-backdrop: rain;
+  --prism-cursor: square;
+  --prism-enter: rewind;
+}
+
+.prism-card, .prism-panel {
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px)) !important;
+  border: 1px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--prism-surface) !important;
+}
+.prism-card-lift:hover { box-shadow: var(--prism-shadow-lg) !important; border-color: var(--prism-accent-2) !important; }
+
+.prism-btn, .prism-btn-ghost {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)) !important;
+  border-radius: 0 !important;
+}
+.prism-btn { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; }
+.prism-btn:hover, .prism-btn-ghost:hover { box-shadow: var(--prism-glow) !important; }
+
+.prism-badge, .prism-chip, .prism-frame, .prism-kbd { border-radius: 0 !important; border: 1px solid var(--prism-line-2) !important; }
+
+.prism-title { text-shadow: 0 0 12px rgba(0,240,255,0.5) !important; }
+
+.prism-rule { background: linear-gradient(90deg, var(--prism-accent-2), var(--prism-accent)) !important; }
+.prism-noise { opacity: 0.4 !important; }

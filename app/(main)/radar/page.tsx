@@ -16,12 +16,12 @@ export default function RadarPage() {
   const picks = getAllRadarPicks()
 
   return (
-    <section id="v2-radar" className="v2-section">
-      <div className="v2-wrap">
+    <section id="prism-radar" className="prism-section">
+      <div className="prism-wrap">
         <Reveal>
-          <span className="v2-eyebrow"><span className="v2-dot" />AI Radar</span>
-          <h1 className="v2-title">Radar</h1>
-          <p className="v2-body v2-muted" style={{ maxWidth: 640, marginTop: '12px' }}>
+          <span className="prism-eyebrow"><span className="prism-dot" />AI Radar</span>
+          <h1 className="prism-title">Radar</h1>
+          <p className="prism-body prism-muted" style={{ maxWidth: 640, marginTop: '12px' }}>
             Signals, notes, and picks from the AI frontier.
           </p>
         </Reveal>

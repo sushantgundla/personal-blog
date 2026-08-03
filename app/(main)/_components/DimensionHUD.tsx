@@ -34,7 +34,7 @@ const swatchCache = new Map<string, Promise<ThemeColors | null>>();
 
 function extractVar(css: string, varName: string): string | null {
   // Matching the literal `varName:` substring is enough to avoid
-  // `--v2-accent` picking up `--v2-accent-2` — the dash before the colon
+  // `--prism-accent` picking up `--prism-accent-2` — the dash before the colon
   // makes those two substrings distinct.
   const match = css.match(new RegExp(`${varName}:\\s*([^;]+);`, 'i'));
   return match ? match[1].trim() : null;
@@ -45,13 +45,13 @@ async function fetchThemeColors(slug: string): Promise<ThemeColors | null> {
   try {
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
     const timeoutId = controller ? window.setTimeout(() => controller.abort(), 2500) : undefined;
-    const res = await fetch(`/v2/themes/${slug}.css`, { signal: controller?.signal });
+    const res = await fetch(`/prism/themes/${slug}.css`, { signal: controller?.signal });
     if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     if (!res.ok) return null;
     const text = await res.text();
-    const bg = extractVar(text, '--v2-bg');
-    const accent = extractVar(text, '--v2-accent');
-    const accent2 = extractVar(text, '--v2-accent-2');
+    const bg = extractVar(text, '--prism-bg');
+    const accent = extractVar(text, '--prism-accent');
+    const accent2 = extractVar(text, '--prism-accent-2');
     if (!bg || !accent || !accent2) return null;
     return { bg, accent, accent2 };
   } catch {
@@ -159,32 +159,32 @@ function DimensionHUD() {
   }, []);
 
   return (
-    <div id="v2-hud">
+    <div id="prism-hud">
       <button
         type="button"
-        className={`v2-hud-btn${busy ? ' is-busy' : ''}`}
+        className={`prism-hud-btn${busy ? ' is-busy' : ''}`}
         onClick={onShuffle}
         aria-label="Change this page's design"
       >
-        <span className="v2-hud-btn-spark" aria-hidden="true" />
-        <span className="v2-hud-btn-text">
-          <span className="v2-hud-btn-label" key={labelIndex}>
+        <span className="prism-hud-btn-spark" aria-hidden="true" />
+        <span className="prism-hud-btn-text">
+          <span className="prism-hud-btn-label" key={labelIndex}>
             {BUTTON_LABELS[labelIndex]}
           </span>
           {/* Reserve the line before mount so the button never changes size. */}
-          <span className="v2-hud-btn-sub">{mounted && name ? name : ' '}</span>
+          <span className="prism-hud-btn-sub">{mounted && name ? name : ' '}</span>
         </span>
       </button>
 
       <button
         type="button"
         ref={galleryTriggerRef}
-        className="v2-hud-gallery-trigger"
+        className="prism-hud-gallery-trigger"
         onClick={openGallery}
         aria-label="Browse all 30 designs"
         aria-haspopup="dialog"
         aria-expanded={galleryOpen}
-        aria-controls="v2-hud-gallery-dialog"
+        aria-controls="prism-hud-gallery-dialog"
       >
         <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
           <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
@@ -335,24 +335,24 @@ function DesignGallery({ currentSlug, onPick, onClose }: DesignGalleryProps) {
 
   return (
     <div
-      className="v2-hud-gallery-overlay"
+      className="prism-hud-gallery-overlay"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       <div
         ref={panelRef}
-        id="v2-hud-gallery-dialog"
-        className="v2-hud-gallery-panel"
+        id="prism-hud-gallery-dialog"
+        className="prism-hud-gallery-panel"
         role="dialog"
         aria-modal="true"
         aria-label="Browse all designs"
       >
-        <div className="v2-hud-gallery-head">
+        <div className="prism-hud-gallery-head">
           <input
             ref={inputRef}
             type="text"
-            className="v2-hud-gallery-filter"
+            className="prism-hud-gallery-filter"
             placeholder="Filter designs…"
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
@@ -361,7 +361,7 @@ function DesignGallery({ currentSlug, onPick, onClose }: DesignGalleryProps) {
           />
           <button
             type="button"
-            className="v2-hud-gallery-close"
+            className="prism-hud-gallery-close"
             onClick={onClose}
             aria-label="Close design gallery"
           >
@@ -371,22 +371,22 @@ function DesignGallery({ currentSlug, onPick, onClose }: DesignGalleryProps) {
           </button>
         </div>
 
-        <p className="v2-hud-gallery-count">
+        <p className="prism-hud-gallery-count">
           {filtered.length} of {DIMENSIONS.length} designs
         </p>
 
-        <div className="v2-hud-gallery-list" onKeyDown={onListKeydown}>
+        <div className="prism-hud-gallery-list" onKeyDown={onListKeydown}>
           {filtered.length === 0 && (
-            <p className="v2-hud-gallery-empty">No designs match &ldquo;{filter}&rdquo;.</p>
+            <p className="prism-hud-gallery-empty">No designs match &ldquo;{filter}&rdquo;.</p>
           )}
           {filtered.map((d) => {
             const isCurrent = d.slug === currentSlug;
             const c = colors[d.slug];
             const swatchStyle = c
               ? ({
-                  '--v2-hud-swatch-bg': c.bg,
-                  '--v2-hud-swatch-a1': c.accent,
-                  '--v2-hud-swatch-a2': c.accent2,
+                  '--prism-hud-swatch-bg': c.bg,
+                  '--prism-hud-swatch-a1': c.accent,
+                  '--prism-hud-swatch-a2': c.accent2,
                 } as CSSProperties)
               : undefined;
             return (
@@ -398,21 +398,21 @@ function DesignGallery({ currentSlug, onPick, onClose }: DesignGalleryProps) {
                   else optionRefs.current.delete(d.slug);
                 }}
                 data-slug={d.slug}
-                className={`v2-hud-gallery-option${isCurrent ? ' is-current' : ''}`}
+                className={`prism-hud-gallery-option${isCurrent ? ' is-current' : ''}`}
                 onClick={() => onPick(d.slug)}
                 aria-current={isCurrent ? 'true' : undefined}
               >
                 <span
-                  className={`v2-hud-gallery-swatch${c ? '' : ' is-empty'}`}
+                  className={`prism-hud-gallery-swatch${c ? '' : ' is-empty'}`}
                   aria-hidden="true"
                   style={swatchStyle}
                 />
-                <span className="v2-hud-gallery-option-text">
-                  <span className="v2-hud-gallery-option-name">
+                <span className="prism-hud-gallery-option-text">
+                  <span className="prism-hud-gallery-option-name">
                     {d.name}
-                    {isCurrent && <span className="v2-hud-gallery-option-tag">current</span>}
+                    {isCurrent && <span className="prism-hud-gallery-option-tag">current</span>}
                   </span>
-                  <span className="v2-hud-gallery-option-blurb">{d.blurb}</span>
+                  <span className="prism-hud-gallery-option-blurb">{d.blurb}</span>
                 </span>
               </button>
             );
@@ -423,6 +423,6 @@ function DesignGallery({ currentSlug, onPick, onClose }: DesignGalleryProps) {
   );
 }
 
-// app/v2/layout.tsx imports this as a named import.
+// app/(main)/layout.tsx imports this as a named import.
 export { DimensionHUD };
 export default DimensionHUD;

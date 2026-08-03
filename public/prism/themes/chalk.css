@@ -1,0 +1,75 @@
+/* Lecture Hall — dark green chalkboard, chalk-dust texture, hand-drawn warmth */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --prism-bg: #1e3229;
+  --prism-bg-2: #1a2b23;
+  --prism-surface: #23392f;
+  --prism-surface-2: #2a4137;
+  --prism-surface-3: #324a3f;
+  --prism-text: #f2efe6;
+  --prism-muted: rgba(242,239,230,0.62);
+  --prism-faint: rgba(242,239,230,0.3);
+  --prism-line: rgba(242,239,230,0.16);
+  --prism-line-2: rgba(246,224,94,0.4);
+  --prism-accent: #f6e05e;
+  --prism-accent-2: #f6a8a8;
+  --prism-accent-3: #a8c5b8;
+  --prism-accent-soft: rgba(246,224,94,0.12);
+  --prism-on-accent: #1e3229;
+
+  --prism-radius: 14px;
+  --prism-radius-sm: 8px;
+  --prism-radius-lg: 24px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  --prism-shadow-lg: 0 16px 40px -14px rgba(0,0,0,0.5);
+  --prism-glow: 0 0 16px rgba(246,224,94,0.3);
+
+  --prism-font-display: 'Caveat', 'Fraunces', cursive;
+  --prism-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: 0em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.02em;
+
+  --prism-backdrop: dots;
+  --prism-cursor: default;
+  --prism-enter: tear;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 300px 160px at 15% 20%, rgba(242,239,230,0.04), transparent 60%),
+    radial-gradient(ellipse 260px 140px at 85% 70%, rgba(242,239,230,0.03), transparent 60%),
+    var(--prism-bg) !important;
+}
+.prism-band { background: var(--prism-bg-2) !important; }
+.prism-orb { opacity: 0.4 !important; filter: blur(50px) !important; }
+.prism-noise { opacity: 0.06 !important; }
+
+.prism-card, .prism-panel {
+  background: var(--prism-surface) !important;
+  border: 1px dashed var(--prism-line-2) !important;
+  border-radius: 18px 12px 20px 10px / 10px 20px 12px 18px !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover { box-shadow: var(--prism-glow) !important; border-color: var(--prism-accent) !important; }
+
+.prism-title { color: var(--prism-accent) !important; text-shadow: 0 0 12px rgba(246,224,94,0.25) !important; }
+.prism-eyebrow { color: var(--prism-accent-2) !important; }
+
+.prism-btn { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; border: 1px dashed rgba(30,50,41,0.4) !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-btn-ghost { border: 1px dashed var(--prism-line-2) !important; color: var(--prism-text) !important; background: transparent !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-btn-quiet { color: var(--prism-accent-2) !important; }
+
+.prism-chip { border: 1px dashed var(--prism-line-2) !important; background: var(--prism-surface-2) !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-chip-on { background: var(--prism-accent-soft) !important; border-color: var(--prism-accent) !important; color: var(--prism-accent) !important; }
+
+.prism-badge { border: 1px dashed var(--prism-accent-2) !important; color: var(--prism-accent-2) !important; background: rgba(246,168,168,0.08) !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-frame { border: 1px dashed var(--prism-line-2) !important; border-radius: 20px 10px 24px 12px / 12px 24px 10px 20px !important; }
+.prism-rule { background: repeating-linear-gradient(90deg, var(--prism-line-2) 0 6px, transparent 6px 10px) !important; height: 2px !important; opacity: 0.7 !important; }
+.prism-kbd { border: 1px dashed var(--prism-line) !important; background: var(--prism-surface-3) !important; border-radius: var(--prism-radius-sm) !important; }

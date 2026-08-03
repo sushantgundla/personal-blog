@@ -1,0 +1,70 @@
+/* Blueprint — navy drafting paper, cyan technical linework, drawing labels */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap');
+
+:root {
+  --prism-bg: #0d2137;
+  --prism-bg-2: #0a1b2c;
+  --prism-surface: #102a45;
+  --prism-surface-2: #143355;
+  --prism-surface-3: #1a3f66;
+  --prism-text: #eef6fc;
+  --prism-muted: rgba(238,246,252,0.64);
+  --prism-faint: rgba(238,246,252,0.34);
+  --prism-line: rgba(125,211,252,0.35);
+  --prism-line-2: rgba(125,211,252,0.65);
+  --prism-accent: #7dd3fc;
+  --prism-accent-2: #38bdf8;
+  --prism-accent-3: #fbbf24;
+  --prism-accent-soft: rgba(125,211,252,0.12);
+  --prism-on-accent: #0d2137;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 2px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: 0 0 0 1px rgba(125,211,252,0.4);
+  --prism-glow: 0 0 16px rgba(125,211,252,0.3);
+
+  --prism-font-display: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-font-body: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-display-weight: 600;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.14em;
+
+  --prism-backdrop: grid;
+  --prism-cursor: crosshair;
+  --prism-enter: iris;
+}
+
+.prism-card, .prism-frame, .prism-badge, .prism-chip, .prism-kbd {
+  border: 1px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--prism-surface) !important;
+}
+.prism-panel {
+  border: 1px dashed var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.prism-badge { border-radius: 2px !important; }
+.prism-card-lift:hover {
+  box-shadow: var(--prism-glow) !important;
+  border-color: var(--prism-accent) !important;
+}
+
+.prism-btn, .prism-btn-ghost, .prism-icon-btn { border-radius: 0 !important; }
+.prism-chip { border-radius: 2px !important; }
+
+.prism-eyebrow, .prism-mono, .prism-num {
+  font-family: var(--prism-font-mono) !important;
+  letter-spacing: 0.08em !important;
+}
+
+.prism-rule { background: var(--prism-line-2) !important; }
+.prism-noise { display: none !important; }

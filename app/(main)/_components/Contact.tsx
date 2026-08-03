@@ -13,7 +13,7 @@ function MarqueeContent(): JSX.Element {
       {MARQUEE_ITEMS.map((item) => (
         <span key={item}>{item}</span>
       ))}
-      <span className="v2-dot" aria-hidden="true" />
+      <span className="prism-dot" aria-hidden="true" />
     </>
   )
 }
@@ -35,27 +35,27 @@ export function Contact(): JSX.Element {
   }
 
   return (
-    <section id="v2-contact" className="v2-section">
-      <div className="v2-wrap">
+    <section id="prism-contact" className="prism-section">
+      <div className="prism-wrap">
         <Reveal>
-          <span className="v2-eyebrow">Get in touch</span>
-          <h2 className="v2-title v2-title-xl" style={{ marginTop: '18px', maxWidth: '14ch' }}>
+          <span className="prism-eyebrow">Get in touch</span>
+          <h2 className="prism-title prism-title-xl" style={{ marginTop: '18px', maxWidth: '14ch' }}>
             Let&apos;s build something that ships.
           </h2>
         </Reveal>
 
         <Reveal delay={80}>
-          <div className="v2-grid" data-cols="2" style={{ marginTop: 'clamp(32px, 5vw, 56px)' }}>
-            <div className="v2-panel v2-card-lift v2-col" style={{ gap: '20px' }}>
-              <div className="v2-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <span className="v2-eyebrow">Email</span>
-                <span className="v2-mono v2-muted" style={{ fontSize: '0.78em' }}>Direct</span>
+          <div className="prism-grid" data-cols="2" style={{ marginTop: 'clamp(32px, 5vw, 56px)' }}>
+            <div className="prism-panel prism-card-lift prism-col" style={{ gap: '20px' }}>
+              <div className="prism-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <span className="prism-eyebrow">Email</span>
+                <span className="prism-mono prism-muted" style={{ fontSize: '0.78em' }}>Direct</span>
               </div>
               <a
                 href={`mailto:${siteConfig.email}`}
-                className="v2-link"
+                className="prism-link"
                 style={{
-                  fontFamily: 'var(--v2-font-head)',
+                  fontFamily: 'var(--prism-font-head)',
                   fontSize: 'clamp(1.35rem, 3vw, 2.1rem)',
                   fontWeight: 700,
                   wordBreak: 'break-word',
@@ -65,7 +65,7 @@ export function Contact(): JSX.Element {
               </a>
               <button
                 type="button"
-                className="v2-btn-ghost"
+                className="prism-btn-ghost"
                 onClick={handleCopy}
                 aria-label={copied ? 'Email copied to clipboard' : 'Copy email address'}
                 style={{ alignSelf: 'flex-start' }}
@@ -80,40 +80,40 @@ export function Contact(): JSX.Element {
               rel="noopener noreferrer"
               style={{ display: 'block', height: '100%', textDecoration: 'none', color: 'inherit' }}
             >
-              <div className="v2-panel v2-card-lift v2-col" style={{ gap: '20px', height: '100%' }}>
-                <div className="v2-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <span className="v2-eyebrow">LinkedIn</span>
-                  <span className="v2-mono v2-muted" style={{ fontSize: '0.78em' }}>↗</span>
+              <div className="prism-panel prism-card-lift prism-col" style={{ gap: '20px', height: '100%' }}>
+                <div className="prism-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <span className="prism-eyebrow">LinkedIn</span>
+                  <span className="prism-mono prism-muted" style={{ fontSize: '0.78em' }}>↗</span>
                 </div>
                 <span
                   style={{
-                    fontFamily: 'var(--v2-font-head)',
+                    fontFamily: 'var(--prism-font-head)',
                     fontSize: 'clamp(1.35rem, 3vw, 2.1rem)',
                     fontWeight: 700,
                   }}
                 >
                   Connect on LinkedIn
                 </span>
-                <span className="v2-body v2-muted">Fastest way to reach me about roles, projects, and work.</span>
+                <span className="prism-body prism-muted">Fastest way to reach me about roles, projects, and work.</span>
               </div>
             </a>
           </div>
         </Reveal>
 
         <Reveal delay={140}>
-          <div className="v2-row" style={{ marginTop: '28px', gap: '24px' }}>
-            <a href={siteConfig.social.github} target="_blank" rel="noopener noreferrer" className="v2-btn-quiet">
+          <div className="prism-row" style={{ marginTop: '28px', gap: '24px' }}>
+            <a href={siteConfig.social.github} target="_blank" rel="noopener noreferrer" className="prism-btn-quiet">
               GitHub
             </a>
-            <a href={siteConfig.social.twitter} target="_blank" rel="noopener noreferrer" className="v2-btn-quiet">
+            <a href={siteConfig.social.twitter} target="_blank" rel="noopener noreferrer" className="prism-btn-quiet">
               X
             </a>
           </div>
         </Reveal>
       </div>
 
-      <div className="v2-marquee" style={{ marginTop: 'clamp(64px, 8vw, 96px)' }} aria-hidden="true">
-        <div className="v2-marquee-track">
+      <div className="prism-marquee" style={{ marginTop: 'clamp(64px, 8vw, 96px)' }} aria-hidden="true">
+        <div className="prism-marquee-track">
           <span>
             <MarqueeContent />
           </span>
@@ -123,14 +123,14 @@ export function Contact(): JSX.Element {
         </div>
       </div>
 
-      <div className="v2-wrap">
+      <div className="prism-wrap">
         <Reveal delay={80}>
           <div
-            className="v2-row"
+            className="prism-row"
             style={{
               marginTop: 'clamp(48px, 6vw, 72px)',
               paddingTop: '28px',
-              borderTop: '1px solid var(--v2-line)',
+              borderTop: '1px solid var(--prism-line)',
               justifyContent: 'space-between',
               alignItems: 'flex-start',
             }}
@@ -140,19 +140,19 @@ export function Contact(): JSX.Element {
                 which crowded badly and left the right side to a back-link and a
                 shortcut hint the owner did not want. Year sits alone on the
                 right so the two sides balance. */}
-            <div className="v2-stack" style={{ gap: '6px' }}>
-              <span className="v2-sub" style={{ fontWeight: 700 }}>
+            <div className="prism-stack" style={{ gap: '6px' }}>
+              <span className="prism-sub" style={{ fontWeight: 700 }}>
                 {siteConfig.name}
               </span>
-              <span className="v2-muted" style={{ fontSize: '0.9em' }}>
+              <span className="prism-muted" style={{ fontSize: '0.9em' }}>
                 {role}
               </span>
-              <span className="v2-mono v2-muted" style={{ fontSize: '0.82em' }}>
+              <span className="prism-mono prism-muted" style={{ fontSize: '0.82em' }}>
                 {location}
               </span>
             </div>
 
-            <span className="v2-mono v2-muted" style={{ fontSize: '0.82em' }}>
+            <span className="prism-mono prism-muted" style={{ fontSize: '0.82em' }}>
               © {year}
             </span>
           </div>

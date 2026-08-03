@@ -1,0 +1,80 @@
+/* Neo-Brutalism — off-white, thick black borders, hard offset shadows, hot yellow */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Archivo+Black&display=swap');
+
+:root {
+  --prism-bg: #f5f2eb;
+  --prism-bg-2: #ece7db;
+  --prism-surface: #f5f2eb;
+  --prism-surface-2: #ffffff;
+  --prism-surface-3: #e5ded0;
+  --prism-text: #0a0a0a;
+  --prism-muted: rgba(10,10,10,0.66);
+  --prism-faint: rgba(10,10,10,0.62);
+  --prism-line: #0a0a0a;
+  --prism-line-2: #0a0a0a;
+  --prism-accent: #ffe500;
+  --prism-accent-2: #0a0a0a;
+  --prism-accent-3: #ff3d3d;
+  --prism-accent-soft: rgba(255,229,0,0.35);
+  --prism-on-accent: #0a0a0a;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 0px;
+  --prism-border-w: 3px;
+  --prism-shadow: 6px 6px 0 #0a0a0a;
+  --prism-shadow-lg: 9px 9px 0 #0a0a0a;
+  --prism-glow: none;
+
+  --prism-font-display: 'Archivo Black', system-ui, sans-serif;
+  --prism-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-body: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-mono: 'Space Grotesk', ui-monospace, monospace;
+  --prism-display-weight: 900;
+  --prism-display-tracking: -0.02em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.06em;
+
+  --prism-backdrop: none;
+  --prism-cursor: square;
+  --prism-enter: shatter;
+}
+
+.prism-card, .prism-panel, .prism-frame, .prism-badge, .prism-chip, .prism-kbd {
+  border: 3px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--prism-shadow) !important;
+  background: var(--prism-surface-2) !important;
+  transition: transform var(--prism-dur-fast) var(--prism-ease), box-shadow var(--prism-dur-fast) var(--prism-ease) !important;
+}
+.prism-card-lift:hover {
+  transform: translate(4px, 4px) !important;
+  box-shadow: 2px 2px 0 #0a0a0a !important;
+}
+
+.prism-btn {
+  border: 3px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--prism-shadow) !important;
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
+  transition: transform var(--prism-dur-fast) var(--prism-ease), box-shadow var(--prism-dur-fast) var(--prism-ease) !important;
+}
+.prism-btn:hover { transform: translate(3px, 3px) !important; box-shadow: 3px 3px 0 #0a0a0a !important; }
+.prism-btn-ghost, .prism-icon-btn { border: 3px solid var(--prism-line-2) !important; border-radius: 0 !important; }
+.prism-chip { border: 2px solid var(--prism-line-2) !important; border-radius: 0 !important; }
+.prism-chip-on { background: var(--prism-accent) !important; color: var(--prism-accent-2) !important; border-color: var(--prism-line-2) !important; }
+
+/* Hot yellow is a fill colour only — as text on light paper it fails contrast,
+   so eyebrow/badge use the near-black accent-2 for legibility instead. */
+.prism-eyebrow { color: var(--prism-accent-2) !important; }
+.prism-badge { color: var(--prism-accent-2) !important; }
+
+/* Some copy (e.g. project impact lines) is coloured with --prism-accent inline.
+   Hot yellow text on this theme's light paper is close to invisible
+   (~1.3:1), so force body copy to the readable muted ink instead. */
+.prism-body { color: var(--prism-muted) !important; }
+
+.prism-rule { background: var(--prism-line-2) !important; }
+.prism-orb { display: none !important; }

@@ -1,0 +1,88 @@
+/* Attention Heads — the site as a transformer attention map, blue→violet→amber heat */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --prism-bg: #08090d;
+  --prism-bg-2: #0c0e14;
+  --prism-surface: #0f1119;
+  --prism-surface-2: #151827;
+  --prism-surface-3: #1c2033;
+  --prism-text: #eef0f8;
+  --prism-muted: rgba(238,240,248,0.6);
+  --prism-faint: rgba(238,240,248,0.28);
+  --prism-line: rgba(124,58,237,0.28);
+  --prism-line-2: rgba(245,158,11,0.45);
+  --prism-accent: #f59e0b;
+  --prism-accent-2: #7c3aed;
+  --prism-accent-3: #1e3a8a;
+  --prism-accent-soft: rgba(245,158,11,0.1);
+  --prism-on-accent: #08090d;
+
+  --prism-radius: 4px;
+  --prism-radius-sm: 3px;
+  --prism-radius-lg: 8px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  --prism-shadow-lg: 0 24px 60px -20px rgba(0,0,0,0.85);
+  --prism-glow: 0 0 24px rgba(245,158,11,0.4);
+
+  --prism-font-display: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.02em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.14em;
+
+  --prism-backdrop: embed;
+  --prism-cursor: crosshair;
+  --prism-enter: pixelate;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; border-top: 1px solid var(--prism-line) !important; border-bottom: 1px solid var(--prism-line) !important; }
+.prism-orb { display: none !important; }
+.prism-noise { opacity: 0.05 !important; mix-blend-mode: screen !important; }
+
+.prism-card, .prism-panel {
+  background:
+    repeating-linear-gradient(115deg, rgba(30,58,138,0.1) 0px, rgba(124,58,237,0.07) 2px, transparent 2px, transparent 14px),
+    var(--prism-surface) !important;
+  border: 1px solid var(--prism-line) !important;
+  border-radius: var(--prism-radius) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover {
+  border-color: var(--prism-accent) !important;
+  background:
+    repeating-linear-gradient(115deg, rgba(245,158,11,0.14) 0px, rgba(245,158,11,0.08) 2px, transparent 2px, transparent 14px),
+    var(--prism-surface-2) !important;
+  box-shadow: var(--prism-glow) !important;
+}
+
+.prism-title { color: var(--prism-text) !important; }
+/* Base .prism-mono defaults to --prism-faint (a 0.30-alpha watermark tone) — only 2.3:1 here.
+   These annotation labels ("chat.mypdi", "mcp://gateway", etc.) need to be readable,
+   so give them --prism-muted instead (~6.4:1). */
+.prism-mono { color: var(--prism-muted) !important; }
+.prism-eyebrow { color: var(--prism-accent) !important; font-family: var(--prism-font-mono) !important; } /* accent-2 violet read at 3.49:1 on bg — the amber end of the ramp clears 4.5:1 */
+.prism-num { color: var(--prism-accent) !important; }
+
+.prism-btn { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; border: none !important; border-radius: var(--prism-radius-sm) !important; box-shadow: var(--prism-glow) !important; }
+.prism-btn-ghost { background: transparent !important; border: 1px solid var(--prism-accent-2) !important; color: var(--prism-text) !important; border-radius: var(--prism-radius-sm) !important; }
+/* Raw --prism-accent-2 violet (#7c3aed) only reaches 3.49:1 on this near-black bg.
+   #b39cfb is the same violet lifted a step, clears 4.5:1 (~8.6:1 measured). */
+.prism-btn-quiet { color: #b39cfb !important; }
+
+.prism-chip { border: 1px solid var(--prism-line) !important; background: var(--prism-surface-2) !important; border-radius: var(--prism-radius-sm) !important; font-family: var(--prism-font-mono) !important; }
+.prism-chip-on { background: var(--prism-accent-soft) !important; border-color: var(--prism-accent) !important; color: var(--prism-accent) !important; }
+
+/* Badge text uses a lighter step of the violet ramp than --prism-accent-2 (#7c3aed),
+   which only reaches 3.14:1 on this near-black surface. #b39cfb keeps the violet
+   identity and clears 4.5:1. The border stays on the darker violet. */
+.prism-badge { border: 1px solid var(--prism-accent-2) !important; color: #b39cfb !important; background: rgba(124,58,237,0.08) !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-frame { border: 1px solid var(--prism-line-2) !important; border-radius: var(--prism-radius) !important; filter: saturate(1.1) contrast(1.05) !important; }
+.prism-rule { background: linear-gradient(90deg, var(--prism-accent-3), var(--prism-accent-2), var(--prism-accent)) !important; height: 1px !important; opacity: 0.7 !important; }
+.prism-kbd { border: 1px solid var(--prism-line-2) !important; background: var(--prism-surface-3) !important; border-radius: 3px !important; }

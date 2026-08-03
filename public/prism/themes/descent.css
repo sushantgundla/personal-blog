@@ -1,0 +1,78 @@
+/* Gradient Descent — a loss landscape, contour lines, cyan→green→yellow as loss decreases */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+:root {
+  --prism-bg: #0a1128;
+  --prism-bg-2: #080d1f;
+  --prism-surface: #0d1530;
+  --prism-surface-2: #121b3d;
+  --prism-surface-3: #182449;
+  --prism-text: #eaf2fb;
+  --prism-muted: rgba(234,242,251,0.6);
+  --prism-faint: rgba(234,242,251,0.28);
+  --prism-line: rgba(34,211,238,0.18);
+  --prism-line-2: rgba(74,222,128,0.4);
+  --prism-accent: #22d3ee;
+  --prism-accent-2: #4ade80;
+  --prism-accent-3: #facc15;
+  --prism-accent-soft: rgba(34,211,238,0.1);
+  --prism-on-accent: #0a1128;
+
+  --prism-radius: 6px;
+  --prism-radius-sm: 4px;
+  --prism-radius-lg: 10px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  --prism-shadow-lg: 0 20px 50px -20px rgba(0,0,0,0.7);
+  --prism-glow: 0 0 20px rgba(74,222,128,0.35);
+
+  --prism-font-display: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+  --prism-font-head: 'IBM Plex Mono', monospace;
+  --prism-font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --prism-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-display-weight: 600;
+  --prism-display-tracking: -0.02em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.14em;
+
+  --prism-backdrop: grid;
+  --prism-cursor: crosshair;
+  --prism-enter: collapse;
+}
+
+body {
+  background:
+    repeating-linear-gradient(0deg, rgba(34,211,238,0.035) 0px, transparent 1px, transparent 40px, rgba(34,211,238,0.035) 41px),
+    repeating-linear-gradient(90deg, rgba(74,222,128,0.02) 0px, transparent 1px, transparent 40px),
+    var(--prism-bg) !important;
+}
+.prism-band { background: var(--prism-bg-2) !important; }
+.prism-orb { display: none !important; }
+.prism-noise { opacity: 0.04 !important; }
+
+.prism-card, .prism-panel {
+  background-image: linear-gradient(var(--prism-surface), var(--prism-surface)), linear-gradient(120deg, var(--prism-accent), var(--prism-accent-2), var(--prism-accent-3)) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--prism-radius) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover { box-shadow: var(--prism-glow) !important; }
+
+.prism-title { color: var(--prism-text) !important; }
+.prism-eyebrow { color: var(--prism-accent) !important; }
+.prism-num, .prism-mono { color: var(--prism-accent-2) !important; }
+
+.prism-btn { background: linear-gradient(120deg, var(--prism-accent), var(--prism-accent-2)) !important; color: var(--prism-bg) !important; border: none !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-btn-ghost { border: 1px solid var(--prism-line-2) !important; color: var(--prism-text) !important; background: transparent !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-btn-quiet { color: var(--prism-accent) !important; }
+
+.prism-chip { border: 1px solid var(--prism-line) !important; background: var(--prism-surface-2) !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-chip-on { border-color: var(--prism-accent-2) !important; color: var(--prism-accent-2) !important; background: rgba(74,222,128,0.1) !important; }
+
+.prism-rule { background: linear-gradient(90deg, var(--prism-accent), var(--prism-accent-2), var(--prism-accent-3)) !important; height: 1px !important; opacity: 0.6 !important; }
+.prism-badge { border: 1px solid var(--prism-accent-3) !important; color: var(--prism-accent-3) !important; background: rgba(250,204,21,0.08) !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-frame { border: 1px solid var(--prism-line-2) !important; border-radius: var(--prism-radius-lg) !important; }
+.prism-kbd { border: 1px solid var(--prism-line) !important; background: var(--prism-surface-3) !important; border-radius: var(--prism-radius-sm) !important; }

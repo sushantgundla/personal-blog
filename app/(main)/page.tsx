@@ -12,7 +12,7 @@ import { Contact } from './_components/Contact'
  * Server component: articles are read from the filesystem here and handed to
  * the client sections as plain props. Nothing below this line may touch `fs`.
  */
-export default function V2Page() {
+export default function HomePage() {
   const articles: ArticleCard[] = getAllArticles()
     .slice(0, 4)
     .map(({ slug, title, date, description, tags, readingTime }) => ({

@@ -1,0 +1,116 @@
+/* Bauhaus — ecru paper, hard primary geometry, thick black rules. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap');
+
+:root {
+  --prism-bg: #f0ebe1;
+  --prism-bg-2: #e8e1d2;
+  --prism-surface: #ffffff;
+  --prism-surface-2: #f0ebe1;
+  --prism-surface-3: #e8e1d2;
+  --prism-text: #1a1a1a;
+  --prism-muted: rgba(26, 26, 26, 0.68);
+  --prism-faint: rgba(26, 26, 26, 0.34);
+  --prism-line: #1a1a1a;
+  --prism-line-2: #1a1a1a;
+  --prism-accent: #c1121f;
+  --prism-accent-2: #1d3557;
+  --prism-accent-3: #f4c430;
+  --prism-accent-soft: rgba(193, 18, 31, 0.12);
+  --prism-on-accent: #f6f1e7;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 2px;
+  --prism-shadow: none;
+  --prism-shadow-lg: 6px 6px 0 #1a1a1a;
+  --prism-glow: none;
+
+  --prism-font-display: 'Poppins', system-ui, sans-serif;
+  --prism-font-head: 'Poppins', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 800;
+  --prism-display-tracking: 0em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.08em;
+
+  --prism-backdrop: none;
+  --prism-cursor: square;
+  --prism-enter: shatter;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; border-top: 2px solid #1a1a1a !important; border-bottom: 2px solid #1a1a1a !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { display: none !important; }
+
+.prism-title, .prism-head { text-transform: uppercase !important; }
+
+.prism-card, .prism-panel { box-shadow: none !important; }
+.prism-card-lift:hover {
+  border-color: var(--prism-accent-2) !important;
+  box-shadow: var(--prism-shadow-lg) !important;
+  background: var(--prism-surface) !important;
+}
+
+.prism-btn {
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
+  border: 2px solid #1a1a1a !important;
+  box-shadow: 4px 4px 0 #1a1a1a !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+.prism-btn:hover {
+  background: var(--prism-accent-2) !important;
+  transform: none !important;
+  box-shadow: 6px 6px 0 #1a1a1a !important;
+}
+
+.prism-btn-ghost {
+  background: transparent !important;
+  border: 2px solid #1a1a1a !important;
+  color: var(--prism-text) !important;
+}
+.prism-btn-ghost:hover { background: var(--prism-surface-3) !important; transform: none !important; }
+
+.prism-chip {
+  background: #ffffff !important;
+  border: 2px solid #1a1a1a !important;
+  color: var(--prism-text) !important;
+}
+.prism-chip-on {
+  background: var(--prism-accent-2) !important;
+  border-color: #1a1a1a !important;
+  color: var(--prism-on-accent) !important;
+}
+
+.prism-icon-btn {
+  border: 2px solid #1a1a1a !important;
+  background: var(--prism-accent-3) !important;
+  color: #1a1a1a !important;
+}
+.prism-icon-btn:hover { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; transform: none !important; }
+
+.prism-frame {
+  border: 2px solid #1a1a1a !important;
+  box-shadow: 6px 6px 0 var(--prism-accent-2) !important;
+}
+
+.prism-badge {
+  background: #f4c430 !important;
+  border: 2px solid #1a1a1a !important;
+  color: #1a1a1a !important;
+}
+
+.prism-kbd {
+  background: #ffffff !important;
+  border: 2px solid #1a1a1a !important;
+}
+
+.prism-rule { background: #1a1a1a !important; height: 2px !important; }
+
+.prism-dot { background: #e63946 !important; }

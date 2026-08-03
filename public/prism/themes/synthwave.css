@@ -1,0 +1,74 @@
+/* Synthwave — deep purple, magenta/cyan neon, chrome gradient text, horizon glow */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --prism-bg: #1a0b2e;
+  --prism-bg-2: #150925;
+  --prism-surface: #22103b;
+  --prism-surface-2: #2b1549;
+  --prism-surface-3: #351b5c;
+  --prism-text: #f5eefe;
+  --prism-muted: rgba(245,238,254,0.64);
+  --prism-faint: rgba(245,238,254,0.34);
+  --prism-line: rgba(255,46,151,0.3);
+  --prism-line-2: rgba(0,229,255,0.55);
+  --prism-accent: #ff2e97;
+  --prism-accent-2: #00e5ff;
+  --prism-accent-3: #ffb03a;
+  --prism-accent-soft: rgba(255,46,151,0.12);
+  --prism-on-accent: #1a0b2e;
+
+  --prism-radius: 10px;
+  --prism-radius-sm: 6px;
+  --prism-radius-lg: 20px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: 0 0 40px rgba(255,46,151,0.35);
+  --prism-glow: 0 0 24px rgba(0,229,255,0.5);
+
+  --prism-font-display: 'Poppins', system-ui, sans-serif;
+  --prism-font-head: 'Poppins', system-ui, sans-serif;
+  --prism-font-body: 'Poppins', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 800;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.14em;
+
+  --prism-backdrop: waves;
+  --prism-cursor: ring;
+  --prism-enter: rewind;
+}
+
+.prism-card, .prism-panel, .prism-frame, .prism-badge, .prism-chip {
+  border: 1px solid transparent !important;
+  border-radius: var(--prism-radius) !important;
+  background:
+    linear-gradient(var(--prism-surface), var(--prism-surface)) padding-box,
+    linear-gradient(135deg, var(--prism-accent), var(--prism-accent-2)) border-box !important;
+  box-shadow: none !important;
+}
+.prism-card-lift:hover { box-shadow: var(--prism-shadow-lg) !important; }
+
+/* NOTE: intentionally solid colour + glow, not background-clip:text gradient.
+   The hero name is split into one <span> per letter for its reveal animation;
+   `background`/`background-clip` do not inherit to those child spans (only
+   `color` and `text-shadow` do), so a clipped gradient here renders as fully
+   invisible text on the animated hero title. Solid colour + text-shadow glow
+   gives the same chrome/neon read and survives being split into spans. */
+.prism-title {
+  color: var(--prism-accent-2) !important;
+  -webkit-text-fill-color: var(--prism-accent-2) !important;
+  text-shadow: 0 0 18px rgba(0, 229, 255, 0.55), 0 0 42px rgba(255, 46, 151, 0.35) !important;
+}
+
+.prism-btn {
+  background: linear-gradient(135deg, var(--prism-accent), var(--prism-accent-2)) !important;
+  color: #1a0b2e !important;
+  border-radius: var(--prism-radius-pill) !important;
+}
+.prism-btn:hover { box-shadow: var(--prism-glow) !important; }
+.prism-btn-ghost, .prism-icon-btn { border: 1px solid var(--prism-accent-2) !important; border-radius: var(--prism-radius-pill) !important; }
+
+.prism-noise { display: none !important; }

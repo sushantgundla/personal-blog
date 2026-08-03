@@ -1,0 +1,126 @@
+/* Neumorphism — dark, flat, monochrome. Depth from paired shadows only. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --prism-bg: #1e1e1e;
+  --prism-bg-2: #1e1e1e;
+  --prism-surface: #1e1e1e;
+  --prism-surface-2: #212121;
+  --prism-surface-3: #1a1a1a;
+  --prism-text: #f2f2f2;
+  --prism-muted: rgba(242, 242, 242, 0.62);
+  --prism-faint: rgba(242, 242, 242, 0.34);
+  --prism-line: transparent;
+  --prism-line-2: transparent;
+  --prism-accent: #5fd0c2;
+  --prism-accent-2: #4bb8ab;
+  --prism-accent-3: #9f8cf0;
+  --prism-accent-soft: rgba(95, 208, 194, 0.12);
+  --prism-on-accent: #10231f;
+
+  --prism-radius: 18px;
+  --prism-radius-sm: 12px;
+  --prism-radius-lg: 26px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 0px;
+  --prism-shadow: 6px 6px 16px #141414, -6px -6px 16px #282828;
+  --prism-shadow-lg: 8px 8px 22px #121212, -8px -8px 22px #2c2c2c;
+  --prism-glow: 0 0 0 rgba(0, 0, 0, 0);
+
+  --prism-font-display: 'Poppins', system-ui, sans-serif;
+  --prism-font-head: 'Poppins', system-ui, sans-serif;
+  --prism-font-body: 'Poppins', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.02em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.06em;
+
+  --prism-backdrop: none;
+  --prism-cursor: ring;
+  --prism-enter: collapse;
+}
+
+body { background: var(--prism-bg) !important; }
+
+.prism-band { background: var(--prism-bg) !important; box-shadow: inset 0 12px 24px -20px #000, inset 0 -12px 24px -20px #000 !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { display: none !important; }
+
+.prism-card-lift:hover,
+.prism-card-lift:focus-visible {
+  background: var(--prism-surface) !important;
+  box-shadow: inset 6px 6px 16px #141414, inset -6px -6px 16px #282828 !important;
+  transform: none !important;
+}
+
+.prism-btn {
+  background: var(--prism-surface) !important;
+  color: var(--prism-accent) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-btn:hover {
+  background: var(--prism-surface) !important;
+  box-shadow: inset 4px 4px 10px #141414, inset -4px -4px 10px #282828 !important;
+  transform: none !important;
+}
+
+.prism-btn-ghost {
+  background: var(--prism-surface) !important;
+  box-shadow: 4px 4px 10px #141414, -4px -4px 10px #282828 !important;
+  color: var(--prism-muted) !important;
+}
+.prism-btn-ghost:hover {
+  box-shadow: inset 3px 3px 8px #141414, inset -3px -3px 8px #282828 !important;
+  background: var(--prism-surface) !important;
+  transform: none !important;
+}
+
+.prism-chip {
+  background: var(--prism-surface) !important;
+  box-shadow: 3px 3px 8px #141414, -3px -3px 8px #282828 !important;
+  color: var(--prism-muted) !important;
+}
+.prism-chip-on {
+  background: var(--prism-surface) !important;
+  box-shadow: inset 3px 3px 8px #141414, inset -3px -3px 8px #282828 !important;
+  color: var(--prism-accent) !important;
+}
+
+.prism-icon-btn {
+  background: var(--prism-surface) !important;
+  box-shadow: 4px 4px 10px #141414, -4px -4px 10px #282828 !important;
+  color: var(--prism-muted) !important;
+}
+.prism-icon-btn:hover {
+  box-shadow: inset 3px 3px 8px #141414, inset -3px -3px 8px #282828 !important;
+  color: var(--prism-accent) !important;
+  transform: none !important;
+}
+
+.prism-frame {
+  background: var(--prism-surface) !important;
+  box-shadow: 8px 8px 20px #141414, -8px -8px 20px #282828 !important;
+}
+
+.prism-badge {
+  background: var(--prism-surface) !important;
+  box-shadow: inset 3px 3px 7px #141414, inset -3px -3px 7px #282828 !important;
+  color: var(--prism-accent) !important;
+}
+
+.prism-kbd {
+  background: var(--prism-surface) !important;
+  box-shadow: inset 2px 2px 5px #141414, inset -2px -2px 5px #282828 !important;
+}
+
+.prism-rule {
+  background: transparent !important;
+  box-shadow: 0 1px 0 #282828, 0 -1px 0 #141414 !important;
+}
+
+.prism-dot {
+  background: var(--prism-accent) !important;
+  box-shadow: 2px 2px 5px #141414, -1px -1px 3px #282828 !important;
+}

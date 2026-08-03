@@ -7,7 +7,7 @@ import { Reveal } from './Reveal'
 
 /**
  * "What I do" section. Renders the AI platform as a layered system diagram
- * built entirely from .v2-card, plus a filterable skill cloud.
+ * built entirely from .prism-card, plus a filterable skill cloud.
  */
 
 type Group = 'all' | 'ai' | 'infra' | 'data' | 'lang'
@@ -174,7 +174,7 @@ function Connector({ variant }: { variant: ConnectorVariant }): JSX.Element {
 
   return (
     <svg {...common}>
-      <path d={path} fill="none" stroke="var(--v2-line-2)" strokeWidth={2} strokeLinecap="round" />
+      <path d={path} fill="none" stroke="var(--prism-line-2)" strokeWidth={2} strokeLinecap="round" />
     </svg>
   )
 }
@@ -192,22 +192,22 @@ function LayerCard({
 
   return (
     <div
-      className="v2-card v2-card-lift v2-col"
+      className="prism-card prism-card-lift prism-col"
       style={{
         gap: '0.4rem',
         paddingBlock: 'clamp(12px, 1.6vw, 16px)',
         opacity: dimmed ? 0.55 : 1,
-        transition: 'opacity var(--v2-dur-fast) var(--v2-ease)',
+        transition: 'opacity var(--prism-dur-fast) var(--prism-ease)',
       }}
       onMouseEnter={() => onHover(item.id)}
       onMouseLeave={() => onHover(null)}
     >
-      <span className="v2-sub">{item.label}</span>
-      <p className="v2-body v2-muted" style={{ margin: 0 }}>{item.desc}</p>
-      {/* --v2-muted, not --v2-faint. These tags ("chat.interface", "llm.gateway")
-          are real content, and --v2-faint is a 0.30-alpha watermark tone — it
+      <span className="prism-sub">{item.label}</span>
+      <p className="prism-body prism-muted" style={{ margin: 0 }}>{item.desc}</p>
+      {/* --prism-muted, not --prism-faint. These tags ("chat.interface", "llm.gateway")
+          are real content, and --prism-faint is a 0.30-alpha watermark tone — it
           measured as low as 1.9:1 in several dimensions. */}
-      <span className="v2-mono" style={{ fontSize: '0.78rem', color: 'var(--v2-muted)' }}>{item.tag}</span>
+      <span className="prism-mono" style={{ fontSize: '0.78rem', color: 'var(--prism-muted)' }}>{item.tag}</span>
     </div>
   )
 }
@@ -217,20 +217,20 @@ export function Signal(): JSX.Element {
   const [activeGroup, setActiveGroup] = useState<Group>('all')
 
   return (
-    <section id="v2-signal" className="v2-section">
-      <div className="v2-wrap v2-col" style={{ gap: 'clamp(20px, 3vw, 36px)' }}>
+    <section id="prism-signal" className="prism-section">
+      <div className="prism-wrap prism-col" style={{ gap: 'clamp(20px, 3vw, 36px)' }}>
         {/* Part A — thesis */}
         <Reveal>
-          <div className="v2-col" style={{ maxWidth: 720, gap: '1rem' }}>
-            <span className="v2-eyebrow"><span className="v2-dot" />What I build</span>
-            <h2 className="v2-head">One connected AI platform, not five separate projects</h2>
+          <div className="prism-col" style={{ maxWidth: 720, gap: '1rem' }}>
+            <span className="prism-eyebrow"><span className="prism-dot" />What I build</span>
+            <h2 className="prism-head">One connected AI platform, not five separate projects</h2>
             {/* Rewritten for two reasons. It described the internal wiring of a
                 specific employer's platform, which does not belong on a
                 personal capability page; and it listed an ingestion pipeline
                 and an infra layer that are no longer in the diagram below. It
                 now describes the capability generically and matches the four
                 layers actually shown. */}
-            <p className="v2-body v2-muted">
+            <p className="prism-body prism-muted">
               I build AI systems as one connected platform rather than five disconnected projects:
               gateways that make models and tools reliably available, a knowledge base that grounds
               them in real content, an agent framework standing on both, and the chatbots and
@@ -240,17 +240,17 @@ export function Signal(): JSX.Element {
         </Reveal>
 
         {/* Part B — stack diagram */}
-        <div className="v2-col" style={{ gap: '0.75rem' }}>
+        <div className="prism-col" style={{ gap: '0.75rem' }}>
           <Reveal>
-            <span className="v2-eyebrow"><span className="v2-dot" />The stack, top to bottom</span>
+            <span className="prism-eyebrow"><span className="prism-dot" />The stack, top to bottom</span>
           </Reveal>
-          <div className="v2-col" style={{ gap: 0 }}>
+          <div className="prism-col" style={{ gap: 0 }}>
             {LAYERS.map((row, i) => (
               <div key={row[0]?.id ?? i}>
                 {i > 0 && <Connector variant={connectorVariant(LAYERS[i - 1].length, row.length)} />}
                 <Reveal delay={i * 90}>
                   {row.length > 1 ? (
-                    <div className="v2-grid" data-cols={String(row.length)}>
+                    <div className="prism-grid" data-cols={String(row.length)}>
                       {row.map((item) => (
                         <LayerCard key={item.id} item={item} hoveredId={hoveredId} onHover={setHoveredId} />
                       ))}
@@ -269,7 +269,7 @@ export function Signal(): JSX.Element {
                 maps one-to-one to the card above it. */}
             <Connector variant="support" />
             <Reveal delay={LAYERS.length * 90}>
-              <div className="v2-grid" data-cols="3">
+              <div className="prism-grid" data-cols="3">
                 {FOUNDATION.map((item) => (
                   <LayerCard
                     key={item.id}
@@ -284,16 +284,16 @@ export function Signal(): JSX.Element {
         </div>
 
         {/* Part C — capability chips */}
-        <div className="v2-col" style={{ gap: '1.25rem' }}>
+        <div className="prism-col" style={{ gap: '1.25rem' }}>
           <Reveal>
-            <div className="v2-col" style={{ gap: '0.75rem' }}>
-              <span className="v2-eyebrow"><span className="v2-dot" />Capabilities</span>
-              <div className="v2-row" role="group" aria-label="Filter skills by category">
+            <div className="prism-col" style={{ gap: '0.75rem' }}>
+              <span className="prism-eyebrow"><span className="prism-dot" />Capabilities</span>
+              <div className="prism-row" role="group" aria-label="Filter skills by category">
                 {FILTERS.map((f) => (
                   <button
                     key={f.id}
                     type="button"
-                    className={`v2-btn-quiet${activeGroup === f.id ? ' v2-chip-on' : ''}`}
+                    className={`prism-btn-quiet${activeGroup === f.id ? ' prism-chip-on' : ''}`}
                     aria-pressed={activeGroup === f.id}
                     onClick={() => setActiveGroup(f.id)}
                   >
@@ -301,7 +301,7 @@ export function Signal(): JSX.Element {
                   </button>
                 ))}
               </div>
-              <div className="v2-row">
+              <div className="prism-row">
                 {siteConfig.skills.map((skill) => {
                   const g = groupOf(skill.label)
                   const matches = activeGroup === 'all' || g === activeGroup
@@ -309,10 +309,10 @@ export function Signal(): JSX.Element {
                   return (
                     <span
                       key={skill.label}
-                      className={`v2-chip${emphasize ? ' v2-chip-on' : ''}`}
+                      className={`prism-chip${emphasize ? ' prism-chip-on' : ''}`}
                       style={{
                         opacity: matches ? 1 : 0.4,
-                        transition: 'opacity var(--v2-dur-fast) var(--v2-ease), border-color var(--v2-dur-fast) var(--v2-ease), color var(--v2-dur-fast) var(--v2-ease), background var(--v2-dur-fast) var(--v2-ease)',
+                        transition: 'opacity var(--prism-dur-fast) var(--prism-ease), border-color var(--prism-dur-fast) var(--prism-ease), color var(--prism-dur-fast) var(--prism-ease), background var(--prism-dur-fast) var(--prism-ease)',
                       }}
                     >
                       {skill.label}

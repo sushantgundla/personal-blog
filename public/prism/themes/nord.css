@@ -1,0 +1,100 @@
+/* Nord — polar night, snow storm text, frost accents. Calm, quiet, built for reading. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --prism-bg: #2e3440;
+  --prism-bg-2: #272c36;
+  --prism-surface: #3b4252;
+  --prism-surface-2: #434c5e;
+  --prism-surface-3: #4c566a;
+  --prism-text: #eceff4;
+  --prism-muted: rgba(236,239,244,0.75);
+  --prism-faint: rgba(236,239,244,0.36);
+  --prism-line: rgba(236,239,244,0.12);
+  --prism-line-2: rgba(236,239,244,0.22);
+  --prism-accent: #88c0d0;
+  --prism-accent-2: #5e81ac;
+  --prism-accent-3: #a3be8c;
+  --prism-accent-soft: rgba(136,192,208,0.12);
+  --prism-on-accent: #2e3440;
+
+  --prism-radius: 12px;
+  --prism-radius-sm: 8px;
+  --prism-radius-lg: 18px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  --prism-shadow-lg: 0 20px 44px -18px rgba(0,0,0,0.45);
+  --prism-glow: 0 0 0 3px rgba(136,192,208,0.18);
+
+  --prism-font-display: 'Inter', system-ui, sans-serif;
+  --prism-font-head: 'Inter', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.02em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.08em;
+
+  --prism-backdrop: stars;
+  --prism-cursor: default;
+  --prism-enter: iris;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { display: none !important; }
+
+.prism-title,
+.prism-eyebrow { text-shadow: none !important; }
+
+.prism-card,
+.prism-panel {
+  background: var(--prism-surface) !important;
+  border: 1px solid var(--prism-line) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover {
+  border-color: var(--prism-accent) !important;
+  box-shadow: var(--prism-shadow-lg) !important;
+  transform: translateY(-2px) !important;
+}
+
+.prism-chip {
+  background: var(--prism-surface-2) !important;
+  border: 1px solid var(--prism-line) !important;
+}
+.prism-chip-on {
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
+  border-color: var(--prism-accent) !important;
+}
+
+.prism-btn {
+  background: #496586 !important; /* darkened accent-2 — raw hue is too light for white text at 4.5:1 */
+  color: #eceff4 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.prism-btn:hover { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; }
+.prism-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--prism-line-2) !important;
+  color: var(--prism-text) !important;
+}
+
+.prism-badge {
+  background: var(--prism-surface-2) !important;
+  border: 1px solid var(--prism-accent-3) !important;
+  color: #b5cc9c !important; /* lightened accent-3 — the raw hue is too dark on surface-2 */
+}
+
+.prism-frame {
+  border: 1px solid var(--prism-line) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+
+.prism-rule { background: var(--prism-line) !important; }
+.prism-kbd { background: var(--prism-surface-2) !important; border: 1px solid var(--prism-line-2) !important; box-shadow: 0 1px 0 rgba(0,0,0,0.3) !important; }

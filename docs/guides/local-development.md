@@ -64,4 +64,4 @@ The site ships with 30 visual themes ("dimensions") — see
   | `]` | next dimension in the list |
   | `\` | jump to one random other dimension |
 
-The chosen dimension persists in `localStorage` (`v2-dimension`) so it survives a reload.
+The chosen dimension persists in `localStorage` (`prism-dimension`) so it survives a reload.

@@ -1,0 +1,74 @@
+/* Fifth-Generation Photocopy — harsh dithered black on grey-white, degraded punk zine energy */
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;700&display=swap');
+
+:root {
+  --prism-bg: #e8e6e1;
+  --prism-bg-2: #ddd9d1;
+  --prism-surface: #eeece7;
+  --prism-surface-2: #dedad2;
+  --prism-surface-3: #cfcabf;
+  --prism-text: #111111;
+  --prism-muted: rgba(17,17,17,0.65);
+  --prism-faint: rgba(17,17,17,0.32);
+  --prism-line: rgba(17,17,17,0.4);
+  --prism-line-2: #111111;
+  --prism-accent: #111111;
+  --prism-accent-2: #4a4a4a;
+  --prism-accent-3: #8a8a8a;
+  --prism-accent-soft: rgba(17,17,17,0.08);
+  --prism-on-accent: #e8e6e1;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 0px;
+  --prism-border-w: 2px;
+  --prism-shadow: 3px 3px 0 rgba(17,17,17,0.3);
+  --prism-shadow-lg: 5px 5px 0 rgba(17,17,17,0.4);
+  --prism-glow: 0 0 0 rgba(0,0,0,0);
+
+  --prism-font-display: 'Anton', 'Space Grotesk', sans-serif;
+  --prism-font-head: 'Barlow Condensed', sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 400;
+  --prism-display-tracking: 0em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.02em;
+
+  --prism-backdrop: none;
+  --prism-cursor: square;
+  --prism-enter: pixelate;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band {
+  background: linear-gradient(180deg, rgba(17,17,17,0.05), transparent 15%, transparent 85%, rgba(17,17,17,0.08)), var(--prism-bg-2) !important;
+  border-top: 2px solid #111 !important;
+  border-bottom: 2px solid #111 !important;
+}
+.prism-orb { display: none !important; }
+.prism-noise { opacity: 0.35 !important; mix-blend-mode: multiply !important; }
+
+.prism-card, .prism-panel {
+  background: repeating-conic-gradient(rgba(17,17,17,0.06) 0% 25%, transparent 0% 50%) 0 0/3px 3px, var(--prism-surface) !important;
+  border: 2px solid #111 !important;
+  border-radius: 0 !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover { box-shadow: var(--prism-shadow-lg) !important; }
+
+.prism-title { color: var(--prism-text) !important; text-transform: uppercase !important; }
+.prism-eyebrow { color: var(--prism-text) !important; }
+
+.prism-btn { background: #111 !important; color: var(--prism-bg) !important; border: 2px solid #111 !important; border-radius: 0 !important; box-shadow: var(--prism-shadow) !important; }
+.prism-btn:hover { background: var(--prism-bg) !important; color: #111 !important; }
+.prism-btn-ghost { background: transparent !important; border: 2px solid #111 !important; color: #111 !important; border-radius: 0 !important; }
+
+.prism-chip { border: 2px solid #111 !important; border-radius: 0 !important; background: transparent !important; }
+.prism-chip-on { background: #111 !important; color: var(--prism-bg) !important; }
+
+.prism-badge { border: 2px solid #111 !important; border-radius: 0 !important; background: #111 !important; color: var(--prism-bg) !important; }
+.prism-frame { filter: contrast(1.4) grayscale(1) !important; border: 2px solid #111 !important; border-radius: 0 !important; box-shadow: 3px 3px 0 #111 !important; }
+.prism-rule { background: repeating-linear-gradient(90deg, #111 0 4px, transparent 4px 7px) !important; height: 3px !important; }
+.prism-kbd { border: 2px solid #111 !important; border-radius: 0 !important; box-shadow: 2px 2px 0 #111 !important; background: var(--prism-surface) !important; }

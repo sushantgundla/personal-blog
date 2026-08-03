@@ -1,0 +1,115 @@
+/* Neon Tokyo — wet black streets, hot pink + electric blue glow, rain-soaked chrome */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Oswald:wght@500;600;700&display=swap');
+
+:root {
+  --prism-bg: #050507;
+  --prism-bg-2: #0a0810;
+  --prism-surface: #0c0a12;
+  --prism-surface-2: #14101c;
+  --prism-surface-3: #1a1424;
+  --prism-text: #f5f2ff;
+  --prism-muted: rgba(245,242,255,0.68);
+  --prism-faint: rgba(245,242,255,0.34);
+  --prism-line: rgba(255,0,128,0.35);
+  --prism-line-2: rgba(0,179,255,0.5);
+  --prism-accent: #ff0080;
+  --prism-accent-2: #00b3ff;
+  --prism-accent-3: #ff5fa8;
+  --prism-accent-soft: rgba(255,0,128,0.12);
+  --prism-on-accent: #050507;
+
+  --prism-radius: 4px;
+  --prism-radius-sm: 2px;
+  --prism-radius-lg: 6px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 0 0 1px rgba(255,0,128,0.15), 0 4px 20px rgba(0,0,0,0.6);
+  --prism-shadow-lg: 0 0 40px rgba(255,0,128,0.35), 0 0 80px rgba(0,179,255,0.15);
+  --prism-glow: 0 0 24px rgba(255,0,128,0.55), 0 0 48px rgba(0,179,255,0.25);
+
+  --prism-font-display: 'Oswald', 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'Rajdhani', system-ui, sans-serif;
+  --prism-font-body: 'Rajdhani', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.22em;
+
+  --prism-backdrop: rain;
+  --prism-cursor: ring;
+  --prism-enter: rewind;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; }
+
+.prism-orb { display: block !important; opacity: 0.5 !important; filter: blur(90px) saturate(200%) !important; mix-blend-mode: screen !important; }
+.prism-noise { opacity: 0.05 !important; }
+
+.prism-title {
+  text-shadow:
+    0 0 8px rgba(255,0,128,0.8),
+    0 0 24px rgba(255,0,128,0.5),
+    0 0 48px rgba(0,179,255,0.3) !important;
+}
+
+.prism-eyebrow { color: #ff4fa3 !important; text-shadow: 0 0 10px rgba(0,179,255,0.7) !important; }
+
+.prism-card,
+.prism-panel {
+  background: linear-gradient(160deg, #0d0a14, #050507) !important;
+  border: 1px solid rgba(255,0,128,0.3) !important;
+  box-shadow: var(--prism-shadow) !important;
+  transition: box-shadow var(--prism-dur) var(--prism-ease), border-color var(--prism-dur) var(--prism-ease) !important;
+}
+.prism-card-lift:hover {
+  border-color: rgba(0,179,255,0.7) !important;
+  box-shadow: var(--prism-glow), var(--prism-shadow-lg) !important;
+}
+
+.prism-chip {
+  background: rgba(255,0,128,0.08) !important;
+  border: 1px solid rgba(255,0,128,0.4) !important;
+  text-transform: uppercase !important;
+}
+.prism-chip-on {
+  background: var(--prism-accent-2) !important;
+  color: var(--prism-on-accent) !important;
+  border-color: var(--prism-accent-2) !important;
+  box-shadow: 0 0 16px rgba(0,179,255,0.7) !important;
+}
+
+.prism-btn {
+  background: linear-gradient(90deg, var(--prism-accent), var(--prism-accent-2)) !important;
+  color: #050507 !important;
+  border: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  box-shadow: 0 0 24px rgba(255,0,128,0.5) !important;
+}
+.prism-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--prism-accent-2) !important;
+  color: var(--prism-accent-2) !important;
+  box-shadow: inset 0 0 12px rgba(0,179,255,0.15) !important;
+}
+
+.prism-badge {
+  background: rgba(0,179,255,0.1) !important;
+  border: 1px solid var(--prism-accent-2) !important;
+  color: #ff4fa3 !important;
+  box-shadow: 0 0 12px rgba(0,179,255,0.4) !important;
+}
+
+.prism-frame {
+  border: 1px solid rgba(255,0,128,0.4) !important;
+  box-shadow: 0 0 30px rgba(255,0,128,0.25) !important;
+}
+
+.prism-rule {
+  background: linear-gradient(90deg, var(--prism-accent), var(--prism-accent-2)) !important;
+  box-shadow: 0 0 10px rgba(255,0,128,0.5) !important;
+}
+
+.prism-dot { box-shadow: 0 0 10px currentColor !important; }

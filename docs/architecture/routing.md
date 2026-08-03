@@ -16,7 +16,7 @@ Only paths matching `/old` (and anything under it) get `Header`/`Footer`. Every 
 
 `(main)` is a Next.js **route group**: the parenthesized segment doesn't appear in the URL, so `app/(main)/page.tsx` serves `/`, `app/(main)/about/page.tsx` serves `/about`, and so on.
 
-Layout: `app/(main)/layout.tsx` (`V2Layout`). Mounts, in order: `Backdrop` (theme-reactive canvas), `DimensionEngine` (the theme-swap engine + SVG filter defs), `Nav` (fixed top bar), `#v2-shell` wrapping `{children}`, `.v2-noise` (grain overlay), `DimensionHUD` (the theme picker button, deliberately outside `#v2-shell` so it stays still during transitions), `Cursor` (custom cursor). Pulls in `app/(main)/v2.css`, the base stylesheet for the whole [design system](./design-system.md).
+Layout: `app/(main)/layout.tsx` (`PrismLayout`). Mounts, in order: `Backdrop` (theme-reactive canvas), `DimensionEngine` (the theme-swap engine + SVG filter defs), `Nav` (fixed top bar), `#prism-shell` wrapping `{children}`, `.prism-noise` (grain overlay), `DimensionHUD` (the theme picker button, deliberately outside `#prism-shell` so it stays still during transitions), `Cursor` (custom cursor). Pulls in `app/(main)/prism.css`, the base stylesheet for the whole [design system](./design-system.md).
 
 | Route | File | Renders |
 |---|---|---|
@@ -29,7 +29,7 @@ Layout: `app/(main)/layout.tsx` (`V2Layout`). Mounts, in order: `Backdrop` (them
 
 ## `/old` — the previous home page
 
-File: `app/old/page.tsx`. Not inside `app/(main)`, so it does **not** get `V2Layout` or any `/v2` styling — instead `SiteFrame` gives it the legacy `Header`/`Footer` chrome, and it's styled with Tailwind like the rest of the pre-redesign site.
+File: `app/old/page.tsx`. Not inside `app/(main)`, so it does **not** get `PrismLayout` or any Prism styling — instead `SiteFrame` gives it the legacy `Header`/`Footer` chrome, and it's styled with Tailwind like the rest of the pre-redesign site.
 
 Kept for reference after the redesign shipped to `/`. Marked `robots: { index: false }` with `alternates: { canonical: '/' }` — it isn't meant to rank; indexing it alongside `/` would split ranking signals between two pages with near-identical content.
 

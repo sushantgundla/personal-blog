@@ -19,14 +19,14 @@ export const metadata: Metadata = {
  */
 export default function ProjectsPage() {
   return (
-    <section className="v2-section">
-      <div className="v2-wrap">
+    <section className="prism-section">
+      <div className="prism-wrap">
         <Reveal>
           {/* Headline and intro are his own copy, carried over verbatim from
               the previous designs — do not paraphrase them. */}
-          <span className="v2-eyebrow">Systems &amp; Prototypes</span>
-          <h1 className="v2-title">Projects</h1>
-          <p className="v2-body v2-muted" style={{ maxWidth: '640px', marginTop: '16px' }}>
+          <span className="prism-eyebrow">Systems &amp; Prototypes</span>
+          <h1 className="prism-title">Projects</h1>
+          <p className="prism-body prism-muted" style={{ maxWidth: '640px', marginTop: '16px' }}>
             Systems, tools, and experiments from the frontier of AI engineering.
           </p>
         </Reveal>

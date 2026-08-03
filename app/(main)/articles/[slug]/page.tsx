@@ -56,12 +56,12 @@ export default function ArticlePage({ params }: Props) {
   const nextArticle = currentIndex > 0 ? articles[currentIndex - 1] : null
 
   return (
-    <article className="v2-section">
-      <div className="v2-wrap" style={{ maxWidth: 'var(--v2-measure)' }}>
+    <article className="prism-section">
+      <div className="prism-wrap" style={{ maxWidth: 'var(--prism-measure)' }}>
         <Reveal>
           <Link
             href="/articles"
-            className="v2-btn-quiet"
+            className="prism-btn-quiet"
             style={{ marginBottom: 'clamp(24px, 4vh, 40px)' }}
           >
             ← All writing
@@ -69,17 +69,17 @@ export default function ArticlePage({ params }: Props) {
         </Reveal>
 
         <Reveal delay={60}>
-          <header className="v2-col" style={{ gap: '1rem', marginBottom: 'clamp(32px, 5vh, 56px)' }}>
-            <h1 className="v2-title">{article.title}</h1>
-            <div className="v2-row" style={{ gap: '12px' }}>
-              <time className="v2-mono v2-muted" style={{ fontSize: '0.85em' }} dateTime={article.date}>
+          <header className="prism-col" style={{ gap: '1rem', marginBottom: 'clamp(32px, 5vh, 56px)' }}>
+            <h1 className="prism-title">{article.title}</h1>
+            <div className="prism-row" style={{ gap: '12px' }}>
+              <time className="prism-mono prism-muted" style={{ fontSize: '0.85em' }} dateTime={article.date}>
                 {formatDate(article.date)}
               </time>
-              <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>
+              <span className="prism-mono prism-muted" style={{ fontSize: '0.85em' }}>
                 {article.readingTime}
               </span>
               {article.tags.map((tag) => (
-                <span key={tag} className="v2-chip">
+                <span key={tag} className="prism-chip">
                   {tag}
                 </span>
               ))}
@@ -88,7 +88,7 @@ export default function ArticlePage({ params }: Props) {
         </Reveal>
 
         <Reveal delay={120}>
-          <div className="v2-prose">
+          <div className="prism-prose">
             <MDXRemote
               source={article.content}
               options={{
@@ -101,21 +101,21 @@ export default function ArticlePage({ params }: Props) {
         </Reveal>
 
         <div
-          className="v2-rule"
+          className="prism-rule"
           style={{ marginTop: 'clamp(48px, 6vh, 72px)', marginBottom: 'clamp(24px, 4vh, 40px)' }}
         />
 
         {(prevArticle || nextArticle) && (
-          <div className="v2-row" style={{ justifyContent: 'space-between', gap: '24px' }}>
+          <div className="prism-row" style={{ justifyContent: 'space-between', gap: '24px' }}>
             <div>
               {prevArticle && (
                 <Link
                   href={`/articles/${prevArticle.slug}`}
-                  className="v2-col"
+                  className="prism-col"
                   style={{ gap: '0.35rem', textDecoration: 'none', color: 'inherit' }}
                 >
-                  <span className="v2-eyebrow">← Previous</span>
-                  <span className="v2-body" style={{ fontWeight: 600, maxWidth: 'none' }}>
+                  <span className="prism-eyebrow">← Previous</span>
+                  <span className="prism-body" style={{ fontWeight: 600, maxWidth: 'none' }}>
                     {prevArticle.title}
                   </span>
                 </Link>
@@ -125,11 +125,11 @@ export default function ArticlePage({ params }: Props) {
               {nextArticle && (
                 <Link
                   href={`/articles/${nextArticle.slug}`}
-                  className="v2-col"
+                  className="prism-col"
                   style={{ gap: '0.35rem', textDecoration: 'none', color: 'inherit', alignItems: 'flex-end' }}
                 >
-                  <span className="v2-eyebrow">Next →</span>
-                  <span className="v2-body" style={{ fontWeight: 600, maxWidth: 'none' }}>
+                  <span className="prism-eyebrow">Next →</span>
+                  <span className="prism-body" style={{ fontWeight: 600, maxWidth: 'none' }}>
                     {nextArticle.title}
                   </span>
                 </Link>
@@ -140,7 +140,7 @@ export default function ArticlePage({ params }: Props) {
 
         <Reveal delay={180}>
           <div style={{ marginTop: 'clamp(32px, 5vh, 48px)' }}>
-            <Link href="/articles" className="v2-btn-ghost">
+            <Link href="/articles" className="prism-btn-ghost">
               All writing
             </Link>
           </div>

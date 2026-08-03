@@ -4,18 +4,18 @@ import { useEffect, useRef, useState } from 'react'
 
 type CursorMode = 'default' | 'ring' | 'square' | 'block' | 'crosshair'
 
-const HOVER_SELECTOR = 'a, button, [role="button"], input, .v2-card, .v2-chip'
+const HOVER_SELECTOR = 'a, button, [role="button"], input, .prism-card, .prism-chip'
 
 function readCursorMode(): CursorMode {
   const styles = getComputedStyle(document.documentElement)
-  const raw = styles.getPropertyValue('--v2-cursor').trim()
+  const raw = styles.getPropertyValue('--prism-cursor').trim()
   if (raw === 'ring' || raw === 'square' || raw === 'block' || raw === 'crosshair') return raw
   return 'default'
 }
 
 function readAccent(): string {
   const styles = getComputedStyle(document.documentElement)
-  return styles.getPropertyValue('--v2-accent').trim() || '#ff6b35'
+  return styles.getPropertyValue('--prism-accent').trim() || '#ff6b35'
 }
 
 export default function Cursor() {
@@ -47,12 +47,12 @@ export default function Cursor() {
 
     const mo = new MutationObserver((mutations) => {
       for (const m of mutations) {
-        if (m.type === 'attributes' && m.attributeName === 'data-v2-dimension') {
+        if (m.type === 'attributes' && m.attributeName === 'data-prism-dimension') {
           applyTheme()
         }
       }
     })
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-v2-dimension'] })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-prism-dimension'] })
 
     return () => {
       cancelAnimationFrame(raf)
@@ -65,10 +65,10 @@ export default function Cursor() {
     if (!shouldRender) return
     const active = mode !== 'default'
     if (active) {
-      document.documentElement.classList.add('v2-cursor-hidden')
+      document.documentElement.classList.add('prism-cursor-hidden')
     }
     return () => {
-      document.documentElement.classList.remove('v2-cursor-hidden')
+      document.documentElement.classList.remove('prism-cursor-hidden')
     }
   }, [shouldRender, mode])
 
@@ -125,12 +125,12 @@ export default function Cursor() {
   return (
     <>
       <style>{`
-        .v2-cursor-hidden,
-        .v2-cursor-hidden * {
+        .prism-cursor-hidden,
+        .prism-cursor-hidden * {
           cursor: none !important;
         }
-        .v2-cursor-outer,
-        .v2-cursor-inner {
+        .prism-cursor-outer,
+        .prism-cursor-inner {
           position: fixed;
           top: 0;
           left: 0;
@@ -138,81 +138,81 @@ export default function Cursor() {
           z-index: 9999;
           will-change: transform;
         }
-        .v2-cursor-inner {
+        .prism-cursor-inner {
           border-radius: 50%;
           transition: width 0.15s ease, height 0.15s ease, background 0.15s ease;
         }
-        .v2-cursor-outer {
+        .prism-cursor-outer {
           transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
         }
-        .v2-cursor-outer--ring {
+        .prism-cursor-outer--ring {
           border-radius: 50%;
-          border: 1.5px solid var(--v2-cursor-accent);
+          border: 1.5px solid var(--prism-cursor-accent);
           mix-blend-mode: difference;
         }
-        .v2-cursor-outer--square {
+        .prism-cursor-outer--square {
           border-radius: 2px;
-          border: 1.5px solid var(--v2-cursor-accent);
+          border: 1.5px solid var(--prism-cursor-accent);
           mix-blend-mode: difference;
         }
-        .v2-cursor-outer--block {
+        .prism-cursor-outer--block {
           border-radius: 1px;
-          background: var(--v2-cursor-accent);
+          background: var(--prism-cursor-accent);
           opacity: 0.85;
           mix-blend-mode: difference;
-          animation: v2-cursor-blink 1s steps(1) infinite;
+          animation: prism-cursor-blink 1s steps(1) infinite;
         }
-        .v2-cursor-outer--crosshair {
+        .prism-cursor-outer--crosshair {
           background: transparent;
         }
-        .v2-cursor-outer--crosshair::before,
-        .v2-cursor-outer--crosshair::after {
+        .prism-cursor-outer--crosshair::before,
+        .prism-cursor-outer--crosshair::after {
           content: '';
           position: absolute;
-          background: var(--v2-cursor-accent);
+          background: var(--prism-cursor-accent);
           mix-blend-mode: difference;
         }
-        .v2-cursor-outer--crosshair::before {
+        .prism-cursor-outer--crosshair::before {
           left: 50%;
           top: 0;
           bottom: 0;
           width: 1px;
           transform: translateX(-50%);
         }
-        .v2-cursor-outer--crosshair::after {
+        .prism-cursor-outer--crosshair::after {
           top: 50%;
           left: 0;
           right: 0;
           height: 1px;
           transform: translateY(-50%);
         }
-        @keyframes v2-cursor-blink {
+        @keyframes prism-cursor-blink {
           0%, 49% { opacity: 0.85; }
           50%, 100% { opacity: 0.15; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .v2-cursor-outer--block {
+          .prism-cursor-outer--block {
             animation: none;
           }
         }
       `}</style>
       <div
         ref={innerRef}
-        className="v2-cursor-inner"
+        className="prism-cursor-inner"
         style={{
           width: innerSize,
           height: innerSize,
           background: accent,
-          ['--v2-cursor-accent' as string]: accent,
+          ['--prism-cursor-accent' as string]: accent,
         }}
       />
       <div
         ref={outerRef}
-        className={`v2-cursor-outer v2-cursor-outer--${mode}`}
+        className={`prism-cursor-outer prism-cursor-outer--${mode}`}
         style={{
           width: outerSize,
           height: outerSize,
-          ['--v2-cursor-accent' as string]: accent,
+          ['--prism-cursor-accent' as string]: accent,
         }}
       />
     </>

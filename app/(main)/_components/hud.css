@@ -4,18 +4,18 @@
  * This is the only control on /v2, and it has to stay legible on all 30
  * dimensions — including the ones that flip to a light background or push
  * contrast to extremes. So unlike the rest of the page it deliberately does
- * NOT hook into the themeable surface/text tokens (--v2-surface, --v2-text,
- * --v2-line, ...). It defines its own tiny constant palette — dark glass,
- * light text — and only *borrows* --v2-accent (with a hardcoded fallback) for
+ * NOT hook into the themeable surface/text tokens (--prism-surface, --prism-text,
+ * --prism-line, ...). It defines its own tiny constant palette — dark glass,
+ * light text — and only *borrows* --prism-accent (with a hardcoded fallback) for
  * the spark, since every theme keeps that token legible against dark.
  *
- * Every padding/margin below carries !important on purpose. v2.css contains
- * `.v2-root, .v2-root * { margin: 0; padding: 0 }`, which has the same
+ * Every padding/margin below carries !important on purpose. prism.css contains
+ * `.prism-root, .prism-root * { margin: 0; padding: 0 }`, which has the same
  * specificity as any single class here and loads after it — without
  * !important that reset silently flattens this button.
  */
 
-#v2-hud {
+#prism-hud {
   position: fixed;
   left: clamp(16px, 3vw, 32px);
   bottom: clamp(16px, 3vw, 32px);
@@ -25,7 +25,7 @@
   gap: 8px !important;
 }
 
-.v2-hud-btn {
+.prism-hud-btn {
   display: flex !important;
   align-items: center;
   gap: 10px !important;
@@ -42,7 +42,7 @@
     0 10px 30px -8px rgba(0, 0, 0, 0.55);
 
   color: #f4f2ef;
-  font-family: var(--v2-font-head, system-ui, sans-serif);
+  font-family: var(--prism-font-head, system-ui, sans-serif);
   cursor: pointer;
   text-align: left;
   transition:
@@ -51,7 +51,7 @@
     border-color 0.35s ease;
 }
 
-.v2-hud-btn:hover {
+.prism-hud-btn:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.26);
   box-shadow:
@@ -59,22 +59,22 @@
     0 16px 40px -10px rgba(0, 0, 0, 0.65);
 }
 
-.v2-hud-btn:active {
+.prism-hud-btn:active {
   transform: translateY(0) scale(0.98);
 }
 
-.v2-hud-btn:focus-visible {
-  outline: 2px solid var(--v2-accent, #ff6b35);
+.prism-hud-btn:focus-visible {
+  outline: 2px solid var(--prism-accent, #ff6b35);
   outline-offset: 3px;
 }
 
 /* Swallowing clicks mid-transition — show it rather than feeling broken. */
-.v2-hud-btn.is-busy {
+.prism-hud-btn.is-busy {
   pointer-events: none;
   opacity: 0.75;
 }
 
-.v2-hud-btn-text {
+.prism-hud-btn-text {
   display: flex !important;
   flex-direction: column;
   gap: 1px !important;
@@ -85,25 +85,25 @@
    does not resize as the text changes length, and the fade keyframe (keyed off
    labelIndex in the component) makes each swap a soft cross-fade rather than a
    hard cut. */
-.v2-hud-btn-label {
+.prism-hud-btn-label {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.2;
   white-space: nowrap;
   min-width: 10.4em;
-  animation: v2-hud-label-in 0.45s var(--v2-ease, ease) both;
+  animation: prism-hud-label-in 0.45s var(--prism-ease, ease) both;
 }
 
-@keyframes v2-hud-label-in {
+@keyframes prism-hud-label-in {
   from { opacity: 0; transform: translateY(3px); }
   to   { opacity: 1; transform: none; }
 }
 
 /* Current dimension name — present but quiet. Reserves its line even when
    empty (pre-mount) so the button never resizes. */
-.v2-hud-btn-sub {
-  font-family: var(--v2-font-mono, ui-monospace, monospace);
+.prism-hud-btn-sub {
+  font-family: var(--prism-font-mono, ui-monospace, monospace);
   font-size: 10px;
   line-height: 1.3;
   letter-spacing: 0.04em;
@@ -114,27 +114,27 @@
 
 /* The accent dot. Breathes slowly so the button reads as "alive" and
    pressable without shouting. */
-.v2-hud-btn-spark {
+.prism-hud-btn-spark {
   width: 8px;
   height: 8px;
   flex-shrink: 0;
   border-radius: 999px;
-  background: var(--v2-accent, #ff6b35);
-  box-shadow: 0 0 0 0 var(--v2-accent, #ff6b35);
-  animation: v2-hud-breathe 2.8s ease-in-out infinite;
+  background: var(--prism-accent, #ff6b35);
+  box-shadow: 0 0 0 0 var(--prism-accent, #ff6b35);
+  animation: prism-hud-breathe 2.8s ease-in-out infinite;
 }
 
-@keyframes v2-hud-breathe {
+@keyframes prism-hud-breathe {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.28); }
   50%      { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0); }
 }
 
 @media (max-width: 480px) {
-  .v2-hud-btn {
+  .prism-hud-btn {
     padding: 9px 14px 9px 12px !important;
   }
-  .v2-hud-btn-label { font-size: 12px; }
-  .v2-hud-btn-sub   { font-size: 9px; }
+  .prism-hud-btn-label { font-size: 12px; }
+  .prism-hud-btn-sub   { font-size: 9px; }
 }
 
 /*
@@ -142,12 +142,12 @@
  *
  * Same rule as the shuffle button above: this stays a legible dark-glass
  * surface on every dimension. The only theme colour it borrows is
- * var(--v2-accent), and only for small highlights (focus rings, the
+ * var(--prism-accent), and only for small highlights (focus rings, the
  * "current" marker) — never for the panel background or body text, or it
  * goes unreadable on the light-background themes.
  */
 
-.v2-hud-gallery-trigger {
+.prism-hud-gallery-trigger {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -175,11 +175,11 @@
     color 0.2s ease;
 }
 
-.v2-hud-gallery-trigger svg rect {
+.prism-hud-gallery-trigger svg rect {
   fill: currentColor;
 }
 
-.v2-hud-gallery-trigger:hover {
+.prism-hud-gallery-trigger:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.26);
   color: #f4f2ef;
@@ -188,26 +188,26 @@
     0 16px 40px -10px rgba(0, 0, 0, 0.65);
 }
 
-.v2-hud-gallery-trigger:active {
+.prism-hud-gallery-trigger:active {
   transform: translateY(0) scale(0.96);
 }
 
-.v2-hud-gallery-trigger:focus-visible,
-.v2-hud-gallery-close:focus-visible,
-.v2-hud-gallery-filter:focus-visible,
-.v2-hud-gallery-option:focus-visible {
-  outline: 2px solid var(--v2-accent, #ff6b35);
+.prism-hud-gallery-trigger:focus-visible,
+.prism-hud-gallery-close:focus-visible,
+.prism-hud-gallery-filter:focus-visible,
+.prism-hud-gallery-option:focus-visible {
+  outline: 2px solid var(--prism-accent, #ff6b35);
   outline-offset: 2px;
 }
 
-.v2-hud-gallery-trigger[aria-expanded="true"] {
-  border-color: var(--v2-accent, #ff6b35);
+.prism-hud-gallery-trigger[aria-expanded="true"] {
+  border-color: var(--prism-accent, #ff6b35);
   color: #f4f2ef;
 }
 
 /* Overlay + panel */
 
-.v2-hud-gallery-overlay {
+.prism-hud-gallery-overlay {
   position: fixed;
   inset: 0;
   z-index: 9010;
@@ -220,10 +220,10 @@
   background: rgba(6, 5, 4, 0.6);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  animation: v2-hud-gallery-fade 0.2s ease both;
+  animation: prism-hud-gallery-fade 0.2s ease both;
 }
 
-.v2-hud-gallery-panel {
+.prism-hud-gallery-panel {
   display: flex !important;
   flex-direction: column;
   width: min(560px, 100%);
@@ -240,22 +240,22 @@
     0 1px 0 rgba(255, 255, 255, 0.08) inset,
     0 30px 80px -20px rgba(0, 0, 0, 0.75);
   color: #f4f2ef;
-  font-family: var(--v2-font-body, system-ui, sans-serif);
+  font-family: var(--prism-font-body, system-ui, sans-serif);
   overflow: hidden;
-  animation: v2-hud-gallery-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: prism-hud-gallery-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes v2-hud-gallery-fade {
+@keyframes prism-hud-gallery-fade {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-@keyframes v2-hud-gallery-in {
+@keyframes prism-hud-gallery-in {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.v2-hud-gallery-head {
+.prism-hud-gallery-head {
   display: flex !important;
   align-items: center;
   gap: 10px !important;
@@ -264,7 +264,7 @@
   flex-shrink: 0;
 }
 
-.v2-hud-gallery-filter {
+.prism-hud-gallery-filter {
   flex: 1;
   min-width: 0;
   padding: 9px 12px !important;
@@ -274,15 +274,15 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   color: #f4f2ef;
-  font-family: var(--v2-font-body, system-ui, sans-serif);
+  font-family: var(--prism-font-body, system-ui, sans-serif);
   font-size: 13px;
 }
 
-.v2-hud-gallery-filter::placeholder {
+.prism-hud-gallery-filter::placeholder {
   color: rgba(244, 242, 239, 0.4);
 }
 
-.v2-hud-gallery-close {
+.prism-hud-gallery-close {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -299,29 +299,29 @@
   cursor: pointer;
 }
 
-.v2-hud-gallery-close svg path {
+.prism-hud-gallery-close svg path {
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
 }
 
-.v2-hud-gallery-close:hover {
+.prism-hud-gallery-close:hover {
   color: #f4f2ef;
   background: rgba(255, 255, 255, 0.1);
 }
 
-.v2-hud-gallery-count {
+.prism-hud-gallery-count {
   padding: 0 16px 10px !important;
   margin: 0 !important;
   flex-shrink: 0;
 
-  font-family: var(--v2-font-mono, ui-monospace, monospace);
+  font-family: var(--prism-font-mono, ui-monospace, monospace);
   font-size: 11px;
   letter-spacing: 0.02em;
   color: rgba(244, 242, 239, 0.45);
 }
 
-.v2-hud-gallery-list {
+.prism-hud-gallery-list {
   display: flex !important;
   flex-direction: column;
   gap: 4px !important;
@@ -333,7 +333,7 @@
   min-height: 0;
 }
 
-.v2-hud-gallery-empty {
+.prism-hud-gallery-empty {
   padding: 24px 12px !important;
   margin: 0 !important;
   text-align: center;
@@ -341,7 +341,7 @@
   color: rgba(244, 242, 239, 0.5);
 }
 
-.v2-hud-gallery-option {
+.prism-hud-gallery-option {
   display: flex !important;
   align-items: center;
   gap: 12px !important;
@@ -358,16 +358,16 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.v2-hud-gallery-option:hover {
+.prism-hud-gallery-option:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.v2-hud-gallery-option.is-current {
-  border-color: var(--v2-accent, #ff6b35);
+.prism-hud-gallery-option.is-current {
+  border-color: var(--prism-accent, #ff6b35);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.v2-hud-gallery-swatch {
+.prism-hud-gallery-swatch {
   flex-shrink: 0;
   width: 30px;
   height: 30px;
@@ -375,15 +375,15 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   background:
     linear-gradient(135deg,
-      var(--v2-hud-swatch-a1, rgba(255, 255, 255, 0.16)) 0%,
-      var(--v2-hud-swatch-a1, rgba(255, 255, 255, 0.16)) 34%,
-      var(--v2-hud-swatch-bg, rgba(255, 255, 255, 0.08)) 34%,
-      var(--v2-hud-swatch-bg, rgba(255, 255, 255, 0.08)) 66%,
-      var(--v2-hud-swatch-a2, rgba(255, 255, 255, 0.16)) 66%,
-      var(--v2-hud-swatch-a2, rgba(255, 255, 255, 0.16)) 100%);
+      var(--prism-hud-swatch-a1, rgba(255, 255, 255, 0.16)) 0%,
+      var(--prism-hud-swatch-a1, rgba(255, 255, 255, 0.16)) 34%,
+      var(--prism-hud-swatch-bg, rgba(255, 255, 255, 0.08)) 34%,
+      var(--prism-hud-swatch-bg, rgba(255, 255, 255, 0.08)) 66%,
+      var(--prism-hud-swatch-a2, rgba(255, 255, 255, 0.16)) 66%,
+      var(--prism-hud-swatch-a2, rgba(255, 255, 255, 0.16)) 100%);
 }
 
-.v2-hud-gallery-swatch.is-empty {
+.prism-hud-gallery-swatch.is-empty {
   background: repeating-linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.08) 0px,
@@ -393,41 +393,41 @@
   );
 }
 
-.v2-hud-gallery-option-text {
+.prism-hud-gallery-option-text {
   display: flex !important;
   flex-direction: column;
   gap: 2px !important;
   min-width: 0;
 }
 
-.v2-hud-gallery-option-name {
+.prism-hud-gallery-option-name {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  font-family: var(--v2-font-head, system-ui, sans-serif);
+  font-family: var(--prism-font-head, system-ui, sans-serif);
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.v2-hud-gallery-option-tag {
+.prism-hud-gallery-option-tag {
   flex-shrink: 0;
   padding: 1px 7px !important;
   margin: 0 !important;
   border-radius: 999px;
-  background: var(--v2-accent, #ff6b35);
+  background: var(--prism-accent, #ff6b35);
   color: #0a0908;
-  font-family: var(--v2-font-mono, ui-monospace, monospace);
+  font-family: var(--prism-font-mono, ui-monospace, monospace);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.v2-hud-gallery-option-blurb {
+.prism-hud-gallery-option-blurb {
   font-size: 11.5px;
   line-height: 1.35;
   color: rgba(244, 242, 239, 0.55);
@@ -437,46 +437,46 @@
 }
 
 @media (max-width: 640px) {
-  .v2-hud-gallery-overlay {
+  .prism-hud-gallery-overlay {
     padding: 0 !important;
     align-items: stretch;
   }
-  .v2-hud-gallery-panel {
+  .prism-hud-gallery-panel {
     width: 100%;
     max-height: 100dvh;
     height: 100dvh;
     border-radius: 0;
     border-width: 0;
   }
-  .v2-hud-gallery-option-blurb {
+  .prism-hud-gallery-option-blurb {
     white-space: normal;
   }
 }
 
 @media (max-width: 480px) {
-  .v2-hud-gallery-trigger {
+  .prism-hud-gallery-trigger {
     width: 34px;
     height: 34px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .v2-hud-btn,
-  .v2-hud-btn:hover,
-  .v2-hud-btn:active,
-  .v2-hud-gallery-trigger,
-  .v2-hud-gallery-trigger:hover,
-  .v2-hud-gallery-trigger:active {
+  .prism-hud-btn,
+  .prism-hud-btn:hover,
+  .prism-hud-btn:active,
+  .prism-hud-gallery-trigger,
+  .prism-hud-gallery-trigger:hover,
+  .prism-hud-gallery-trigger:active {
     transform: none;
     transition: none;
   }
-  .v2-hud-btn-spark { animation: none; }
-  .v2-hud-btn-label { animation: none; }
-  .v2-hud-gallery-overlay,
-  .v2-hud-gallery-panel {
+  .prism-hud-btn-spark { animation: none; }
+  .prism-hud-btn-label { animation: none; }
+  .prism-hud-gallery-overlay,
+  .prism-hud-gallery-panel {
     animation: none;
   }
-  .v2-hud-gallery-option {
+  .prism-hud-gallery-option {
     transition: none;
   }
 }

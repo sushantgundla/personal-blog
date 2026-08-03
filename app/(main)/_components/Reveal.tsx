@@ -46,7 +46,7 @@ export function Reveal({ children, delay = 0, as = 'div', className }: RevealPro
     return () => observer.disconnect()
   }, [])
 
-  const classes = ['v2-reveal', isIn ? 'v2-in' : '', className].filter(Boolean).join(' ')
+  const classes = ['prism-reveal', isIn ? 'prism-in' : '', className].filter(Boolean).join(' ')
 
   return createElement(
     as,

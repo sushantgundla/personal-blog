@@ -1,0 +1,116 @@
+/* Vaporwave — pastel neon on deep indigo, chrome gradient titles, retro oversized type */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --prism-bg: #180a2e;
+  --prism-bg-2: #1f0f3a;
+  --prism-surface: #23113f;
+  --prism-surface-2: #2c1750;
+  --prism-surface-3: #180a2e;
+  --prism-text: #f5eeff;
+  --prism-muted: rgba(245,238,255,0.72);
+  --prism-faint: rgba(245,238,255,0.4);
+  --prism-line: rgba(1,205,254,0.35);
+  --prism-line-2: rgba(255,113,206,0.55);
+  --prism-accent: #ff71ce;
+  --prism-accent-2: #01cdfe;
+  --prism-accent-3: #b967ff;
+  --prism-accent-soft: rgba(255,113,206,0.12);
+  --prism-on-accent: #180a2e;
+
+  --prism-radius: 16px;
+  --prism-radius-sm: 10px;
+  --prism-radius-lg: 26px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  --prism-shadow-lg: 0 20px 50px -15px rgba(185,103,255,0.5);
+  --prism-glow: 0 0 30px rgba(1,205,254,0.4), 0 0 60px rgba(255,113,206,0.25);
+
+  --prism-font-display: 'Poppins', 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'Poppins', system-ui, sans-serif;
+  --prism-font-body: 'Poppins', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 800;
+  --prism-display-tracking: 0.01em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.24em;
+
+  --prism-backdrop: waves;
+  --prism-cursor: ring;
+  --prism-enter: rewind;
+}
+
+body {
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(185,103,255,0.2), transparent 65%),
+    linear-gradient(180deg, #180a2e, #10071f) !important;
+}
+.prism-band { background: var(--prism-bg-2) !important; }
+
+.prism-orb { display: block !important; opacity: 0.6 !important; filter: blur(80px) saturate(180%) !important; }
+.prism-noise { opacity: 0.03 !important; }
+
+.prism-title {
+  background: linear-gradient(180deg, #ffffff 0%, #ffd6f5 35%, #ff9fe3 55%, #7fe9ff 75%, #d6b9ff 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  -webkit-text-stroke: 1px rgba(8,4,20,0.65) !important;
+  text-stroke: 1px rgba(8,4,20,0.65) !important;
+  text-shadow: 0 0 10px rgba(255,113,206,0.3) !important;
+  letter-spacing: 0.02em !important;
+}
+
+.prism-eyebrow { color: var(--prism-accent-2) !important; text-shadow: 0 0 12px rgba(1,205,254,0.6) !important; }
+
+.prism-card,
+.prism-panel {
+  background: linear-gradient(160deg, rgba(255,113,206,0.08), rgba(1,205,254,0.06)) !important;
+  border: 1px solid var(--prism-line-2) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover {
+  border-color: var(--prism-accent-2) !important;
+  box-shadow: var(--prism-glow) !important;
+  transform: translateY(-3px) !important;
+}
+
+.prism-chip {
+  background: rgba(255,113,206,0.1) !important;
+  border: 1px solid var(--prism-line-2) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+.prism-chip-on {
+  background: linear-gradient(90deg, var(--prism-accent), var(--prism-accent-3)) !important;
+  border-color: transparent !important;
+  color: #180a2e !important;
+}
+
+.prism-btn {
+  background: linear-gradient(90deg, var(--prism-accent), var(--prism-accent-3), var(--prism-accent-2)) !important;
+  color: #180a2e !important;
+  border: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  box-shadow: 0 10px 30px -8px rgba(255,113,206,0.5) !important;
+}
+.prism-btn-ghost {
+  background: rgba(1,205,254,0.06) !important;
+  border: 1px solid var(--prism-accent-2) !important;
+  color: var(--prism-accent-2) !important;
+}
+
+.prism-badge {
+  background: rgba(185,103,255,0.14) !important;
+  border: 1px solid var(--prism-accent-3) !important;
+}
+
+.prism-frame {
+  border: 1px solid var(--prism-line-2) !important;
+  box-shadow: var(--prism-glow) !important;
+}
+
+.prism-rule { background: linear-gradient(90deg, var(--prism-accent), var(--prism-accent-2)) !important; }

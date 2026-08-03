@@ -32,7 +32,7 @@ interface ProjectCardProps {
 function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element {
   const card = (
     <div
-      className={project.link ? 'v2-card v2-card-lift v2-col' : 'v2-card v2-col'}
+      className={project.link ? 'prism-card prism-card-lift prism-col' : 'prism-card prism-col'}
       style={{
         height: '100%',
         justifyContent: 'space-between',
@@ -40,12 +40,12 @@ function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element 
         paddingBlock: 'clamp(18px, 2.6vw, 26px)',
         opacity: dimmed ? 0.35 : 1,
         transform: dimmed ? 'scale(0.97)' : 'scale(1)',
-        transition: 'opacity var(--v2-dur) var(--v2-ease), transform var(--v2-dur) var(--v2-ease)',
+        transition: 'opacity var(--prism-dur) var(--prism-ease), transform var(--prism-dur) var(--prism-ease)',
       }}
     >
-      <div className="v2-col" style={{ gap: '0.6rem' }}>
+      <div className="prism-col" style={{ gap: '0.6rem' }}>
         <div
-          className="v2-col"
+          className="prism-col"
           style={{ alignItems: 'flex-start', gap: '10px' }}
         >
           {/* Badge above the title on its own line, not beside it.
@@ -53,26 +53,26 @@ function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element 
               flexWrap: nowrap it pushed out past the card edge, and it squeezed
               the title into the left half while the right sat empty. Stacking
               gives the title the full width and keeps the badge inside. */}
-          <span className="v2-badge">{STATUS_LABEL[project.status]}</span>
-          <span className="v2-sub" style={{ fontWeight: 700 }}>
+          <span className="prism-badge">{STATUS_LABEL[project.status]}</span>
+          <span className="prism-sub" style={{ fontWeight: 700 }}>
             {project.title}
           </span>
         </div>
-        <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>
+        <span className="prism-mono prism-muted" style={{ fontSize: '0.85em' }}>
           {project.organization} · {project.period}
         </span>
-        <p className="v2-body v2-muted" style={{ margin: 0 }}>
+        <p className="prism-body prism-muted" style={{ margin: 0 }}>
           {project.description}
         </p>
         {project.impact && (
-          <p className="v2-body" style={{ margin: 0, color: 'var(--v2-accent)', fontWeight: 600 }}>
+          <p className="prism-body" style={{ margin: 0, color: 'var(--prism-accent)', fontWeight: 600 }}>
             {project.impact}
           </p>
         )}
       </div>
-      <div className="v2-row" style={{ gap: '8px', marginTop: '10px' }}>
+      <div className="prism-row" style={{ gap: '8px', marginTop: '10px' }}>
         {project.tags.map((tag) => (
-          <span key={tag} className="v2-chip">
+          <span key={tag} className="prism-chip">
             {tag}
           </span>
         ))}
@@ -115,23 +115,23 @@ export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element
     <>
       <Reveal>
         <div
-          className="v2-row"
+          className="prism-row"
           style={{ justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '28px' }}
         >
-          <span className="v2-mono v2-muted">{countLabel}</span>
-          <div className="v2-row" role="group" aria-label="Filter projects by status" style={{ gap: '4px', flexWrap: 'wrap' }}>
+          <span className="prism-mono prism-muted">{countLabel}</span>
+          <div className="prism-row" role="group" aria-label="Filter projects by status" style={{ gap: '4px', flexWrap: 'wrap' }}>
             {FILTERS.map((f) => {
               const pressed = filter === f.value
               return (
                 <button
                   key={f.value}
                   type="button"
-                  className="v2-btn-quiet"
+                  className="prism-btn-quiet"
                   aria-pressed={pressed}
                   onClick={() => setFilter(f.value)}
                   style={{
-                    color: pressed ? 'var(--v2-text)' : undefined,
-                    borderColor: pressed ? 'var(--v2-accent)' : undefined,
+                    color: pressed ? 'var(--prism-text)' : undefined,
+                    borderColor: pressed ? 'var(--prism-accent)' : undefined,
                   }}
                 >
                   {f.label}
@@ -142,7 +142,7 @@ export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element
         </div>
       </Reveal>
 
-      <div className="v2-grid" data-cols="2">
+      <div className="prism-grid" data-cols="2">
         {workProjects.map((project, i) => (
           <ProjectCard
             key={project.slug}
@@ -156,14 +156,14 @@ export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element
       {experimentProjects.length > 0 && (
         <div style={{ marginTop: 'clamp(32px, 4vh, 48px)' }}>
           <Reveal>
-            <div className="v2-row" style={{ alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
-              <span className="v2-eyebrow">Experiments</span>
-              <span className="v2-mono v2-muted" style={{ fontSize: '0.85em' }}>
+            <div className="prism-row" style={{ alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
+              <span className="prism-eyebrow">Experiments</span>
+              <span className="prism-mono prism-muted" style={{ fontSize: '0.85em' }}>
                 Built out of curiosity, not for work
               </span>
             </div>
           </Reveal>
-          <div className="v2-grid" data-cols="2">
+          <div className="prism-grid" data-cols="2">
             {experimentProjects.map((project, i) => (
               <ProjectCard
                 key={project.slug}

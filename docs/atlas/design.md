@@ -347,7 +347,7 @@ linkable, and the source of the map's choropleth data.
 
 ### 5.1 Do not touch
 
-`app/v2/`, `public/v2/`, the PNG files in the repo root, and `components/SiteFrame.tsx` are the
+`app/(main)/`, `public/prism/`, the PNG files in the repo root, and `components/SiteFrame.tsx` are the
 owner's separate in-progress work. Nothing in this project may modify, move, delete or commit
 them. The `/atlas` route does not go through `SiteFrame` — it has its own layout at
 `app/atlas/layout.tsx`.
@@ -452,4 +452,4 @@ If a component file grows past roughly 200 lines it is doing too much — split 
 - `prefers-reduced-motion` kills every animation
 - No horizontal scroll at 375px
 - Every number shows its year; every source is attributed
-- Nothing under `app/v2/`, `public/v2/`, the root PNGs or `components/SiteFrame.tsx` has changed
+- Nothing under `app/(main)/`, `public/prism/`, the root PNGs or `components/SiteFrame.tsx` has changed
