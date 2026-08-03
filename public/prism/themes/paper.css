@@ -46,7 +46,7 @@
   border: 1px solid var(--prism-line) !important;
   border-radius: var(--prism-radius) !important;
   box-shadow: var(--prism-shadow) !important;
-  background: var(--prism-surface-2) !important;
+  background-color: var(--prism-surface-2) !important;
 }
 .prism-card-lift:hover { box-shadow: var(--prism-shadow-lg) !important; }
 
@@ -57,5 +57,23 @@
 .prism-eyebrow { font-family: var(--prism-font-mono) !important; }
 
 .prism-rule { background: var(--prism-line-2) !important; }
-.prism-orb { display: none !important; }
-.prism-noise { opacity: 0.25 !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Letterpress is pressure. Content settles down onto the sheet — a small
+   scale-down with barely any travel — and the stock gets real tooth. */
+:root {
+  --prism-reveal-y: 8px;
+  --prism-reveal-scale: 1.03;
+  --prism-reveal-dur: 0.6s;
+  --prism-lift: -3px;
+
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.16;
+  --prism-texture-blend: multiply;
+  --prism-surface-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-surface-texture-blend: multiply;
+  --prism-body-leading: 1.72;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+}

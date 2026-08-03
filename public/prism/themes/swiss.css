@@ -57,5 +57,22 @@
 .prism-eyebrow { font-size: 0.7em !important; letter-spacing: 0.24em !important; }
 
 .prism-rule { background: var(--prism-line-2) !important; }
-.prism-orb { display: none !important; }
-.prism-noise { display: none !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Grid modernism has no patience for easing. Content enters along the grid
+   axis, quickly, with a curve that decelerates once and stops. */
+:root {
+  --prism-reveal-x: -22px;
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.45s;
+  --prism-reveal-ease: cubic-bezier(0.2, 0, 0, 1);
+  --prism-lift: -2px;
+
+  --prism-title-transform: uppercase;
+  --prism-title-leading: 0.92;
+  --prism-body-leading: 1.5;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture: none;
+}

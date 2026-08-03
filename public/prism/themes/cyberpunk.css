@@ -62,4 +62,22 @@
 .prism-title { text-shadow: 0 0 12px rgba(0,240,255,0.5) !important; }
 
 .prism-rule { background: linear-gradient(90deg, var(--prism-accent-2), var(--prism-accent)) !important; }
-.prism-noise { opacity: 0.4 !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Glitched in, not eased in: a short lateral snap on a stepped curve. Corner
+   cuts move to the clip tokens so cards and buttons share one bevel. */
+:root {
+  --prism-reveal-x: 14px;
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.22s;
+  --prism-reveal-ease: steps(3, end);
+  --prism-lift: -4px;
+
+  --prism-card-clip: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  --prism-btn-clip: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --prism-title-transform: uppercase;
+  --prism-title-leading: 0.9;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-texture-opacity: 0.4;
+}

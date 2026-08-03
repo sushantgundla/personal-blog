@@ -1,12 +1,12 @@
 # The `/v2` design system ("DIMENSION")
 
-This covers the design system behind the live site (`app/(main)/*`, served at `/`). Its defining feature: the whole site can repaint into 30 completely different visual designs by swapping one `<link>` tag. This file documents the tokens, the class vocabulary, the theme file contract, and the engine that drives it. For where this fits in the wider repo, see [overview.md](./overview.md). For which routes use it, see [routing.md](./routing.md).
+This covers the design system behind the live site (`app/(main)/*`, served at `/`). Its defining feature: the whole site can repaint into 36 completely different visual designs by swapping one `<link>` tag. This file documents the tokens, the class vocabulary, the theme file contract, and the engine that drives it. For where this fits in the wider repo, see [overview.md](./overview.md). For which routes use it, see [routing.md](./routing.md).
 
 This file was formerly `app/(main)/CONTRACT.md`, an instruction set written for AI agents building the system. It has been rewritten here as reference documentation for a maintainer; every token and class name below has been checked against `app/(main)/prism.css`.
 
 ## 1. The core trick
 
-One `<link id="prism-theme-link">` tag's `href` is swapped between 30 stylesheets:
+One `<link id="prism-theme-link">` tag's `href` is swapped between 36 stylesheets:
 
 ```js
 document.getElementById('prism-theme-link').href = `/prism/themes/${slug}.css`
@@ -80,6 +80,79 @@ Declared under `:root` in `app/(main)/prism.css`. A theme file may override any 
 | `--prism-dur` | standard duration | `0.5s` |
 | `--prism-dur-fast` | micro-interactions | `0.2s` |
 
+### Motion identity
+
+The entrance is part of the design language, not a global default. Before these existed all
+thirty dimensions rose 24px on the same curve, so a hard-edged press aesthetic and a soft
+glass one arrived on screen identically. Each theme now authors **one** gesture — travel, or
+scale, or blur — chosen to match its material.
+
+| Token | Meaning | Base default |
+|---|---|---|
+| `--prism-reveal-y` | vertical travel; negative enters from above | `24px` |
+| `--prism-reveal-x` | lateral travel | `0px` |
+| `--prism-reveal-scale` | start scale | `1` |
+| `--prism-reveal-blur` | start blur | `0px` |
+| `--prism-reveal-dur` | entrance duration | `0.8s` |
+| `--prism-reveal-ease` | entrance easing | `var(--prism-ease)` |
+| `--prism-lift` / `--prism-lift-x` | card hover travel; **positive presses in** | `-6px` / `0px` |
+| `--prism-lift-sm` / `--prism-lift-sm-x` | control hover travel | `-2px` / `0px` |
+
+Range in use: `0.16s` (Terminal, a hard redraw) to `1.4s` (Sonar, a return surfacing).
+Matrix is the only dimension with a negative `--prism-reveal-y`. Brutalist and Xerox are the
+only ones with a positive `--prism-lift` — they press into their own hard shadow.
+
+`.prism-reveal` applies `filter: blur()`, which establishes a containing block for
+`position: fixed` descendants. That is safe only because every fixed element on the page
+(Backdrop, Nav, `.prism-noise`, the HUD, Cursor) renders **outside** `#prism-shell`, so no
+revealed element can contain one. Keep it that way.
+
+### Material
+
+Page grain and card fill used to be reachable only by overriding `.prism-noise` and
+`.prism-orb` with `!important`, which 27 of 30 theme files did. Those overrides have all been
+retired in favour of tokens. **Do not re-add them** — an `!important` rule in a theme file
+beats the variable the base reads, and the token silently stops working.
+
+| Token | Meaning | Base default |
+|---|---|---|
+| `--prism-texture` | page grain image | fractal-noise SVG |
+| `--prism-texture-size` | grain tile size | `auto` |
+| `--prism-texture-opacity` | grain strength | `0.045` |
+| `--prism-texture-blend` | grain blend mode | `overlay` |
+| `--prism-surface-texture` | card/panel fill image | `none` |
+| `--prism-surface-texture-size` | fill tile size | `auto` |
+| `--prism-surface-texture-blend` | fill blend mode | `normal` |
+| `--prism-orb-opacity` | orb strength (`0` replaces `display: none`) | `0.28` |
+| `--prism-orb-blur` | orb blur radius | `80px` |
+| `--prism-orb-saturate` | orb saturation | `100%` |
+| `--prism-orb-blend` | orb blend mode | `normal` |
+
+Because `--prism-surface-texture` is a background *image*, `.prism-card` and `.prism-panel`
+set `background-color` and `background-image` separately. A theme that writes the
+`background` shorthand on either resets the image and wipes its own texture.
+
+### Letterform
+
+| Token | Meaning | Base default |
+|---|---|---|
+| `--prism-title-transform` | `.prism-title` case | `none` |
+| `--prism-title-leading` | `.prism-title` line-height | `0.98` |
+| `--prism-title-leading-xl` | `.prism-title-xl` line-height | `0.88` |
+| `--prism-title-style` | `normal` / `italic` | `normal` |
+| `--prism-title-variation` | `font-variation-settings` (Fraunces ships `SOFT`, `WONK`) | `normal` |
+| `--prism-title-shadow` | display text-shadow | `none` |
+| `--prism-title-stroke` / `--prism-title-stroke-color` | outline display type | `0` / `transparent` |
+| `--prism-body-leading` | `.prism-body` line-height | `1.65` |
+
+### Edge
+
+| Token | Meaning | Base default |
+|---|---|---|
+| `--prism-border-style` | border style on every container at once | `solid` |
+| `--prism-card-clip` | `clip-path` on cards and panels | `none` |
+| `--prism-btn-clip` | `clip-path` on buttons | `none` |
+
 ### JS-read mode tokens
 
 These three carry no CSS effect of their own — they are read out of `getComputedStyle` by JavaScript, so a theme file must always declare all three even though they look inert in the CSS.
@@ -97,7 +170,8 @@ These three carry no CSS effect of their own — they are read out of `getComput
 | `--prism-max` | `100%` | The page is full-bleed by design — no fixed max-width. A flat pixel cap left bare background down the sides on any display wider than the cap. |
 | `--prism-gutter` | `clamp(16px, 3.5vw, 72px)` | Side padding for `.prism-wrap`. |
 | `--prism-measure` | `68ch` | Max line length for long-form text only (`.prism-body`), not for layout — a paragraph running the full width of an ultrawide display is unreadable even though the page itself has no width cap. |
-| `--prism-section-y` | `clamp(80px, 12vh, 160px)` | Vertical padding for `.prism-section`. |
+| `--prism-section-y` | `calc(clamp(80px, 12vh, 160px) * var(--prism-density))` | Vertical padding for `.prism-section`. |
+| `--prism-density` | `1` | **The one layout token a theme may set.** Multiplies the section rhythm. Broadsheet runs `0.6` (newsprint is dense), Sonar `1.2`. Keep inside roughly `0.6`–`1.3`. |
 
 ## 3. Class vocabulary
 
@@ -208,7 +282,14 @@ Hard rules:
 ## 5. Backdrop, cursor, and transitions
 
 **Backdrop** (`app/(main)/_components/Backdrop.tsx`) — a `<canvas>` fixed behind the page content, reading `--prism-backdrop` and repainting at ~30fps (throttled deliberately; 60fps visibly competed with scroll compositing). One of:
-`none` | `grid` | `dots` | `rain` | `stars` | `embed` | `scan` | `waves`
+`none` | `grid` | `dots` | `rain` | `stars` | `embed` | `scan` | `waves` | `sonar` | `flow` | `halftone` | `sun` | `weave`
+
+The five added modes: `sonar` sweeps a bearing over range rings and lights fixed contacts;
+`flow` drifts soft additive masses; `halftone` rides a print lattice's dot gain on a slow
+wave; `sun` casts leaning light shafts with dust rising through them; `weave` draws a kolam
+progressively, holds, and starts again. `sun` blends the accent most of the way to white
+before painting — light has to be lighter than the page it falls on, and the raw accent at
+low alpha on a cream ground reads as a smudge.
 
 It reads `--prism-accent`, `--prism-accent-2`, `--prism-accent-3`, `--prism-line`, and `--prism-bg` from the active theme to colour whichever mode is running, re-applies on every `data-prism-dimension` attribute change, and stops rendering entirely when the tab is hidden, the canvas scrolls out of view, or the viewport is under 640px wide.
 
@@ -260,7 +341,7 @@ The fix, in `prism.css` immediately after the reset:
 
 `.prism-root .prism-btn` is `(0,2,0)` — enough to beat `.prism-root button`'s `(0,1,1)` while still losing to any theme rule, which always carries `!important`. If you add a new control class rendered as a native `<button>`, check whether it needs an entry here too.
 
-## 8. The 30 dimensions
+## 8. The 36 dimensions
 
 Defined in `app/(main)/_lib/dimensions.ts` (`DIMENSIONS`), which is the source of truth for slug, name, one-line blurb, and tier (`core` shows before "More realities…"; `more` is behind it). Stylesheets live at `public/prism/themes/<slug>.css`.
 
@@ -296,8 +377,21 @@ Defined in `app/(main)/_lib/dimensions.ts` (`DIMENSIONS`), which is the source o
 | `descent` | Gradient Descent | more |
 | `xerox` | Xerox | more |
 | `chalk` | Chalk | more |
+| `daylight` | Daylight | core |
+| `ferro` | Ferrofluid | core |
+| `kolam` | Kolam | core |
+| `broadsheet` | Broadsheet | more |
+| `sonar` | Sonar | more |
+| `marginalia` | Marginalia | more |
 
-That's 30 dimensions, 8 of them `core`: `ember`, `terminal`, `brutalist`, `cyberpunk`, `synthwave`, `glass`, `latent`, `attention`.
+That's 36 dimensions, 11 of them `core`: `ember`, `terminal`, `brutalist`, `cyberpunk`, `synthwave`, `glass`, `latent`, `attention`, `daylight`, `ferro`, `kolam`.
+
+The six most recent fill gaps the original thirty left open. `daylight` is the only one with
+a light *source* rather than flat stock. `ferro` is the only organic material. `broadsheet`
+is the only dense one. `sonar` is slow where the other dark instrument dimensions are fast.
+`marginalia` routes `--prism-font-mono` to a handwriting face, so every small label becomes a
+margin note. `kolam` is a craft with rules rather than a mood, and its `weave` backdrop is the
+only one that draws something rather than just moving.
 
 ## 9. Data access
 

@@ -44,9 +44,6 @@
 body { background: #000000 !important; }
 .prism-band { background: #030503 !important; border-top: 1px solid rgba(0,255,65,0.15) !important; border-bottom: 1px solid rgba(0,255,65,0.15) !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise { opacity: 0.04 !important; mix-blend-mode: screen !important; }
-
 .prism-title,
 .prism-eyebrow { text-shadow: 0 0 6px rgba(0,255,65,0.6) !important; }
 
@@ -106,3 +103,22 @@ body { background: #000000 !important; }
 
 .prism-rule { background: var(--prism-line-2) !important; height: 1px !important; }
 .prism-kbd { border-radius: 0 !important; border: 1px solid var(--prism-line-2) !important; box-shadow: none !important; }
+
+/* --- Motion identity & material ------------------------------------
+   The cascade falls. Content enters from ABOVE — the only theme in the set
+   with a negative reveal offset — on a linear curve, like a column of glyphs
+   arriving at its row. */
+:root {
+  --prism-reveal-y: -28px;
+  --prism-reveal-dur: 0.38s;
+  --prism-reveal-ease: linear;
+  --prism-lift: -2px;
+
+  --prism-title-transform: uppercase;
+  --prism-body-leading: 1.6;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture-opacity: 0.04;
+  --prism-texture-blend: screen;
+}

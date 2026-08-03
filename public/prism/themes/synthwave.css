@@ -71,4 +71,19 @@
 .prism-btn:hover { box-shadow: var(--prism-glow) !important; }
 .prism-btn-ghost, .prism-icon-btn { border: 1px solid var(--prism-accent-2) !important; border-radius: var(--prism-radius-pill) !important; }
 
-.prism-noise { display: none !important; }
+/* --- Motion identity & material ------------------------------------
+   Everything rises over the horizon: a long climb with a slight scale-down,
+   so content reads as approaching from the vanishing point. */
+:root {
+  --prism-reveal-y: 64px;
+  --prism-reveal-scale: 1.05;
+  --prism-reveal-dur: 1.1s;
+  --prism-lift: -10px;
+
+  --prism-title-leading: 0.86;
+  --prism-orb-opacity: 0.42;
+  --prism-orb-blur: 110px;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-texture: none;
+}

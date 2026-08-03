@@ -1,0 +1,106 @@
+/* Daylight — nine in the morning, sun across a white wall. Every other light
+   dimension in the set is flat stock (paper, swiss, eink, xerox); this one has
+   a light SOURCE. There is not a single border anywhere: shape comes entirely
+   from long, warm, directional shadow. */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
+
+:root {
+  --prism-bg: #faf7f1;
+  --prism-bg-2: #f3ece0;
+  --prism-surface: #ffffff;
+  --prism-surface-2: #fffdf9;
+  --prism-surface-3: #f0e8db;
+  --prism-text: #1e1811;
+  --prism-muted: rgba(30, 24, 17, 0.66);
+  --prism-faint: rgba(30, 24, 17, 0.46);
+  /* Lines exist as tokens because the vocabulary needs them; they are set to
+     near-nothing because this dimension draws with light, not with edges. */
+  --prism-line: rgba(150, 110, 50, 0.1);
+  --prism-line-2: rgba(150, 110, 50, 0.2);
+  --prism-accent: #92500e;
+  --prism-accent-2: #e5a63f;
+  --prism-accent-3: #6d8a5e;
+  --prism-accent-soft: rgba(146, 80, 14, 0.1);
+  --prism-on-accent: #fffdf8;
+
+  --prism-radius: 18px;
+  --prism-radius-sm: 10px;
+  --prism-radius-lg: 30px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 0px;
+  /* Sun-angle shadows: a short contact shadow plus a long soft cast, both
+     warm-tinted rather than grey, and both offset the same direction. */
+  --prism-shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 10px 22px -10px rgba(120, 90, 40, 0.16);
+  --prism-shadow-lg: 0 3px 6px rgba(120, 90, 40, 0.08), 0 44px 72px -34px rgba(120, 90, 40, 0.34);
+  --prism-glow: 0 0 44px rgba(229, 166, 63, 0.28);
+
+  --prism-font-display: 'Instrument Serif', Georgia, serif;
+  --prism-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 400;
+  --prism-display-tracking: -0.018em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.16em;
+
+  --prism-title-leading: 1.02;
+  --prism-title-leading-xl: 0.92;
+  --prism-body-leading: 1.72;
+
+  --prism-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --prism-dur: 0.6s;
+  --prism-dur-fast: 0.24s;
+
+  /* Light does not slide in. It warms up. */
+  --prism-reveal-y: 14px;
+  --prism-reveal-scale: 0.985;
+  --prism-reveal-dur: 1s;
+  --prism-lift: -7px;
+  --prism-lift-sm: -3px;
+
+  --prism-texture: none;
+  --prism-orb-opacity: 0.55;
+  --prism-orb-blur: 130px;
+  --prism-orb-saturate: 130%;
+
+  --prism-backdrop: sun;
+  --prism-cursor: default;
+  --prism-enter: iris;
+
+  --prism-density: 1.15;
+}
+
+body { background: var(--prism-bg) !important; }
+
+/* A warm wash across the top of every surface, as if lit from above-left. */
+.prism-card,
+.prism-panel {
+  border: none !important;
+  background-image: linear-gradient(155deg, rgba(255, 236, 200, 0.6), rgba(255, 255, 255, 0) 46%) !important;
+}
+
+.prism-card-lift:hover { box-shadow: var(--prism-shadow-lg), var(--prism-glow) !important; }
+
+.prism-title { font-style: normal !important; }
+/* Instrument Serif's italic is the reason to pick it — used once, on the
+   sub-heading, so it reads as emphasis rather than as a mannerism. */
+.prism-sub { font-family: var(--prism-font-display) !important; font-style: italic !important; font-weight: 400 !important; font-size: clamp(1.35rem, 2.2vw, 1.9rem) !important; }
+
+.prism-eyebrow { color: var(--prism-accent) !important; }
+
+.prism-btn { border: none !important; box-shadow: 0 2px 4px rgba(120, 90, 40, 0.14), 0 10px 20px -8px rgba(201, 118, 26, 0.45) !important; }
+/* Hover darkens rather than brightens. The base hover swaps in --prism-accent-2,
+   which is the sun tone and far too light to hold white text. */
+.prism-btn:hover { background: #6f3c08 !important; box-shadow: 0 3px 6px rgba(120, 90, 40, 0.16), 0 20px 34px -10px rgba(146, 80, 14, 0.5) !important; }
+
+.prism-btn-ghost { border: 1px solid var(--prism-line-2) !important; }
+.prism-btn-ghost:hover { border-color: var(--prism-accent) !important; background: var(--prism-accent-soft) !important; }
+
+.prism-chip { border: none !important; background: var(--prism-surface-3) !important; box-shadow: 0 1px 2px rgba(120, 90, 40, 0.08) !important; }
+.prism-chip-on { background: var(--prism-accent-soft) !important; color: var(--prism-accent) !important; }
+
+.prism-badge { border: none !important; background: var(--prism-accent-soft) !important; }
+.prism-frame { border: none !important; box-shadow: var(--prism-shadow-lg) !important; }
+.prism-rule { background: var(--prism-line-2) !important; }
+.prism-kbd { border: none !important; background: var(--prism-surface-3) !important; box-shadow: 0 2px 0 rgba(150, 110, 50, 0.22) !important; }
+.prism-icon-btn { border: none !important; background: var(--prism-surface) !important; box-shadow: var(--prism-shadow) !important; }

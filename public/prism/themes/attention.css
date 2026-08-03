@@ -43,8 +43,6 @@
 
 body { background: var(--prism-bg) !important; }
 .prism-band { background: var(--prism-bg-2) !important; border-top: 1px solid var(--prism-line) !important; border-bottom: 1px solid var(--prism-line) !important; }
-.prism-orb { display: none !important; }
-.prism-noise { opacity: 0.05 !important; mix-blend-mode: screen !important; }
 
 .prism-card, .prism-panel {
   background:
@@ -86,3 +84,19 @@ body { background: var(--prism-bg) !important; }
 .prism-frame { border: 1px solid var(--prism-line-2) !important; border-radius: var(--prism-radius) !important; filter: saturate(1.1) contrast(1.05) !important; }
 .prism-rule { background: linear-gradient(90deg, var(--prism-accent-3), var(--prism-accent-2), var(--prism-accent)) !important; height: 1px !important; opacity: 0.7 !important; }
 .prism-kbd { border: 1px solid var(--prism-line-2) !important; background: var(--prism-surface-3) !important; border-radius: 3px !important; }
+
+/* --- Motion identity & material ------------------------------------
+   A heatmap resolves as the softmax sharpens: out of blur, up from slightly
+   small, with no directional travel — attention has no direction. */
+:root {
+  --prism-reveal-y: 0px;
+  --prism-reveal-scale: 0.975;
+  --prism-reveal-blur: 9px;
+  --prism-reveal-dur: 0.9s;
+  --prism-lift: -6px;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture-opacity: 0.05;
+  --prism-texture-blend: screen;
+}

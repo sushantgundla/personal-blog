@@ -1,0 +1,103 @@
+/* Sonar — six hundred metres down. Matrix and Oscilloscope are the other dark
+   instrument dimensions and both are fast and aggressive; this one is the
+   opposite. It carries the slowest entrance in the whole set, and it is the
+   only dimension with POSITIVE display tracking: everything is spaced out
+   because there is nothing down here and no hurry to say so. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+:root {
+  --prism-bg: #03080b;
+  --prism-bg-2: #050d12;
+  --prism-surface: #07141c;
+  --prism-surface-2: #0b1f2a;
+  --prism-surface-3: #102a38;
+  --prism-text: #d8f0e8;
+  --prism-muted: rgba(216, 240, 232, 0.6);
+  --prism-faint: rgba(216, 240, 232, 0.44);
+  --prism-line: rgba(60, 224, 176, 0.16);
+  --prism-line-2: rgba(60, 224, 176, 0.38);
+  --prism-accent: #3ce0b0;
+  --prism-accent-2: #86ffdb;
+  --prism-accent-3: #1b6f80;
+  --prism-accent-soft: rgba(60, 224, 176, 0.09);
+  --prism-on-accent: #03080b;
+
+  --prism-radius: 2px;
+  --prism-radius-sm: 2px;
+  --prism-radius-lg: 3px;
+  --prism-radius-pill: 2px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  --prism-shadow-lg: 0 0 60px -10px rgba(60, 224, 176, 0.22);
+  --prism-glow: 0 0 26px rgba(60, 224, 176, 0.35);
+
+  --prism-font-display: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-font-head: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --prism-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-display-weight: 500;
+  /* Positive tracking on the display face. Nothing else in the set does this;
+     it is what makes a headline read as a range readout rather than a title. */
+  --prism-display-tracking: 0.09em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.28em;
+
+  --prism-title-transform: uppercase;
+  --prism-title-leading: 1.14;
+  --prism-title-leading-xl: 1.02;
+  --prism-body-leading: 1.72;
+
+  --prism-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --prism-dur: 0.7s;
+  --prism-dur-fast: 0.3s;
+
+  /* A return surfaces out of the deep: no travel, no direction, just slowly
+     resolving. The longest reveal in the set at 1.4s. */
+  --prism-reveal-y: 0px;
+  --prism-reveal-scale: 0.972;
+  --prism-reveal-blur: 9px;
+  --prism-reveal-dur: 1.4s;
+  --prism-reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --prism-lift: -4px;
+  --prism-lift-sm: -2px;
+
+  /* Faint horizontal sweep lines, as on a paper trace recorder. */
+  --prism-texture: repeating-linear-gradient(0deg, rgba(60, 224, 176, 0.5) 0 1px, transparent 1px 5px);
+  --prism-texture-opacity: 0.05;
+  --prism-texture-blend: screen;
+  --prism-orb-opacity: 0.22;
+  --prism-orb-blur: 140px;
+
+  --prism-backdrop: sonar;
+  --prism-cursor: crosshair;
+  --prism-enter: iris;
+
+  --prism-density: 1.2;
+}
+
+body { background: var(--prism-bg) !important; }
+
+.prism-card,
+.prism-panel {
+  background-color: rgba(7, 20, 28, 0.72) !important;
+  border: 1px solid var(--prism-line) !important;
+}
+.prism-card-lift:hover { border-color: var(--prism-accent) !important; box-shadow: var(--prism-glow) !important; }
+
+.prism-title { text-shadow: 0 0 22px rgba(60, 224, 176, 0.35) !important; }
+.prism-eyebrow { color: var(--prism-accent) !important; }
+
+.prism-btn { border: 1px solid var(--prism-accent) !important; font-weight: 500 !important; letter-spacing: 0.16em !important; text-transform: uppercase !important; font-size: 0.78rem !important; }
+.prism-btn:hover { box-shadow: var(--prism-glow) !important; }
+.prism-btn-ghost { border: 1px solid var(--prism-line-2) !important; letter-spacing: 0.16em !important; text-transform: uppercase !important; font-size: 0.78rem !important; }
+
+.prism-chip { background: transparent !important; border: 1px solid var(--prism-line) !important; letter-spacing: 0.08em !important; }
+.prism-chip-on { border-color: var(--prism-accent) !important; box-shadow: var(--prism-glow) !important; }
+
+.prism-badge { border: 1px solid var(--prism-accent) !important; background: transparent !important; color: var(--prism-accent-2) !important; }
+.prism-rule { background: var(--prism-line-2) !important; }
+.prism-frame { border: 1px solid var(--prism-line-2) !important; filter: saturate(0.55) hue-rotate(-8deg) !important; }
+.prism-dot { box-shadow: 0 0 10px var(--prism-accent) !important; }
+.prism-kbd { border: 1px solid var(--prism-line-2) !important; box-shadow: none !important; }
+/* Ranging numerals: tabular, spaced, the way a depth readout is set. */
+.prism-num { letter-spacing: 0.06em !important; font-weight: 400 !important; }

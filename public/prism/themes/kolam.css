@@ -1,0 +1,109 @@
+/* Kolam — rice flour on a swept threshold at dawn. Monsoon is the set's other
+   Indian dimension and it is a mood (weather, light, a window); this one is a
+   craft, with actual rules: a lattice of pulli (dots), and a single unbroken
+   line looping around them.
+
+   Two things carry it. Borders are dotted rather than solid, so the pulli grid
+   shows up on every container in the vocabulary at once. And the backdrop is
+   `weave`, which draws a kolam continuously and then starts again — the one
+   backdrop in the set that makes something rather than just moving. */
+@import url('https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;600;800&display=swap');
+
+:root {
+  --prism-bg: #1b100b;
+  --prism-bg-2: #241610;
+  --prism-surface: #2c1c14;
+  --prism-surface-2: #38251a;
+  --prism-surface-3: #452e21;
+  --prism-text: #f8f2e7;
+  --prism-muted: rgba(248, 242, 231, 0.66);
+  --prism-faint: rgba(248, 242, 231, 0.48);
+  --prism-line: rgba(248, 242, 231, 0.22);
+  --prism-line-2: rgba(248, 242, 231, 0.45);
+  --prism-accent: #e8b33c;
+  --prism-accent-2: #f8f2e7;
+  --prism-accent-3: #c0442e;
+  --prism-accent-soft: rgba(232, 179, 60, 0.12);
+  --prism-on-accent: #1b100b;
+
+  /* A kolam has no straight line in it if it can help it. */
+  --prism-radius: 22px;
+  --prism-radius-sm: 12px;
+  --prism-radius-lg: 36px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 2px;
+  --prism-border-style: dotted;
+  --prism-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --prism-shadow-lg: 0 26px 60px -24px rgba(0, 0, 0, 0.8);
+  --prism-glow: 0 0 32px rgba(232, 179, 60, 0.32);
+
+  --prism-font-display: 'Kumbh Sans', system-ui, sans-serif;
+  --prism-font-head: 'Kumbh Sans', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 800;
+  --prism-display-tracking: -0.02em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.2em;
+
+  --prism-title-leading: 0.96;
+  --prism-title-leading-xl: 0.88;
+  --prism-body-leading: 1.7;
+
+  --prism-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --prism-dur: 0.6s;
+  --prism-dur-fast: 0.24s;
+
+  /* A kolam is drawn from the centre outward as one continuous line, so
+     content grows into place rather than travelling to it. */
+  --prism-reveal-y: 0px;
+  --prism-reveal-scale: 0.94;
+  --prism-reveal-dur: 1.05s;
+  --prism-lift: -6px;
+  --prism-lift-sm: -3px;
+
+  --prism-texture: none;
+  /* The pulli lattice itself, on every surface. */
+  --prism-surface-texture: radial-gradient(circle, rgba(248, 242, 231, 0.11) 1.2px, transparent 1.7px);
+  --prism-surface-texture-size: 22px 22px;
+  --prism-orb-opacity: 0.34;
+  --prism-orb-blur: 110px;
+
+  --prism-backdrop: weave;
+  --prism-cursor: ring;
+  --prism-enter: iris;
+}
+
+body { background: var(--prism-bg) !important; }
+
+.prism-card-lift:hover {
+  border-color: var(--prism-accent) !important;
+  box-shadow: var(--prism-shadow-lg), var(--prism-glow) !important;
+}
+
+.prism-title { color: var(--prism-accent-2) !important; }
+.prism-head { color: var(--prism-accent-2) !important; }
+.prism-eyebrow { color: var(--prism-accent) !important; }
+
+.prism-btn { border: 2px dotted transparent !important; font-weight: 800 !important; }
+.prism-btn:hover { box-shadow: var(--prism-glow) !important; }
+.prism-btn-ghost { border: 2px dotted var(--prism-line-2) !important; font-weight: 600 !important; }
+.prism-btn-ghost:hover { border-color: var(--prism-accent) !important; }
+
+.prism-chip { border: 2px dotted var(--prism-line) !important; background: transparent !important; }
+.prism-chip-on { border-color: var(--prism-accent) !important; background: var(--prism-accent-soft) !important; }
+
+.prism-badge { border: 2px dotted var(--prism-accent) !important; background: transparent !important; }
+
+/* The threshold line: a dotted rule, the same lattice turned on its side. */
+.prism-rule {
+  height: 3px !important;
+  background: radial-gradient(circle, var(--prism-accent) 1.2px, transparent 1.6px) !important;
+  background-size: 11px 3px !important;
+  opacity: 0.75 !important;
+}
+
+.prism-dot { box-shadow: 0 0 12px var(--prism-accent) !important; }
+.prism-frame { border: 2px dotted var(--prism-line-2) !important; filter: saturate(1.1) !important; }
+.prism-kbd { border: 2px dotted var(--prism-line-2) !important; box-shadow: none !important; }
+.prism-icon-btn { border: 2px dotted var(--prism-line) !important; }

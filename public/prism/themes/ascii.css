@@ -43,9 +43,6 @@
 
 body { background: var(--prism-bg) !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise { display: none !important; }
-
 .prism-card, .prism-panel {
   background: var(--prism-bg) !important;
   box-shadow: none !important;
@@ -68,8 +65,7 @@ body { background: var(--prism-bg) !important; }
   background: var(--prism-bg) !important;
   border-color: var(--prism-line-2) !important;
   box-shadow: none !important;
-  transform: none !important;
-}
+  }
 
 .prism-eyebrow::before { content: "## " !important; }
 
@@ -83,15 +79,14 @@ body { background: var(--prism-bg) !important; }
 .prism-btn:hover {
   background: var(--prism-text) !important;
   color: var(--prism-bg) !important;
-  transform: none !important;
-}
+  }
 
 .prism-btn-ghost {
   background: transparent !important;
   border: 1px dashed var(--prism-line-2) !important;
   color: var(--prism-muted) !important;
 }
-.prism-btn-ghost:hover { transform: none !important; }
+.prism-btn-ghost:hover { }
 
 .prism-chip {
   background: transparent !important;
@@ -104,7 +99,7 @@ body { background: var(--prism-bg) !important; }
 .prism-chip-on::before, .prism-chip-on::after { color: var(--prism-bg) !important; opacity: 1 !important; }
 
 .prism-icon-btn { background: transparent !important; }
-.prism-icon-btn:hover { background: var(--prism-accent-soft) !important; transform: none !important; }
+.prism-icon-btn:hover { background: var(--prism-accent-soft) !important; }
 
 .prism-frame { box-shadow: none !important; }
 
@@ -119,3 +114,20 @@ body { background: var(--prism-bg) !important; }
 }
 
 .prism-dot { background: var(--prism-text) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Characters are either in the cell or they are not. One step, no travel. */
+:root {
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.2s;
+  --prism-reveal-ease: steps(1, end);
+  --prism-body-leading: 1.6;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture: none;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: 0px;
+  --prism-lift-sm: 0px;
+}

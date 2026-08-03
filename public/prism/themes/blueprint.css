@@ -67,4 +67,20 @@
 }
 
 .prism-rule { background: var(--prism-line-2) !important; }
-.prism-noise { display: none !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Drafted, not dropped: elements arrive from the left the way a T-square
+   sweeps across the sheet. Borders go dashed at the token level so every
+   container picks it up at once. */
+:root {
+  --prism-reveal-x: -26px;
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.7s;
+  --prism-lift: -3px;
+  --prism-border-style: dashed;
+
+  /* Blue linen drafting stock. */
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.06;
+  --prism-texture-blend: overlay;
+}

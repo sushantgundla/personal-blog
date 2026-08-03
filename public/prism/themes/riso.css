@@ -43,8 +43,6 @@
 
 body { background: var(--prism-bg) !important; }
 .prism-band { background: var(--prism-bg-2) !important; }
-.prism-orb { display: none !important; }
-.prism-noise { opacity: 0.15 !important; mix-blend-mode: multiply !important; }
 
 .prism-card, .prism-panel {
   background-color: var(--prism-surface) !important;
@@ -69,4 +67,23 @@ body { background: var(--prism-bg) !important; }
 .prism-badge { border: 2px solid var(--prism-line-2) !important; background: rgba(255,72,176,0.08) !important; color: var(--prism-text) !important; text-shadow: 1px 1px 0 rgba(255,72,176,0.6), -1px -1px 0 rgba(0,80,255,0.5) !important; border-radius: var(--prism-radius-sm) !important; }
 .prism-frame { border: 3px solid var(--prism-text) !important; border-radius: var(--prism-radius) !important; filter: contrast(1.05) saturate(1.15) !important; box-shadow: 4px 4px 0 rgba(0,80,255,0.25) !important; }
 .prism-rule { background: repeating-linear-gradient(90deg, var(--prism-accent) 0 4px, var(--prism-accent-2) 4px 8px) !important; height: 2px !important; opacity: 0.65 !important; }
-.prism-kbd { border: 2px solid var(--prism-text) !important; background: var(--prism-surface-2) !important; border-radius: var(--prism-radius-sm) !important; box-shadow: none !important; }
+.prism-kbd { border: 2px solid var(--prism-text) !important; background-color: var(--prism-surface-2) !important; border-radius: var(--prism-radius-sm) !important; box-shadow: none !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Misregistration settling: the second pass lands a few millimetres off and
+   snaps square. Both axes travel, briefly, which no other theme does. */
+:root {
+  --prism-reveal-x: 9px;
+  --prism-reveal-y: 11px;
+  --prism-reveal-dur: 0.4s;
+  --prism-reveal-ease: cubic-bezier(0.3, 1.4, 0.5, 1);
+  --prism-lift: -3px;
+
+  --prism-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --prism-texture-opacity: 0.18;
+  --prism-texture-blend: multiply;
+  --prism-title-leading: 0.9;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+}

@@ -64,7 +64,21 @@ body, .prism-body, .prism-title, .prism-head, .prism-sub {
 
 .prism-eyebrow::before { content: '> ' !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise { display: none !important; }
-
 .prism-rule { background: var(--prism-line-2) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   A terminal does not animate. Content is written to the buffer and it is
+   simply there — so the entrance is a hard linear cut with no travel, fast
+   enough to read as a redraw rather than a fade. */
+:root {
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.16s;
+  --prism-reveal-ease: linear;
+  --prism-lift: 0px;
+  --prism-lift-sm: 0px;
+  --prism-body-leading: 1.55;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture: none;
+}

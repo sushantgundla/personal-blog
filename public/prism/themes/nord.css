@@ -44,9 +44,6 @@
 body { background: var(--prism-bg) !important; }
 .prism-band { background: var(--prism-bg-2) !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise { display: none !important; }
-
 .prism-title,
 .prism-eyebrow { text-shadow: none !important; }
 
@@ -59,8 +56,7 @@ body { background: var(--prism-bg) !important; }
 .prism-card-lift:hover {
   border-color: var(--prism-accent) !important;
   box-shadow: var(--prism-shadow-lg) !important;
-  transform: translateY(-2px) !important;
-}
+  }
 
 .prism-chip {
   background: var(--prism-surface-2) !important;
@@ -98,3 +94,19 @@ body { background: var(--prism-bg) !important; }
 
 .prism-rule { background: var(--prism-line) !important; }
 .prism-kbd { background: var(--prism-surface-2) !important; border: 1px solid var(--prism-line-2) !important; box-shadow: 0 1px 0 rgba(0,0,0,0.3) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Quiet confidence means a short, unremarkable rise. Restraint is the point. */
+:root {
+  --prism-reveal-y: 16px;
+  --prism-reveal-dur: 0.7s;
+  --prism-body-leading: 1.68;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture: none;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: -3px;
+  --prism-lift-sm: -2px;
+}

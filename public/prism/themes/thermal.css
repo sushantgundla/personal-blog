@@ -43,8 +43,6 @@
 
 body { background: #000000 !important; }
 .prism-band { background: var(--prism-bg-2) !important; }
-.prism-orb { display: none !important; }
-.prism-noise { opacity: 0.05 !important; mix-blend-mode: screen !important; }
 
 .prism-card, .prism-panel {
   border: none !important;
@@ -79,3 +77,20 @@ body { background: #000000 !important; }
 .prism-frame { border: none !important; border-radius: var(--prism-radius-lg) !important; box-shadow: 0 0 40px rgba(192,38,211,0.3) !important; filter: contrast(1.1) saturate(1.3) !important; }
 .prism-rule { background: linear-gradient(90deg, transparent, var(--prism-accent-2), var(--prism-accent), transparent) !important; height: 2px !important; }
 .prism-kbd { border: 1px solid rgba(249,115,22,0.4) !important; box-shadow: 0 0 6px rgba(249,115,22,0.3) !important; border-radius: var(--prism-radius-sm) !important; }
+
+/* --- Motion identity & material ------------------------------------
+   Heat blooms outward before it settles: content enters slightly LARGER and
+   out of focus, then cools into place. */
+:root {
+  --prism-reveal-scale: 1.06;
+  --prism-reveal-blur: 14px;
+  --prism-reveal-y: 0px;
+  --prism-reveal-dur: 0.85s;
+  --prism-lift: -7px;
+  --prism-orb-blur: 120px;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture-opacity: 0.05;
+  --prism-texture-blend: screen;
+}

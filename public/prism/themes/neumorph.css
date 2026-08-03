@@ -45,15 +45,11 @@ body { background: var(--prism-bg) !important; }
 
 .prism-band { background: var(--prism-bg) !important; box-shadow: inset 0 12px 24px -20px #000, inset 0 -12px 24px -20px #000 !important; }
 
-.prism-orb { display: none !important; }
-.prism-noise { display: none !important; }
-
 .prism-card-lift:hover,
 .prism-card-lift:focus-visible {
   background: var(--prism-surface) !important;
   box-shadow: inset 6px 6px 16px #141414, inset -6px -6px 16px #282828 !important;
-  transform: none !important;
-}
+  }
 
 .prism-btn {
   background: var(--prism-surface) !important;
@@ -63,8 +59,7 @@ body { background: var(--prism-bg) !important; }
 .prism-btn:hover {
   background: var(--prism-surface) !important;
   box-shadow: inset 4px 4px 10px #141414, inset -4px -4px 10px #282828 !important;
-  transform: none !important;
-}
+  }
 
 .prism-btn-ghost {
   background: var(--prism-surface) !important;
@@ -74,8 +69,7 @@ body { background: var(--prism-bg) !important; }
 .prism-btn-ghost:hover {
   box-shadow: inset 3px 3px 8px #141414, inset -3px -3px 8px #282828 !important;
   background: var(--prism-surface) !important;
-  transform: none !important;
-}
+  }
 
 .prism-chip {
   background: var(--prism-surface) !important;
@@ -96,8 +90,7 @@ body { background: var(--prism-bg) !important; }
 .prism-icon-btn:hover {
   box-shadow: inset 3px 3px 8px #141414, inset -3px -3px 8px #282828 !important;
   color: var(--prism-accent) !important;
-  transform: none !important;
-}
+  }
 
 .prism-frame {
   background: var(--prism-surface) !important;
@@ -123,4 +116,21 @@ body { background: var(--prism-bg) !important; }
 .prism-dot {
   background: var(--prism-accent) !important;
   box-shadow: 2px 2px 5px #141414, -1px -1px 3px #282828 !important;
+}
+
+/* --- Motion identity & material ------------------------------------
+   Nothing arrives from elsewhere — shapes are extruded out of the surface
+   itself, so the only gesture is scale. Travel would break the illusion. */
+:root {
+  --prism-reveal-y: 0px;
+  --prism-reveal-scale: 0.965;
+  --prism-reveal-dur: 0.8s;
+
+  /* Retired .prism-orb / .prism-noise overrides, stated as tokens. */
+  --prism-orb-opacity: 0;
+  --prism-texture: none;
+
+  /* Retired hardcoded hover transforms. */
+  --prism-lift: 0px;
+  --prism-lift-sm: 0px;
 }
