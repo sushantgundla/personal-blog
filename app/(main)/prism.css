@@ -566,10 +566,11 @@ html:has(.prism-root) body {
      4px wide. Give the cell its own width instead of stretching it, so the
      portrait stays centred rather than filling the column. */
   /* Sized so the whole hero — name, portrait, lede AND the primary button —
-     clears an 800px laptop viewport. At 300px square every stack dimension put
-     the call to action 20–50px below the fold. */
+     clears a real laptop viewport once browser chrome is taken off the top. At
+     300px square every stack dimension put the call to action 20-50px below an
+     800px fold; at 228px thermal still missed a measured 757px one by 5px. */
   .prism-hero-media {
-    width: min(228px, 100%);
+    width: min(206px, 100%);
     margin-top: clamp(4px, 1vw, 12px);
   }
 
