@@ -62,6 +62,7 @@ and bounces. Two gestures at once nearly always reads as fussy.
 | `--prism-reveal-ease` | `var(--prism-ease)` | `steps(n, end)` for anything that redraws rather than moves. |
 | `--prism-lift` / `--prism-lift-x` | `-6px` / `0px` | Hover travel. **Positive presses in** — Brutalist and Xerox push into their hard shadow. |
 | `--prism-lift-sm` / `--prism-lift-sm-x` | `-2px` / `0px` | Same, for buttons and chips. |
+| `--prism-marquee-dur` | `58s` | One pass of the skills ticker. Higher is slower. |
 
 ### Material
 

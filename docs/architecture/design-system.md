@@ -97,6 +97,7 @@ scale, or blur — chosen to match its material.
 | `--prism-reveal-ease` | entrance easing | `var(--prism-ease)` |
 | `--prism-lift` / `--prism-lift-x` | card hover travel; **positive presses in** | `-6px` / `0px` |
 | `--prism-lift-sm` / `--prism-lift-sm-x` | control hover travel | `-2px` / `0px` |
+| `--prism-marquee-dur` | one full pass of the skills ticker; higher is slower | `58s` |
 
 Range in use: `0.16s` (Terminal, a hard redraw) to `1.4s` (Sonar, a return surfacing).
 Matrix is the only dimension with a negative `--prism-reveal-y`. Brutalist and Xerox are the

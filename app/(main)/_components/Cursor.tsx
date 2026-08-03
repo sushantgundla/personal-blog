@@ -81,7 +81,24 @@ export default function Cursor() {
     let outerX = targetX
     let outerY = targetY
     let rafId: number | null = null
-    const LERP = 0.15
+    let lastT = 0
+
+    /**
+     * Time constant for the ring's follow, in seconds — the time it takes to
+     * close ~63% of the gap to the pointer.
+     *
+     * This was a flat `outer += (target - outer) * 0.15` applied once per
+     * frame, which had two problems. It was simply too heavy: at 60fps it
+     * needs ~18 frames, about 300ms, to catch up, so the ring visibly trails
+     * the pointer rather than tracking it. And because the step was per-frame
+     * rather than per-second, the cursor moved at twice the speed on a 120Hz
+     * display and crawled whenever the frame rate dropped.
+     *
+     * Exponential smoothing against real elapsed time fixes both: identical
+     * feel at any refresh rate, and ~40ms is enough lag to read as a soft
+     * follow instead of a rigid attachment.
+     */
+    const FOLLOW_TAU = 0.04
 
     function onMove(e: PointerEvent) {
       targetX = e.clientX
@@ -96,9 +113,18 @@ export default function Cursor() {
       setHovering(!!target?.closest(HOVER_SELECTOR))
     }
 
-    function tick() {
-      outerX += (targetX - outerX) * LERP
-      outerY += (targetY - outerY) * LERP
+    function tick(now: number) {
+      // Clamp the delta so a backgrounded tab or a long frame doesn't produce
+      // one huge jump when it resumes.
+      const dt = lastT ? Math.min((now - lastT) / 1000, 0.1) : 1 / 60
+      lastT = now
+      const k = 1 - Math.exp(-dt / FOLLOW_TAU)
+      outerX += (targetX - outerX) * k
+      outerY += (targetY - outerY) * k
+      // Snap the last fraction of a pixel so the ring settles instead of
+      // asymptotically creeping toward the pointer forever.
+      if (Math.abs(targetX - outerX) < 0.1) outerX = targetX
+      if (Math.abs(targetY - outerY) < 0.1) outerY = targetY
       if (outerRef.current) {
         outerRef.current.style.transform = `translate3d(${outerX}px, ${outerY}px, 0) translate(-50%, -50%)`
       }
@@ -124,7 +150,14 @@ export default function Cursor() {
 
   return (
     <>
-      <style>{`
+      {/* dangerouslySetInnerHTML, not a text child — see design-system.md §6.
+          React escapes the apostrophes in `content: ''` below on the server but
+          not on the client, and the mismatch makes React throw the whole tree
+          away. This component happens to render null on the server today, so
+          the bug is dormant rather than live, but the rule is absolute. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .prism-cursor-hidden,
         .prism-cursor-hidden * {
           cursor: none !important;
@@ -195,7 +228,9 @@ export default function Cursor() {
             animation: none;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
       <div
         ref={innerRef}
         className="prism-cursor-inner"
