@@ -1,0 +1,1169 @@
+/* ============================================================
+   A run (/atlas/learn/[game]) — layout and positioning only.
+
+   Every colour, font and surface comes from ../../atlas.css; nothing
+   here invents a palette. Same split as floor.module.css,
+   dossier.module.css and plate.module.css.
+
+   The room: a bench on the mint's training floor. A ledger card
+   carries the question, a perforation strip counts the run, and a
+   stamp comes down on the answer.
+
+   Two colours do all the work, and they are the pair the floor's
+   result wall already uses:
+     --pass = --note-ember  the truth, a correct call, a strong run
+     --fail = --note-rust   a rejected note; duller, never shouty
+
+   There is no red anywhere in The Atlas and this file does not
+   introduce one. A wrong answer reads as *voided* — dimmed, ruled in
+   rust — while the ember always marks what was actually true, because
+   that is the thing worth looking at.
+
+   Width: every cap is min(x, 100%) and every grid track is
+   minmax(min(100%, x), 1fr), which is what keeps 375px to one column
+   instead of a track wider than the screen. Nothing here may cause a
+   horizontal scrollbar.
+   ============================================================ */
+
+/* ---------------------------------------------------------- page shell */
+
+.run {
+  --pass: var(--note-ember);
+  --pass-rgb: var(--note-ember-rgb);
+  --fail: var(--note-rust);
+  --fail-rgb: var(--note-rust-rgb);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  /* Narrower than the floor's 1400px on purpose: this page is read, not
+     scanned. min(), not a bare px cap, so it is fluid all the way down. */
+  max-width: min(68rem, 100%);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.runHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.backLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  color: var(--note-ember);
+}
+
+.runTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Bodoni declared here, not borrowed from .atlas-face-name — that class
+   carries a country-name clamp up to 9rem, and overriding one single-class
+   rule from another is a specificity coin toss. Same reasoning as
+   floor.module.css's .title. */
+.runName {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.875rem, 6vw, 3.375rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--note-intaglio);
+  margin: 0;
+}
+
+.runInstruction {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+  max-width: 56ch;
+}
+
+/* ---------------------------------------------------------- the rail */
+
+.bench {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.rail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px dashed var(--note-rule);
+}
+
+.railCount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.railCount strong {
+  color: var(--note-intaglio);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.railScore {
+  color: var(--pass);
+  letter-spacing: 0.06em;
+}
+
+/* The perforation strip — one punched mark per question, the seam between
+   notes on an uncut sheet. Decorative: .railCount carries the same facts
+   as words, so nothing is lost when this is hidden from assistive tech. */
+.marks {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* Ten marks at 0.55rem never overflow, but a longer run one day must
+     wrap rather than push the page wide. */
+  flex-wrap: wrap;
+}
+
+.mark {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  border: 1px solid var(--note-rule);
+  background: transparent;
+  transition: background-color 0.25s var(--atlas-ease), border-color 0.25s var(--atlas-ease),
+    transform 0.25s var(--atlas-ease);
+}
+
+.mark[data-mark='right'] {
+  background: var(--pass);
+  border-color: var(--pass);
+}
+
+.mark[data-mark='wrong'] {
+  background: transparent;
+  border-color: var(--fail);
+  box-shadow: inset 0 0 0 2px rgba(var(--fail-rgb), 0.5);
+}
+
+.mark[data-mark='current'] {
+  border-color: var(--note-intaglio);
+  transform: scale(1.35);
+}
+
+.railSerial {
+  opacity: 0.75;
+}
+
+/* The bench's standing order, above the first question only. */
+.houseRule {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+  max-width: 60ch;
+}
+
+/* ---------------------------------------------------------- the card */
+
+.card {
+  position: relative;
+  padding: clamp(1.25rem, 4vw, 2.25rem);
+}
+
+/* The dashed cutting guide printed just inside a note's own edge, the same
+   detail the floor's game cards carry. Purely decorative. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--note-rule);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.question {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.prompt {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 3.4vw, 1.875rem);
+  line-height: 1.25;
+  color: var(--note-intaglio);
+  margin: 0;
+  max-width: 40ch;
+  text-wrap: balance;
+}
+
+/* ---------------------------------------------------------- options */
+
+/* `minmax(0, 1fr)` is doing real work here, not decoration. A grid's default
+   `auto` track is sized from its content's max-content width, and the
+   forgery options' repeated-code microtext is one long unbreakable line — it
+   pushed the single column to 1048px inside a 984px list, which is a
+   horizontal scrollbar on every screen. The 0 minimum lets the track ignore
+   its content's intrinsic width and just fill the container. */
+.options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.65rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Four names, 2x2. Explicit columns, not auto-fit: auto-fit worked out three
+   tracks at bench width and left the fourth option orphaned on a row of its
+   own with two empty cells beside it. Four options only ever want 2x2 or a
+   single column. */
+.options[data-layout='grid'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 34rem) {
+  .options[data-layout='grid'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Two plates weighed against each other, side by side, each filling half the
+   bench.
+   This had `max-width` plus `margin-inline: auto`, which was the bug: an auto
+   inline margin on a flex-column child cancels the default stretch, so the
+   list stopped filling its parent and shrank to fit its own content — 318px
+   of it, stranded in a 1056px card, with the two countries stacked. Measured,
+   not guessed. There is no width cap here now and there must not be one: the
+   list fills the column. */
+.options[data-layout='pair'] {
+  position: relative;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+/* The comparison mark, struck between the two plates like the pivot of a
+   balance. Decorative — the prompt already says "which country is greater?" —
+   so it is hidden from assistive tech and dropped entirely once the two
+   plates stack. */
+.options[data-layout='pair']::after {
+  content: 'vs';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--note-rule);
+  background: var(--note-paper);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  pointer-events: none;
+}
+
+@media (max-width: 40rem) {
+  .options[data-layout='pair'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .options[data-layout='pair']::after {
+    content: none;
+  }
+}
+
+.option {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  text-align: left;
+  padding: 0.9rem 1rem;
+  background: transparent;
+  border: 1px solid var(--note-rule);
+  color: var(--note-intaglio);
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color 0.2s var(--atlas-ease), background-color 0.2s var(--atlas-ease),
+    opacity 0.2s var(--atlas-ease);
+}
+
+.option:hover:not(:disabled),
+.option:focus-visible {
+  background: var(--note-paper-hi);
+  border-color: var(--note-ember);
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+/* The keyboard number, in its own punched square. Also the marker that
+   carries the right/wrong colour once the stamp has come down. */
+.optionKey {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--note-rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--note-intaglio-dim);
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease),
+    background-color 0.2s var(--atlas-ease);
+}
+
+.optionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.optionText {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  /* Long statements and long country names wrap; they never widen the
+     grid track they sit in. */
+  overflow-wrap: anywhere;
+}
+
+/* Genuine microprinting: one line of repeated country code, clipped at the
+   option's edge. Texture only, and `overflow: hidden` + `nowrap` mean the
+   long string can never widen the grid track it sits in — which at 375px is
+   the whole difference between texture and a horizontal scrollbar. */
+.optionMicrotext {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  user-select: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 6px;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  color: var(--note-intaglio-dim);
+  opacity: 0.5;
+}
+
+/* --- after the answer -------------------------------------------------- */
+
+/* Everything the player did not touch, and which was not the truth, steps
+   back so the two that matter are the only two lit. */
+.options[data-answered='true'] .option[data-state='idle'] {
+  opacity: 0.42;
+}
+
+/* The truth. Always marked, whether the player found it or not — a wrong
+   answer is the whole reason this section exists. Solid ember, full
+   contrast, filled key: the one thing on the card worth looking at. */
+.option[data-state='right'] {
+  border-color: var(--pass);
+  background: rgba(var(--pass-rgb), 0.08);
+  box-shadow: inset 0 0 0 1px var(--pass);
+}
+
+.option[data-state='right'] .optionKey {
+  border-color: var(--pass);
+  background: var(--pass);
+  color: var(--note-void);
+}
+
+/* The note the player struck out in error.
+   Rust and ember are close enough in a dark room that colour alone did not
+   separate these two states — measured on the real screen, the right and the
+   wrong option read as the same orange box at a glance. So the difference is
+   carried by shape and weight, not hue: a dashed rule instead of a solid one,
+   no fill, dimmed type, and the text ruled through. A struck-out line is
+   literally what the player did, and it survives colour-blindness and a bad
+   monitor in a way a second orange never would. */
+.option[data-state='wrong'] {
+  border: 1px dashed var(--fail);
+  background: transparent;
+  color: var(--note-intaglio-dim);
+}
+
+.option[data-state='wrong'] .optionKey {
+  border-style: dashed;
+  border-color: var(--fail);
+  color: var(--fail);
+}
+
+.option[data-state='wrong'] .optionText,
+.option[data-state='wrong'] .plateName {
+  text-decoration: line-through;
+  text-decoration-color: var(--fail);
+  text-decoration-thickness: 1px;
+}
+
+/* --- spot the forgery -------------------------------------------------- */
+
+.forgeryHead {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+/* The flag as a struck ring seal, the same treatment the dossier's face
+   note gives it. */
+.flagSeal {
+  position: relative;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--note-seal);
+  box-shadow: 0 0 0 3px var(--note-paper), 0 0 0 4px var(--note-seal);
+  opacity: 0.92;
+}
+
+.flagSealImg {
+  object-fit: cover;
+}
+
+.forgeryHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.forgeryCountry {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  line-height: 1.1;
+  color: var(--note-intaglio);
+  overflow-wrap: anywhere;
+}
+
+/* --- higher or lower --------------------------------------------------- */
+
+/* One country as a plate: the option button becomes a column with its own
+   flag, name and code, and the keyboard number moves to the corner — it
+   floated oddly above the flag when it stayed in the normal flow. */
+.optionPlate {
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.7rem;
+  padding: 1.6rem 1rem 1.2rem;
+}
+
+.optionPlate .optionKey {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+}
+
+.plateFlag {
+  position: relative;
+  width: min(100%, 14rem);
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--note-rule);
+  overflow: hidden;
+  background: var(--note-plate);
+}
+
+.plateFlagImg {
+  object-fit: cover;
+}
+
+.plateFlagFallback {
+  display: grid;
+  place-items: center;
+  width: min(100%, 14rem);
+  aspect-ratio: 3 / 2;
+  border: 1px dashed var(--note-rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  color: var(--note-intaglio-dim);
+}
+
+.plateName {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.15;
+  color: var(--note-intaglio);
+  overflow-wrap: anywhere;
+}
+
+/* --- guess the flag ---------------------------------------------------- */
+
+.flagStage {
+  position: relative;
+  width: min(100%, 28rem);
+  aspect-ratio: 3 / 2;
+  margin: 0 auto;
+  border: 1px solid var(--note-rule);
+  background: var(--note-plate);
+  overflow: hidden;
+}
+
+/* The dashed inner guide again, on top of the image this time — the flag is
+   a specimen pinned to the bench, not a photograph. */
+.flagStage::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed rgba(var(--note-rust-rgb), 0.35);
+  pointer-events: none;
+}
+
+.flagStageImg {
+  object-fit: contain;
+}
+
+.flagStageMissing {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 1rem;
+  text-align: center;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  color: var(--note-intaglio-dim);
+}
+
+/* ---------------------------------------------------------- the verdict */
+
+.verdict {
+  --verdict-ink: var(--fail);
+  --verdict-rgb: var(--fail-rgb);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.1rem, 3.5vw, 1.75rem);
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  border-left: 3px solid var(--verdict-ink);
+  min-width: 0;
+}
+
+.verdict[data-correct='true'] {
+  --verdict-ink: var(--pass);
+  --verdict-rgb: var(--pass-rgb);
+}
+
+.verdictTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  /* wrap-reverse, so on a narrow screen the stamp lands ABOVE the words
+     instead of below them — a stamp comes down on top of a document. */
+  flex-wrap: wrap-reverse;
+}
+
+.verdictCall {
+  margin: 0;
+  flex: 1 1 18rem;
+  min-width: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--note-intaglio);
+}
+
+.verdictCallWord {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--verdict-ink);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.verdictHeadline {
+  overflow-wrap: anywhere;
+}
+
+/* --- the stamp --------------------------------------------------------- */
+
+.stamp {
+  flex: none;
+  display: grid;
+  place-items: center;
+  gap: 0.2rem;
+  /* Roomy enough that the sub-line clears the double ring — at tighter
+     padding "you rejected statement 1" touched the inner rule. */
+  padding: 0.75rem 1.35rem 0.8rem;
+  border: 2.5px solid var(--verdict-ink);
+  border-radius: 4px;
+  color: var(--verdict-ink);
+  /* Two rings with a gap of paper between them — struck ink, not a box. */
+  box-shadow: inset 0 0 0 1.5px var(--note-paper), inset 0 0 0 4px var(--verdict-ink),
+    inset 0 0 0 60px rgba(var(--verdict-rgb), 0.07);
+  transform: rotate(-7deg);
+  animation: playStamp 460ms var(--atlas-ease) both;
+}
+
+.stampWord {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: clamp(1rem, 3.4vw, 1.375rem);
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
+.stampNote {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  text-align: center;
+}
+
+@keyframes playStamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-20deg) scale(2.1);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-7deg) scale(1);
+  }
+}
+
+/* --- the teaching ledger ----------------------------------------------- */
+
+.ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px dashed var(--note-rule);
+}
+
+/* A real ledger: three columns that line up down the panel — what it is,
+   what it measured, and where to read more.
+   Deliberately a grid, not a space-between flex row. As a flex row the
+   dossier link wrapped onto its own line whenever a value ran long (the
+   "forged" row, which prints both the fake figure and the real one, does
+   this every time) and landed back at the left margin, breaking the column
+   under it. Below 46rem it collapses to one column and stacks. */
+.ledgerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.3rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed var(--note-rule);
+}
+
+@media (min-width: 46rem) {
+  .ledgerRow {
+    /* The value column is the widest of the three: on the flags bench a row's
+       value is a sentence ("Capital Georgetown · South America · .gy · drives
+       on the left"), not a number. It is left-aligned for the same reason —
+       right-aligning a value that wraps onto two lines leaves a ragged left
+       edge that reads as a mistake. The mono, tabular face still lines the
+       figures up down the column. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) auto;
+    align-items: baseline;
+    gap: 0.4rem 1.5rem;
+  }
+}
+
+.ledgerLabel {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--note-intaglio);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A plain block, not a flex row: the value and its year are inline text so a
+   long value wraps and the year simply trails the last line. As flex items
+   they wrapped as whole boxes and the year ended up stranded on a line of
+   its own at the far right. */
+.ledgerFigure {
+  min-width: 0;
+}
+
+/* Tabular so a column of numbers lines up like a real ledger — the same
+   reason .atlas-denomination sets it. */
+.ledgerValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  color: var(--note-intaglio);
+  overflow-wrap: anywhere;
+}
+
+.ledgerYear {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  color: var(--note-intaglio-dim);
+  margin-left: 0.6rem;
+  white-space: nowrap;
+}
+
+.ledgerLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  white-space: nowrap;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.ledgerLink:hover,
+.ledgerLink:focus-visible {
+  color: var(--note-ember);
+  border-bottom-color: var(--note-ember);
+}
+
+/* Keeps the three-column rhythm when a row has no dossier to point at. */
+.ledgerLinkEmpty {
+  display: block;
+}
+
+.verdictNote {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+  max-width: 66ch;
+}
+
+.provenance {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem 0.9rem;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.provenanceItem {
+  min-width: 0;
+}
+
+.provenanceLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--note-intaglio-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.provenanceLink:hover,
+.provenanceLink:focus-visible {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- foot / actions */
+
+.benchFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+}
+
+.hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  opacity: 0.8;
+}
+
+.primaryAction {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-void);
+  background: var(--note-ember);
+  border: 1px solid var(--note-ember);
+  padding: 0.7rem 1.3rem;
+  cursor: pointer;
+  transition: background-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease);
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  background: transparent;
+  color: var(--note-ember);
+}
+
+.secondaryAction {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  background: transparent;
+  border: 1px solid var(--note-rule);
+  padding: 0.7rem 1.3rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.secondaryAction:hover,
+.secondaryAction:focus-visible {
+  color: var(--note-intaglio);
+  border-color: var(--note-ink);
+}
+
+/* ---------------------------------------------------------- loading / error */
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: clamp(1.5rem, 5vw, 3rem) 0;
+  min-height: 12rem;
+}
+
+.stateLabel {
+  display: block;
+}
+
+.stateBody {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--note-intaglio);
+  margin: 0;
+  max-width: 56ch;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------- the summary */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: clamp(1.25rem, 4vw, 2.25rem);
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+}
+
+.summaryScore {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summaryFigure {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0;
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.summaryCorrect {
+  font-size: clamp(3rem, 12vw, 5rem);
+  color: var(--pass);
+}
+
+.summaryOutOf {
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  color: var(--note-intaglio-dim);
+}
+
+.summaryVerdict {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 3.6vw, 1.875rem);
+  line-height: 1.25;
+  color: var(--note-intaglio);
+  margin: 0;
+  max-width: 40ch;
+  text-wrap: balance;
+}
+
+.summaryStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--note-rule);
+}
+
+.summaryStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.summaryStatValue {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.0625rem;
+  color: var(--note-intaglio);
+}
+
+/* ---------------------------------------------- what got past you */
+
+.misses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--note-rule);
+}
+
+.missList {
+  display: grid;
+  /* minmax(0, …) for the same reason .options has it: the track must be free
+     to ignore its content's intrinsic width and just fill the panel. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* One rejected note per card, ruled in rust down its left edge — the same
+   language the verdict panel uses for a wrong call. */
+.miss {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  background: var(--note-void);
+  border: 1px solid var(--note-rule);
+  border-left: 2px solid var(--fail);
+}
+
+.missPrompt {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  color: var(--note-intaglio-dim);
+  overflow-wrap: anywhere;
+}
+
+.missTruth {
+  margin: 0;
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  color: var(--note-intaglio);
+  overflow-wrap: anywhere;
+}
+
+.missFigure {
+  margin: 0;
+}
+
+.missValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--pass);
+  overflow-wrap: anywhere;
+}
+
+.missYear {
+  margin-left: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  color: var(--note-intaglio-dim);
+  white-space: nowrap;
+}
+
+.missChoice {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--note-intaglio-dim);
+}
+
+.missChoiceText {
+  text-decoration: line-through;
+  text-decoration-color: var(--fail);
+  text-decoration-thickness: 1px;
+  overflow-wrap: anywhere;
+}
+
+.missLink {
+  margin-top: 0.15rem;
+  align-self: flex-start;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.missLink:hover,
+.missLink:focus-visible {
+  color: var(--note-ember);
+  border-bottom-color: var(--note-ember);
+}
+
+.summaryGrade {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+  max-width: 60ch;
+}
+
+.summaryGrade strong {
+  color: var(--note-seal);
+  font-weight: 500;
+}
+
+.summaryActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------- not found */
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  min-height: 60vh;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.notFoundTitle {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(2.25rem, 8vw, 4rem);
+  line-height: 1;
+  color: var(--note-intaglio);
+  margin: 0;
+}
+
+.notFoundBody {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+  max-width: min(36rem, 100%);
+}
+
+/* ---------------------------------------------------------- focus */
+
+/* One visible ring on everything interactive. The options get theirs
+   outside the border so it reads against the fill states above. */
+.option:focus-visible,
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible,
+.ledgerLink:focus-visible,
+.missLink:focus-visible,
+.provenanceLink:focus-visible,
+.backLink:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  /* The stamp included — it is the loudest thing on the page and the first
+     thing that should stop moving. */
+  .stamp {
+    animation: none !important;
+  }
+
+  .option,
+  .optionKey,
+  .mark,
+  .primaryAction,
+  .secondaryAction,
+  .ledgerLink,
+  .missLink,
+  .provenanceLink,
+  .backLink {
+    transition: none !important;
+  }
+}

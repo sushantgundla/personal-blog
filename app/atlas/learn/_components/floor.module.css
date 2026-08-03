@@ -1,0 +1,585 @@
+/* ============================================================
+   The training floor (/atlas/learn) — layout and positioning only.
+
+   Every colour, font, surface and effect comes from ../../atlas.css.
+   Nothing here invents a palette: the floor has to read as the same
+   building as the plate and the dossiers, just a different room —
+   paper record-keeping instead of maps. Same split as
+   dossier.module.css and plate.module.css.
+
+   The room's own vocabulary, on top of the shared one:
+     - a ledger card is ruled paper (.runCard's faint repeating rule),
+     - a stamp is ink pressed at a slight angle (.seal, .runStamp),
+     - a game card carries its own guilloché rosette, seeded from the
+       game id exactly the way a country note is seeded from its ISO3.
+   ============================================================ */
+
+/* ---------------------------------------------------------- page shell */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 2.75rem;
+  /* min() not a bare px cap: the shell is fluid to the viewport and only
+     stops growing on very wide screens, matching dossier.module.css. */
+  max-width: min(1400px, 100%);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.backLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- the framing */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Bodoni is declared here rather than borrowing .atlas-face-name: that
+   class carries a country-name-sized clamp (up to 9rem) and overriding it
+   from a CSS module would be a specificity fight between two single-class
+   rules. The floor's title wants its own, smaller scale. */
+.title {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--note-intaglio);
+  margin: 0;
+}
+
+.framing {
+  max-width: 62ch;
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--note-intaglio-dim);
+}
+
+.framing strong {
+  color: var(--note-intaglio);
+  font-weight: 500;
+}
+
+/* The engraved marginalia running under the title. Decorative, aria-hidden
+   in the markup, and clipped rather than wrapped so it can never widen the
+   page at 375px. */
+.microStrip {
+  overflow: hidden;
+  white-space: nowrap;
+  border-top: 1px dashed var(--note-rule);
+  border-bottom: 1px dashed var(--note-rule);
+  padding: 0.3rem 0;
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------- grade seal */
+
+.gradeBlock {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: clamp(1.25rem, 4vw, 2.5rem);
+  flex-wrap: wrap;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.seal {
+  position: relative;
+  flex: none;
+  width: clamp(7.5rem, 22vw, 10.5rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 1.1rem;
+  transform: rotate(-5deg);
+  background: radial-gradient(circle at 50% 32%, var(--note-paper-hi), var(--note-paper) 72%);
+  border: 2px solid var(--note-seal);
+  /* Two rings with paper between them — a struck seal, not a plain circle. */
+  box-shadow: inset 0 0 0 1.5px var(--note-paper), inset 0 0 0 4px var(--note-seal),
+    0 0 0 1px var(--note-rule);
+}
+
+.sealGrade {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: clamp(0.9rem, 2.6vw, 1.2rem);
+  line-height: 1.15;
+  color: var(--note-seal);
+  text-wrap: balance;
+}
+
+.sealRank {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-style: normal;
+  font-weight: 400;
+  font-size: var(--atlas-text-xs, 0.5625rem);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  margin-bottom: 0.4rem;
+}
+
+/* The stamp coming down. Killed under reduced motion at the foot of this
+   file. Only ever applied once the record has actually loaded, so it reads
+   as "your grade was pressed", not as a page-load flourish. */
+.sealStamp {
+  animation: floorStamp 520ms var(--atlas-ease) both;
+}
+
+@keyframes floorStamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-16deg) scale(1.7);
+  }
+  62% {
+    opacity: 1;
+    transform: rotate(-2deg) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-5deg) scale(1);
+  }
+}
+
+.gradeText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.gradeCount {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* Reuses .atlas-denomination's face; only the size is floor-specific. */
+.gradeNumber {
+  font-size: clamp(2.25rem, 7vw, 3.375rem);
+  line-height: 1;
+}
+
+.gradeLadder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 26rem;
+}
+
+.gradeLadderRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* The five ranks of the mint, printed down the right-hand side of the seal
+   block. Without it the block ran a third full on a wide screen — this is
+   both what fills that width and the answer to "what am I climbing
+   towards", which the thread alone only implies. */
+.ranks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+  flex: 0 1 15rem;
+  border-left: 1px dashed var(--note-rule);
+  padding-left: clamp(1rem, 3vw, 2rem);
+}
+
+.rank {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+  opacity: 0.6;
+}
+
+/* Every rung already reached. */
+.rankEarned {
+  color: var(--note-intaglio);
+  opacity: 1;
+}
+
+/* The one the visitor holds right now. */
+.rankHeld {
+  color: var(--note-seal);
+  opacity: 1;
+}
+
+.rankMark {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- game cards */
+
+.grid {
+  display: grid;
+  /* min(100%, …) is what keeps 375px to a single column instead of
+     forcing a 16rem track wider than the viewport. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  /* `start`, not the grid default `stretch`: dealing a Surprise card makes
+     that one card grow, and stretching would drag the other three to the
+     same height and leave a hand's width of empty note under each. The
+     three game cards all clear .min-height on their own, so they still
+     line up with each other. */
+  align-self: start;
+  min-height: 14.5rem;
+  padding: 1.35rem 1.35rem 1.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The inner cutting guide — the dashed rule printed just inside a note's
+   own edge. Purely decorative. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--note-rule);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cardBody {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* One bespoke rosette per game, seated in the bottom-right corner the way
+   a note's ornament is. Only a small bleed: pulled much further off the
+   corner, all you see is a handful of arcs, which reads as stray scribble
+   rather than an engraved rosette. Most of the closed curve has to be on
+   the card for the shape to register. */
+.cardRosette {
+  position: absolute;
+  right: -2rem;
+  bottom: -2rem;
+  width: 11rem;
+  height: 11rem;
+  z-index: 0;
+  opacity: 0.32;
+  pointer-events: none;
+  transition: opacity 0.35s var(--atlas-ease);
+}
+
+.card:hover .cardRosette,
+.card:focus-visible .cardRosette {
+  opacity: 0.7;
+}
+
+.cardTitle {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: var(--note-intaglio);
+  margin: 0;
+}
+
+.cardLine {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+}
+
+.cardFoot {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cardGo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-ember);
+}
+
+/* Reserves the record line's height before it loads so the card doesn't
+   twitch a row taller the moment localStorage comes back. inline-block,
+   not the inline default — min-height does nothing to an inline box. */
+.cardRecord {
+  display: inline-block;
+  min-height: 1.1rem;
+}
+
+/* ---------------------------------------------------------- surprise me */
+
+.dealButton {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note-intaglio);
+  background: transparent;
+  border: 1px solid var(--note-rule);
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.dealButton:hover,
+.dealButton:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+.dealButton:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+.dealt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.dealtHead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+/* The flag as a small struck seal, the same ringed treatment the face note
+   gives it, at ledger-card size. */
+.dealtFlag {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--note-seal);
+  opacity: 0.92;
+}
+
+.dealtFlagImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dealtHeadline {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  line-height: 1.25;
+  color: var(--note-intaglio);
+  margin: 0;
+}
+
+.dealtDetail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--note-intaglio-dim);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  /* Long detail strings must wrap, never widen the card. */
+  overflow-wrap: anywhere;
+}
+
+.dealtLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--note-ember);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  align-self: flex-start;
+}
+
+.dealtLink:hover,
+.dealtLink:focus-visible {
+  border-bottom-color: var(--note-ember);
+}
+
+.notice {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+}
+
+.noticeError {
+  color: var(--note-ember);
+}
+
+/* ---------------------------------------------------------- the wall */
+
+.wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  gap: 0.75rem;
+}
+
+.runCard {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0.9rem 0.9rem;
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+}
+
+/* Ruled ledger paper, behind the type. */
+.runCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.75;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 1.05rem,
+    var(--note-rule) 1.05rem calc(1.05rem + 1px)
+  );
+}
+
+.runGame {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  color: var(--note-intaglio);
+}
+
+.runFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+/* The score, pressed at an angle. Ember for a strong run, security-thread
+   green for a weak one — the same two-colour language the dossier's
+   comparison bar already uses for above / below. */
+.runStamp {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  transform: rotate(-3deg);
+  color: var(--note-ember);
+  border: 1.5px solid var(--note-ember);
+  box-shadow: inset 0 0 0 3px rgba(var(--note-ember-rgb), 0.12);
+}
+
+.runStampLow {
+  color: var(--note-thread);
+  border-color: var(--note-thread);
+  box-shadow: inset 0 0 0 3px rgba(var(--note-thread-rgb), 0.12);
+}
+
+/* Also the wall's pre-load placeholder, which is why it holds a line's
+   height while empty — the section keeps its size instead of the page
+   jumping the moment the record comes back from localStorage. */
+.empty {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  min-height: 1.5rem;
+  color: var(--note-intaglio-dim);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------- focus */
+
+/* One visible ring for every interactive thing on the floor. The cards are
+   whole-card links, so the ring sits outside their border. */
+.card:focus-visible,
+.dealButton:focus-visible,
+.dealtLink:focus-visible,
+.backLink:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .sealStamp {
+    animation: none !important;
+  }
+
+  .cardRosette,
+  .dealButton,
+  .backLink {
+    transition: none !important;
+  }
+}

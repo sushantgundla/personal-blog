@@ -89,6 +89,17 @@ export default function AtlasLayout({ children }: { children: React.ReactNode })
         >
           ← sushantgundla.com
         </Link>
+
+        {/* The discovery path to the learning section. It sits on every
+            /atlas/* route deliberately — a visitor reading a dossier is
+            exactly the person who might want to be asked something about
+            it instead. Same treatment as the link on the left. */}
+        <Link
+          href="/atlas/learn"
+          className="atlas-label !text-[10px] !tracking-[0.2em] ml-auto hover:text-[var(--note-ember)] transition-colors"
+        >
+          the training floor →
+        </Link>
       </header>
 
       <main className="flex-1">{children}</main>
