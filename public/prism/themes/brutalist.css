@@ -39,6 +39,9 @@
   --prism-backdrop: none;
   --prism-cursor: square;
   --prism-enter: shatter;
+
+  /* A poster is centred and frontal — no editorial two-column split. */
+  --prism-hero: stack;
 }
 
 .prism-card, .prism-panel, .prism-frame, .prism-badge, .prism-chip, .prism-kbd {

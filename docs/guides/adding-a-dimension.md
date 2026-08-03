@@ -96,6 +96,17 @@ on a card or panel in a theme file** — it resets the image and wipes the textu
 | `--prism-border-style` | `solid` | `dashed` (Blueprint), `dotted` (Kolam). Applies to every container at once. |
 | `--prism-card-clip` / `--prism-btn-clip` | `none` | Corner cuts — Cyberpunk's bevel. |
 
+### Composition
+
+`--prism-hero` picks the hero arrangement: `split` (default), `masthead` or `stack`. This is
+the only token that changes layout rather than skin — see `design-system.md` §2 for the full
+table and the constraints each archetype is tuned against. Pick the one the dimension's own
+logic implies: a print dimension is usually `masthead`, a poster dimension `stack`. If none
+fits, leave it out and take `split`.
+
+Adding a **new** archetype means adding a block to §5b of `app/(main)/prism.css` — never a
+layout rule in a theme file, and never an inline style in `Hero.tsx`.
+
 ### Density
 
 `--prism-density` (default `1`) multiplies `--prism-section-y`. It is the only layout token a

@@ -39,6 +39,9 @@
   --prism-backdrop: waves;
   --prism-cursor: crosshair;
   --prism-enter: iris;
+
+  /* A heat image is centred in frame, not set beside a paragraph. */
+  --prism-hero: stack;
 }
 
 body { background: #000000 !important; }

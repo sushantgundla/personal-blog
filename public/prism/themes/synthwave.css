@@ -39,6 +39,9 @@
   --prism-backdrop: waves;
   --prism-cursor: ring;
   --prism-enter: rewind;
+
+  /* Everything rises up the centre toward the horizon. */
+  --prism-hero: stack;
 }
 
 .prism-card, .prism-panel, .prism-frame, .prism-badge, .prism-chip {

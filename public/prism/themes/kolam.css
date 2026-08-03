@@ -72,6 +72,9 @@
   --prism-backdrop: weave;
   --prism-cursor: ring;
   --prism-enter: iris;
+
+  /* A kolam is drawn on an axis of symmetry; an off-centre hero fights it. */
+  --prism-hero: stack;
 }
 
 body { background: var(--prism-bg) !important; }

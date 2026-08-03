@@ -39,6 +39,9 @@
   --prism-backdrop: none;
   --prism-cursor: square;
   --prism-enter: shatter;
+
+  /* The composition is symmetrical geometry stacked on an axis. */
+  --prism-hero: stack;
 }
 
 body { background: var(--prism-bg) !important; }

@@ -121,6 +121,23 @@
   /* One full pass of the skills ticker. Higher is slower. */
   --prism-marquee-dur: 58s;
 
+  /* --- Composition ------------------------------------------------------
+     Which hero arrangement this dimension uses: `split`, `masthead` or
+     `stack`. See §5b.
+
+     This is the one token that changes the page's SHAPE rather than its skin,
+     and it is why the thirty-six dimensions stopped being thirty-six colour
+     schemes. Broadsheet was newsprint colour applied to a portfolio hero;
+     `masthead` makes it an actual masthead.
+
+     Every arrangement lives in the base stylesheet and is chosen by value —
+     a theme file still never writes a layout rule, which is the whole
+     discipline. Selection uses a CSS style query rather than JavaScript, so
+     there is no swap-time race and no flash of the wrong composition. A
+     browser without style-query support simply gets `split`, which is the
+     layout every dimension had before this existed. */
+  --prism-hero: split;
+
   /* --- Material ---------------------------------------------------------
      The page grain used to be one hardcoded SVG turbulence that themes could
      only hide or re-opacity. It is now a token, so a theme states its own
@@ -429,6 +446,170 @@ html:has(.prism-root) body {
 
 .prism-stack > * + * {
   margin-top: 1rem;
+}
+
+
+/* ============================================================================
+   5b. HERO COMPOSITION — the three arrangements a theme can choose between
+   ============================================================================
+   Hero.tsx renders four named parts and places none of them; the archetype
+   here does the placing. Selection is by CSS style query on --prism-hero, so
+   the composition is already correct on the frame the stylesheet applies —
+   reading the token in JS after the swap would race the stylesheet and flash
+   the previous layout.
+
+   Adding a fourth archetype means adding a block here, not touching Hero.tsx.
+   ============================================================================ */
+
+/* --- split (default) — identity left, portrait right ---------------------- */
+.prism-hero-grid {
+  display: grid;
+  align-items: center;
+  column-gap: clamp(32px, 6vw, 80px);
+  row-gap: clamp(18px, 2.5vw, 32px);
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-areas:
+    'status media'
+    'name   media'
+    'lede   media';
+}
+
+.prism-hero-status { grid-area: status; }
+.prism-hero-name { grid-area: name; }
+
+.prism-hero-lede {
+  grid-area: lede;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(16px, 2vw, 24px);
+}
+
+/* Narrower than --prism-measure on purpose: this sits beside the portrait and
+   is an intro, not body copy. */
+.prism-hero-blurb { max-width: 46ch; }
+
+.prism-hero-media {
+  grid-area: media;
+  display: flex;
+  justify-content: center;
+}
+
+.prism-hero-media .prism-frame {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 4 / 5;
+}
+
+.prism-hero-scroll {
+  text-align: center;
+  margin-top: clamp(48px, 8vh, 96px);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+}
+
+/* --- masthead — name full-bleed across the top, then lede beside portrait --
+   For the print dimensions. The name stops being one column of a two-column
+   layout and becomes the banner the rest of the page hangs under, with a rule
+   below it in the theme's own border style. */
+@container style(--prism-hero: masthead) {
+  .prism-hero-grid {
+    align-items: start;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-areas:
+      'status status'
+      'name   name'
+      'lede   media';
+  }
+
+  /* A standfirst runs wide. Left at the 46ch used beside a portrait it filled
+     under half its column and left a hole in the middle of the fold that read
+     as a mistake rather than as white space. */
+  .prism-hero-blurb { max-width: 58ch; }
+
+  .prism-hero-name {
+    border-bottom: max(2px, var(--prism-border-w)) var(--prism-border-style) var(--prism-line-2);
+    padding-bottom: clamp(10px, 1.6vw, 22px);
+    width: 100%;
+  }
+
+  /* Square and smaller — a masthead carries a portrait at column width, not a
+     hero image. */
+  .prism-hero-media .prism-frame {
+    max-width: 300px;
+    aspect-ratio: 1 / 1;
+    margin-left: auto;
+  }
+}
+
+/* --- stack — one centred column, portrait between name and lede ------------
+   For the poster dimensions, where the composition is symmetrical and the
+   type is the subject. */
+@container style(--prism-hero: stack) {
+  .prism-hero-grid {
+    justify-items: center;
+    text-align: center;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'status'
+      'name'
+      'media'
+      'lede';
+  }
+
+  .prism-hero-lede { align-items: center; }
+  .prism-hero-blurb { margin-inline: auto; }
+
+  /* justify-items: center shrink-wraps every cell, so the media cell collapses
+     to zero and the frame's width:100% resolves against nothing — it rendered
+     4px wide. Give the cell its own width instead of stretching it, so the
+     portrait stays centred rather than filling the column. */
+  /* Sized so the whole hero — name, portrait, lede AND the primary button —
+     clears an 800px laptop viewport. At 300px square every stack dimension put
+     the call to action 20–50px below the fold. */
+  .prism-hero-media {
+    width: min(228px, 100%);
+    margin-top: clamp(4px, 1vw, 12px);
+  }
+
+  .prism-hero-media .prism-frame { max-width: none; aspect-ratio: 1 / 1; }
+}
+
+/* --- Every archetype collapses to one column on narrow viewports -----------
+   The layout this replaced was flex with `flex: 1.3 1 520px`, so it wrapped on
+   its own somewhere near 900px. A grid does not wrap — without this the two
+   columns would hold all the way down to the 640px breakpoint and crush both.
+
+   Declared AFTER the @container blocks deliberately: same specificity, so
+   source order is what lets it beat an archetype without !important. */
+@media (max-width: 900px) {
+  .prism-hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'status'
+      'name'
+      'lede'
+      'media';
+    align-items: start;
+    justify-items: stretch;
+    text-align: left;
+  }
+
+  .prism-hero-lede { align-items: flex-start; }
+  .prism-hero-blurb { margin-inline: 0; }
+  .prism-hero-name { width: auto; }
+
+  .prism-hero-media {
+    justify-content: flex-start;
+    margin-top: clamp(12px, 3vw, 24px);
+  }
+
+  .prism-hero-media .prism-frame {
+    max-width: 320px;
+    aspect-ratio: 4 / 5;
+    margin-left: 0;
+  }
 }
 
 

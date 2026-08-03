@@ -39,6 +39,9 @@
   --prism-backdrop: grid;
   --prism-cursor: crosshair;
   --prism-enter: iris;
+
+  /* A drawing sheet carries its title across the top with a rule under it. */
+  --prism-hero: masthead;
 }
 
 .prism-card, .prism-frame, .prism-badge, .prism-chip, .prism-kbd {
