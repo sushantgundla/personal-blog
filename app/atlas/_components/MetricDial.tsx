@@ -5,7 +5,7 @@ import { MagneticButton } from '@/app/v4/_components/MagneticButton'
 import styles from './plate.module.css'
 
 /** The colour ramp painted west-to-east across the plate. Warm/high at one
- * end, cold/low at the other — see docs/superpowers/specs §2.1. Kept here
+ * end, cold/low at the other — see docs/atlas/design.md §2.1. Kept here
  * (rather than in ink.ts, which is per-country hue, not per-value) because
  * it is a rendering concern of the dial + Plate, not the design-token layer. */
 export const METRIC_RAMP = [

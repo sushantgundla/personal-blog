@@ -1,8 +1,43 @@
 # Country Explorer ("The Atlas") — Design Spec
 
-**Date:** 2026-08-02
+**Date:** 2026-08-02 (original spec). **Moved to `docs/atlas/design.md` and annotated against
+the shipped code without rewriting the original text.**
 **Branch:** `feature/country-explorer`
-**Status:** approved to build
+**Status:** shipped. See [`build-pipeline.md`](./build-pipeline.md) for how the data actually
+gets built today and [`feature-checklist.md`](./feature-checklist.md) for what works in the
+browser.
+
+> **This file is the plan, written before implementation. Where it disagrees with the shipped
+> code, the code wins — this note calls out every place that happened, but leaves the rest of
+> the spec as originally written, since it still describes what got built.**
+>
+> - **§3.1 "no static JSON snapshot… fetched on the server, cached with ISR"** — this is the
+>   biggest divergence. The shipped app does the opposite: `content/atlas/snapshot/countries/*.json`
+>   (250 files) and `content/atlas/snapshot/rankings.json` **are committed to the repo**, built
+>   offline by `scripts/atlas/build-snapshot.mjs`, and read first — no network — by
+>   `lib/atlas/dossier.ts`'s `getDossier()` and `lib/atlas/rankings.ts`. Live ISR fetching (the
+>   `fetchLiveDossier` function this spec describes) still exists, but only as a fallback for a
+>   country the snapshot doesn't have yet, and as what runs behind the "Refresh" button on a
+>   dossier page. This changed because a cold page was measured at 30–95s (worse, per this
+>   spec's own §5, 204–280s for some countries) under World Bank/Wikidata/Comtrade throttling —
+>   see `build-pipeline.md`.
+> - **§3.2/§3.3 sources** — REST Countries is correctly rejected here and never used. That part
+>   of the spec matches the code. (An earlier research pass, `data-sources.md` in this same
+>   folder, had recommended REST Countries v5 before this spec overrode that choice — see that
+>   file's own note.)
+> - **§3.4** `lib/atlas/geo/world-paths.ts` — matches. `content/atlas/famous-people.json` —
+>   matches, still precomputed by `build-people.mjs`.
+> - **§5** "`generateStaticParams` pre-renders every country page" — does not match. Only 25
+>   countries (the largest populations/economies) are prerendered at build
+>   (`PRERENDER_ISO3` in `app/atlas/[iso3]/page.tsx`); the rest render on first request via
+>   `dynamicParams` (default `true`) and are now fast because of the committed snapshot, not
+>   because they're prerendered.
+> - **Routes** — `/atlas/compare/[a]-vs-[b]` in the table below is really the dynamic segment
+>   `app/atlas/compare/[countries]/page.tsx`, and it was built to handle **2 to 5 countries**,
+>   not just 2 — see `MAX_FULL_FACE_NOTES` in that file.
+>
+> Numbers used elsewhere in this spec (e.g. "~160 indicators" in §3.2) are the plan's estimate;
+> the shipped catalogue in `lib/atlas/indicators.ts` has **151** entries — see `data-sources.md`.
 
 ---
 
@@ -41,8 +76,12 @@ All are real, linkable, indexable URLs.
 
 **The metaphor: every country is its own banknote, and the world map is the uncut printing plate.**
 
-Chosen from three directions in `docs/superpowers/research/country-explorer-design.md`. The full
-rationale is there; the short version is that a sheet of banknotes is *already* a grid of
+Chosen from three directions in a research file this spec cites as
+`docs/superpowers/research/country-explorer-design.md` — **that file does not exist anywhere in
+the repo** (checked while moving this doc to `docs/atlas/`; only `data-sources.md` and
+`story-catalog.md` were ever present). The direction it argued for is the one that shipped, so
+nothing downstream depends on recovering it, but the rationale for rejecting the other two
+directions is lost. The short version of what's left: a sheet of banknotes is *already* a grid of
 self-contained, ornamented, number-led modules, so the metaphor solves the hard problem — how to
 show hundreds of numbers without it reading as a spreadsheet — for free.
 
@@ -147,8 +186,8 @@ fetch(url, { next: { revalidate: N } })
 
 ### 3.2 Sources — confirmed working, no API key
 
-Full research in `docs/superpowers/research/country-numbers-catalog.md` and
-`country-story-catalog.md`.
+Full research in [`data-sources.md`](./data-sources.md) and [`story-catalog.md`](./story-catalog.md)
+(moved from `docs/superpowers/research/` — same content, new path).
 
 | Source | Gives us | Endpoint shape |
 |---|---|---|

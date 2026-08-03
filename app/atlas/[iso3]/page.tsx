@@ -28,7 +28,7 @@ export const revalidate = 604800
 // the countries a visitor is most likely to land on directly — the largest
 // populations and economies — and let every other country render on first
 // request, then cache for `revalidate` (dynamicParams defaults to true, so
-// all 250 ISO3 codes still resolve; see docs/superpowers/specs/2026-08-02-country-explorer-design.md §5).
+// all 250 ISO3 codes still resolve; see docs/atlas/design.md §5).
 const PRERENDER_ISO3 = [
   'IND', 'USA', 'CHN', 'FRA', 'DEU', 'GBR', 'JPN', 'BRA',
   'RUS', 'CAN', 'AUS', 'ITA', 'ESP', 'MEX', 'IDN', 'KOR',

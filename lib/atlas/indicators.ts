@@ -1,5 +1,5 @@
 // The indicator catalogue — one entry per World Bank indicator we show on a
-// dossier. Codes are taken from docs/superpowers/research/country-numbers-catalog.md.
+// dossier. Codes are taken from docs/atlas/data-sources.md.
 // Do not invent codes here; every code must be verifiable by
 // scripts/atlas/verify-indicators.mjs, which is the pre-ship sweep that
 // drops anything that comes back empty for a sample of countries.

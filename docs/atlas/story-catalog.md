@@ -1,5 +1,24 @@
 # Country Story Catalog
 
+Covers the non-economic research behind The Atlas: Wikidata facts (motto, anthem, flag, capital,
+head of state and more), Wikipedia summaries, famous people, trade partners, and images. Moved
+here from `docs/superpowers/research/country-story-catalog.md`; content unchanged except this
+note.
+
+> **How this differs from what shipped:** this file describes fields fetched live over ISR. The
+> shipped app still fetches all of this live in `lib/atlas/sources/wikidata.ts`,
+> `wikipedia.ts`, `comtrade.ts`, `meteo.ts` and `fx.ts` — those clients match this research closely
+> — but a country's result is now read from a **committed snapshot file** first
+> (`content/atlas/snapshot/countries/{ISO3}.json`) and only falls back to a live call for a
+> country not yet captured. See [`build-pipeline.md`](./build-pipeline.md) for how that snapshot
+> gets built, and [`design.md`](./design.md)'s annotation for why the plan changed. The head-of-
+> state vandalism problem described below (§0) is handled exactly as this file recommends:
+> `lib/atlas/overrides.ts` is the only source for head of state and head of government, never live
+> Wikidata — it's a small hand-curated list (19 countries as of this writing), each with a comment
+> saying live vandalism is the reason it exists. One addition since this file was written:
+> neighbouring countries (Wikidata `P47`) were folded into the same dossier SPARQL query on
+> 2026-08-03, rather than being fetched separately per-request as `Neighbours.tsx` used to do.
+
 Non-economic data for the "every country is a banknote" explorer page. Server-fetched with
 Next.js ISR (`fetch(url, { next: { revalidate: N } })`), no API keys unless stated.
 

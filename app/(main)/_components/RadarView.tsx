@@ -109,7 +109,7 @@ function PickEntry({ pick, isLatest }: { pick: RadarPick; isLatest: boolean }): 
  * Entries are page-scoped classes (`.v2-radar-*`), styled by the
  * `<style>` block below — the same pattern `articles/page.tsx` uses for its
  * tag filter. This keeps every visual rule (hover, focus, type colour) out
- * of inline `style={{}}`, which stays structural-only per CONTRACT.md.
+ * of inline `style={{}}`, which stays structural-only per docs/architecture/design-system.md.
  */
 export function RadarView({ posts, picks }: RadarViewProps): JSX.Element {
   return (
@@ -156,7 +156,7 @@ export function RadarView({ posts, picks }: RadarViewProps): JSX.Element {
         </div>
       </div>
 
-      {/* dangerouslySetInnerHTML, not a text child — see CONTRACT.md §7b.
+      {/* dangerouslySetInnerHTML, not a text child — see docs/architecture/design-system.md §6.
           A plain <style> text child gets escaped differently on the server
           vs the client the moment a quote appears (attribute selectors
           below, e.g. [data-type="tool"]), and that mismatch throws away the

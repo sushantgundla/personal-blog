@@ -16,7 +16,7 @@ const nextConfig = {
   // compilation itself is ~360ms). Without raising this, the build worker
   // gets SIGTERM'd mid-fetch and Next restarts that page's generation,
   // which just repeats the same slow, throttled requests. See
-  // docs/superpowers/specs/2026-08-02-country-explorer-design.md.
+  // docs/atlas/design.md.
   staticPageGenerationTimeout: 420,
   images: {
     remotePatterns: [

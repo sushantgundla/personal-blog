@@ -18,7 +18,7 @@ export interface Dimension {
   tier: 'core' | 'more';
 }
 
-// Order matches CONTRACT.md §6 exactly.
+// Order matches docs/architecture/design-system.md §8 exactly.
 export const DIMENSIONS: Dimension[] = [
   { slug: 'ember', name: 'Ember', blurb: 'Dark charcoal, ember orange, editorial serif calm.', tier: 'core' },
   { slug: 'terminal', name: 'Phosphor Terminal', blurb: 'P1 phosphor, 80 columns, no mercy.', tier: 'core' },
