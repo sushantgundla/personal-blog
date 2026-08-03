@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import type { JSX } from 'react'
-import Link from 'next/link'
 import { siteConfig } from '@/lib/config'
 import { Reveal } from './Reveal'
 
@@ -136,25 +135,26 @@ export function Contact(): JSX.Element {
               alignItems: 'flex-start',
             }}
           >
-            <div className="v2-stack" style={{ gap: '4px' }}>
-              <span className="v2-body" style={{ fontWeight: 600 }}>
+            {/* Name leads, then role and location on their own lines. They used
+                to run together as "role · location · © year" on one long line,
+                which crowded badly and left the right side to a back-link and a
+                shortcut hint the owner did not want. Year sits alone on the
+                right so the two sides balance. */}
+            <div className="v2-stack" style={{ gap: '6px' }}>
+              <span className="v2-sub" style={{ fontWeight: 700 }}>
                 {siteConfig.name}
               </span>
               <span className="v2-muted" style={{ fontSize: '0.9em' }}>
-                {role} · {location} · © {year}
+                {role}
+              </span>
+              <span className="v2-mono v2-muted" style={{ fontSize: '0.82em' }}>
+                {location}
               </span>
             </div>
 
-            <div className="v2-stack" style={{ gap: '4px', textAlign: 'right' }}>
-              {/* This page is now the site home, so the old home lives at /old. */}
-              <Link href="/old" className="v2-link" style={{ fontSize: '0.95em' }}>
-                ← previous site
-              </Link>
-              <span className="v2-muted" style={{ fontSize: '0.85em' }}>
-                Try another dimension — press <span className="v2-kbd">⌘</span>{' '}
-                <span className="v2-kbd">K</span>
-              </span>
-            </div>
+            <span className="v2-mono v2-muted" style={{ fontSize: '0.82em' }}>
+              © {year}
+            </span>
           </div>
         </Reveal>
       </div>
