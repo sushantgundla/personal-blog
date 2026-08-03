@@ -98,6 +98,13 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
           <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
             Full rankings →
           </Link>
+          {/* Added 2026-08-04: the only route into the learning section was
+              the matching link in app/atlas/layout.tsx's top bar, which
+              reads as chrome and gets skipped. Framed rather than
+              underlined like the two above it — see .introLinkStrong. */}
+          <Link href="/atlas/learn" className={`${styles.introLink} ${styles.introLinkStrong}`}>
+            The training floor →
+          </Link>
         </nav>
       </div>
 

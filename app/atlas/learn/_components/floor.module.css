@@ -110,16 +110,22 @@
   padding: clamp(1.25rem, 3vw, 2rem);
 }
 
+/* Wider and less padded than it used to be, because a circle is a hostile
+   place to set type: the usable line length is not the diameter but the
+   chord at the line's own height, and the grade sits below the middle where
+   that chord is already narrowing. The ladder's longest single word,
+   "Siderographer", cannot be broken on a space, and at the old 7.5rem it
+   crossed the gold ring. See .sealGrade for the other half of the fix. */
 .seal {
   position: relative;
   flex: none;
-  width: clamp(7.5rem, 22vw, 10.5rem);
+  width: clamp(9rem, 24vw, 11rem);
   aspect-ratio: 1;
   border-radius: 50%;
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 1.1rem;
+  padding: 0.9rem;
   transform: rotate(-5deg);
   background: radial-gradient(circle at 50% 32%, var(--note-paper-hi), var(--note-paper) 72%);
   border: 2px solid var(--note-seal);
@@ -128,14 +134,20 @@
     0 0 0 1px var(--note-rule);
 }
 
+/* Sized for the longest name on the ladder, not the shortest. Two-word
+   grades ("Rose-engine Turner", "Warden of the Mint") break on their own
+   space; `hyphens: auto` is only there for "Siderographer", which has
+   nowhere else to break — it gives a proper "Sidero-/grapher" instead of
+   the letter-anywhere chop `overflow-wrap` would make. */
 .sealGrade {
   font-family: 'Bodoni Moda', Georgia, serif;
   font-style: italic;
   font-weight: 700;
-  font-size: clamp(0.9rem, 2.6vw, 1.2rem);
+  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
   line-height: 1.15;
   color: var(--note-seal);
   text-wrap: balance;
+  hyphens: auto;
 }
 
 .sealRank {
@@ -207,11 +219,34 @@
   gap: 1rem;
 }
 
-/* The five ranks of the mint, printed down the right-hand side of the seal
+/* The ranks of the mint, printed down the right-hand side of the seal
    block. Without it the block ran a third full on a wide screen — this is
    both what fills that width and the answer to "what am I climbing
-   towards", which the thread alone only implies. */
+   towards", which the thread alone only implies.
+
+   The ladder is fifteen rungs long and only ever five of them are printed
+   here (see `ladderWindow`). Fifteen rows of monospace was a wall of type
+   that stood taller than the seal beside it and, once the block wrapped on
+   a phone, ran the panel well past a screen's height for no gain — nobody
+   reads the rungs they cleared four sittings ago. */
 .ranks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 0 1 16rem;
+  border-left: 1px dashed var(--note-rule);
+  padding-left: clamp(1rem, 3vw, 2rem);
+}
+
+/* "Rung 4 of 15" — the count the shortened list can no longer show by
+   simply being as long as the ladder. */
+.ranksHead {
+  margin: 0;
+  color: var(--note-intaglio-dim);
+}
+
+.rankList {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -219,21 +254,40 @@
   padding: 0;
   list-style: none;
   min-width: 0;
-  flex: 0 1 15rem;
-  border-left: 1px dashed var(--note-rule);
-  padding-left: clamp(1rem, 3vw, 2rem);
 }
 
 .rank {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6875rem;
   letter-spacing: 0.06em;
   color: var(--note-intaglio-dim);
   opacity: 0.6;
+}
+
+/* The rungs this row skipped over. A dashed rule with air above it, so the
+   jump from "the next one up" to "the summit" reads as a distance rather
+   than as two adjacent ranks. Decorative only — GradeSeal also says how
+   many rungs are above you in words. */
+.rankGap {
+  margin-top: 0.5rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--note-rule);
+}
+
+/* The name can wrap ("Rose-engine Turner", "Warden of the Mint"); the
+   threshold beside it must not, or the number breaks across two lines. */
+.rankName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rankAt {
+  flex: none;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Every rung already reached. */
@@ -250,6 +304,29 @@
 
 .rankMark {
   color: var(--note-ember);
+}
+
+.ranksFoot {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--atlas-text-xs, 0.5625rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  opacity: 0.75;
+}
+
+/* Once the block wraps, the ranks sit *under* the seal rather than beside
+   it, and a left border there points at nothing. Swap it for a rule across
+   the top, which is where the division actually is. */
+@media (max-width: 34rem) {
+  .ranks {
+    flex-basis: 100%;
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px dashed var(--note-rule);
+    padding-top: 0.9rem;
+  }
 }
 
 /* ---------------------------------------------------------- game cards */

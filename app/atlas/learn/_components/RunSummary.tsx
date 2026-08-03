@@ -2,12 +2,7 @@
 
 import Link from 'next/link'
 import type { GameId, Question } from '@/lib/atlas/learn/types'
-import {
-  gradeFor,
-  lifetimeCorrect,
-  nextGrade,
-  type Progress,
-} from '@/lib/atlas/learn/progress'
+import { gradeProgress, lifetimeCorrect, type Progress } from '@/lib/atlas/learn/progress'
 import styles from './play.module.css'
 
 export interface MissedQuestion {
@@ -55,6 +50,19 @@ function verdictLine(correct: number, total: number): string {
 }
 
 /**
+ * "a" or "an" for a grade name.
+ *
+ * The line used to read "You are an Apprentice" with the article typed in,
+ * which was fine when the bottom rung was the only one most people saw. The
+ * ladder now runs Apprentice, Ink-hand, Engraver, Assayer — and Pressman,
+ * Die-sinker, Siderographer. Vowel letters are all this needs: no grade on
+ * the ladder is a "a hour" or "an unicorn" case.
+ */
+function article(name: string): string {
+  return /^[aeiou]/i.test(name) ? 'an' : 'a'
+}
+
+/**
  * The row from a question's verdict that belongs to the correct option.
  *
  * The generators build `verdict.rows` one per option, in the same order as
@@ -85,9 +93,12 @@ export function RunSummary({
   onAgain,
   againRef,
 }: RunSummaryProps) {
+  // `null` only while the record is still unread — in which case this says
+  // nothing about grades rather than guessing at a rung. Otherwise every
+  // figure comes from the ladder, so a player at the summit gets a sentence
+  // instead of "NaN more to undefined".
   const lifetime = progress ? lifetimeCorrect(progress) : null
-  const grade = lifetime === null ? null : gradeFor(lifetime)
-  const next = lifetime === null ? null : nextGrade(lifetime)
+  const standing = lifetime === null ? null : gradeProgress(lifetime)
 
   return (
     <section className={styles.summary} aria-labelledby="atlas-run-summary-title">
@@ -176,12 +187,14 @@ export function RunSummary({
         </section>
       )}
 
-      {grade && (
+      {standing && (
         <p className={styles.summaryGrade}>
-          You are an <strong>{grade.name}</strong>
-          {next && lifetime !== null
-            ? ` — ${next.at - lifetime} more correct answers to ${next.name}.`
-            : ' — the top of the ladder.'}
+          You are {article(standing.grade.name)} <strong>{standing.grade.name}</strong>
+          {standing.next
+            ? ` — ${standing.remaining} more correct ${
+                standing.remaining === 1 ? 'answer' : 'answers'
+              } to ${standing.next.name}. Rung ${standing.rung} of ${standing.rungs}.`
+            : ' — the top of the ladder, with nothing above it.'}
         </p>
       )}
 

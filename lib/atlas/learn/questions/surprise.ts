@@ -73,6 +73,32 @@ function tierFor(rank: number, outOf: number): number | null {
   return null;
 }
 
+/**
+ * A percentage above 100 reads as a broken number to anyone who does not
+ * already know the measure.
+ *
+ * Several measures here are honest ratios that routinely exceed 100%.
+ * "Secondary school enrolment — 142.4% gross" counts over-age and under-age
+ * pupils against the official age group, so a country catching up after a
+ * war clears 100 legitimately. "Energy imported (net) — 403.6% of energy
+ * use" is Malta importing four times what it consumes and re-exporting the
+ * rest. Both are true, and both look like a bug on a card whose entire job
+ * is to be a pleasant surprise.
+ *
+ * A dossier can afford to print them, because a reader who has scrolled to
+ * the LEARNING section has the surrounding context and the unit spelled
+ * out beside it. One card dealt cold has neither. So the surprise card
+ * simply never deals them — it is the only place in the app that filters
+ * on this, and it costs almost nothing: every country has dozens of
+ * remarkable measures and this removes a handful.
+ *
+ * Only the top end is cut. A negative percentage ("GDP growth -5.2%") is
+ * ordinary and reads correctly.
+ */
+function printsAsBrokenPercent(indicator: DeckIndicator, value: number): boolean {
+  return indicator.format === "percent" && value > 100;
+}
+
 /** Everything remarkable this country has. */
 function candidatesFor(deck: Deck, country: DeckCountry): Candidate[] {
   const out: Candidate[] = [];
@@ -82,6 +108,7 @@ function candidatesFor(deck: Deck, country: DeckCountry): Candidate[] {
     const [value, year, rank] = entry;
     if (!Number.isFinite(value) || !Number.isFinite(rank) || rank < 1) continue;
     if (rank > indicator.outOf) continue;
+    if (printsAsBrokenPercent(indicator, value)) continue;
     const tier = tierFor(rank, indicator.outOf);
     if (tier === null) continue;
     out.push({ indicator, value, year, rank, tier });
@@ -116,6 +143,57 @@ function describeRank(
   return { place, word };
 }
 
+/**
+ * The first run of digits in a printed measure — "0.0" in "0.0% of GDP",
+ * "0" in "-$0". Deliberately does not match a leading sign or a currency
+ * symbol, so a replacement can swap the digits and leave "-" and "$"
+ * exactly where `formatMeasure` put them. Not global: `String.replace`
+ * then touches only the leading number, never the "1,000" inside a unit
+ * like "per 1,000 live births".
+ */
+const FIRST_NUMBER = /\d[\d,]*(?:\.\d+)?/;
+
+/** How many decimals `value` needs before a significant digit appears. */
+function decimalsToShow(value: number): number {
+  const abs = Math.abs(value);
+  for (let decimals = 2; decimals < 6; decimals++) {
+    if (Number(abs.toFixed(decimals)) !== 0) return decimals;
+  }
+  return 6;
+}
+
+/**
+ * One measurement, printed so that a real value never reads as nothing.
+ *
+ * `formatMeasure` prints a percentage to one decimal, which is right
+ * almost everywhere and wrong here. Mauritania spends 0.0116% of GDP on
+ * research — the 2nd lowest on Earth, a genuinely remarkable fact — and at
+ * one decimal that card reads "0.0% of GDP". This app's own rule is that a
+ * missing number is an em dash and never a zero, so a printed zero has to
+ * mean an actual zero; a headline that breaks that rule looks like a data
+ * bug rather than a record.
+ *
+ * So: print it the ordinary way, and only if the number came out as all
+ * zeros while the value is not zero, reprint the digits with enough
+ * decimal places to show something. Everything else about the string —
+ * the sign, the "$", the unit tail — is left exactly as `formatMeasure`
+ * wrote it, and `lib/atlas/format.ts` is not touched, since every other
+ * screen depends on its current defaults.
+ *
+ * Applies to any format, not just percentages: a currency or per-1,000
+ * measure can round to zero the same way.
+ */
+function measureText(indicator: DeckIndicator, value: number): string {
+  const printed = formatMeasure(indicator, value);
+  // A true zero is a true zero, and prints as one.
+  if (value === 0) return printed;
+  const match = printed.match(FIRST_NUMBER);
+  if (!match) return printed;
+  if (Number(match[0].replace(/,/g, "")) !== 0) return printed;
+  // Absolute value: any minus sign is already printed ahead of these digits.
+  return printed.replace(FIRST_NUMBER, Math.abs(value).toFixed(decimalsToShow(value)));
+}
+
 /** One dealt card, or `null` if nothing remarkable turned up. */
 export function buildSurpriseCard(deck: Deck, rng: Rng): SurpriseCard | null {
   // Sovereign states only. A card reading "Tokelau is 1st on Earth for X" is
@@ -140,9 +218,19 @@ export function buildSurpriseCard(deck: Deck, rng: Rng): SurpriseCard | null {
       flagUrl: country.flagUrl,
       headline: `${ordinal(place)} ${word} on Earth for ${chosen.indicator.label}`,
       detail:
-        `${formatMeasure(chosen.indicator, chosen.value)}, ${chosen.year} — ` +
+        `${measureText(chosen.indicator, chosen.value)}, ${chosen.year} — ` +
         `${formatRank(chosen.rank, chosen.indicator.outOf)}`,
       href: dossierHref(country.iso3),
+      // The reverse of the card. All of it comes straight off the deck and
+      // is already nullable or empty there — a country with none of it
+      // still deals a perfectly good card, it just has a shorter reverse.
+      // Sent with the card itself so turning it over never costs a second
+      // request.
+      region: country.region,
+      capital: country.capital,
+      drivingSide: country.drivingSide,
+      tld: country.tld,
+      neighbours: country.neighbours,
       provenance: {
         source: "World Bank",
         year: chosen.year,

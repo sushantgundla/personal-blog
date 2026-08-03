@@ -138,4 +138,19 @@ export interface SurpriseCard {
   detail: string;             // "31.2% of land area, 2022 — #3 of 189"
   href: string;
   provenance: Provenance;
+  /**
+   * The reverse of the dealt card: the plain identifying facts a visitor
+   * wants once the remarkable one has landed. Added for the Surprise me
+   * modal, which turns the card over.
+   *
+   * Optional and nullable on purpose — added fields, never renamed ones,
+   * so everything already written against this shape still compiles, and a
+   * card without them simply prints fewer rows on its reverse.
+   */
+  region?: string | null;
+  capital?: string | null;
+  drivingSide?: string | null;
+  tld?: string | null;
+  /** ISO3 codes only, exactly as `DeckCountry` stores them. */
+  neighbours?: string[];
 }

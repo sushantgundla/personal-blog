@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import {
-  GRADES,
-  gradeFor,
+  gradeProgress,
+  ladderWindow,
   lifetimeCorrect,
-  nextGrade,
   readProgress,
   type Progress,
 } from '@/lib/atlas/learn/progress'
@@ -30,14 +29,14 @@ export function GradeSeal() {
   }, [])
 
   const correct = progress ? lifetimeCorrect(progress) : 0
-  const grade = gradeFor(correct)
-  const next = nextGrade(correct)
   const bestStreak = progress?.bestStreak ?? 0
 
-  // How far along the current rung the visitor is, 0..1. The floor of the
-  // rung is the grade they hold; the ceiling is the next one.
-  const span = next ? next.at - grade.at : 0
-  const climbed = span > 0 ? Math.min(1, Math.max(0, (correct - grade.at) / span)) : 1
+  // Every number on this panel comes out of the ladder, including how far
+  // across the current rung the visitor is (0..1) and how many answers are
+  // left. At the summit that is `next: null`, `remaining: 0`, `climbed: 1`,
+  // so nothing here has to guard a subtraction.
+  const { grade, next, rung, rungs, remaining, climbed, atTop } = gradeProgress(correct)
+  const rows = ladderWindow(correct)
 
   return (
     <section className={`atlas-note ${styles.gradeBlock}`} aria-label="Your grade">
@@ -65,8 +64,8 @@ export function GradeSeal() {
           <div className={styles.gradeLadderRow}>
             <span className="atlas-serial">
               {next
-                ? `${next.at - correct} more to ${next.name}`
-                : `Top of the ladder — ${GRADES[GRADES.length - 1].name}`}
+                ? `${remaining} more to ${next.name}`
+                : `Top of the ladder — nothing above ${grade.name}`}
             </span>
             <span className="atlas-serial">{next ? `${grade.at} → ${next.at}` : `${correct}`}</span>
           </div>
@@ -80,32 +79,52 @@ export function GradeSeal() {
         </div>
       </div>
 
-      {/* The whole ladder, so the climb has somewhere visible to go. */}
-      <ol className={styles.ranks}>
-        {GRADES.map((rung) => {
-          const held = rung.name === grade.name
-          const earned = correct >= rung.at
-          return (
+      {/* The ladder, shortened to the rungs that matter: the one below, the
+          one held, the next two, and the summit. Printing all fifteen was a
+          wall of small type that pushed the block past a phone's width, and
+          a climber only ever looks at where they are and where they end
+          up. `.rankGap` draws the stretch that was skipped. */}
+      <div className={styles.ranks}>
+        <p className={`atlas-label ${styles.ranksHead}`}>
+          Rung {rung} of {rungs}
+        </p>
+        <ol className={styles.rankList}>
+          {rows.map((row) => (
             <li
-              key={rung.name}
-              className={`${styles.rank} ${earned ? styles.rankEarned : ''} ${
-                held ? styles.rankHeld : ''
-              }`}
-              aria-current={held ? 'true' : undefined}
+              key={row.grade.name}
+              className={[
+                styles.rank,
+                row.earned ? styles.rankEarned : '',
+                row.held ? styles.rankHeld : '',
+                row.gapBefore ? styles.rankGap : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-current={row.held ? 'true' : undefined}
             >
-              <span>
-                {held && (
+              <span className={styles.rankName}>
+                {row.held && (
                   <span aria-hidden="true" className={styles.rankMark}>
                     ◉{' '}
                   </span>
                 )}
-                {rung.name}
+                {row.grade.name}
               </span>
-              <span>{rung.at}</span>
+              <span className={styles.rankAt}>{row.grade.at}</span>
             </li>
-          )
-        })}
-      </ol>
+          ))}
+        </ol>
+        {/* Said in words as well as by the gap, because the dashed break is
+            decorative and a screen reader would otherwise hear five rungs
+            as if they were the whole ladder. */}
+        {atTop ? (
+          <p className={styles.ranksFoot}>Every rung climbed.</p>
+        ) : (
+          <p className={styles.ranksFoot}>
+            {rungs - rung} more {rungs - rung === 1 ? 'rung' : 'rungs'} above you.
+          </p>
+        )}
+      </div>
     </section>
   )
 }
