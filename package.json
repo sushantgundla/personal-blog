@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "atlas:iso": "node scripts/atlas/build-iso.mjs",
-    "atlas:geo": "node scripts/atlas/build-geo.mjs"
+    "atlas:geo": "node scripts/atlas/build-geo.mjs",
+    "atlas:deck": "node scripts/atlas/build-deck.mjs"
   },
   "dependencies": {
     "next": "^14.2.0",
