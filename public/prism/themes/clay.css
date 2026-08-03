@@ -1,0 +1,123 @@
+/* Claymorphism — pastel lilac toy plastic, fat radius, soft double shadows */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+
+:root {
+  --prism-bg: #e8e4f3;
+  --prism-bg-2: #dfd9ee;
+  --prism-surface: #ece8f6;
+  --prism-surface-2: #f3f0fa;
+  --prism-surface-3: #ddd7ee;
+  --prism-text: #3a3355;
+  --prism-muted: rgba(58,51,85,0.8);
+  --prism-faint: rgba(58,51,85,0.75);
+  --prism-line: rgba(58,51,85,0.08);
+  --prism-line-2: rgba(58,51,85,0.16);
+  --prism-accent: #ff8fab;
+  --prism-accent-2: #8ecae6;
+  --prism-accent-3: #ffd166;
+  --prism-accent-soft: rgba(255,143,171,0.16);
+  --prism-on-accent: #3a3355;
+
+  --prism-radius: 28px;
+  --prism-radius-sm: 18px;
+  --prism-radius-lg: 36px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 0px;
+  --prism-shadow: 10px 10px 24px rgba(160,148,199,0.45), -8px -8px 20px rgba(255,255,255,0.85);
+  --prism-shadow-lg: 16px 16px 36px rgba(160,148,199,0.5), -10px -10px 26px rgba(255,255,255,0.9);
+  --prism-glow: 0 0 0 4px rgba(255,143,171,0.25);
+
+  --prism-font-display: 'Quicksand', 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'Quicksand', system-ui, sans-serif;
+  --prism-font-body: 'Nunito', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.02em;
+
+  --prism-backdrop: none;
+  --prism-cursor: ring;
+  --prism-enter: collapse;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { display: none !important; }
+
+.prism-title,
+.prism-eyebrow { text-shadow: none !important; }
+/* Pastel pink accent is too light for text on this bg — use the dark plum
+   ink instead so the label stays readable; accent still carries the buttons/badges. */
+.prism-eyebrow { color: var(--prism-text) !important; }
+
+.prism-card,
+.prism-panel {
+  background: var(--prism-surface) !important;
+  border: none !important;
+  border-radius: var(--prism-radius) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover {
+  box-shadow: var(--prism-shadow-lg) !important;
+  transform: translateY(-3px) !important;
+}
+
+.prism-chip {
+  background: var(--prism-surface-2) !important;
+  border: none !important;
+  border-radius: var(--prism-radius-pill) !important;
+  box-shadow: 5px 5px 12px rgba(160,148,199,0.4), -4px -4px 10px rgba(255,255,255,0.85) !important;
+}
+.prism-chip-on {
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
+  box-shadow: inset 4px 4px 10px rgba(180,60,100,0.3), inset -3px -3px 8px rgba(255,255,255,0.4) !important;
+}
+
+.prism-btn {
+  background: linear-gradient(160deg, #ffa5bd, var(--prism-accent)) !important;
+  color: #3a3355 !important;
+  border: none !important;
+  border-radius: var(--prism-radius-pill) !important;
+  box-shadow: 7px 7px 16px rgba(160,148,199,0.5), -6px -6px 14px rgba(255,255,255,0.85) !important;
+  transition: box-shadow var(--prism-dur-fast) var(--prism-ease), transform var(--prism-dur-fast) var(--prism-ease) !important;
+}
+.prism-btn:active {
+  box-shadow: inset 5px 5px 12px rgba(180,60,100,0.35), inset -4px -4px 10px rgba(255,255,255,0.5) !important;
+  transform: translateY(2px) !important;
+}
+.prism-btn-ghost {
+  background: var(--prism-surface) !important;
+  border: none !important;
+  border-radius: var(--prism-radius-pill) !important;
+  box-shadow: 6px 6px 14px rgba(160,148,199,0.4), -5px -5px 12px rgba(255,255,255,0.85) !important;
+}
+.prism-btn-ghost:active {
+  box-shadow: inset 4px 4px 10px rgba(160,148,199,0.35), inset -3px -3px 8px rgba(255,255,255,0.6) !important;
+}
+
+.prism-badge {
+  background: var(--prism-accent-3) !important;
+  border: none !important;
+  border-radius: var(--prism-radius-pill) !important;
+  color: #4a3a1a !important;
+  box-shadow: 4px 4px 10px rgba(160,148,199,0.4), -3px -3px 8px rgba(255,255,255,0.8) !important;
+}
+
+.prism-frame {
+  border: none !important;
+  border-radius: var(--prism-radius-lg) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+
+.prism-rule { background: var(--prism-line-2) !important; border-radius: 999px !important; }
+.prism-icon-btn {
+  border-radius: var(--prism-radius-pill) !important;
+  box-shadow: 5px 5px 12px rgba(160,148,199,0.4), -4px -4px 10px rgba(255,255,255,0.85) !important;
+}
+.prism-icon-btn:active {
+  box-shadow: inset 3px 3px 8px rgba(160,148,199,0.4), inset -2px -2px 6px rgba(255,255,255,0.6) !important;
+}

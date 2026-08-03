@@ -11,19 +11,19 @@ source of truth if this guide and the code ever disagree.
 The homepage links to exactly one theme stylesheet:
 
 ```js
-document.getElementById('v2-theme-link').href = `/v2/themes/${slug}.css`
+document.getElementById('prism-theme-link').href = `/prism/themes/${slug}.css`
 ```
 
-The base stylesheet, `app/(main)/v2.css`, defines every color, radius, shadow, and font as
-a CSS variable (a `--v2-*` custom property) and every visual element as a class from a
-fixed vocabulary (`.v2-card`, `.v2-btn`, `.v2-chip`, …). A theme file does two things:
+The base stylesheet, `app/(main)/prism.css`, defines every color, radius, shadow, and font as
+a CSS variable (a `--prism-*` custom property) and every visual element as a class from a
+fixed vocabulary (`.prism-card`, `.prism-btn`, `.prism-chip`, …). A theme file does two things:
 re-set the variables, and override the handful of things variables can't carry (radius
 shape, borders, shadow style) with `!important` rules targeting that same vocabulary.
 That discipline is what makes a same-page, no-reload repaint possible.
 
 ## Steps
 
-1. **Create the theme file**: `public/v2/themes/<slug>.css`. Target 2–5 KB.
+1. **Create the theme file**: `public/prism/themes/<slug>.css`. Target 2–5 KB.
 2. **Register it**: add an entry to the `DIMENSIONS` array in
    `app/(main)/_lib/dimensions.ts`. Each entry is:
    ```ts
@@ -41,12 +41,12 @@ button in the bottom-left) reads `DIMENSIONS` directly.
 
 ## Tokens to re-set
 
-All declared under `:root` in `app/(main)/v2.css`; a theme overrides whichever it needs.
-Full table is in `docs/architecture/design-system.md` §1 — the categories are: colour (`--v2-bg`, `--v2-surface`,
-`--v2-text`, `--v2-accent`, etc.), shape & depth (`--v2-radius`, `--v2-shadow`, …), type
-(`--v2-font-display`, `--v2-font-body`, `--v2-display-weight`, …), and motion
-(`--v2-ease`, `--v2-dur`). Do **not** touch the layout tokens (`--v2-max`, `--v2-gutter`,
-`--v2-section-y`) — those are structural and themes never override them.
+All declared under `:root` in `app/(main)/prism.css`; a theme overrides whichever it needs.
+Full table is in `docs/architecture/design-system.md` §1 — the categories are: colour (`--prism-bg`, `--prism-surface`,
+`--prism-text`, `--prism-accent`, etc.), shape & depth (`--prism-radius`, `--prism-shadow`, …), type
+(`--prism-font-display`, `--prism-font-body`, `--prism-display-weight`, …), and motion
+(`--prism-ease`, `--prism-dur`). Do **not** touch the layout tokens (`--prism-max`, `--prism-gutter`,
+`--prism-section-y`) — those are structural and themes never override them.
 
 ### The three JS-read tokens
 
@@ -55,22 +55,22 @@ use one of the listed values exactly — a typo silently falls back to a default
 
 | Token | Read by | Valid values |
 |---|---|---|
-| `--v2-backdrop` | background effect behind the page | `none`, `grid`, `dots`, `rain`, `stars`, `embed`, `scan`, `waves` |
-| `--v2-cursor` | custom cursor style | `default`, `ring`, `square`, `block`, `crosshair` |
-| `--v2-enter` | transition played when switching *into* this theme | `tear`, `shatter`, `scanline`, `pixelate`, `iris`, `rewind`, `collapse` |
+| `--prism-backdrop` | background effect behind the page | `none`, `grid`, `dots`, `rain`, `stars`, `embed`, `scan`, `waves` |
+| `--prism-cursor` | custom cursor style | `default`, `ring`, `square`, `block`, `crosshair` |
+| `--prism-enter` | transition played when switching *into* this theme | `tear`, `shatter`, `scanline`, `pixelate`, `iris`, `rewind`, `collapse` |
 
-`dimensions.ts` fetches the theme CSS and regex-matches `--v2-enter: <value>` to choose the
-switch-in animation before the stylesheet swap — so `--v2-enter` has to be a real property
+`dimensions.ts` fetches the theme CSS and regex-matches `--prism-enter: <value>` to choose the
+switch-in animation before the stylesheet swap — so `--prism-enter` has to be a real property
 in your file's `:root`, not just implied.
 
 ## The rule: skin, not structure
 
 - Only target classes/IDs from the fixed vocabulary in `docs/architecture/design-system.md` §2
-  (`.v2-card`, `.v2-btn`, `.v2-chip`, `.v2-title`, etc.). Never invent a bespoke class.
+  (`.prism-card`, `.prism-btn`, `.prism-chip`, `.prism-title`, etc.). Never invent a bespoke class.
   Never target a bare element selector except `body` or `html`.
 - Never set `position`, `display: flex/grid`, `width`, `margin`, or `padding` on layout
   containers. That breaks the page for every other theme sharing the same markup.
-  `display: none` on `.v2-orb` or `.v2-noise` (decorative-only elements) is fine.
+  `display: none` on `.prism-orb` or `.prism-noise` (decorative-only elements) is fine.
 - **Every rule outside `:root` needs `!important`.** Theme sheets load after the base
   sheet, so without `!important` the base styles win and your theme silently does nothing.
 - No Tailwind classes anywhere in `/v2`. Hand-written CSS only.
@@ -79,7 +79,7 @@ in your file's `:root`, not just implied.
 
 ## Contrast requirement
 
-Aim for **4.5:1 contrast** between `--v2-text` and `--v2-bg` (and any text-on-fill
+Aim for **4.5:1 contrast** between `--prism-text` and `--prism-bg` (and any text-on-fill
 combination you introduce). This is not optional — it's the one hard accessibility bar
 every theme must clear. Check with any contrast checker before shipping; don't eyeball it.
 
@@ -90,59 +90,59 @@ every theme must clear. Check with any contrast checker before shipping; don't e
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap');
 
 :root {
-  --v2-bg: #0b0b0f;
-  --v2-bg-2: #101018;
-  --v2-surface: #14141c;
-  --v2-surface-2: #1c1c26;
-  --v2-surface-3: #26262f;
-  --v2-text: #f2f2f5;
-  --v2-muted: rgba(242, 242, 245, 0.6);
-  --v2-faint: rgba(242, 242, 245, 0.32);
-  --v2-line: rgba(242, 242, 245, 0.12);
-  --v2-line-2: rgba(242, 242, 245, 0.24);
-  --v2-accent: #5b8cff;
-  --v2-accent-2: #8a5bff;
-  --v2-accent-3: #5bffd9;
-  --v2-accent-soft: rgba(91, 140, 255, 0.1);
-  --v2-on-accent: #0b0b0f;
+  --prism-bg: #0b0b0f;
+  --prism-bg-2: #101018;
+  --prism-surface: #14141c;
+  --prism-surface-2: #1c1c26;
+  --prism-surface-3: #26262f;
+  --prism-text: #f2f2f5;
+  --prism-muted: rgba(242, 242, 245, 0.6);
+  --prism-faint: rgba(242, 242, 245, 0.32);
+  --prism-line: rgba(242, 242, 245, 0.12);
+  --prism-line-2: rgba(242, 242, 245, 0.24);
+  --prism-accent: #5b8cff;
+  --prism-accent-2: #8a5bff;
+  --prism-accent-3: #5bffd9;
+  --prism-accent-soft: rgba(91, 140, 255, 0.1);
+  --prism-on-accent: #0b0b0f;
 
-  --v2-radius: 10px;
-  --v2-radius-sm: 6px;
-  --v2-radius-lg: 18px;
-  --v2-radius-pill: 999px;
-  --v2-border-w: 1px;
-  --v2-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --v2-shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
-  --v2-glow: 0 0 24px rgba(91, 140, 255, 0.3);
+  --prism-radius: 10px;
+  --prism-radius-sm: 6px;
+  --prism-radius-lg: 18px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --prism-shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+  --prism-glow: 0 0 24px rgba(91, 140, 255, 0.3);
 
-  --v2-font-display: 'Space Grotesk', system-ui, sans-serif;
-  --v2-font-head: 'Space Grotesk', system-ui, sans-serif;
-  --v2-font-body: system-ui, sans-serif;
-  --v2-font-mono: ui-monospace, monospace;
-  --v2-display-weight: 700;
-  --v2-display-tracking: -0.02em;
-  --v2-head-transform: uppercase;
-  --v2-head-tracking: 0.14em;
+  --prism-font-display: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-body: system-ui, sans-serif;
+  --prism-font-mono: ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.02em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.14em;
 
-  --v2-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --v2-dur: 0.5s;
-  --v2-dur-fast: 0.2s;
+  --prism-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --prism-dur: 0.5s;
+  --prism-dur-fast: 0.2s;
 
-  --v2-backdrop: dots;
-  --v2-cursor: ring;
-  --v2-enter: iris;
+  --prism-backdrop: dots;
+  --prism-cursor: ring;
+  --prism-enter: iris;
 }
 
-.v2-orb { display: none !important; }
+.prism-orb { display: none !important; }
 
-.v2-card {
-  border-radius: var(--v2-radius) !important;
-  border: 1px solid var(--v2-line) !important;
+.prism-card {
+  border-radius: var(--prism-radius) !important;
+  border: 1px solid var(--prism-line) !important;
 }
-.v2-btn {
-  border-radius: var(--v2-radius-pill) !important;
-  background: var(--v2-accent) !important;
-  color: var(--v2-on-accent) !important;
+.prism-btn {
+  border-radius: var(--prism-radius-pill) !important;
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
 }
 ```
 
@@ -154,9 +154,9 @@ Register it (step 2):
 
 ## Checklist before shipping
 
-- [ ] File is at `public/v2/themes/<slug>.css`, 2–5 KB.
+- [ ] File is at `public/prism/themes/<slug>.css`, 2–5 KB.
 - [ ] Added to `DIMENSIONS` in `app/(main)/_lib/dimensions.ts` with matching `slug`.
-- [ ] All three JS-read tokens declared: `--v2-backdrop`, `--v2-cursor`, `--v2-enter` —
+- [ ] All three JS-read tokens declared: `--prism-backdrop`, `--prism-cursor`, `--prism-enter` —
       each one of the exact listed values.
 - [ ] Only vocabulary classes/IDs targeted (`docs/architecture/design-system.md` §2). No bespoke classes, no bare
       element selectors besides `body`/`html`.

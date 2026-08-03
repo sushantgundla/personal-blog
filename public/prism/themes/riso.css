@@ -1,0 +1,72 @@
+/* Risograph Print — warm newsprint, pink + blue ink overprint, deliberate misregistration */
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+  --prism-bg: #f5f0e6;
+  --prism-bg-2: #efe8d8;
+  --prism-surface: #faf6ec;
+  --prism-surface-2: #fffdf7;
+  --prism-surface-3: #e8e0cc;
+  --prism-text: #1a1508;
+  --prism-muted: rgba(26,21,8,0.62);
+  --prism-faint: rgba(26,21,8,0.3);
+  --prism-line: rgba(26,21,8,0.15);
+  --prism-line-2: #ff48b0;
+  --prism-accent: #ff48b0;
+  --prism-accent-2: #0050ff;
+  --prism-accent-3: #1a1508;
+  --prism-accent-soft: rgba(255,72,176,0.12);
+  --prism-on-accent: #ffffff;
+
+  --prism-radius: 6px;
+  --prism-radius-sm: 4px;
+  --prism-radius-lg: 10px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 2px;
+  --prism-shadow: 2px 2px 0 rgba(0,80,255,0.25);
+  --prism-shadow-lg: 4px 4px 0 rgba(255,72,176,0.3);
+  --prism-glow: 0 0 0 rgba(0,0,0,0);
+
+  --prism-font-display: 'Archivo Black', 'Space Grotesk', sans-serif;
+  --prism-font-head: 'Space Grotesk', sans-serif;
+  --prism-font-body: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 900;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.1em;
+
+  --prism-backdrop: dots;
+  --prism-cursor: default;
+  --prism-enter: shatter;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; }
+.prism-orb { display: none !important; }
+.prism-noise { opacity: 0.15 !important; mix-blend-mode: multiply !important; }
+
+.prism-card, .prism-panel {
+  background-color: var(--prism-surface) !important;
+  background-image: radial-gradient(circle, rgba(26,21,8,0.1) 1px, transparent 1.3px) !important;
+  background-size: 6px 6px !important;
+  border: 2px solid var(--prism-line) !important;
+  border-radius: var(--prism-radius) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover { box-shadow: var(--prism-shadow-lg) !important; border-color: var(--prism-accent) !important; }
+
+.prism-title { color: var(--prism-text) !important; text-shadow: 2px 1px 0 rgba(255,72,176,0.55), -2px -1px 0 rgba(0,80,255,0.45) !important; }
+.prism-eyebrow { color: var(--prism-accent-2) !important; }
+
+.prism-btn { background: var(--prism-accent) !important; color: var(--prism-text) !important; border: 2px solid var(--prism-text) !important; border-radius: var(--prism-radius-sm) !important; box-shadow: 3px 3px 0 var(--prism-accent-2) !important; }
+.prism-btn:hover { box-shadow: 4px 4px 0 var(--prism-accent-2) !important; }
+.prism-btn-ghost { background: transparent !important; border: 2px solid var(--prism-text) !important; color: var(--prism-text) !important; border-radius: var(--prism-radius-sm) !important; }
+
+.prism-chip { border: 1.5px solid var(--prism-line-2) !important; background: rgba(255,72,176,0.08) !important; border-radius: var(--prism-radius-sm) !important; mix-blend-mode: multiply !important; }
+.prism-chip-on { background: var(--prism-accent-2) !important; color: #fff !important; mix-blend-mode: normal !important; }
+
+.prism-badge { border: 2px solid var(--prism-line-2) !important; background: rgba(255,72,176,0.08) !important; color: var(--prism-text) !important; text-shadow: 1px 1px 0 rgba(255,72,176,0.6), -1px -1px 0 rgba(0,80,255,0.5) !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-frame { border: 3px solid var(--prism-text) !important; border-radius: var(--prism-radius) !important; filter: contrast(1.05) saturate(1.15) !important; box-shadow: 4px 4px 0 rgba(0,80,255,0.25) !important; }
+.prism-rule { background: repeating-linear-gradient(90deg, var(--prism-accent) 0 4px, var(--prism-accent-2) 4px 8px) !important; height: 2px !important; opacity: 0.65 !important; }
+.prism-kbd { border: 2px solid var(--prism-text) !important; background: var(--prism-surface-2) !important; border-radius: var(--prism-radius-sm) !important; box-shadow: none !important; }

@@ -1,168 +1,168 @@
 /* ============================================================
-   .v2-prose — reading styles for rendered MDX article content.
-   Every colour, font and border comes from a --v2-* token (see
+   .prism-prose — reading styles for rendered MDX article content.
+   Every colour, font and border comes from a --prism-* token (see
    CONTRACT.md §1) so all 30 dimensions restyle the article body
    along with everything else.
 
-   Selectors are prefixed `.v2-root .v2-prose` rather than just
-   `.v2-prose` so they reliably beat the generic resets in v2.css
-   (`.v2-root ul`, `.v2-root a`, `.v2-root * { margin:0 }`, etc.)
+   Selectors are prefixed `.prism-root .prism-prose` rather than just
+   `.prism-prose` so they reliably beat the generic resets in prism.css
+   (`.prism-root ul`, `.prism-root a`, `.prism-root * { margin:0 }`, etc.)
    regardless of stylesheet load order — those resets strip list
    markers and link underlines that this file needs to restore.
    ============================================================ */
 
-.v2-root .v2-prose {
-  font-family: var(--v2-font-body);
+.prism-root .prism-prose {
+  font-family: var(--prism-font-body);
   font-size: clamp(1rem, 1.1vw, 1.1rem);
   line-height: 1.85;
-  color: var(--v2-text);
+  color: var(--prism-text);
 }
 
-.v2-root .v2-prose > *:first-child {
+.prism-root .prism-prose > *:first-child {
   margin-top: 0;
 }
 
 /* --- Headings ------------------------------------------------- */
-.v2-root .v2-prose h1 {
-  font-family: var(--v2-font-display);
-  font-weight: var(--v2-display-weight);
-  letter-spacing: var(--v2-display-tracking);
+.prism-root .prism-prose h1 {
+  font-family: var(--prism-font-display);
+  font-weight: var(--prism-display-weight);
+  letter-spacing: var(--prism-display-tracking);
   line-height: 1.1;
   font-size: clamp(1.75rem, 3.4vw, 2.5rem);
-  color: var(--v2-text);
+  color: var(--prism-text);
   margin-top: 3rem;
   margin-bottom: 1.25rem;
 }
 
-.v2-root .v2-prose h2 {
-  font-family: var(--v2-font-display);
+.prism-root .prism-prose h2 {
+  font-family: var(--prism-font-display);
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.2;
   font-size: clamp(1.4rem, 2.6vw, 1.9rem);
-  color: var(--v2-text);
+  color: var(--prism-text);
   margin-top: 3rem;
   margin-bottom: 1.1rem;
   scroll-margin-top: 2rem;
 }
 
-.v2-root .v2-prose h3 {
-  font-family: var(--v2-font-head);
+.prism-root .prism-prose h3 {
+  font-family: var(--prism-font-head);
   font-weight: 700;
   letter-spacing: -0.005em;
   line-height: 1.3;
   font-size: clamp(1.15rem, 1.9vw, 1.4rem);
-  color: var(--v2-text);
+  color: var(--prism-text);
   margin-top: 2.4rem;
   margin-bottom: 0.9rem;
   scroll-margin-top: 2rem;
 }
 
-.v2-root .v2-prose h4,
-.v2-root .v2-prose h5,
-.v2-root .v2-prose h6 {
-  font-family: var(--v2-font-head);
+.prism-root .prism-prose h4,
+.prism-root .prism-prose h5,
+.prism-root .prism-prose h6 {
+  font-family: var(--prism-font-head);
   font-weight: 600;
   line-height: 1.4;
   font-size: 1.05rem;
-  color: var(--v2-text);
+  color: var(--prism-text);
   margin-top: 2rem;
   margin-bottom: 0.75rem;
   scroll-margin-top: 2rem;
 }
 
 /* --- Body copy -------------------------------------------------- */
-.v2-root .v2-prose p {
+.prism-root .prism-prose p {
   margin-bottom: 1.5rem;
-  color: var(--v2-text);
+  color: var(--prism-text);
 }
 
-.v2-root .v2-prose strong {
-  color: var(--v2-text);
+.prism-root .prism-prose strong {
+  color: var(--prism-text);
   font-weight: 700;
 }
 
-.v2-root .v2-prose em {
+.prism-root .prism-prose em {
   font-style: italic;
 }
 
-.v2-root .v2-prose a {
-  color: var(--v2-accent);
+.prism-root .prism-prose a {
+  color: var(--prism-accent);
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: var(--v2-line-2);
-  transition: text-decoration-color var(--v2-dur-fast) var(--v2-ease),
-    color var(--v2-dur-fast) var(--v2-ease);
+  text-decoration-color: var(--prism-line-2);
+  transition: text-decoration-color var(--prism-dur-fast) var(--prism-ease),
+    color var(--prism-dur-fast) var(--prism-ease);
 }
 
-.v2-root .v2-prose a:hover {
+.prism-root .prism-prose a:hover {
   text-decoration-color: currentColor;
-  color: var(--v2-accent-2);
+  color: var(--prism-accent-2);
 }
 
 /* --- Lists -------------------------------------------------------- */
-.v2-root .v2-prose ul {
+.prism-root .prism-prose ul {
   list-style: disc;
   padding-left: 1.4em;
   margin-bottom: 1.5rem;
 }
 
-.v2-root .v2-prose ol {
+.prism-root .prism-prose ol {
   list-style: decimal;
   padding-left: 1.4em;
   margin-bottom: 1.5rem;
 }
 
-.v2-root .v2-prose li {
+.prism-root .prism-prose li {
   margin-bottom: 0.55rem;
-  color: var(--v2-text);
+  color: var(--prism-text);
 }
 
-.v2-root .v2-prose li::marker {
-  color: var(--v2-muted);
+.prism-root .prism-prose li::marker {
+  color: var(--prism-muted);
 }
 
-.v2-root .v2-prose li > ul,
-.v2-root .v2-prose li > ol {
+.prism-root .prism-prose li > ul,
+.prism-root .prism-prose li > ol {
   margin-top: 0.55rem;
   margin-bottom: 0;
 }
 
 /* --- Blockquote ----------------------------------------------------- */
-.v2-root .v2-prose blockquote {
-  border-left: 2px solid var(--v2-accent);
+.prism-root .prism-prose blockquote {
+  border-left: 2px solid var(--prism-accent);
   padding-left: 1.25rem;
   margin: 2rem 0;
-  color: var(--v2-muted);
+  color: var(--prism-muted);
   font-style: italic;
 }
 
-.v2-root .v2-prose blockquote p {
+.prism-root .prism-prose blockquote p {
   margin-bottom: 0.5rem;
 }
 
-.v2-root .v2-prose blockquote p:last-child {
+.prism-root .prism-prose blockquote p:last-child {
   margin-bottom: 0;
 }
 
 /* --- Rule ----------------------------------------------------------- */
-.v2-root .v2-prose hr {
+.prism-root .prism-prose hr {
   border: none;
-  height: var(--v2-border-w);
-  background: var(--v2-line);
+  height: var(--prism-border-w);
+  background: var(--prism-line);
   margin: 3rem 0;
 }
 
 /* --- Images ----------------------------------------------------------- */
-.v2-root .v2-prose img {
+.prism-root .prism-prose img {
   width: 100%;
-  border-radius: var(--v2-radius);
-  border: var(--v2-border-w) solid var(--v2-line);
+  border-radius: var(--prism-radius);
+  border: var(--prism-border-w) solid var(--prism-line);
   margin: 2rem 0;
 }
 
 /* --- Tables ----------------------------------------------------------- */
-.v2-root .v2-prose table {
+.prism-root .prism-prose table {
   width: 100%;
   display: block;
   overflow-x: auto;
@@ -171,114 +171,114 @@
   font-size: 0.92rem;
 }
 
-.v2-root .v2-prose th,
-.v2-root .v2-prose td {
+.prism-root .prism-prose th,
+.prism-root .prism-prose td {
   padding: 0.65em 1em;
-  border: var(--v2-border-w) solid var(--v2-line);
+  border: var(--prism-border-w) solid var(--prism-line);
   text-align: left;
   white-space: nowrap;
 }
 
-.v2-root .v2-prose th {
-  font-family: var(--v2-font-head);
+.prism-root .prism-prose th {
+  font-family: var(--prism-font-head);
   font-weight: 700;
-  color: var(--v2-text);
-  background: var(--v2-surface-2);
+  color: var(--prism-text);
+  background: var(--prism-surface-2);
 }
 
-.v2-root .v2-prose td {
-  color: var(--v2-muted);
+.prism-root .prism-prose td {
+  color: var(--prism-muted);
 }
 
-.v2-root .v2-prose tr:nth-child(even) td {
-  background: var(--v2-surface);
+.prism-root .prism-prose tr:nth-child(even) td {
+  background: var(--prism-surface);
 }
 
 /* --- Inline code & code blocks ------------------------------------------ */
-.v2-root .v2-prose code {
-  font-family: var(--v2-font-mono);
+.prism-root .prism-prose code {
+  font-family: var(--prism-font-mono);
   font-size: 0.88em;
-  background: var(--v2-surface-2);
-  border: var(--v2-border-w) solid var(--v2-line);
+  background: var(--prism-surface-2);
+  border: var(--prism-border-w) solid var(--prism-line);
   padding: 0.15em 0.45em;
-  border-radius: var(--v2-radius-sm);
-  color: var(--v2-accent-2);
+  border-radius: var(--prism-radius-sm);
+  color: var(--prism-accent-2);
 }
 
-.v2-root .v2-prose pre {
-  background: var(--v2-surface);
-  border: var(--v2-border-w) solid var(--v2-line);
-  border-radius: var(--v2-radius);
+.prism-root .prism-prose pre {
+  background: var(--prism-surface);
+  border: var(--prism-border-w) solid var(--prism-line);
+  border-radius: var(--prism-radius);
   padding: clamp(16px, 2.4vw, 24px);
   overflow-x: auto;
   margin: 2rem 0;
   font-size: 0.88rem;
   line-height: 1.7;
-  box-shadow: var(--v2-shadow);
+  box-shadow: var(--prism-shadow);
 }
 
-.v2-root .v2-prose pre code {
+.prism-root .prism-prose pre code {
   background: none;
   border: none;
   padding: 0;
-  color: var(--v2-text);
+  color: var(--prism-text);
 }
 
 /* --- rehype-highlight syntax colours, derived from the accent trio ------ */
-.v2-root .v2-prose .hljs-comment,
-.v2-root .v2-prose .hljs-quote {
-  color: var(--v2-faint);
+.prism-root .prism-prose .hljs-comment,
+.prism-root .prism-prose .hljs-quote {
+  color: var(--prism-faint);
   font-style: italic;
 }
 
-.v2-root .v2-prose .hljs-keyword,
-.v2-root .v2-prose .hljs-selector-tag,
-.v2-root .v2-prose .hljs-literal,
-.v2-root .v2-prose .hljs-operator {
-  color: var(--v2-accent-3);
+.prism-root .prism-prose .hljs-keyword,
+.prism-root .prism-prose .hljs-selector-tag,
+.prism-root .prism-prose .hljs-literal,
+.prism-root .prism-prose .hljs-operator {
+  color: var(--prism-accent-3);
 }
 
-.v2-root .v2-prose .hljs-string,
-.v2-root .v2-prose .hljs-attr,
-.v2-root .v2-prose .hljs-symbol,
-.v2-root .v2-prose .hljs-regexp {
-  color: var(--v2-accent-2);
+.prism-root .prism-prose .hljs-string,
+.prism-root .prism-prose .hljs-attr,
+.prism-root .prism-prose .hljs-symbol,
+.prism-root .prism-prose .hljs-regexp {
+  color: var(--prism-accent-2);
 }
 
-.v2-root .v2-prose .hljs-number,
-.v2-root .v2-prose .hljs-built_in,
-.v2-root .v2-prose .hljs-type,
-.v2-root .v2-prose .hljs-params {
-  color: var(--v2-accent);
+.prism-root .prism-prose .hljs-number,
+.prism-root .prism-prose .hljs-built_in,
+.prism-root .prism-prose .hljs-type,
+.prism-root .prism-prose .hljs-params {
+  color: var(--prism-accent);
 }
 
-.v2-root .v2-prose .hljs-title,
-.v2-root .v2-prose .hljs-section,
-.v2-root .v2-prose .hljs-name,
-.v2-root .v2-prose .hljs-selector-id,
-.v2-root .v2-prose .hljs-selector-class {
-  color: var(--v2-text);
+.prism-root .prism-prose .hljs-title,
+.prism-root .prism-prose .hljs-section,
+.prism-root .prism-prose .hljs-name,
+.prism-root .prism-prose .hljs-selector-id,
+.prism-root .prism-prose .hljs-selector-class {
+  color: var(--prism-text);
   font-weight: 700;
 }
 
-.v2-root .v2-prose .hljs-variable,
-.v2-root .v2-prose .hljs-template-variable {
-  color: var(--v2-accent-2);
+.prism-root .prism-prose .hljs-variable,
+.prism-root .prism-prose .hljs-template-variable {
+  color: var(--prism-accent-2);
 }
 
-.v2-root .v2-prose .hljs-deletion {
-  color: var(--v2-accent);
+.prism-root .prism-prose .hljs-deletion {
+  color: var(--prism-accent);
   text-decoration: line-through;
 }
 
-.v2-root .v2-prose .hljs-addition {
-  color: var(--v2-accent-2);
+.prism-root .prism-prose .hljs-addition {
+  color: var(--prism-accent-2);
 }
 
-.v2-root .v2-prose .hljs-emphasis {
+.prism-root .prism-prose .hljs-emphasis {
   font-style: italic;
 }
 
-.v2-root .v2-prose .hljs-strong {
+.prism-root .prism-prose .hljs-strong {
   font-weight: 700;
 }

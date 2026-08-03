@@ -25,17 +25,17 @@ const MAX_DPR = 2
 
 function readVars(): { mode: Mode; colors: Colors } {
   const styles = getComputedStyle(document.documentElement)
-  const rawMode = styles.getPropertyValue('--v2-backdrop').trim()
+  const rawMode = styles.getPropertyValue('--prism-backdrop').trim()
   const mode: Mode = (
     ['none', 'grid', 'dots', 'rain', 'stars', 'embed', 'scan', 'waves'].includes(rawMode)
       ? rawMode
       : 'none'
   ) as Mode
-  const accent = styles.getPropertyValue('--v2-accent').trim() || DEFAULT_COLORS.accent
-  const accent2 = styles.getPropertyValue('--v2-accent-2').trim() || DEFAULT_COLORS.accent2
-  const accent3 = styles.getPropertyValue('--v2-accent-3').trim() || DEFAULT_COLORS.accent3
-  const line = styles.getPropertyValue('--v2-line').trim() || DEFAULT_COLORS.line
-  const bg = styles.getPropertyValue('--v2-bg').trim() || DEFAULT_COLORS.bg
+  const accent = styles.getPropertyValue('--prism-accent').trim() || DEFAULT_COLORS.accent
+  const accent2 = styles.getPropertyValue('--prism-accent-2').trim() || DEFAULT_COLORS.accent2
+  const accent3 = styles.getPropertyValue('--prism-accent-3').trim() || DEFAULT_COLORS.accent3
+  const line = styles.getPropertyValue('--prism-line').trim() || DEFAULT_COLORS.line
+  const bg = styles.getPropertyValue('--prism-bg').trim() || DEFAULT_COLORS.bg
   return { mode, colors: { accent, accent2, accent3, line, bg } }
 }
 
@@ -477,12 +477,12 @@ export default function Backdrop() {
 
     const mo = new MutationObserver((mutations) => {
       for (const m of mutations) {
-        if (m.type === 'attributes' && m.attributeName === 'data-v2-dimension') {
+        if (m.type === 'attributes' && m.attributeName === 'data-prism-dimension') {
           applyTheme()
         }
       }
     })
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-v2-dimension'] })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-prism-dimension'] })
 
     resize()
     requestAnimationFrame(() => {

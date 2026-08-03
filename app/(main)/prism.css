@@ -1,0 +1,917 @@
+/* ============================================================================
+   v2 "DIMENSION" — BASE STYLESHEET
+   ============================================================================
+   This file is the foundation for /v2. It declares every design token,
+   implements every class in the CONTRACT.md §2 vocabulary, and nothing else.
+   22 theme files (public/prism/themes/*.css) re-set the :root variables and
+   layer a small amount of !important skin on top of these classes.
+
+   DISCIPLINE RULES (see CONTRACT.md):
+   - Every colour / radius / shadow / font / border comes from a --prism-* token.
+   - Every visual element is built from the fixed class vocabulary.
+   - Zero Tailwind. This file is the only thing standing between a theme
+     swap working perfectly and it falling apart.
+
+   ----------------------------------------------------------------------------
+   LAYOUT PRIMITIVES — quick reference for other agents
+   ----------------------------------------------------------------------------
+   .prism-wrap     centred max-width container, side gutters              (§ LAYOUT)
+   .prism-section  top-level section, owns vertical rhythm padding        (§ LAYOUT)
+   .prism-band     full-bleed alternate-background band (--prism-bg-2)       (§ LAYOUT)
+   .prism-grid     responsive auto-fit grid, [data-cols] to hint columns  (§ LAYOUT)
+   .prism-row      flex row, gap, wraps                                  (§ LAYOUT)
+   .prism-col      flex column, gap                                      (§ LAYOUT)
+   .prism-stack    vertical rhythm via `> * + * { margin-top }`           (§ LAYOUT)
+
+   .prism-card / .prism-card-lift   panel / tile, workhorse of the page      (§ CONTAINERS)
+   .prism-panel                  larger bordered region                  (§ CONTAINERS)
+
+   .prism-title / .prism-title-xl   display headline (huge, serif by default)(§ TYPE)
+   .prism-head / .prism-sub         section heading / sub-heading            (§ TYPE)
+   .prism-eyebrow                tiny uppercase label                     (§ TYPE)
+   .prism-body / .prism-muted       paragraph text / muted utility           (§ TYPE)
+   .prism-mono / .prism-num         monospace utility / large tabular number (§ TYPE)
+
+   .prism-btn / .prism-btn-ghost / .prism-btn-quiet   buttons                   (§ CONTROLS)
+   .prism-chip / .prism-chip-on                    tag / pill / active pill  (§ CONTROLS)
+   .prism-link / .prism-icon-btn                   inline link / icon button (§ CONTROLS)
+
+   .prism-rule / .prism-dot / .prism-frame / .prism-marquee / .prism-badge / .prism-kbd  (§ ORNAMENT)
+   .prism-orb / .prism-noise                       decorative overlays       (§ ORNAMENT)
+
+   .prism-reveal / .prism-reveal.prism-in             scroll-reveal base states (§ MOTION)
+
+   Structural IDs (must exist, exactly these — see CONTRACT.md §2):
+   #prism-shell #prism-hero #prism-signal #prism-writing #prism-radar #prism-contact #prism-hud
+   ============================================================================ */
+
+
+/* ============================================================================
+   1. DESIGN TOKENS — Ember defaults. Themes override everything under :root.
+   ============================================================================ */
+:root {
+  /* --- Colour --------------------------------------------------------- */
+  --prism-bg: #0a0908;
+  --prism-bg-2: #100e0c;
+  --prism-surface: #141110;
+  --prism-surface-2: #1c1917;
+  --prism-surface-3: #252220;
+  --prism-text: #f5f0ea;
+  --prism-muted: rgba(245, 240, 234, 0.58);
+  /* Tertiary tone. Raised from 0.30 alpha: several dimensions measured this
+     as low as 1.9:1 where it lands on real text (the marquee ticker, mono
+     labels), and nine separate theme files ended up patching around it. 0.45
+     keeps it clearly recessive while staying legible. */
+  --prism-faint: rgba(245, 240, 234, 0.45);
+  --prism-line: rgba(245, 240, 234, 0.12);
+  --prism-line-2: rgba(245, 240, 234, 0.24);
+  --prism-accent: #ff6b35;
+  --prism-accent-2: #ffb03a;
+  --prism-accent-3: #7c3aed;
+  --prism-accent-soft: rgba(255, 107, 53, 0.10);
+  --prism-on-accent: #0a0908;
+
+  /* --- Shape & depth ---------------------------------------------------- */
+  --prism-radius: 14px;
+  --prism-radius-sm: 8px;
+  --prism-radius-lg: 24px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --prism-shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+  --prism-glow: 0 0 0 rgba(0, 0, 0, 0);
+
+  /* --- Type --------------------------------------------------------- */
+  --prism-font-display: 'Fraunces', Georgia, serif;
+  --prism-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 800;
+  --prism-display-tracking: -0.04em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.18em;
+
+  /* --- Motion --------------------------------------------------------- */
+  --prism-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --prism-dur: 0.5s;
+  --prism-dur-fast: 0.2s;
+
+  /* --- JS-read mode tokens ---------------------------------------------- */
+  --prism-backdrop: dots;
+  --prism-cursor: ring;
+  --prism-enter: tear;
+
+  /* --- Layout (structural — never overridden by themes) ----------------- */
+  /* Content width is FLUID — never a fixed pixel cap.
+     A flat max-width (this was 1180px) leaves bare page background down each
+     side on any display wider than the cap, which reads as grey bars, not as
+     margin. The layout now fills whatever viewport it is given — phone,
+     tablet, laptop, ultrawide — and only the gutter scales. Line length is
+     kept readable per-block via --prism-measure below, not by shrinking the
+     whole page. */
+  --prism-max: 100%;
+  --prism-gutter: clamp(16px, 3.5vw, 72px);
+  /* Max line length for long-form prose only (paragraphs, not layout). */
+  --prism-measure: 68ch;
+  --prism-section-y: clamp(80px, 12vh, 160px);
+}
+
+
+/* ============================================================================
+   2. RESET — scoped to .prism-root only. The rest of the site keeps Tailwind.
+   ============================================================================ */
+.prism-root,
+.prism-root *,
+.prism-root *::before,
+.prism-root *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Canvas colour.
+   The browser paints the area outside the document box — macOS overscroll
+   bounce, the scrollbar gutter, anything below short content — using the
+   background propagated from <html>, falling back to <body>. globals.css
+   hard-sets `body { background-color: var(--surface) }` (#121212 in dark
+   mode), and our theme colour lives on the inner .prism-root div, so that grey
+   shows through at the edges. On a light dimension like `swiss` or
+   `brutalist` it reads as a broken grey border down the right and along the
+   bottom. Push --prism-bg all the way up to <html> so the canvas matches.
+   :has() keeps this scoped to v2 pages only — the rest of the site is
+   untouched. */
+html:has(.prism-root),
+html:has(.prism-root) body {
+  background-color: var(--prism-bg);
+}
+
+.prism-root {
+  background: var(--prism-bg);
+  color: var(--prism-text);
+  font-family: var(--prism-font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  position: relative;
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+.prism-root a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.prism-root img,
+.prism-root svg,
+.prism-root video {
+  max-width: 100%;
+  display: block;
+}
+
+.prism-root ul,
+.prism-root ol {
+  list-style: none;
+}
+
+.prism-root button,
+.prism-root input,
+.prism-root textarea,
+.prism-root select {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+}
+
+.prism-root button {
+  cursor: pointer;
+}
+
+/* Specificity repair.
+   The reset above uses `.prism-root button` (0,1,1), which outranks the single-class
+   control selectors (0,1,0) further down this file. Left alone, every control
+   rendered as a <button> inherits the page text colour instead of its own —
+   which makes `.prism-btn` accent-on-accent, i.e. invisible, in any theme whose
+   --prism-text equals its --prism-accent. Re-assert the intended colours here at
+   matching specificity. Theme files use !important, so they still win. */
+.prism-root .prism-btn { color: var(--prism-on-accent); }
+.prism-root .prism-btn-ghost,
+.prism-root .prism-link,
+.prism-root .prism-icon-btn { color: var(--prism-text); }
+.prism-root .prism-btn-quiet,
+.prism-root .prism-chip { color: var(--prism-muted); }
+.prism-root .prism-chip-on { color: var(--prism-accent); }
+
+
+/* ============================================================================
+   3. ACCESSIBILITY — focus ring + reduced motion (declared early, wins late)
+   ============================================================================ */
+.prism-root :focus-visible {
+  outline: 2px solid var(--prism-accent);
+  outline-offset: 3px;
+  border-radius: var(--prism-radius-sm);
+}
+
+
+/* ============================================================================
+   4. TYPE SCALE — fluid via clamp(), all tokens-derived
+   ============================================================================ */
+.prism-title {
+  font-family: var(--prism-font-display);
+  font-weight: var(--prism-display-weight);
+  letter-spacing: var(--prism-display-tracking);
+  line-height: 0.98;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: var(--prism-text);
+}
+
+.prism-title-xl {
+  font-size: clamp(3rem, 11vw, 9rem);
+  line-height: 0.88;
+}
+
+.prism-head {
+  font-family: var(--prism-font-head);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+  color: var(--prism-text);
+}
+
+.prism-sub {
+  font-family: var(--prism-font-head);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+  font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+  color: var(--prism-text);
+}
+
+.prism-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-family: var(--prism-font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: var(--prism-head-transform);
+  letter-spacing: var(--prism-head-tracking);
+  color: var(--prism-accent);
+}
+
+.prism-body {
+  font-family: var(--prism-font-body);
+  font-size: clamp(0.98rem, 1.1vw, 1.08rem);
+  line-height: 1.65;
+  color: var(--prism-text);
+  /* Cap the LINE, not the layout. The page is full-bleed by design, but a
+     paragraph running the full width of a 1728px display is unreadable — the
+     eye loses its place on the return sweep. This caps the measure only where
+     text actually flows; inside cards the container is already narrower, so
+     it has no effect there. */
+  max-width: var(--prism-measure);
+}
+
+.prism-muted {
+  color: var(--prism-muted);
+}
+
+.prism-mono {
+  font-family: var(--prism-font-mono);
+}
+
+.prism-num {
+  font-family: var(--prism-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--prism-text);
+  transition: color var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-num:hover {
+  color: var(--prism-accent);
+}
+
+
+/* ============================================================================
+   5. LAYOUT PRIMITIVES
+   ============================================================================ */
+.prism-wrap {
+  width: 100%;
+  max-width: var(--prism-max);
+  margin-inline: auto;
+  padding-inline: var(--prism-gutter);
+}
+
+.prism-section {
+  padding-block: var(--prism-section-y);
+  position: relative;
+}
+
+.prism-band {
+  background: var(--prism-bg-2);
+  position: relative;
+}
+
+.prism-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: clamp(16px, 2.5vw, 28px);
+}
+
+.prism-grid[data-cols='2'] {
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+
+.prism-grid[data-cols='3'] {
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+}
+
+.prism-grid[data-cols='4'] {
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+}
+
+.prism-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: clamp(10px, 1.6vw, 20px);
+}
+
+.prism-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vw, 20px);
+}
+
+.prism-stack > * + * {
+  margin-top: 1rem;
+}
+
+
+/* ============================================================================
+   6. CONTAINERS
+   ============================================================================ */
+.prism-card {
+  background: var(--prism-surface);
+  border: var(--prism-border-w) solid var(--prism-line);
+  border-radius: var(--prism-radius);
+  padding: clamp(20px, 3vw, 32px);
+  box-shadow: var(--prism-shadow);
+  transition: transform var(--prism-dur) var(--prism-ease),
+    box-shadow var(--prism-dur) var(--prism-ease),
+    border-color var(--prism-dur) var(--prism-ease),
+    background var(--prism-dur) var(--prism-ease);
+}
+
+.prism-card-lift {
+  cursor: pointer;
+}
+
+.prism-card-lift:hover,
+.prism-card-lift:focus-visible {
+  border-color: var(--prism-line-2);
+  background: var(--prism-surface-2);
+  box-shadow: var(--prism-glow), var(--prism-shadow-lg);
+}
+
+@media (hover: hover) {
+  .prism-card-lift:hover {
+    transform: translateY(-6px);
+  }
+}
+
+.prism-card-lift:focus-visible {
+  transform: translateY(-6px);
+}
+
+.prism-panel {
+  background: var(--prism-surface);
+  border: var(--prism-border-w) solid var(--prism-line);
+  border-radius: var(--prism-radius-lg);
+  padding: clamp(28px, 4vw, 48px);
+  box-shadow: var(--prism-shadow);
+}
+
+
+/* ============================================================================
+   7. CONTROLS
+   ============================================================================ */
+.prism-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 0.85em 1.6em;
+  border-radius: var(--prism-radius-pill);
+  background: var(--prism-accent);
+  color: var(--prism-on-accent);
+  font-family: var(--prism-font-head);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  border: var(--prism-border-w) solid transparent;
+  box-shadow: var(--prism-shadow);
+  transition: transform var(--prism-dur-fast) var(--prism-ease),
+    box-shadow var(--prism-dur) var(--prism-ease),
+    background var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-btn:hover,
+.prism-btn:focus-visible {
+  background: var(--prism-accent-2);
+  box-shadow: var(--prism-glow), var(--prism-shadow-lg);
+}
+
+@media (hover: hover) {
+  .prism-btn:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.prism-btn:focus-visible {
+  transform: translateY(-2px);
+}
+
+.prism-btn:active {
+  transform: translateY(0);
+}
+
+.prism-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 0.85em 1.6em;
+  border-radius: var(--prism-radius-pill);
+  background: transparent;
+  color: var(--prism-text);
+  font-family: var(--prism-font-head);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  border: var(--prism-border-w) solid var(--prism-line-2);
+  transition: border-color var(--prism-dur-fast) var(--prism-ease),
+    background var(--prism-dur-fast) var(--prism-ease),
+    transform var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-btn-ghost:hover,
+.prism-btn-ghost:focus-visible {
+  border-color: var(--prism-accent);
+  background: var(--prism-accent-soft);
+}
+
+@media (hover: hover) {
+  .prism-btn-ghost:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.prism-btn-ghost:focus-visible {
+  transform: translateY(-2px);
+}
+
+.prism-btn-ghost:active {
+  transform: translateY(0);
+}
+
+.prism-btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.4em 0.2em;
+  color: var(--prism-muted);
+  font-family: var(--prism-font-head);
+  font-weight: 600;
+  font-size: 0.92rem;
+  border-bottom: var(--prism-border-w) solid transparent;
+  transition: color var(--prism-dur-fast) var(--prism-ease),
+    border-color var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-btn-quiet:hover,
+.prism-btn-quiet:focus-visible {
+  color: var(--prism-text);
+  border-color: var(--prism-line-2);
+}
+
+.prism-btn-quiet:active {
+  color: var(--prism-accent);
+}
+
+.prism-btn:focus-visible,
+.prism-btn-ghost:focus-visible,
+.prism-btn-quiet:focus-visible,
+.prism-icon-btn:focus-visible {
+  outline: 2px solid var(--prism-accent);
+  outline-offset: 3px;
+}
+
+.prism-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.45em 0.95em;
+  border-radius: var(--prism-radius-pill);
+  background: var(--prism-surface-2);
+  border: var(--prism-border-w) solid var(--prism-line);
+  color: var(--prism-muted);
+  font-family: var(--prism-font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  transition: border-color var(--prism-dur-fast) var(--prism-ease),
+    color var(--prism-dur-fast) var(--prism-ease),
+    background var(--prism-dur-fast) var(--prism-ease),
+    box-shadow var(--prism-dur-fast) var(--prism-ease),
+    transform var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-chip:hover,
+.prism-chip:focus-visible {
+  border-color: var(--prism-line-2);
+  color: var(--prism-text);
+  background: var(--prism-surface-3);
+}
+
+@media (hover: hover) {
+  .prism-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--prism-shadow);
+  }
+}
+
+.prism-chip:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: var(--prism-shadow);
+}
+
+.prism-chip:active {
+  transform: translateY(0);
+}
+
+.prism-chip-on {
+  background: var(--prism-accent-soft);
+  border-color: var(--prism-accent);
+  color: var(--prism-accent);
+}
+
+.prism-chip-on:hover,
+.prism-chip-on:focus-visible {
+  background: var(--prism-accent-soft);
+  border-color: var(--prism-accent-2);
+  color: var(--prism-accent-2);
+  box-shadow: var(--prism-glow);
+}
+
+.prism-link {
+  display: inline;
+  color: var(--prism-text);
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  padding-bottom: 0.1em;
+  transition: color var(--prism-dur-fast) var(--prism-ease),
+    background-size var(--prism-dur) var(--prism-ease);
+}
+
+.prism-link:hover,
+.prism-link:focus-visible {
+  color: var(--prism-accent);
+  background-size: 0% 1px;
+}
+
+.prism-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75em;
+  height: 2.75em;
+  border-radius: var(--prism-radius-sm);
+  background: var(--prism-surface-2);
+  border: var(--prism-border-w) solid var(--prism-line);
+  color: var(--prism-text);
+  transition: border-color var(--prism-dur-fast) var(--prism-ease),
+    background var(--prism-dur-fast) var(--prism-ease),
+    transform var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-icon-btn:hover,
+.prism-icon-btn:focus-visible {
+  border-color: var(--prism-accent);
+  background: var(--prism-accent-soft);
+  color: var(--prism-accent);
+  box-shadow: var(--prism-glow);
+}
+
+@media (hover: hover) {
+  .prism-icon-btn:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.prism-icon-btn:focus-visible {
+  transform: translateY(-2px);
+}
+
+.prism-icon-btn:active {
+  transform: translateY(0);
+}
+
+
+/* ============================================================================
+   8. ORNAMENT
+   ============================================================================ */
+.prism-rule {
+  height: var(--prism-border-w);
+  width: 100%;
+  background: var(--prism-line);
+  border: none;
+}
+
+.prism-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--prism-accent);
+  flex: none;
+  transition: transform var(--prism-dur-fast) var(--prism-ease),
+    box-shadow var(--prism-dur-fast) var(--prism-ease);
+}
+
+@media (hover: hover) {
+  .prism-dot:hover {
+    transform: scale(1.4);
+    box-shadow: var(--prism-glow);
+  }
+}
+
+.prism-frame {
+  border-radius: var(--prism-radius-lg);
+  border: var(--prism-border-w) solid var(--prism-line);
+  overflow: hidden;
+  background: var(--prism-surface);
+  box-shadow: var(--prism-shadow-lg);
+  transition: border-color var(--prism-dur) var(--prism-ease);
+}
+
+.prism-frame img,
+.prism-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--prism-dur) var(--prism-ease);
+}
+
+.prism-frame:hover,
+.prism-frame:focus-visible {
+  border-color: var(--prism-line-2);
+}
+
+@media (hover: hover) {
+  .prism-frame:hover img,
+  .prism-frame:hover video {
+    transform: scale(1.04);
+  }
+}
+
+.prism-frame:focus-visible img,
+.prism-frame:focus-visible video {
+  transform: scale(1.04);
+}
+
+.prism-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.35em 0.8em;
+  border-radius: var(--prism-radius-sm);
+  background: var(--prism-accent-soft);
+  border: var(--prism-border-w) solid var(--prism-accent);
+  color: var(--prism-accent);
+  font-family: var(--prism-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: var(--prism-head-transform);
+  letter-spacing: var(--prism-head-tracking);
+  transition: border-color var(--prism-dur-fast) var(--prism-ease),
+    box-shadow var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-badge:hover {
+  border-color: var(--prism-accent-2);
+  box-shadow: var(--prism-glow);
+}
+
+.prism-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.8em;
+  padding: 0.2em 0.5em;
+  border-radius: var(--prism-radius-sm);
+  background: var(--prism-surface-3);
+  border: var(--prism-border-w) solid var(--prism-line-2);
+  border-bottom-width: 2px;
+  color: var(--prism-text);
+  font-family: var(--prism-font-mono);
+  font-size: 0.78rem;
+  box-shadow: var(--prism-shadow);
+  transition: border-color var(--prism-dur-fast) var(--prism-ease),
+    color var(--prism-dur-fast) var(--prism-ease);
+}
+
+.prism-kbd:hover {
+  border-color: var(--prism-accent);
+  color: var(--prism-accent);
+}
+
+/* --- Marquee ---------------------------------------------------------- */
+.prism-marquee {
+  overflow: hidden;
+  width: 100%;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+}
+
+.prism-marquee-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  gap: clamp(24px, 4vw, 64px);
+  animation: prism-marquee-scroll 28s linear infinite;
+}
+
+.prism-marquee:hover .prism-marquee-track {
+  animation-play-state: paused;
+}
+
+.prism-marquee-track span {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(24px, 4vw, 64px);
+  font-family: var(--prism-font-head);
+  font-size: clamp(1.25rem, 3vw, 2.25rem);
+  font-weight: 600;
+  /* --prism-muted, not --prism-faint. The ticker carries real words (skill names),
+     and on --prism-faint it measured 1.9–2.9:1 in 23 of the 30 dimensions —
+     failing even the 3:1 bar that large text gets. Themes are required to
+     keep --prism-muted legible, so routing through it fixes every dimension at
+     once instead of patching thirty files. Opacity below keeps it recessive. */
+  color: var(--prism-muted);
+  opacity: 0.75;
+  white-space: nowrap;
+  transition: opacity var(--prism-dur) var(--prism-ease);
+}
+
+.prism-marquee:hover .prism-marquee-track span {
+  opacity: 1;
+}
+
+@keyframes prism-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* --- Decorative overlays ------------------------------------------------ */
+.prism-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Same reason as the backdrop canvas: a fixed, full-viewport layer that is
+     not GPU-promoted gets repainted on every scroll frame — and this one also
+     carries mix-blend-mode, so each repaint re-blends against the whole page
+     underneath. That is the expensive part during a fast scroll. */
+  transform: translateZ(0);
+  will-change: transform;
+  contain: strict;
+}
+
+.prism-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  z-index: 0;
+  width: clamp(280px, 40vw, 560px);
+  height: clamp(280px, 40vw, 560px);
+  background: radial-gradient(
+    circle,
+    var(--prism-accent) 0%,
+    var(--prism-accent-3) 45%,
+    transparent 72%
+  );
+  opacity: 0.28;
+}
+
+
+/* ============================================================================
+   9. MOTION — scroll reveal base states
+   ============================================================================ */
+.prism-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.8s var(--prism-ease), transform 0.8s var(--prism-ease);
+}
+
+.prism-reveal.prism-in {
+  opacity: 1;
+  transform: none;
+}
+
+
+/* ============================================================================
+   10. ACCESSIBILITY — reduced motion (kills all animation/transform)
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .prism-root *,
+  .prism-root *::before,
+  .prism-root *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .prism-reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .prism-card-lift:hover,
+  .prism-card-lift:focus-visible,
+  .prism-btn:hover,
+  .prism-btn:focus-visible,
+  .prism-btn-ghost:hover,
+  .prism-btn-ghost:focus-visible,
+  .prism-icon-btn:hover,
+  .prism-icon-btn:focus-visible,
+  .prism-chip:hover,
+  .prism-chip:focus-visible,
+  .prism-chip-on:hover,
+  .prism-chip-on:focus-visible,
+  .prism-dot:hover,
+  .prism-frame:hover img,
+  .prism-frame:hover video,
+  .prism-frame:focus-visible img,
+  .prism-frame:focus-visible video {
+    transform: none;
+  }
+
+  .prism-marquee-track {
+    animation: none;
+  }
+}
+
+
+/* ============================================================================
+   11. RESPONSIVE — down to 360px
+   ============================================================================ */
+@media (max-width: 640px) {
+  .prism-wrap {
+    padding-inline: clamp(16px, 6vw, 24px);
+  }
+
+  .prism-grid,
+  .prism-grid[data-cols='2'],
+  .prism-grid[data-cols='3'],
+  .prism-grid[data-cols='4'] {
+    grid-template-columns: 1fr;
+  }
+
+  .prism-panel {
+    padding: clamp(18px, 6vw, 28px);
+  }
+
+  .prism-orb {
+    width: clamp(180px, 60vw, 320px);
+    height: clamp(180px, 60vw, 320px);
+    filter: blur(60px);
+  }
+}

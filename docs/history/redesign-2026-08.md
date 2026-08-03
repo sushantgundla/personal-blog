@@ -23,16 +23,16 @@ shape, borders, shadows, clip-paths, fonts).
 Commit `cbf6339` ("feat: ship the 30-dimension redesign as the home page") shipped the
 mechanism:
 
-- `app/(main)/v2.css` — the base stylesheet, ~40 CSS custom properties (`--v2-*`) and a fixed
-  ~30-class vocabulary (`.v2-card`, `.v2-btn`, `.v2-eyebrow`, etc). Full rules in
+- `app/(main)/prism.css` — the base stylesheet, ~40 CSS custom properties (`--prism-*`) and a fixed
+  ~30-class vocabulary (`.prism-card`, `.prism-btn`, `.prism-eyebrow`, etc). Full rules in
   [`docs/architecture/design-system.md`](../architecture/design-system.md).
-- `public/v2/themes/*.css` — 30 theme files, averaging ~3.5 KB each. Eight are original
+- `public/prism/themes/*.css` — 30 theme files, averaging ~3.5 KB each. Eight are original
   designs; the rest are takes on existing aesthetics (Nord, Solarized, Swiss, synthwave,
   vaporwave, terminal, xerox, riso, and more).
 - Seven transition treatments (tear, shatter, scanline, pixelate, iris, rewind, collapse), each
   a 640ms three-beat sequence. The stylesheet swap lands at peak distortion so the repaint is
   never visible.
-- One canvas backdrop with eight modes, driven by a `--v2-backdrop` variable each theme sets —
+- One canvas backdrop with eight modes, driven by a `--prism-backdrop` variable each theme sets —
   one canvas, thirty different looks. Throttled to 30fps and GPU-promoted.
 - `color-scheme` tracks the active theme's background luminance so light dimensions do not get
   a dark browser scrollbar.
@@ -52,12 +52,12 @@ Commit `aecf7f4` ("feat: move the whole site onto the redesign") brought every o
 `app/(main)/`, so all thirty dimensions repaint the entire site, not just one screen:
 
 - A new themed nav bar, built only from the shared class vocabulary — hides on scroll down,
-  returns on scroll up, highlights the active section. It sits outside `#v2-shell` so it stays
+  returns on scroll up, highlights the active section. It sits outside `#prism-shell` so it stays
   still while the shell distorts during a transition.
 - `/articles`: full index, a featured post, and a pure-CSS tag filter using `:has()` — no
   client JS needed.
 - `/articles/[slug]`: reader view with `prose.css`, every colour/font/border (including the
-  `rehype-highlight` code block palette) driven by `--v2-*` tokens.
+  `rehype-highlight` code block palette) driven by `--prism-*` tokens.
 - `/projects`: a status filter that dims rather than unmounts non-matching cards.
 - `/about` and `/radar`: ported into the new shell.
 - `SiteFrame`'s default inverted — routes render bare by default, and only `/old` keeps the
@@ -77,7 +77,7 @@ commits corrected this:
   numbered section labels, the Download Resume / View Projects actions, and the four original
   skill groups (AI & Machine Learning, Frameworks & Tools, Data & Retrieval, Infrastructure)
   in place of an invented taxonomy.
-- Fixed the `/about` portrait, which had collapsed to 2x3px: `.v2-frame` was sized with
+- Fixed the `/about` portrait, which had collapsed to 2x3px: `.prism-frame` was sized with
   `width: 100%`, but the containing element sizes to content as a flex item, so the percentage
   resolved against zero.
 - `/radar` returned to two side-by-side columns (01 / PULSES, 02 / PICKS) instead of tabs that
@@ -145,13 +145,13 @@ page had been inert until this commit.
 
 ## The vocabulary violation, and fixing it
 
-**`fc91778`** ("fix: radar entries use .v2-card, foundation becomes three plain blocks"):
+**`fc91778`** ("fix: radar entries use .prism-card, foundation becomes three plain blocks"):
 `/radar` looked different from every other page because its entries used a bespoke
-`.v2-radar-entry` class instead of `.v2-card`. Since theme files only style `.v2-card`, radar
+`.prism-radar-entry` class instead of `.prism-card`. Since theme files only style `.prism-card`, radar
 was the one page getting no per-theme card treatment at all. This was a violation of the
 design-system contract's rule to build only from the shared vocabulary (see
 [`docs/history/decisions.md`](decisions.md)). Fixed by switching radar entries to
-`.v2-card .v2-card-lift`. The foundation band from `d87c567` also went back to three plain
+`.prism-card .prism-card-lift`. The foundation band from `d87c567` also went back to three plain
 cards — the "Runs on" band and label were dropped, since the `support` connector alone already
 carries that meaning.
 

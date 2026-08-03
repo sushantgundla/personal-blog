@@ -1,0 +1,49 @@
+/* Ember — dark warm charcoal, orange ember accent, editorial serif (DEFAULT) */
+:root {
+  --prism-bg: #0a0908;
+  --prism-bg-2: #100e0c;
+  --prism-surface: #141110;
+  --prism-surface-2: #1c1917;
+  --prism-surface-3: #252220;
+  --prism-text: #f5f0ea;
+  --prism-muted: rgba(245,240,234,0.58);
+  --prism-faint: rgba(245,240,234,0.30);
+  --prism-line: rgba(245,240,234,0.12);
+  --prism-line-2: rgba(245,240,234,0.24);
+  --prism-accent: #ff6b35;
+  --prism-accent-2: #ffb03a;
+  --prism-accent-3: #7c3aed;
+  --prism-accent-soft: rgba(255,107,53,0.10);
+  --prism-on-accent: #0a0908;
+
+  --prism-radius: 14px;
+  --prism-radius-sm: 8px;
+  --prism-radius-lg: 24px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  --prism-shadow-lg: 0 24px 60px -20px rgba(0,0,0,0.7);
+  --prism-glow: 0 0 40px rgba(255,107,53,0.25);
+
+  --prism-font-display: 'Fraunces', Georgia, serif;
+  --prism-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 800;
+  --prism-display-tracking: -0.04em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.18em;
+
+  --prism-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --prism-dur: 0.5s;
+  --prism-dur-fast: 0.2s;
+
+  --prism-backdrop: dots;
+  --prism-cursor: ring;
+  --prism-enter: tear;
+}
+
+/* Faithful to base defaults — just a touch of polish on hover states */
+.prism-card-lift:hover { box-shadow: var(--prism-shadow-lg), var(--prism-glow) !important; }
+.prism-btn:hover { box-shadow: var(--prism-glow) !important; }
+.prism-btn-ghost:hover { border-color: var(--prism-accent) !important; }

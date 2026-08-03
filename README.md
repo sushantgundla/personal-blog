@@ -31,7 +31,7 @@ country-explorer feature, how-to guides, and project history. Common starting po
 ```
 ├── app/
 │   ├── (main)/            # Current site — home, /about, /articles, /projects, /radar
-│   │   ├── v2.css         # Design token + shared class vocabulary (the "dimension" contract)
+│   │   ├── prism.css         # Design token + shared class vocabulary (the "dimension" contract)
 │   │   ├── _components/    # Shared page sections (Hero, Signal, RadarView, Writing, ...)
 │   │   └── _lib/           # Route-group-local helpers
 │   ├── atlas/              # Country-explorer feature (/atlas)
@@ -50,7 +50,7 @@ country-explorer feature, how-to guides, and project history. Common starting po
 │   ├── projects.ts           # Project data
 │   ├── radar.ts              # Radar data
 │   └── atlas/                 # Atlas data layer
-├── public/v2/themes/         # The 30 design theme stylesheets
+├── public/prism/themes/         # The 30 design theme stylesheets
 └── docs/                     # All documentation — start at docs/README.md
 ```
 

@@ -1,0 +1,71 @@
+/* Bengaluru Monsoon — wet slate, deep teal, warm window-light amber, 7pm rain-washed calm */
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Work+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --prism-bg: #1b2426;
+  --prism-bg-2: #171f21;
+  --prism-surface: #202b2d;
+  --prism-surface-2: #263436;
+  --prism-surface-3: #2d3d3f;
+  --prism-text: #eef2f0;
+  --prism-muted: rgba(238,242,240,0.62);
+  --prism-faint: rgba(238,242,240,0.3);
+  --prism-line: rgba(238,242,240,0.12);
+  --prism-line-2: rgba(42,106,104,0.55);
+  --prism-accent: #f0a868;
+  --prism-accent-2: #2a6a68;
+  --prism-accent-3: #6b8f9e;
+  --prism-accent-soft: rgba(240,168,104,0.12);
+  --prism-on-accent: #1b2426;
+
+  --prism-radius: 20px;
+  --prism-radius-sm: 12px;
+  --prism-radius-lg: 32px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 12px 32px -10px rgba(0,0,0,0.55);
+  --prism-shadow-lg: 0 30px 70px -20px rgba(0,0,0,0.65);
+  --prism-glow: 0 0 40px rgba(240,168,104,0.25);
+
+  --prism-font-display: 'Lora', 'Fraunces', Georgia, serif;
+  --prism-font-head: 'Work Sans', system-ui, sans-serif;
+  --prism-font-body: 'Work Sans', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 600;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.04em;
+
+  --prism-backdrop: rain;
+  --prism-cursor: ring;
+  --prism-enter: tear;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; }
+.prism-orb { filter: blur(60px) !important; opacity: 0.5 !important; }
+.prism-noise { opacity: 0.05 !important; mix-blend-mode: overlay !important; }
+
+.prism-card, .prism-panel {
+  background: var(--prism-surface) !important;
+  border: 1px solid var(--prism-line) !important;
+  border-radius: var(--prism-radius) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover { border-color: var(--prism-line-2) !important; box-shadow: var(--prism-shadow-lg), var(--prism-glow) !important; }
+
+.prism-title { color: var(--prism-text) !important; text-shadow: 0 2px 20px rgba(240,168,104,0.2) !important; }
+/* Deep teal (accent-2) reads at 2.53:1 on this bg — swap to the warm amber accent for legibility. */
+.prism-eyebrow { color: var(--prism-accent) !important; }
+
+.prism-btn { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; border: none !important; border-radius: var(--prism-radius-pill) !important; box-shadow: 0 10px 30px -10px rgba(240,168,104,0.5) !important; }
+.prism-btn-ghost { background: transparent !important; border: 1px solid var(--prism-line-2) !important; color: var(--prism-text) !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-btn-quiet { color: var(--prism-accent) !important; }
+
+.prism-chip { background: var(--prism-surface-2) !important; border: 1px solid var(--prism-line) !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-chip-on { background: var(--prism-accent-soft) !important; border-color: var(--prism-accent) !important; color: var(--prism-accent) !important; }
+
+.prism-frame { border: 1px solid var(--prism-line) !important; border-radius: var(--prism-radius-lg) !important; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6) !important; }
+.prism-rule { background: linear-gradient(90deg, transparent, var(--prism-line-2), transparent) !important; height: 1px !important; }
+.prism-badge { border: 1px solid var(--prism-accent-2) !important; color: var(--prism-accent) !important; background: var(--prism-surface-2) !important; border-radius: var(--prism-radius-pill) !important; }
+.prism-kbd { border: none !important; background: var(--prism-surface-3) !important; border-radius: var(--prism-radius-sm) !important; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3) !important; }

@@ -20,12 +20,12 @@ app/                    Next.js App Router routes
   layout.tsx            Root layout — <html>, fonts, JSON-LD, ThemeProvider, SiteFrame
   globals.css            Tailwind base + the site-wide (non-/v2) design tokens
   (main)/                The live site. Route group — the "(main)" segment does not appear in the URL.
-    layout.tsx           V2Layout — mounts the theme engine, backdrop, cursor, nav
+    layout.tsx           PrismLayout — mounts the theme engine, backdrop, cursor, nav
     page.tsx             Home page ("/")
     about/, articles/, projects/, radar/    the other top-level routes
     _components/         Client + server components private to this route group
     _lib/dimensions.ts   The theme-swap engine
-    v2.css               Base stylesheet: every design token + the class vocabulary
+    prism.css               Base stylesheet: every design token + the class vocabulary
     transitions.css      The seven "enter" animations played when a theme swaps
   old/                   The previous home page, kept at /old, noindex
   v4/                    A separate design (Tailwind-based), its own layout, own routes
@@ -59,9 +59,9 @@ Take a request for `/articles/is-rag-dead` as the walkthrough:
 
 1. `app/layout.tsx` (root layout) always renders first: `<html>`, JSON-LD, font preconnects, `ThemeProvider` (next-themes, for the site-wide light/dark toggle — separate from the `/v2` dimension system), then `SiteFrame`.
 2. `components/SiteFrame.tsx` decides whether the route gets the legacy `Header`/`Footer` chrome. Only `/old` does; every other route (including this one) renders bare, because `app/(main)/layout.tsx` brings its own nav and footer.
-3. Because the URL has no `/old`, `/v4`, or `/atlas` prefix, Next.js resolves it inside the `(main)` route group: `app/(main)/layout.tsx` (`V2Layout`) wraps the page. This mounts `Backdrop`, `DimensionEngine`, `Nav`, the `.v2-noise` overlay, `DimensionHUD`, and `Cursor` around the page content.
+3. Because the URL has no `/old`, `/v4`, or `/atlas` prefix, Next.js resolves it inside the `(main)` route group: `app/(main)/layout.tsx` (`PrismLayout`) wraps the page. This mounts `Backdrop`, `DimensionEngine`, `Nav`, the `.prism-noise` overlay, `DimensionHUD`, and `Cursor` around the page content.
 4. `app/(main)/articles/[slug]/page.tsx` is a server component. It calls `getArticleBySlug(slug)` from `lib/articles.ts` (a `fs` read), 404s via `notFound()` if the slug doesn't exist, and renders the MDX body through `MDXRemote` with `rehype-highlight` and `rehype-slug`.
-5. Everything on the page is built from the `/v2` token + class vocabulary (`.v2-card`, `.v2-title`, etc.), so it repaints correctly no matter which of the 30 theme stylesheets is currently loaded. See `docs/architecture/design-system.md` for how that works.
+5. Everything on the page is built from the `/v2` token + class vocabulary (`.prism-card`, `.prism-title`, etc.), so it repaints correctly no matter which of the 30 theme stylesheets is currently loaded. See `docs/architecture/design-system.md` for how that works.
 
 ## Three design systems in one repo
 

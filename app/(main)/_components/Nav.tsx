@@ -7,12 +7,12 @@ import { useEffect, useRef, useState } from 'react';
 /**
  * Fixed top bar: wordmark on the left, four section links on the right.
  *
- * Built entirely from the docs/architecture/design-system.md §3 class vocabulary (.v2-mono,
- * .v2-btn-quiet, .v2-link) so every one of the 30 theme files repaints it
+ * Built entirely from the docs/architecture/design-system.md §3 class vocabulary (.prism-mono,
+ * .prism-btn-quiet, .prism-link) so every one of the 30 theme files repaints it
  * for free. Only structural concerns — fixed positioning, flex layout,
  * gaps, z-index, the scroll-driven hide/show transform — are set inline or
  * in the scoped <style> block below; every colour, border and font comes
- * from the --v2-* tokens.
+ * from the --prism-* tokens.
  *
  * Hides on scroll down, reappears on scroll up, and always stays visible
  * near the top of the page so it never fights the visitor for the first
@@ -74,43 +74,43 @@ export function Nav() {
   return (
     <>
       <style>{`
-        #v2-nav {
+        #prism-nav {
           position: fixed;
           top: 0;
           inset-inline: 0;
           z-index: 800;
           transform: translateY(0);
-          transition: transform var(--v2-dur-fast) var(--v2-ease);
-          background: color-mix(in srgb, var(--v2-bg) 78%, transparent);
+          transition: transform var(--prism-dur-fast) var(--prism-ease);
+          background: color-mix(in srgb, var(--prism-bg) 78%, transparent);
           backdrop-filter: blur(14px);
           -webkit-backdrop-filter: blur(14px);
-          border-bottom: var(--v2-border-w) solid var(--v2-line);
+          border-bottom: var(--prism-border-w) solid var(--prism-line);
         }
-        #v2-nav.v2-nav-hidden {
+        #prism-nav.prism-nav-hidden {
           transform: translateY(-100%);
         }
-        #v2-nav .v2-nav-inner {
-          max-width: var(--v2-max);
+        #prism-nav .prism-nav-inner {
+          max-width: var(--prism-max);
           margin-inline: auto;
-          padding-inline: var(--v2-gutter);
+          padding-inline: var(--prism-gutter);
           height: 64px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
         }
-        #v2-nav .v2-nav-mark {
+        #prism-nav .prism-nav-mark {
           text-decoration: none;
           white-space: nowrap;
           font-size: 1.2rem;
           font-weight: 800;
           letter-spacing: 0.01em;
-          color: var(--v2-text);
+          color: var(--prism-text);
         }
-        #v2-nav .v2-nav-mark-full {
+        #prism-nav .prism-nav-mark-full {
           display: none;
         }
-        #v2-nav .v2-nav-links {
+        #prism-nav .prism-nav-links {
           display: flex;
           align-items: center;
           gap: clamp(10px, 3vw, 28px);
@@ -118,48 +118,48 @@ export function Nav() {
           margin: 0;
           padding: 0;
         }
-        #v2-nav .v2-nav-link {
+        #prism-nav .prism-nav-link {
           font-size: 0.88rem;
           white-space: nowrap;
         }
-        #v2-nav .v2-nav-link-active {
-          color: var(--v2-accent);
-          border-color: var(--v2-accent);
+        #prism-nav .prism-nav-link-active {
+          color: var(--prism-accent);
+          border-color: var(--prism-accent);
         }
         @media (min-width: 640px) {
-          #v2-nav .v2-nav-mark-short { display: none; }
-          #v2-nav .v2-nav-mark-full { display: inline; }
+          #prism-nav .prism-nav-mark-short { display: none; }
+          #prism-nav .prism-nav-mark-full { display: inline; }
         }
         @media (max-width: 400px) {
-          #v2-nav .v2-nav-inner { height: 56px; }
-          #v2-nav .v2-nav-links { gap: 8px; }
-          #v2-nav .v2-nav-link { font-size: 0.76rem; padding-inline: 0.1em; }
-          #v2-nav .v2-nav-mark { font-size: 1.05rem; }
+          #prism-nav .prism-nav-inner { height: 56px; }
+          #prism-nav .prism-nav-links { gap: 8px; }
+          #prism-nav .prism-nav-link { font-size: 0.76rem; padding-inline: 0.1em; }
+          #prism-nav .prism-nav-mark { font-size: 1.05rem; }
         }
         @media (prefers-reduced-motion: reduce) {
-          #v2-nav { transition: none; transform: none !important; }
+          #prism-nav { transition: none; transform: none !important; }
         }
       `}</style>
-      <nav id="v2-nav" aria-label="Primary navigation" className={hidden ? 'v2-nav-hidden' : ''}>
-        <div className="v2-nav-inner">
+      <nav id="prism-nav" aria-label="Primary navigation" className={hidden ? 'prism-nav-hidden' : ''}>
+        <div className="prism-nav-inner">
           <Link
             href="/"
-            className="v2-nav-mark v2-mono"
+            className="prism-nav-mark prism-mono"
             aria-label="Sushant Gundla — home"
             aria-current={pathname === '/' ? 'page' : undefined}
           >
-            <span className="v2-nav-mark-short">SG</span>
-            <span className="v2-nav-mark-full">Sushant Gundla</span>
+            <span className="prism-nav-mark-short">SG</span>
+            <span className="prism-nav-mark-full">Sushant Gundla</span>
           </Link>
 
-          <ul className="v2-nav-links">
+          <ul className="prism-nav-links">
             {NAV_LINKS.map(({ href, label }) => {
               const active = isActive(pathname, href);
               return (
                 <li key={href}>
                   <Link
                     href={href}
-                    className={`v2-btn-quiet v2-nav-link${active ? ' v2-nav-link-active' : ''}`}
+                    className={`prism-btn-quiet prism-nav-link${active ? ' prism-nav-link-active' : ''}`}
                     aria-current={active ? 'page' : undefined}
                   >
                     {label}

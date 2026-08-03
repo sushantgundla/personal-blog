@@ -8,9 +8,9 @@ project — read the referenced commit for the full reasoning.
 ## Zero Tailwind inside `app/(main)`
 
 **Decision:** no Tailwind utility classes anywhere under `app/(main)/` (the redesign route
-group). All styling is hand-written CSS in `app/(main)/v2.css` (base) or
-`public/v2/themes/*.css` (themes). The only exception is the root div using
-`className="v2-root"`.
+group). All styling is hand-written CSS in `app/(main)/prism.css` (base) or
+`public/prism/themes/*.css` (themes). The only exception is the root div using
+`className="prism-root"`.
 
 **Why:** Tailwind utilities carry higher specificity than the theme files. A `flex` or `mt-4`
 class would beat a theme's `!important` overrides, breaking the "swap one stylesheet, repaint
@@ -21,11 +21,11 @@ Tailwind class — it looks fine in the default theme and wrong in every other o
 
 ## The layout is fully fluid, not fixed-width
 
-**Decision:** `--v2-max: 100%` (see `app/(main)/v2.css:112`), not a fixed pixel cap like the
+**Decision:** `--prism-max: 100%` (see `app/(main)/prism.css:112`), not a fixed pixel cap like the
 original `1180px` value documented early in the contract.
 
 **Why:** a fixed pixel max-width left bare page background down both sides on wide displays.
-Line length for readability is capped separately, per text block, via a `--v2-measure` token —
+Line length for readability is capped separately, per text block, via a `--prism-measure` token —
 that is a typography concern, not a page-layout one, and the two should not be conflated.
 
 **If you break it:** wide viewports (1440px+) show dead space at the edges that reads as a
@@ -47,17 +47,17 @@ page and re-renders from scratch on the client.
 rotation logic (`44407ad`) was deliberately written to avoid. Symptom: a page that flashes or
 re-layouts right after load, or fails a hydration check in the console.
 
-## `.v2-root button { color: inherit }` outranks `.v2-btn`
+## `.prism-root button { color: inherit }` outranks `.prism-btn`
 
-**Decision:** button color rules for `.v2-btn`, `.v2-btn-ghost`, `.v2-link` and `.v2-btn-quiet`
-are re-asserted at `.v2-root .v2-btn` specificity (see `app/(main)/v2.css:190-199`), not left to
+**Decision:** button color rules for `.prism-btn`, `.prism-btn-ghost`, `.prism-link` and `.prism-btn-quiet`
+are re-asserted at `.prism-root .prism-btn` specificity (see `app/(main)/prism.css:190-199`), not left to
 the single-class selector alone.
 
-**Why:** the base reset's `.v2-root button { color: inherit }` rule has specificity (0,1,1),
-which outranks a plain `.v2-btn { color: ... }` rule at (0,1,0). Left alone, any control
+**Why:** the base reset's `.prism-root button { color: inherit }` rule has specificity (0,1,1),
+which outranks a plain `.prism-btn { color: ... }` rule at (0,1,0). Left alone, any control
 rendered as a `<button>` inherits the page's text colour instead of its own — which makes the
-primary button accent-on-accent, i.e. invisible, in any theme where `--v2-text` equals
-`--v2-accent`.
+primary button accent-on-accent, i.e. invisible, in any theme where `--prism-text` equals
+`--prism-accent`.
 
 **If you break it:** the primary button vanishes in specific themes only, not all of them,
 which makes it easy to miss in a quick check of the default theme.
@@ -65,15 +65,15 @@ which makes it easy to miss in a quick check of the default theme.
 ## Everything is built from the shared class vocabulary, or themes cannot restyle it
 
 **Decision:** every element must be built from the fixed ~30-class vocabulary in
-`app/(main)/v2.css` (`.v2-card`, `.v2-btn`, `.v2-eyebrow`, etc — full list in
+`app/(main)/prism.css` (`.prism-card`, `.prism-btn`, `.prism-eyebrow`, etc — full list in
 [`docs/architecture/design-system.md`](../architecture/design-system.md)). No bespoke classes
 for one-off page elements.
 
 **Why:** theme files only target the shared vocabulary. A bespoke class gets none of a theme's
 per-theme treatment.
 
-**If you break it:** `/radar` did exactly this — its entries used `.v2-radar-entry` instead of
-`.v2-card`, so it was the one page with no per-theme card styling at all (no slanted texture,
+**If you break it:** `/radar` did exactly this — its entries used `.prism-radar-entry` instead of
+`.prism-card`, so it was the one page with no per-theme card styling at all (no slanted texture,
 no notch, no offset shadow, depending on the theme). Fixed in `fc91778`.
 
 ## Copy belongs to the owner

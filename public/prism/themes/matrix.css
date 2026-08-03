@@ -1,0 +1,108 @@
+/* Matrix — pure black, cascading phosphor green, cold and blocky */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  --prism-bg: #000000;
+  --prism-bg-2: #000000;
+  --prism-surface: #000000;
+  --prism-surface-2: #050805;
+  --prism-surface-3: #0a0f0a;
+  --prism-text: #00ff41;
+  --prism-muted: rgba(0,255,65,0.62);
+  --prism-faint: rgba(0,255,65,0.55);
+  --prism-line: rgba(0,255,65,0.4);
+  --prism-line-2: rgba(0,255,65,0.75);
+  --prism-accent: #00ff41;
+  --prism-accent-2: #00cc33;
+  --prism-accent-3: #00ff41;
+  --prism-accent-soft: rgba(0,255,65,0.08);
+  --prism-on-accent: #000000;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 0px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: 0 0 24px rgba(0,255,65,0.35);
+  --prism-glow: 0 0 12px rgba(0,255,65,0.6);
+
+  --prism-font-display: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-head: 'Share Tech Mono', ui-monospace, monospace;
+  --prism-font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: 0em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.2em;
+
+  --prism-backdrop: rain;
+  --prism-cursor: block;
+  --prism-enter: pixelate;
+}
+
+body { background: #000000 !important; }
+.prism-band { background: #030503 !important; border-top: 1px solid rgba(0,255,65,0.15) !important; border-bottom: 1px solid rgba(0,255,65,0.15) !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { opacity: 0.04 !important; mix-blend-mode: screen !important; }
+
+.prism-title,
+.prism-eyebrow { text-shadow: 0 0 6px rgba(0,255,65,0.6) !important; }
+
+.prism-card,
+.prism-panel {
+  background: #000000 !important;
+  border: 1px solid var(--prism-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.prism-card-lift:hover {
+  border-color: var(--prism-accent) !important;
+  box-shadow: var(--prism-glow) !important;
+}
+
+.prism-chip {
+  background: #000000 !important;
+  border: 1px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  font-family: var(--prism-font-mono) !important;
+}
+.prism-chip::before { content: '> ' !important; }
+.prism-chip-on {
+  background: var(--prism-accent) !important;
+  color: #000000 !important;
+  border-color: var(--prism-accent) !important;
+}
+
+.prism-btn {
+  background: #000000 !important;
+  color: var(--prism-accent) !important;
+  border: 1px solid var(--prism-accent) !important;
+  border-radius: 0 !important;
+  text-transform: uppercase !important;
+  box-shadow: var(--prism-glow) !important;
+}
+.prism-btn:hover { background: var(--prism-accent) !important; color: #000000 !important; }
+.prism-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  color: var(--prism-text) !important;
+}
+
+.prism-badge {
+  background: #000000 !important;
+  border: 1px solid var(--prism-accent) !important;
+  border-radius: 0 !important;
+}
+
+.prism-frame {
+  border: 1px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: grayscale(1) contrast(1.1) sepia(1) hue-rotate(70deg) saturate(3) !important;
+}
+
+.prism-rule { background: var(--prism-line-2) !important; height: 1px !important; }
+.prism-kbd { border-radius: 0 !important; border: 1px solid var(--prism-line-2) !important; box-shadow: none !important; }

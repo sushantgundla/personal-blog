@@ -3,7 +3,7 @@ import { DimensionHUD } from './_components/DimensionHUD'
 import Backdrop from './_components/Backdrop'
 import Cursor from './_components/Cursor'
 import { Nav } from './_components/Nav'
-import './v2.css'
+import './prism.css'
 
 // No metadata export here on purpose. This is now the live home page, so it
 // inherits the real site metadata from app/layout.tsx — title, canonical,
@@ -15,18 +15,18 @@ import './v2.css'
  *
  * Layering, bottom to top:
  *   Backdrop  — z 0, the theme-reactive canvas
- *   #v2-shell — z 2, ALL page content. Transitions distort this element only.
- *   .v2-noise — z 3, grain overlay
- *   DimensionHUD — z 9000, deliberately outside #v2-shell so the switcher
+ *   #prism-shell — z 2, ALL page content. Transitions distort this element only.
+ *   .prism-noise — z 3, grain overlay
+ *   DimensionHUD — z 9000, deliberately outside #prism-shell so the switcher
  *                  stays perfectly still while the page tears itself apart.
  *   Cursor    — z 9999
  *
  * The fonts here are the union of every face the base stylesheet references.
  * Individual themes @import their own extra faces from their own CSS file.
  */
-export default function V2Layout({ children }: { children: React.ReactNode }) {
+export default function PrismLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="v2-root">
+    <div className="prism-root">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link
@@ -37,14 +37,14 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
       <Backdrop />
       <DimensionEngine />
 
-      {/* Nav sits outside #v2-shell so it stays put while the shell tears
+      {/* Nav sits outside #prism-shell so it stays put while the shell tears
           itself apart during a dimension transition — same reason the
           dimension button is outside it. */}
       <Nav />
 
-      <div id="v2-shell">{children}</div>
+      <div id="prism-shell">{children}</div>
 
-      <div className="v2-noise" aria-hidden="true" />
+      <div className="prism-noise" aria-hidden="true" />
       <DimensionHUD />
       <Cursor />
     </div>

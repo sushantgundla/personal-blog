@@ -1,0 +1,70 @@
+/* Phosphor Terminal — black + P1 green CRT, monospace everything, scanlines */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --prism-bg: #000000;
+  --prism-bg-2: #030603;
+  --prism-surface: #061006;
+  --prism-surface-2: #0a1a0a;
+  --prism-surface-3: #0f240f;
+  --prism-text: #33ff66;
+  --prism-muted: rgba(51,255,102,0.62);
+  --prism-faint: rgba(51,255,102,0.32);
+  --prism-line: rgba(51,255,102,0.35);
+  --prism-line-2: rgba(51,255,102,0.6);
+  --prism-accent: #33ff66;
+  --prism-accent-2: #baffce;
+  --prism-accent-3: #ffb703;
+  --prism-accent-soft: rgba(51,255,102,0.12);
+  --prism-on-accent: #000000;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 0px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: 0 0 24px rgba(51,255,102,0.25);
+  --prism-glow: 0 0 12px rgba(51,255,102,0.55);
+
+  --prism-font-display: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-head: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.1em;
+
+  --prism-backdrop: scan;
+  --prism-cursor: block;
+  --prism-enter: scanline;
+}
+
+body, .prism-body, .prism-title, .prism-head, .prism-sub {
+  text-shadow: 0 0 6px rgba(51,255,102,0.35) !important;
+}
+
+.prism-card, .prism-panel, .prism-frame, .prism-badge, .prism-chip, .prism-kbd {
+  border: 1px solid var(--prism-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--prism-surface) !important;
+}
+.prism-card-lift:hover {
+  box-shadow: var(--prism-glow) !important;
+  border-color: var(--prism-accent) !important;
+}
+
+.prism-btn, .prism-btn-ghost, .prism-icon-btn {
+  border-radius: 0 !important;
+  border: 1px solid var(--prism-accent) !important;
+}
+.prism-btn:hover, .prism-btn-ghost:hover { box-shadow: var(--prism-glow) !important; }
+
+.prism-eyebrow::before { content: '> ' !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { display: none !important; }
+
+.prism-rule { background: var(--prism-line-2) !important; }

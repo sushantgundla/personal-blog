@@ -1,0 +1,107 @@
+/* Latent Space — deep indigo/violet, points coloured like an embedding plot. */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&display=swap');
+
+:root {
+  --prism-bg: #0b0a1f;
+  --prism-bg-2: #130f2c;
+  --prism-surface: rgba(139, 92, 246, 0.08);
+  --prism-surface-2: rgba(139, 92, 246, 0.15);
+  --prism-surface-3: rgba(6, 182, 212, 0.08);
+  --prism-text: #f1edff;
+  --prism-muted: rgba(241, 237, 255, 0.64);
+  --prism-faint: rgba(241, 237, 255, 0.34);
+  --prism-line: rgba(139, 92, 246, 0.3);
+  --prism-line-2: rgba(139, 92, 246, 0.55);
+  --prism-accent: #8b5cf6;
+  --prism-accent-2: #06b6d4;
+  --prism-accent-3: #f472b6;
+  --prism-accent-soft: rgba(139, 92, 246, 0.14);
+  --prism-on-accent: #0b0a1f;
+
+  --prism-radius: 18px;
+  --prism-radius-sm: 10px;
+  --prism-radius-lg: 28px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 8px 24px -14px rgba(4, 0, 20, 0.7);
+  --prism-shadow-lg: 0 30px 70px -20px rgba(139, 92, 246, 0.35);
+  --prism-glow: 0 0 32px rgba(139, 92, 246, 0.4);
+
+  --prism-font-display: 'Sora', 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'Sora', system-ui, sans-serif;
+  --prism-font-body: 'Inter', system-ui, sans-serif;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.03em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.1em;
+
+  --prism-backdrop: embed;
+  --prism-cursor: ring;
+  --prism-enter: iris;
+}
+
+body {
+  background:
+    radial-gradient(50% 40% at 15% 10%, rgba(139, 92, 246, 0.28), transparent 60%),
+    radial-gradient(45% 35% at 88% 18%, rgba(6, 182, 212, 0.22), transparent 60%),
+    radial-gradient(55% 45% at 55% 95%, rgba(244, 114, 182, 0.16), transparent 65%),
+    var(--prism-bg) !important;
+}
+
+.prism-band { background: rgba(139, 92, 246, 0.05) !important; }
+
+.prism-noise { display: none !important; }
+.prism-orb { opacity: 0.85 !important; filter: blur(90px) saturate(150%) !important; }
+
+.prism-card, .prism-panel {
+  background: linear-gradient(155deg, rgba(139, 92, 246, 0.14), rgba(6, 182, 212, 0.05)) !important;
+  border: 1px solid var(--prism-line) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+.prism-card-lift:hover {
+  border-color: var(--prism-accent-2) !important;
+  box-shadow: var(--prism-shadow-lg), var(--prism-glow) !important;
+  background: linear-gradient(155deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.08)) !important;
+}
+
+.prism-btn {
+  background: linear-gradient(135deg, var(--prism-accent), var(--prism-accent-2)) !important;
+  color: var(--prism-on-accent) !important;
+  border: none !important;
+  box-shadow: var(--prism-glow) !important;
+}
+.prism-btn-ghost {
+  background: rgba(139, 92, 246, 0.08) !important;
+  border: 1px solid var(--prism-line-2) !important;
+}
+
+.prism-chip {
+  background: rgba(6, 182, 212, 0.1) !important;
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  color: var(--prism-accent-2) !important;
+}
+.prism-chip-on {
+  background: linear-gradient(135deg, var(--prism-accent), var(--prism-accent-3)) !important;
+  color: var(--prism-on-accent) !important;
+  border-color: transparent !important;
+}
+
+.prism-frame {
+  border: 1px solid var(--prism-line-2) !important;
+  box-shadow: var(--prism-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.prism-badge {
+  background: rgba(6, 182, 212, 0.1) !important;
+  border: 1px solid var(--prism-accent-2) !important;
+  color: var(--prism-accent-2) !important;
+}
+
+.prism-rule { background: var(--prism-line-2) !important; }
+
+.prism-dot {
+  background: var(--prism-accent-3) !important;
+  box-shadow: 0 0 8px rgba(244, 114, 182, 0.7) !important;
+}

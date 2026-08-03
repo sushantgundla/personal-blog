@@ -1,0 +1,121 @@
+/* ASCII — two colours, monospace everything, box-drawing corners and brackets. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --prism-bg: #0d0d0d;
+  --prism-bg-2: #0d0d0d;
+  --prism-surface: #0d0d0d;
+  --prism-surface-2: #0d0d0d;
+  --prism-surface-3: #0d0d0d;
+  --prism-text: #e8e6df;
+  --prism-muted: rgba(232, 230, 223, 0.6);
+  --prism-faint: rgba(232, 230, 223, 0.55);
+  --prism-line: rgba(232, 230, 223, 0.4);
+  --prism-line-2: rgba(232, 230, 223, 0.78);
+  --prism-accent: #e8e6df;
+  --prism-accent-2: #e8e6df;
+  --prism-accent-3: #e8e6df;
+  --prism-accent-soft: rgba(232, 230, 223, 0.08);
+  --prism-on-accent: #0d0d0d;
+
+  --prism-radius: 0px;
+  --prism-radius-sm: 0px;
+  --prism-radius-lg: 0px;
+  --prism-radius-pill: 0px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: none;
+  --prism-glow: none;
+
+  --prism-font-display: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-font-head: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-font-body: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: 0em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.1em;
+
+  --prism-backdrop: none;
+  --prism-cursor: block;
+  --prism-enter: pixelate;
+}
+
+body { background: var(--prism-bg) !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { display: none !important; }
+
+.prism-card, .prism-panel {
+  background: var(--prism-bg) !important;
+  box-shadow: none !important;
+  position: relative !important;
+}
+.prism-card::before, .prism-panel::before,
+.prism-card::after, .prism-panel::after {
+  content: "+" !important;
+  position: absolute !important;
+  color: var(--prism-text) !important;
+  font-family: var(--prism-font-mono) !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+  background: var(--prism-bg) !important;
+  padding: 0 2px !important;
+}
+.prism-card::before, .prism-panel::before { top: -9px !important; left: -8px !important; }
+.prism-card::after, .prism-panel::after { bottom: -9px !important; right: -8px !important; }
+.prism-card-lift:hover {
+  background: var(--prism-bg) !important;
+  border-color: var(--prism-line-2) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.prism-eyebrow::before { content: "## " !important; }
+
+.prism-btn {
+  background: transparent !important;
+  color: var(--prism-text) !important;
+  box-shadow: none !important;
+}
+.prism-btn::before { content: "[ " !important; }
+.prism-btn::after { content: " ]" !important; }
+.prism-btn:hover {
+  background: var(--prism-text) !important;
+  color: var(--prism-bg) !important;
+  transform: none !important;
+}
+
+.prism-btn-ghost {
+  background: transparent !important;
+  border: 1px dashed var(--prism-line-2) !important;
+  color: var(--prism-muted) !important;
+}
+.prism-btn-ghost:hover { transform: none !important; }
+
+.prism-chip {
+  background: transparent !important;
+  border: none !important;
+  color: var(--prism-text) !important;
+}
+.prism-chip::before { content: "[" !important; margin-right: 2px !important; opacity: 0.65 !important; }
+.prism-chip::after { content: "]" !important; margin-left: 2px !important; opacity: 0.65 !important; }
+.prism-chip-on { background: var(--prism-text) !important; color: var(--prism-bg) !important; }
+.prism-chip-on::before, .prism-chip-on::after { color: var(--prism-bg) !important; opacity: 1 !important; }
+
+.prism-icon-btn { background: transparent !important; }
+.prism-icon-btn:hover { background: var(--prism-accent-soft) !important; transform: none !important; }
+
+.prism-frame { box-shadow: none !important; }
+
+.prism-badge { background: transparent !important; }
+.prism-badge::before { content: "[" !important; margin-right: 2px !important; }
+.prism-badge::after { content: "]" !important; margin-left: 2px !important; }
+
+.prism-kbd { background: transparent !important; }
+
+.prism-rule {
+  background: repeating-linear-gradient(90deg, var(--prism-line-2) 0 6px, transparent 6px 10px) !important;
+}
+
+.prism-dot { background: var(--prism-text) !important; }

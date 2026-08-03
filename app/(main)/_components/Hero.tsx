@@ -111,20 +111,20 @@ export function Hero(): JSX.Element {
   const marqueeItems = siteConfig.skills.map((s) => s.label)
 
   return (
-    <section id="v2-hero" className="v2-section" style={{ position: 'relative', overflow: 'hidden' }}>
-      <div className="v2-orb" style={{ top: '-12%', left: '-10%' }} />
-      <div className="v2-orb" style={{ bottom: '-18%', right: '-8%' }} />
+    <section id="prism-hero" className="prism-section" style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className="prism-orb" style={{ top: '-12%', left: '-10%' }} />
+      <div className="prism-orb" style={{ bottom: '-18%', right: '-8%' }} />
 
-      <div className="v2-wrap">
+      <div className="prism-wrap">
         <div
-          className="v2-row"
+          className="prism-row"
           style={{ alignItems: 'center', gap: 'clamp(32px, 6vw, 80px)' }}
         >
           {/* --- Left: identity --- */}
-          <div className="v2-col" style={{ flex: '1.3 1 520px', minWidth: '300px', gap: '1.5rem' }}>
-            <div className="v2-eyebrow" suppressHydrationWarning>
+          <div className="prism-col" style={{ flex: '1.3 1 520px', minWidth: '300px', gap: '1.5rem' }}>
+            <div className="prism-eyebrow" suppressHydrationWarning>
               <span
-                className="v2-dot"
+                className="prism-dot"
                 style={{
                   transform: pulse ? 'scale(1.6)' : 'scale(1)',
                   opacity: pulse ? 0.5 : 1,
@@ -134,7 +134,7 @@ export function Hero(): JSX.Element {
               {statusText}
             </div>
 
-            <h1 className="v2-title v2-title-xl" aria-label={siteConfig.name}>
+            <h1 className="prism-title prism-title-xl" aria-label={siteConfig.name}>
               {nameWords.map((word, wi) => (
                 <span key={wi} aria-hidden="true" style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
                   {word.split('').map((char, ci) => {
@@ -147,7 +147,7 @@ export function Hero(): JSX.Element {
                           display: 'inline-block',
                           opacity: revealed ? 1 : 0,
                           transform: revealed ? 'translateY(0)' : 'translateY(0.6em)',
-                          transition: 'opacity 0.7s var(--v2-ease), transform 0.7s var(--v2-ease)',
+                          transition: 'opacity 0.7s var(--prism-ease), transform 0.7s var(--prism-ease)',
                           transitionDelay: `${i * 35}ms`,
                         }}
                       >
@@ -163,24 +163,24 @@ export function Hero(): JSX.Element {
             {/* No employer or product named here. The home page is his own
                 capability page; where he works belongs on /about, which still
                 names PDI Technologies in full. */}
-            <p className="v2-body v2-muted" style={{ maxWidth: '46ch' }}>
+            <p className="prism-body prism-muted" style={{ maxWidth: '46ch' }}>
               Technical Lead for AI/ML — I architect the agent frameworks, RAG pipelines and LLM
               gateways behind AI products running in production.
             </p>
 
-            <div className="v2-row" style={{ gap: '1rem' }}>
+            <div className="prism-row" style={{ gap: '1rem' }}>
               <a
                 ref={btnRef}
-                href="#v2-work"
-                className="v2-btn"
+                href="#prism-work"
+                className="prism-btn"
                 style={{
                   transform: `translate(${btnOffset.x}px, ${btnOffset.y}px)`,
-                  transition: 'transform 0.15s ease-out, background 0.2s var(--v2-ease), box-shadow 0.5s var(--v2-ease)',
+                  transition: 'transform 0.15s ease-out, background 0.2s var(--prism-ease), box-shadow 0.5s var(--prism-ease)',
                 }}
               >
                 View my work
               </a>
-              <a href="#v2-contact" className="v2-btn-ghost">
+              <a href="#prism-contact" className="prism-btn-ghost">
                 Get in touch
               </a>
             </div>
@@ -189,7 +189,7 @@ export function Hero(): JSX.Element {
           {/* --- Right: portrait --- */}
           <div style={{ flex: '1 1 340px', minWidth: '240px', display: 'flex', justifyContent: 'center' }}>
             <div
-              className="v2-frame"
+              className="prism-frame"
               onPointerMove={handleFrameMove}
               onPointerLeave={handleFrameLeave}
               style={{
@@ -198,7 +198,7 @@ export function Hero(): JSX.Element {
                 maxWidth: '380px',
                 aspectRatio: '4 / 5',
                 transform: `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-                transition: 'transform 0.4s var(--v2-ease)',
+                transition: 'transform 0.4s var(--prism-ease)',
               }}
             >
               <Image
@@ -214,15 +214,15 @@ export function Hero(): JSX.Element {
         </div>
 
         <div
-          className="v2-mono v2-muted"
+          className="prism-mono prism-muted"
           style={{ textAlign: 'center', marginTop: 'clamp(48px, 8vh, 96px)', fontSize: '0.8rem', letterSpacing: '0.08em' }}
         >
           scroll ↓
         </div>
       </div>
 
-      <div className="v2-marquee" style={{ marginTop: 'clamp(32px, 6vh, 64px)' }}>
-        <div className="v2-marquee-track">
+      <div className="prism-marquee" style={{ marginTop: 'clamp(32px, 6vh, 64px)' }}>
+        <div className="prism-marquee-track">
           <span>
             {marqueeItems.map((label, i) => (
               <span key={i}>{label}</span>

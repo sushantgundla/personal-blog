@@ -1,8 +1,8 @@
 /**
- * app/v2/_lib/dimensions.ts
+ * app/(main)/_lib/dimensions.ts
  *
- * Framework-free engine for the v2 "DIMENSION" theme system. The entire visual
- * identity of /v2 is one <link id="v2-theme-link"> tag; this module owns
+ * Framework-free engine for the Prism theme system. The entire visual
+ * identity of /v2 is one <link id="prism-theme-link"> tag; this module owns
  * picking which stylesheet is loaded, persisting the choice, driving the
  * "drift" auto-cycle, and choreographing the cinematic transition that hides
  * the repaint when the stylesheet swaps.
@@ -52,8 +52,8 @@ export const DIMENSIONS: Dimension[] = [
   { slug: 'chalk', name: 'Chalk', blurb: 'Dark green slate, chalk dust, lecture hall hush.', tier: 'more' },
 ];
 
-const STORAGE_KEY = 'v2-dimension';
-const LINK_ID = 'v2-theme-link';
+const STORAGE_KEY = 'prism-dimension';
+const LINK_ID = 'prism-theme-link';
 const DEFAULT_SLUG = 'ember';
 
 // Keep in sync with the class vocabulary driven by transitions.css.
@@ -69,7 +69,7 @@ const SWAP_AT_RATIO = 0.45;
 
 let currentSlug: string = DEFAULT_SLUG;
 const subscribers = new Set<(slug: string) => void>();
-// Caches the resolved --v2-enter value per theme so repeat visits to a
+// Caches the resolved --prism-enter value per theme so repeat visits to a
 // dimension don't re-fetch its stylesheet just to read one custom property.
 const enterTypeCache = new Map<string, Promise<TransitionType>>();
 
@@ -78,7 +78,7 @@ function isValidSlug(slug: string): boolean {
 }
 
 function themeHref(slug: string): string {
-  return `/v2/themes/${slug}.css`;
+  return `/prism/themes/${slug}.css`;
 }
 
 function ensureLinkEl(): HTMLLinkElement {
@@ -109,7 +109,7 @@ function applyImmediate(slug: string): void {
   ensureLinkEl().href = themeHref(slug);
   currentSlug = slug;
   persist(slug);
-  document.documentElement.dataset.v2Dimension = slug;
+  document.documentElement.dataset.prismDimension = slug;
   notify();
 }
 
@@ -130,7 +130,7 @@ async function fetchEnterType(slug: string): Promise<TransitionType> {
     if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     if (!res.ok) return DEFAULT_TRANSITION;
     const text = await res.text();
-    const match = text.match(/--v2-enter:\s*([a-z]+)/i);
+    const match = text.match(/--prism-enter:\s*([a-z]+)/i);
     const value = match?.[1]?.toLowerCase();
     if (value && (TRANSITION_TYPES as readonly string[]).includes(value)) {
       return value as TransitionType;
@@ -151,7 +151,7 @@ function resolveEnterType(slug: string): Promise<TransitionType> {
 
 /** Reduced-motion path: instant swap masked by a 200ms opacity crossfade only. */
 function applyReduced(slug: string): void {
-  const shell = document.getElementById('v2-shell');
+  const shell = document.getElementById('prism-shell');
   if (!shell) {
     applyImmediate(slug);
     return;
@@ -166,11 +166,11 @@ function applyReduced(slug: string): void {
   }, 200);
 }
 
-/** Full choreography: play the target theme's --v2-enter effect, swap the
+/** Full choreography: play the target theme's --prism-enter effect, swap the
  * link at its peak-distortion beat, then let the animation settle. */
 async function performTransition(slug: string): Promise<void> {
   const enterType = await resolveEnterType(slug);
-  const fxClass = `v2-fx-${enterType}`;
+  const fxClass = `prism-fx-${enterType}`;
   document.body.classList.add(fxClass);
   const swapDelay = Math.round(TRANSITION_DURATION_MS * SWAP_AT_RATIO);
   window.setTimeout(() => {

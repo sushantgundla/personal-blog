@@ -38,11 +38,11 @@ export function RadarHome({ latestPost, picks }: RadarHomeProps): JSX.Element | 
   const recentPicks = picks.slice(0, 4)
 
   return (
-    <section id="v2-radar" className="v2-section">
-      <div className="v2-wrap">
+    <section id="prism-radar" className="prism-section">
+      <div className="prism-wrap">
         <Reveal>
-          <span className="v2-eyebrow"><span className="v2-dot" />AI Radar</span>
-          <h2 className="v2-head">Signals from the frontier</h2>
+          <span className="prism-eyebrow"><span className="prism-dot" />AI Radar</span>
+          <h2 className="prism-head">Signals from the frontier</h2>
         </Reveal>
 
         {latestPost && (
@@ -52,23 +52,23 @@ export function RadarHome({ latestPost, picks }: RadarHomeProps): JSX.Element | 
                 href="/radar"
                 style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
               >
-                <div className="v2-card v2-card-lift v2-col" style={{ gap: '0.75rem' }}>
-                  <div className="v2-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="v2-eyebrow">Latest pulse</span>
-                    <span className="v2-mono v2-muted" style={{ fontSize: '0.82em' }}>
+                <div className="prism-card prism-card-lift prism-col" style={{ gap: '0.75rem' }}>
+                  <div className="prism-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="prism-eyebrow">Latest pulse</span>
+                    <span className="prism-mono prism-muted" style={{ fontSize: '0.82em' }}>
                       {formatDate(latestPost.date)}
                     </span>
                   </div>
-                  <span className="v2-sub" style={{ fontWeight: 700 }}>
+                  <span className="prism-sub" style={{ fontWeight: 700 }}>
                     {latestPost.title}
                   </span>
-                  <p className="v2-body v2-muted" style={{ margin: 0 }}>
+                  <p className="prism-body prism-muted" style={{ margin: 0 }}>
                     {excerptOf(latestPost.content)}
                   </p>
                   {latestPost.tags.length > 0 && (
-                    <div className="v2-row" style={{ gap: '8px' }}>
+                    <div className="prism-row" style={{ gap: '8px' }}>
                       {latestPost.tags.map((tag) => (
-                        <span key={tag} className="v2-chip">
+                        <span key={tag} className="prism-chip">
                           {tag}
                         </span>
                       ))}
@@ -83,11 +83,11 @@ export function RadarHome({ latestPost, picks }: RadarHomeProps): JSX.Element | 
         {recentPicks.length > 0 && (
           <div style={{ marginTop: latestPost ? 'clamp(16px, 2.4vw, 24px)' : '24px' }}>
             <Reveal delay={100}>
-              <span className="v2-eyebrow" style={{ display: 'block', marginBottom: '12px' }}>
+              <span className="prism-eyebrow" style={{ display: 'block', marginBottom: '12px' }}>
                 Recent picks
               </span>
             </Reveal>
-            <div className="v2-grid" data-cols="4">
+            <div className="prism-grid" data-cols="4">
               {recentPicks.map((pick, i) => (
                 <Reveal key={pick.slug} delay={120 + i * 60}>
                   <a
@@ -97,14 +97,14 @@ export function RadarHome({ latestPost, picks }: RadarHomeProps): JSX.Element | 
                     style={{ display: 'block', height: '100%', textDecoration: 'none', color: 'inherit' }}
                   >
                     <div
-                      className="v2-card v2-card-lift v2-col"
+                      className="prism-card prism-card-lift prism-col"
                       style={{ height: '100%', gap: '0.5rem', paddingBlock: 'clamp(14px, 2vw, 18px)' }}
                     >
-                      <span className="v2-badge">{pick.type}</span>
-                      <span className="v2-body" style={{ fontWeight: 600, fontSize: '0.92em' }}>
+                      <span className="prism-badge">{pick.type}</span>
+                      <span className="prism-body" style={{ fontWeight: 600, fontSize: '0.92em' }}>
                         {pick.title}
                       </span>
-                      <span className="v2-mono v2-muted" style={{ fontSize: '0.78em' }}>
+                      <span className="prism-mono prism-muted" style={{ fontSize: '0.78em' }}>
                         {hostnameOf(pick.url)}
                       </span>
                     </div>
@@ -117,7 +117,7 @@ export function RadarHome({ latestPost, picks }: RadarHomeProps): JSX.Element | 
 
         <Reveal delay={200}>
           <div style={{ marginTop: '24px' }}>
-            <Link href="/radar" className="v2-btn-ghost">
+            <Link href="/radar" className="prism-btn-ghost">
               All signals →
             </Link>
           </div>

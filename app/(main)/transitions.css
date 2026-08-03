@@ -1,29 +1,29 @@
 /**
- * app/v2/transitions.css
+ * app/(main)/transitions.css
  *
  * Seven named "enter" transitions for the DIMENSION theme engine. Each is a
  * class toggled on <body> by dimensions.ts for one ~640ms choreography, and
- * acts on #v2-shell (the element wrapping all page content) unless noted.
+ * acts on #prism-shell (the element wrapping all page content) unless noted.
  *
- * The 640ms duration is shared with app/v2/_lib/dimensions.ts, which swaps
+ * The 640ms duration is shared with app/(main)/_lib/dimensions.ts, which swaps
  * the theme <link> at 45% (~288ms) — every keyframe set below places its
  * peak distortion frame around that same mark so the stylesheet swap is
  * fully hidden inside the noise.
  *
- * The #v2-tear filter is defined as an inline <svg> in DimensionEngine.tsx.
+ * The #prism-tear filter is defined as an inline <svg> in DimensionEngine.tsx.
  */
 
 /* ---------------------------------------------------------------------- */
 /* will-change: only while a transition is actually playing               */
 /* ---------------------------------------------------------------------- */
 
-body.v2-fx-tear #v2-shell,
-body.v2-fx-shatter #v2-shell,
-body.v2-fx-scanline #v2-shell,
-body.v2-fx-pixelate #v2-shell,
-body.v2-fx-iris #v2-shell,
-body.v2-fx-rewind #v2-shell,
-body.v2-fx-collapse #v2-shell {
+body.prism-fx-tear #prism-shell,
+body.prism-fx-shatter #prism-shell,
+body.prism-fx-scanline #prism-shell,
+body.prism-fx-pixelate #prism-shell,
+body.prism-fx-iris #prism-shell,
+body.prism-fx-rewind #prism-shell,
+body.prism-fx-collapse #prism-shell {
   will-change: transform, filter;
 }
 
@@ -31,69 +31,69 @@ body.v2-fx-collapse #v2-shell {
 /* tear — SVG feTurbulence/feDisplacementMap distortion + hard shake       */
 /* ---------------------------------------------------------------------- */
 
-@keyframes v2-tear-shake {
-  0% { transform: translate(0, 0) skew(0deg, 0deg); filter: url(#v2-tear); }
-  12% { transform: translate(-6px, 3px) skew(-2deg, 1deg); filter: url(#v2-tear); }
-  24% { transform: translate(5px, -4px) skew(2deg, -1deg); filter: url(#v2-tear) blur(0.5px); }
-  36% { transform: translate(-8px, 2px) skew(-3deg, 0.5deg); filter: url(#v2-tear) blur(0.5px); }
-  48% { transform: translate(6px, -3px) skew(2deg, -1.5deg); filter: url(#v2-tear) blur(1.5px); }
-  60% { transform: translate(-4px, 2px) skew(-1deg, 0.5deg); filter: url(#v2-tear) blur(0.5px); }
-  75% { transform: translate(2px, -1px) skew(0.5deg, 0deg); filter: url(#v2-tear); }
+@keyframes prism-tear-shake {
+  0% { transform: translate(0, 0) skew(0deg, 0deg); filter: url(#prism-tear); }
+  12% { transform: translate(-6px, 3px) skew(-2deg, 1deg); filter: url(#prism-tear); }
+  24% { transform: translate(5px, -4px) skew(2deg, -1deg); filter: url(#prism-tear) blur(0.5px); }
+  36% { transform: translate(-8px, 2px) skew(-3deg, 0.5deg); filter: url(#prism-tear) blur(0.5px); }
+  48% { transform: translate(6px, -3px) skew(2deg, -1.5deg); filter: url(#prism-tear) blur(1.5px); }
+  60% { transform: translate(-4px, 2px) skew(-1deg, 0.5deg); filter: url(#prism-tear) blur(0.5px); }
+  75% { transform: translate(2px, -1px) skew(0.5deg, 0deg); filter: url(#prism-tear); }
   100% { transform: translate(0, 0) skew(0deg, 0deg); filter: none; }
 }
 
-body.v2-fx-tear #v2-shell {
-  animation: v2-tear-shake 640ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+body.prism-fx-tear #prism-shell {
+  animation: prism-tear-shake 640ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
 /* ---------------------------------------------------------------------- */
 /* shatter — every section flies off in its own direction, snaps back     */
 /* ---------------------------------------------------------------------- */
 
-@keyframes v2-shatter-hero {
+@keyframes prism-shatter-hero {
   0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
   45% { transform: translate(-160px, -70px) rotate(-16deg); opacity: 0.1; }
   55% { transform: translate(-160px, -70px) rotate(-16deg); opacity: 0.1; }
 }
 
-@keyframes v2-shatter-signal {
+@keyframes prism-shatter-signal {
   0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
   45% { transform: translate(150px, -50px) rotate(12deg); opacity: 0.1; }
   55% { transform: translate(150px, -50px) rotate(12deg); opacity: 0.1; }
 }
 
-@keyframes v2-shatter-work {
+@keyframes prism-shatter-work {
   0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
   45% { transform: translate(-130px, 90px) rotate(-10deg); opacity: 0.1; }
   55% { transform: translate(-130px, 90px) rotate(-10deg); opacity: 0.1; }
 }
 
-@keyframes v2-shatter-writing {
+@keyframes prism-shatter-writing {
   0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
   45% { transform: translate(170px, 60px) rotate(14deg); opacity: 0.1; }
   55% { transform: translate(170px, 60px) rotate(14deg); opacity: 0.1; }
 }
 
-@keyframes v2-shatter-contact {
+@keyframes prism-shatter-contact {
   0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
   45% { transform: translate(0, 130px) rotate(-8deg); opacity: 0.1; }
   55% { transform: translate(0, 130px) rotate(-8deg); opacity: 0.1; }
 }
 
-body.v2-fx-shatter #v2-hero {
-  animation: v2-shatter-hero 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+body.prism-fx-shatter #prism-hero {
+  animation: prism-shatter-hero 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-body.v2-fx-shatter #v2-signal {
-  animation: v2-shatter-signal 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+body.prism-fx-shatter #prism-signal {
+  animation: prism-shatter-signal 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-body.v2-fx-shatter #v2-radar {
-  animation: v2-shatter-work 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+body.prism-fx-shatter #prism-radar {
+  animation: prism-shatter-work 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-body.v2-fx-shatter #v2-writing {
-  animation: v2-shatter-writing 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+body.prism-fx-shatter #prism-writing {
+  animation: prism-shatter-writing 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-body.v2-fx-shatter #v2-contact {
-  animation: v2-shatter-contact 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+body.prism-fx-shatter #prism-contact {
+  animation: prism-shatter-contact 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -101,7 +101,7 @@ body.v2-fx-shatter #v2-contact {
 /* and offset in horizontal slices                                        */
 /* ---------------------------------------------------------------------- */
 
-@keyframes v2-scanline-content {
+@keyframes prism-scanline-content {
   0%, 100% { filter: saturate(1); transform: translateX(0); }
   20% { filter: saturate(0.3); transform: translateX(-6px); }
   35% { filter: saturate(0.15); transform: translateX(5px); }
@@ -110,19 +110,19 @@ body.v2-fx-shatter #v2-contact {
   80% { filter: saturate(0.6); transform: translateX(-1px); }
 }
 
-@keyframes v2-scanline-sweep {
+@keyframes prism-scanline-sweep {
   0% { top: -14%; opacity: 0; }
   10% { opacity: 1; }
   90% { opacity: 1; }
   100% { top: 100%; opacity: 0; }
 }
 
-body.v2-fx-scanline #v2-shell {
+body.prism-fx-scanline #prism-shell {
   position: relative;
-  animation: v2-scanline-content 640ms steps(8, end) both;
+  animation: prism-scanline-content 640ms steps(8, end) both;
 }
 
-body.v2-fx-scanline #v2-shell::after {
+body.prism-fx-scanline #prism-shell::after {
   content: '';
   position: absolute;
   left: 0;
@@ -136,22 +136,22 @@ body.v2-fx-scanline #v2-shell::after {
   );
   mix-blend-mode: screen;
   pointer-events: none;
-  animation: v2-scanline-sweep 640ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation: prism-scanline-sweep 640ms cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 
 /* ---------------------------------------------------------------------- */
 /* pixelate — stepped blur + contrast punch, blocky mosaic feel            */
 /* ---------------------------------------------------------------------- */
 
-@keyframes v2-pixelate-blur {
+@keyframes prism-pixelate-blur {
   0%, 100% { filter: blur(0) contrast(1); }
   35% { filter: blur(12px) contrast(1.5); }
   48% { filter: blur(20px) contrast(1.9); }
   70% { filter: blur(8px) contrast(1.3); }
 }
 
-body.v2-fx-pixelate #v2-shell {
-  animation: v2-pixelate-blur 640ms steps(6, end) both;
+body.prism-fx-pixelate #prism-shell {
+  animation: prism-pixelate-blur 640ms steps(6, end) both;
   image-rendering: pixelated;
 }
 
@@ -159,20 +159,20 @@ body.v2-fx-pixelate #v2-shell {
 /* iris — circular clip-path collapses to a point at centre and expands   */
 /* ---------------------------------------------------------------------- */
 
-@keyframes v2-iris {
+@keyframes prism-iris {
   0%, 100% { clip-path: circle(150% at 50% 50%); }
   48% { clip-path: circle(0% at 50% 50%); }
 }
 
-body.v2-fx-iris #v2-shell {
-  animation: v2-iris 640ms cubic-bezier(0.83, 0, 0.17, 1) both;
+body.prism-fx-iris #prism-shell {
+  animation: prism-iris 640ms cubic-bezier(0.83, 0, 0.17, 1) both;
 }
 
 /* ---------------------------------------------------------------------- */
 /* rewind — VHS: RGB channel split, tracking jitter, rolling distortion bar */
 /* ---------------------------------------------------------------------- */
 
-@keyframes v2-rewind {
+@keyframes prism-rewind {
   0%, 100% { transform: translateX(0); filter: none; }
   15% {
     transform: translateX(-3px);
@@ -196,17 +196,17 @@ body.v2-fx-iris #v2-shell {
   }
 }
 
-@keyframes v2-rewind-bar {
+@keyframes prism-rewind-bar {
   0% { top: -10%; }
   100% { top: 110%; }
 }
 
-body.v2-fx-rewind #v2-shell {
+body.prism-fx-rewind #prism-shell {
   position: relative;
-  animation: v2-rewind 640ms steps(12, end) both;
+  animation: prism-rewind 640ms steps(12, end) both;
 }
 
-body.v2-fx-rewind #v2-shell::before {
+body.prism-fx-rewind #prism-shell::before {
   content: '';
   position: absolute;
   left: 0;
@@ -215,14 +215,14 @@ body.v2-fx-rewind #v2-shell::before {
   background: rgba(255, 255, 255, 0.15);
   mix-blend-mode: overlay;
   pointer-events: none;
-  animation: v2-rewind-bar 640ms linear both;
+  animation: prism-rewind-bar 640ms linear both;
 }
 
 /* ---------------------------------------------------------------------- */
 /* collapse — scale to a vanishing point, spring back oversized, settle   */
 /* ---------------------------------------------------------------------- */
 
-@keyframes v2-collapse {
+@keyframes prism-collapse {
   0%, 100% { transform: scale(1); filter: blur(0); opacity: 1; }
   35% { transform: scale(0.2); filter: blur(6px); opacity: 0.4; }
   48% { transform: scale(0.05); filter: blur(10px); opacity: 0.1; }
@@ -230,9 +230,9 @@ body.v2-fx-rewind #v2-shell::before {
   82% { transform: scale(0.95); filter: blur(0); opacity: 1; }
 }
 
-body.v2-fx-collapse #v2-shell {
+body.prism-fx-collapse #prism-shell {
   transform-origin: 50% 50%;
-  animation: v2-collapse 640ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  animation: prism-collapse 640ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -240,19 +240,19 @@ body.v2-fx-collapse #v2-shell {
 /* ---------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  body.v2-fx-tear #v2-shell,
-  body.v2-fx-shatter #v2-hero,
-  body.v2-fx-shatter #v2-signal,
-  body.v2-fx-shatter #v2-radar,
-  body.v2-fx-shatter #v2-writing,
-  body.v2-fx-shatter #v2-contact,
-  body.v2-fx-scanline #v2-shell,
-  body.v2-fx-scanline #v2-shell::after,
-  body.v2-fx-pixelate #v2-shell,
-  body.v2-fx-iris #v2-shell,
-  body.v2-fx-rewind #v2-shell,
-  body.v2-fx-rewind #v2-shell::before,
-  body.v2-fx-collapse #v2-shell {
+  body.prism-fx-tear #prism-shell,
+  body.prism-fx-shatter #prism-hero,
+  body.prism-fx-shatter #prism-signal,
+  body.prism-fx-shatter #prism-radar,
+  body.prism-fx-shatter #prism-writing,
+  body.prism-fx-shatter #prism-contact,
+  body.prism-fx-scanline #prism-shell,
+  body.prism-fx-scanline #prism-shell::after,
+  body.prism-fx-pixelate #prism-shell,
+  body.prism-fx-iris #prism-shell,
+  body.prism-fx-rewind #prism-shell,
+  body.prism-fx-rewind #prism-shell::before,
+  body.prism-fx-collapse #prism-shell {
     animation: none !important;
     transform: none !important;
     filter: none !important;

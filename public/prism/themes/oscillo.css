@@ -1,0 +1,123 @@
+/* Oscilloscope — true black, phosphor-cyan strokes, drawn by an electron beam. */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --prism-bg: #000000;
+  --prism-bg-2: #020403;
+  --prism-surface: rgba(0, 255, 213, 0.03);
+  --prism-surface-2: rgba(0, 255, 213, 0.07);
+  --prism-surface-3: rgba(0, 255, 213, 0.02);
+  --prism-text: #eafffa;
+  --prism-muted: rgba(234, 255, 250, 0.6);
+  --prism-faint: rgba(234, 255, 250, 0.32);
+  --prism-line: rgba(0, 255, 213, 0.45);
+  --prism-line-2: rgba(0, 255, 213, 0.8);
+  --prism-accent: #00ffd5;
+  --prism-accent-2: #00b89f;
+  --prism-accent-3: #7fffe0;
+  --prism-accent-soft: rgba(0, 255, 213, 0.08);
+  --prism-on-accent: #001410;
+
+  --prism-radius: 3px;
+  --prism-radius-sm: 2px;
+  --prism-radius-lg: 6px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: none;
+  --prism-shadow-lg: 0 0 30px rgba(0, 255, 213, 0.22);
+  --prism-glow: 0 0 18px rgba(0, 255, 213, 0.4);
+
+  --prism-font-display: 'Space Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-head: 'Space Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: 0.01em;
+  --prism-head-transform: uppercase;
+  --prism-head-tracking: 0.22em;
+
+  --prism-backdrop: waves;
+  --prism-cursor: crosshair;
+  --prism-enter: scanline;
+}
+
+body { background: var(--prism-bg) !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise {
+  display: block !important;
+  opacity: 0.12 !important;
+  background: repeating-linear-gradient(0deg, rgba(0, 255, 213, 0.5) 0px, rgba(0, 255, 213, 0.5) 1px, transparent 1px, transparent 3px) !important;
+  mix-blend-mode: screen !important;
+}
+
+.prism-card, .prism-panel {
+  background: var(--prism-surface) !important;
+  border: 1px solid var(--prism-line) !important;
+  box-shadow: none !important;
+}
+.prism-card-lift:hover {
+  border-color: var(--prism-accent) !important;
+  box-shadow: var(--prism-glow) !important;
+  background: var(--prism-surface-2) !important;
+}
+
+.prism-title, .prism-head, .prism-num {
+  color: var(--prism-accent) !important;
+  text-shadow: 0 0 8px rgba(0, 255, 213, 0.55), 0 0 2px rgba(0, 255, 213, 0.85) !important;
+}
+.prism-eyebrow { text-shadow: 0 0 6px rgba(0, 255, 213, 0.5) !important; }
+
+.prism-btn {
+  background: transparent !important;
+  border: 1px solid var(--prism-accent) !important;
+  color: var(--prism-accent) !important;
+  text-shadow: 0 0 6px rgba(0, 255, 213, 0.6) !important;
+  box-shadow: none !important;
+}
+.prism-btn:hover {
+  background: var(--prism-accent-soft) !important;
+  box-shadow: var(--prism-glow) !important;
+}
+
+.prism-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--prism-line) !important;
+  color: var(--prism-muted) !important;
+}
+
+.prism-chip {
+  background: transparent !important;
+  border: 1px solid var(--prism-line) !important;
+  color: var(--prism-text) !important;
+}
+.prism-chip-on {
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
+  border-color: var(--prism-accent) !important;
+}
+
+.prism-frame {
+  background: transparent !important;
+  border: 1px solid var(--prism-accent) !important;
+  box-shadow: var(--prism-glow) !important;
+}
+
+.prism-badge {
+  background: transparent !important;
+  border: 1px solid var(--prism-accent) !important;
+  color: var(--prism-accent) !important;
+  text-shadow: 0 0 5px rgba(0, 255, 213, 0.5) !important;
+}
+
+.prism-kbd {
+  background: transparent !important;
+  border: 1px solid var(--prism-line-2) !important;
+}
+
+.prism-rule { background: var(--prism-line) !important; }
+
+.prism-dot {
+  background: var(--prism-accent) !important;
+  box-shadow: 0 0 6px rgba(0, 255, 213, 0.8) !important;
+}

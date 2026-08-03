@@ -1,0 +1,108 @@
+/* Solarized Dark — the classic editor palette, mono UI, six-hue accent cycle */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --prism-bg: #002b36;
+  --prism-bg-2: #012732;
+  --prism-surface: #073642;
+  --prism-surface-2: #0a4152;
+  --prism-surface-3: #0d4a5c;
+  --prism-text: #93a1a1;
+  --prism-muted: rgba(180,193,193,0.85);
+  --prism-faint: rgba(147,161,161,0.42);
+  --prism-line: rgba(131,148,150,0.22);
+  --prism-line-2: rgba(131,148,150,0.4);
+  --prism-accent: #2aa198;
+  --prism-accent-2: #268bd2;
+  --prism-accent-3: #b58900;
+  --prism-accent-soft: rgba(42,161,152,0.12);
+  --prism-on-accent: #002b36;
+
+  --prism-radius: 6px;
+  --prism-radius-sm: 3px;
+  --prism-radius-lg: 10px;
+  --prism-radius-pill: 999px;
+  --prism-border-w: 1px;
+  --prism-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --prism-shadow-lg: 0 16px 40px -16px rgba(0,0,0,0.55);
+  --prism-glow: 0 0 0 3px rgba(42,161,152,0.2);
+
+  --prism-font-display: 'IBM Plex Sans', 'Space Grotesk', system-ui, sans-serif;
+  --prism-font-head: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --prism-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --prism-display-weight: 700;
+  --prism-display-tracking: -0.01em;
+  --prism-head-transform: none;
+  --prism-head-tracking: 0.06em;
+
+  --prism-backdrop: none;
+  --prism-cursor: block;
+  --prism-enter: scanline;
+}
+
+body { background: var(--prism-bg) !important; }
+.prism-band { background: var(--prism-bg-2) !important; }
+
+.prism-orb { display: none !important; }
+.prism-noise { opacity: 0.02 !important; }
+
+.prism-eyebrow { color: #e29c7f !important; } /* raw #cb4b16 reads 3.26:1 on bg — lightened to match the chip-cycle tint */
+.prism-title { color: #eee8d5 !important; }
+
+.prism-card,
+.prism-panel {
+  background: var(--prism-surface) !important;
+  border: 1px solid var(--prism-line) !important;
+  border-radius: var(--prism-radius) !important;
+  box-shadow: var(--prism-shadow) !important;
+}
+.prism-card-lift:hover {
+  border-color: var(--prism-accent) !important;
+  box-shadow: var(--prism-glow), var(--prism-shadow-lg) !important;
+}
+
+.prism-chip {
+  background: var(--prism-surface-2) !important;
+  border: 1px solid var(--prism-line-2) !important;
+  font-family: var(--prism-font-mono) !important;
+}
+/* Text uses a lightened tint of each hue — the raw Solarized accent colours
+   read below 4.5:1 on --prism-surface-2; the border keeps the true hue at low alpha. */
+.prism-chip:nth-of-type(6n+1) { border-color: rgba(181,137,0,0.5) !important; color: #d6be73 !important; }
+.prism-chip:nth-of-type(6n+2) { border-color: rgba(203,75,22,0.5) !important; color: #e29c7f !important; }
+.prism-chip:nth-of-type(6n+3) { border-color: rgba(220,50,47,0.5) !important; color: #ec8e8d !important; }
+.prism-chip:nth-of-type(6n+4) { border-color: rgba(211,54,130,0.5) !important; color: #e790ba !important; }
+.prism-chip:nth-of-type(6n+5) { border-color: rgba(38,139,210,0.5) !important; color: #88bfe6 !important; }
+.prism-chip:nth-of-type(6n+0) { border-color: rgba(42,161,152,0.5) !important; color: #8acbc6 !important; }
+.prism-chip-on {
+  background: var(--prism-accent) !important;
+  color: var(--prism-on-accent) !important;
+  border-color: var(--prism-accent) !important;
+}
+
+.prism-btn {
+  background: #2076b3 !important; /* darkened accent-2 — raw hue is too light for cream text at 4.5:1 */
+  color: #fdf6e3 !important;
+  border: none !important;
+  border-radius: var(--prism-radius-sm) !important;
+}
+.prism-btn:hover { background: var(--prism-accent) !important; color: var(--prism-on-accent) !important; }
+.prism-btn-ghost {
+  background: transparent !important;
+  border: 1px solid var(--prism-line-2) !important;
+  border-radius: var(--prism-radius-sm) !important;
+}
+
+.prism-badge {
+  background: var(--prism-surface-2) !important;
+  border: 1px solid var(--prism-accent-3) !important;
+  color: #e0b000 !important; /* brightened mustard — the raw hue is too dark on surface-2 */
+  border-radius: var(--prism-radius-sm) !important;
+}
+
+.prism-mono { color: var(--prism-muted) !important; } /* base default (--prism-faint) reads 1.99:1 on surface — bumped to muted for 4.5:1+ */
+
+.prism-frame { border: 1px solid var(--prism-line-2) !important; border-radius: var(--prism-radius-sm) !important; }
+.prism-rule { background: var(--prism-line) !important; }
+.prism-kbd { background: var(--prism-surface-2) !important; border: 1px solid var(--prism-line-2) !important; border-radius: 3px !important; color: #eee8d5 !important; }

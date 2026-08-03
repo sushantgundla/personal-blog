@@ -52,7 +52,7 @@ export default function DimensionEngine() {
    * `brutalist` or `clay`, showing up as a grey band down the right edge (and
    * along the bottom whenever a horizontal scrollbar appears).
    *
-   * Deriving the scheme from the resolved --v2-bg means every dimension gets
+   * Deriving the scheme from the resolved --prism-bg means every dimension gets
    * the right scrollbar automatically, including any added later — no per-theme
    * token to forget.
    */
@@ -61,13 +61,13 @@ export default function DimensionEngine() {
     const previous = root.style.colorScheme;
 
     const sync = () => {
-      const bg = getComputedStyle(root).getPropertyValue('--v2-bg');
+      const bg = getComputedStyle(root).getPropertyValue('--prism-bg');
       const l = luminance(bg);
       if (l === null) return;
       root.style.colorScheme = l > 0.4 ? 'light' : 'dark';
     };
 
-    // Timing matters here. --v2-bg only holds the new value once the theme
+    // Timing matters here. --prism-bg only holds the new value once the theme
     // stylesheet has actually parsed, which is *after* both the attribute
     // change and the next animation frame. Reading too early leaves a light
     // dimension stuck on colorScheme:dark — a dark grey scrollbar down the
@@ -84,11 +84,11 @@ export default function DimensionEngine() {
 
     scheduleSync();
 
-    const link = document.getElementById('v2-theme-link');
+    const link = document.getElementById('prism-theme-link');
     link?.addEventListener('load', sync);
 
     const observer = new MutationObserver(scheduleSync);
-    observer.observe(root, { attributes: true, attributeFilter: ['data-v2-dimension'] });
+    observer.observe(root, { attributes: true, attributeFilter: ['data-prism-dimension'] });
 
     return () => {
       timers.forEach(clearTimeout);
@@ -105,17 +105,17 @@ export default function DimensionEngine() {
       style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}
     >
       <defs>
-        <filter id="v2-tear" x="-20%" y="-20%" width="140%" height="140%">
+        <filter id="prism-tear" x="-20%" y="-20%" width="140%" height="140%">
           <feTurbulence
             type="fractalNoise"
             baseFrequency="0.02 0.7"
             numOctaves={1}
             seed={7}
-            result="v2-tear-noise"
+            result="prism-tear-noise"
           />
           <feDisplacementMap
             in="SourceGraphic"
-            in2="v2-tear-noise"
+            in2="prism-tear-noise"
             scale={40}
             xChannelSelector="R"
             yChannelSelector="G"
