@@ -118,6 +118,8 @@
      drop shadow rather than straight down, so hover travel needs both axes. */
   --prism-lift-x: 0px;
   --prism-lift-sm-x: 0px;
+  /* One full pass of the skills ticker. Higher is slower. */
+  --prism-marquee-dur: 58s;
 
   /* --- Material ---------------------------------------------------------
      The page grain used to be one hardcoded SVG turbulence that themes could
@@ -848,7 +850,10 @@ html:has(.prism-root) body {
   align-items: center;
   width: max-content;
   gap: clamp(24px, 4vw, 64px);
-  animation: prism-marquee-scroll 28s linear infinite;
+  /* Was 28s, which moved fast enough that the skill names were hard to read
+     without stopping to track them. The ticker is ambient — it should be
+     legible in passing, not something the eye has to chase. */
+  animation: prism-marquee-scroll var(--prism-marquee-dur) linear infinite;
 }
 
 .prism-marquee:hover .prism-marquee-track {
