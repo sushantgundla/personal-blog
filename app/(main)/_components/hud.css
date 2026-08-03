@@ -81,12 +81,23 @@
   min-width: 0;
 }
 
+/* The label rotates through 15 phrases. min-width holds the pill steady so it
+   does not resize as the text changes length, and the fade keyframe (keyed off
+   labelIndex in the component) makes each swap a soft cross-fade rather than a
+   hard cut. */
 .v2-hud-btn-label {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.2;
   white-space: nowrap;
+  min-width: 10.4em;
+  animation: v2-hud-label-in 0.45s var(--v2-ease, ease) both;
+}
+
+@keyframes v2-hud-label-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* Current dimension name — present but quiet. Reserves its line even when
@@ -460,6 +471,7 @@
     transition: none;
   }
   .v2-hud-btn-spark { animation: none; }
+  .v2-hud-btn-label { animation: none; }
   .v2-hud-gallery-overlay,
   .v2-hud-gallery-panel {
     animation: none;

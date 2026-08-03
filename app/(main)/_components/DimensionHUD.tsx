@@ -69,6 +69,34 @@ function getThemeColors(slug: string): Promise<ThemeColors | null> {
   return promise;
 }
 
+/**
+ * Labels the shuffle button rotates through. Three words or fewer each, so the
+ * pill never changes width enough to jump around.
+ *
+ * Index 0 renders on the server and on the first client paint; rotation only
+ * starts after mount. Picking a random one during render would make the server
+ * and client HTML disagree and React would throw away the whole page.
+ */
+const BUTTON_LABELS = [
+  'Design curious?',
+  'Dimension shift',
+  'Shift reality',
+  'Another dimension',
+  'Try another look',
+  'Change the mood',
+  'Repaint this page',
+  'Reskin this page',
+  'Break the theme',
+  'Shuffle the design',
+  'Roll the dice',
+  'Thirty looks',
+  'Pick a reality',
+  'Feeling adventurous?',
+  'Nothing is fixed',
+] as const
+
+const LABEL_ROTATE_MS = 4200
+
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -78,6 +106,7 @@ function DimensionHUD() {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [labelIndex, setLabelIndex] = useState(0);
 
   const galleryTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -93,12 +122,27 @@ function DimensionHUD() {
     });
   }, []);
 
+  // Rotate the label on a slow timer once mounted. Paused while the gallery is
+  // open so the text is not shifting under someone reading it, and disabled
+  // entirely under prefers-reduced-motion.
+  useEffect(() => {
+    if (!mounted || galleryOpen) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const id = window.setInterval(
+      () => setLabelIndex((i) => (i + 1) % BUTTON_LABELS.length),
+      LABEL_ROTATE_MS
+    );
+    return () => window.clearInterval(id);
+  }, [mounted, galleryOpen]);
+
   const onShuffle = useCallback(() => {
     // The transition runs ~640ms. Swallow clicks during it so an impatient
     // double-tap cannot stack two swaps and strand the page mid-distortion.
     setBusy((isBusy) => {
       if (isBusy) return isBusy;
       shuffleDimension();
+      // Advance the label too, so every press reads as a fresh invitation.
+      setLabelIndex((i) => (i + 1) % BUTTON_LABELS.length);
       window.setTimeout(() => setBusy(false), 700);
       return true;
     });
@@ -124,7 +168,9 @@ function DimensionHUD() {
       >
         <span className="v2-hud-btn-spark" aria-hidden="true" />
         <span className="v2-hud-btn-text">
-          <span className="v2-hud-btn-label">Design curious?</span>
+          <span className="v2-hud-btn-label" key={labelIndex}>
+            {BUTTON_LABELS[labelIndex]}
+          </span>
           {/* Reserve the line before mount so the button never changes size. */}
           <span className="v2-hud-btn-sub">{mounted && name ? name : ' '}</span>
         </span>
