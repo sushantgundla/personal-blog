@@ -46,6 +46,7 @@ export function DossierExtras({ dossier }: DossierExtrasProps) {
         <CapitalClock
           capital={wikidata?.capital ?? null}
           coordinates={wikidata?.capitalCoordinates ?? null}
+          iso3={dossier.iso3}
         />
         <Neighbours neighbours={wikidata?.neighbours} countryName={dossier.name} />
         {/* wikidata is null when dossier.wikidata itself failed (SourceResult
