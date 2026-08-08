@@ -261,8 +261,18 @@ async function runPool(countries, concurrency) {
  * query neighbours with, and dossier.ts's getDossier already degrades
  * `undefined` neighbours to "unavailable" the same way as any other missing
  * field, so this is a normal, non-blocking skip, not a failure.
+ *
+ * `force`, same flag `buildCountries` already reads, means the same thing
+ * here: don't skip a country just because it already has this field. Added
+ * 2026-08-08 so a fix to fetchNeighbours' own filtering (see
+ * lib/atlas/land-borders.ts) can be re-applied to all 250 already-populated
+ * files, not just backfilled into the ones missing it. Still one small
+ * P47 query per country, not a full re-fetch — `node --experimental-loader=
+ * ./scripts/atlas/ts-resolve-hook.mjs scripts/atlas/build-snapshot.mjs
+ * --patch-neighbours --force` takes minutes, not the hour-plus a real
+ * `buildCountries({ force: true })` run does.
  */
-async function patchNeighbours() {
+async function patchNeighbours(force = false) {
   const captured = await loadAlreadyCaptured();
   let patched = 0;
   let skipped = 0;
@@ -283,7 +293,7 @@ async function patchNeighbours() {
       skipped++;
       continue;
     }
-    if (Array.isArray(data.wikidata.data.neighbours)) {
+    if (!force && Array.isArray(data.wikidata.data.neighbours)) {
       skipped++;
       continue;
     }
@@ -351,7 +361,7 @@ async function main() {
   await writeStatus("running", { startedAt: new Date().toISOString() });
 
   if (patchNeighboursOnly) {
-    await patchNeighbours();
+    await patchNeighbours(force);
     await writeStatus("done");
     console.log("\nDone.");
     return;

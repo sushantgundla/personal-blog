@@ -15,6 +15,7 @@
 import type { NeighbourCountry, Person, SourceResult, UnescoSite, WikidataFacts } from "../types";
 import { commonsThumbnail, toHttps } from "../format";
 import { ISO_COUNTRIES } from "../iso-countries";
+import { isLandBorder } from "../land-borders";
 
 const ENDPOINT = "https://query.wikidata.org/sparql";
 const USER_AGENT =
@@ -246,9 +247,18 @@ export async function fetchUnescoSites(
  * the committed snapshot and stayed slow (measured 52s cold on Peru) even
  * after every other panel got fast. Neighbours.tsx now just renders
  * `dossier.wikidata.data.neighbours`.
+ *
+ * Fixed 2026-08-08: P47 ("shares border with") also carries maritime and
+ * disputed relationships — Wikidata returned "Maldives shares a border with
+ * United Kingdom" and "India shares a border with Indonesia" here, both
+ * live on production. No qualifier on the statement distinguishes land from
+ * maritime (checked directly against query.wikidata.org), so this filters
+ * against lib/atlas/land-borders.ts, a small standalone land-border table —
+ * see its file header for where that data comes from.
  */
 export async function fetchNeighbours(qid: string): Promise<SourceResult<NeighbourCountry[]>> {
   try {
+    const sourceIso3 = QID_TO_COUNTRY.get(qid)?.iso3 ?? null;
     const rows = await sparql(neighboursQuery(qid));
     const seen = new Set<string>();
     const neighbours: NeighbourCountry[] = [];
@@ -258,6 +268,8 @@ export async function fetchNeighbours(qid: string): Promise<SourceResult<Neighbo
       // A neighbour not in our ~250-row ISO table (disputed territories,
       // historical entities) is skipped rather than linked to a 404.
       if (!country || seen.has(country.iso3)) continue;
+      // Not a genuine land border — see the "Fixed 2026-08-08" note above.
+      if (!sourceIso3 || !isLandBorder(sourceIso3, country.iso3)) continue;
       seen.add(country.iso3);
       neighbours.push({
         iso3: country.iso3,
