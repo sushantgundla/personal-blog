@@ -68,6 +68,7 @@ import { fileURLToPath } from "node:url";
 import { ISO_COUNTRIES } from "../../lib/atlas/iso-countries.ts";
 import { INDICATORS_BY_CODE } from "../../lib/atlas/indicators.ts";
 import { toHttps, commonsThumbnail } from "../../lib/atlas/format.ts";
+import { isLandBorder } from "../../lib/atlas/land-borders.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
@@ -327,10 +328,22 @@ function buildIndicators(rankingsFile) {
 function buildCountry(iso, snapshot) {
   const facts = snapshot?.wikidata?.ok ? snapshot.wikidata.data : null;
 
+  // Wikidata's P47 ("shares border with") also carries maritime and stale
+  // relationships (Maldives-United Kingdom, Kiribati-United States,
+  // Sudan-Uganda before South Sudan split off) — see land-borders.ts's file
+  // header for why no qualifier on the statement lets Wikidata sort that out
+  // itself. isLandBorder is the filter: a neighbour survives into the deck
+  // only if it's also a real land border.
   const neighbours = Array.isArray(facts?.neighbours)
     ? facts.neighbours
         .map((n) => n?.iso3)
-        .filter((iso3) => typeof iso3 === "string" && BY_ISO3.has(iso3) && iso3 !== iso.iso3)
+        .filter(
+          (iso3) =>
+            typeof iso3 === "string" &&
+            BY_ISO3.has(iso3) &&
+            iso3 !== iso.iso3 &&
+            isLandBorder(iso.iso3, iso3)
+        )
     : [];
 
   return {
