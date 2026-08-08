@@ -24,122 +24,18 @@
 // file read, no network — with the live batched fetch (computeAllRankings)
 // kept as the rare fallback for a process that starts before any snapshot
 // exists. See lib/atlas/dossier.ts for the same pattern applied per-country.
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+//
+// Split 2026-08-08: buildRanking, computeAllRankings and the plain file read
+// now live in lib/atlas/rankings-data.ts, which has no `next/cache` import —
+// see that file's doc comment for why (scripts/atlas/build-snapshot.mjs
+// cannot resolve `next/cache` under plain Node). This file re-exports both so
+// nothing that already imports them from here needs to change, and keeps the
+// unstable_cache wrapping — the part that genuinely needs Next — on top.
 import { unstable_cache } from "next/cache";
-import { BY_ISO3 } from "./iso-countries";
-import { ALL_INDICATOR_CODES, INDICATORS_BY_CODE } from "./indicators";
-import { fetchIndicatorsAllCountries } from "./sources/worldbank";
+import { buildRanking, computeAllRankings, loadRankingsSnapshotFile } from "./rankings-data";
 import type { IndicatorValue, Ranking, RankingRow, SourceResult } from "./types";
 
-const SNAPSHOT_PATH = path.join(
-  process.cwd(),
-  "content",
-  "atlas",
-  "snapshot",
-  "rankings.json"
-);
-
-type CountryValueRow = { iso3: string; name: string; value: number | null; year: string | null };
-
-/**
- * Below this many countries with a value, a rank or a world average is not
- * honest — "#7 of 9" reads like a world ranking but is really a ranking
- * across whichever handful of countries happened to report. Under this
- * threshold, buildRanking still returns the value/year for a country that
- * has one, but leaves rank, percentile and worldAverage null so nothing
- * claims a comparison it can't support.
- */
-const MIN_RANKABLE_COUNTRIES = 30;
-
-/**
- * Exported so scripts/atlas/build-snapshot.mjs can build the exact same
- * Ranking shape this module would compute live, from the batched
- * `fetchIndicatorsAllCountries` response — one implementation, reused by
- * both the snapshot-build script and the (rare) live fallback below. Node
- * imports this .ts file directly (native TypeScript type-stripping), so
- * there is no separate plain-JS copy of this logic to keep in sync.
- */
-export function buildRanking(
-  code: string,
-  rows: readonly CountryValueRow[],
-  lastUpdated: string | null
-): Ranking {
-  const def = INDICATORS_BY_CODE[code];
-  const higherIsBetter = def?.higherIsBetter ?? null;
-
-  // World Bank's `country/all` rows mix in ~78 non-country aggregates
-  // ("World", "IDA & IBRD total", "Middle income", ...). The API's own
-  // `region.value !== "Aggregates"` marker isn't reliably present on the
-  // batched indicator endpoints these rows come from, so instead we only
-  // keep rows whose ISO3 is a real country in BY_ISO3 — aggregates use
-  // non-country codes (WLD, IBT, LMY, MIC, IBD, EAP, ...) that never
-  // appear there, so this drops them by construction.
-  const realCountryRows = rows.filter((r) => BY_ISO3[r.iso3] !== undefined);
-
-  const withValue = realCountryRows.filter(
-    (r): r is CountryValueRow & { value: number } => r.value !== null
-  );
-  const withoutValue = realCountryRows.filter((r) => r.value === null);
-
-  // Below MIN_RANKABLE_COUNTRIES, neither a rank nor a world average is
-  // honest for this indicator — see MIN_RANKABLE_COUNTRIES above.
-  const rankable = withValue.length >= MIN_RANKABLE_COUNTRIES;
-
-  const worldAverage = rankable
-    ? withValue.reduce((sum, r) => sum + r.value, 0) / withValue.length
-    : null;
-
-  // Rank 1 is always "best" for the given indicator: ascending when lower
-  // is better, descending otherwise. A neutral (null) indicator still
-  // gets an ordering (descending) so a rank number exists, but the UI
-  // should not colour it as "good"/"bad".
-  const sorted = rankable
-    ? [...withValue].sort((a, b) =>
-        higherIsBetter === false ? a.value - b.value : b.value - a.value
-      )
-    : [];
-
-  const n = sorted.length;
-  const rankedRows: RankingRow[] = sorted.map((r, i) => {
-    const rank = i + 1;
-    const percentile = n > 1 ? Math.round(((n - rank) / (n - 1)) * 100) : 100;
-    return {
-      iso3: r.iso3,
-      name: BY_ISO3[r.iso3]?.name ?? r.name,
-      value: r.value,
-      year: r.year,
-      rank,
-      percentile,
-    };
-  });
-  if (!rankable) {
-    // Still surface the value/year a country has — just without a rank,
-    // percentile or the comparison bar that a rank would otherwise feed.
-    for (const r of withValue) {
-      rankedRows.push({
-        iso3: r.iso3,
-        name: BY_ISO3[r.iso3]?.name ?? r.name,
-        value: r.value,
-        year: r.year,
-        rank: null,
-        percentile: null,
-      });
-    }
-  }
-  for (const r of withoutValue) {
-    rankedRows.push({
-      iso3: r.iso3,
-      name: BY_ISO3[r.iso3]?.name ?? r.name,
-      value: null,
-      year: null,
-      rank: null,
-      percentile: null,
-    });
-  }
-
-  return { code, asOfNote: lastUpdated, worldAverage, rows: rankedRows };
-}
+export { buildRanking, computeAllRankings };
 
 /**
  * Every indicator's ranking, computed once from one shared batched
@@ -151,41 +47,6 @@ export function buildRanking(
  * processes/deploys once warm).
  */
 let allRankingsPromise: Promise<Map<string, SourceResult<Ranking>>> | null = null;
-
-/**
- * The live path: one shared batched `fetchIndicatorsAllCountries` call
- * against the World Bank, computed into a Ranking per indicator. This is
- * what scripts/atlas/build-snapshot.mjs calls to produce
- * content/atlas/snapshot/rankings.json, and what getAllRankings falls back
- * to below if that snapshot doesn't exist yet (e.g. a fresh checkout before
- * the first snapshot build has ever run).
- */
-export async function computeAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
-  const batch = await fetchIndicatorsAllCountries(ALL_INDICATOR_CODES);
-  const out = new Map<string, SourceResult<Ranking>>();
-
-  if (!batch.ok) {
-    for (const code of ALL_INDICATOR_CODES) out.set(code, batch);
-    return out;
-  }
-
-  for (const code of ALL_INDICATOR_CODES) {
-    const entry = batch.data.get(code);
-    if (!entry || entry.rows.length === 0) {
-      out.set(code, { ok: false, reason: `World Bank returned no ranking rows for ${code}` });
-      continue;
-    }
-    out.set(code, { ok: true, data: buildRanking(code, entry.rows, entry.lastUpdated) });
-  }
-
-  return out;
-}
-
-/** The JSON shape written to content/atlas/snapshot/rankings.json. */
-interface RankingsSnapshotFile {
-  capturedAt: string;
-  rankings: Record<string, SourceResult<Ranking>>;
-}
 
 let cachedSnapshotCapturedAt: string | null = null;
 
@@ -216,20 +77,10 @@ const RANKINGS_CACHE_TAG = "atlas-rankings";
  * cachedSnapshotCapturedAt, both stay in readRankingsSnapshot below, outside
  * the cached function, so they still happen on every call — including a
  * cache *hit* in a process that never ran loadRankingsSnapshotFile itself.
+ * loadRankingsSnapshotFile itself now lives in ./rankings-data (see this
+ * file's top-of-file doc comment for why) — imported above, not redefined
+ * here.
  */
-async function loadRankingsSnapshotFile(): Promise<{
-  capturedAt: string | null;
-  rankings: RankingsSnapshotFile["rankings"];
-} | null> {
-  try {
-    const raw = await readFile(SNAPSHOT_PATH, "utf-8");
-    const parsed = JSON.parse(raw) as RankingsSnapshotFile;
-    return { capturedAt: parsed.capturedAt ?? null, rankings: parsed.rankings };
-  } catch {
-    return null;
-  }
-}
-
 function getCachedRankingsSnapshotFile() {
   return unstable_cache(loadRankingsSnapshotFile, ["atlas-rankings-v1"], {
     tags: [RANKINGS_CACHE_TAG],
