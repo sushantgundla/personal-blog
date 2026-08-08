@@ -75,6 +75,9 @@ const { CLUE_ORDER, populationBand } = await import(
 const { COUNTRY_PATHS } = await import(
   pathToFileURL(path.join(repoRoot, "lib/atlas/geo/world-paths.ts")).href
 );
+const { isLandBorder } = await import(
+  pathToFileURL(path.join(repoRoot, "lib/atlas/land-borders.ts")).href
+);
 
 // ---------------------------------------------------------------- harness
 
@@ -788,6 +791,47 @@ const everyQuestion = [
     "guess-country: clues run broad to narrow, region first, capital last, every clue sourced",
     problems,
     `clue counts — 3: ${clueCounts[3] ?? 0}, 4: ${clueCounts[4] ?? 0}, 5: ${clueCounts[5] ?? 0}`
+  );
+}
+
+{
+  // Wikidata's P47 ("shares border with") also carries maritime and stale
+  // relationships — "Maldives shares a border with United Kingdom" is a real
+  // P47 fact and a false claim for a "name the neighbour" clue. This checks
+  // the printed clue text against lib/atlas/land-borders.ts directly — an
+  // independent table, not deck.countries.neighbours (the field the clue was
+  // actually built from) — so a regression in build-deck.mjs's own filter
+  // would still be caught here rather than the check quietly agreeing with
+  // whatever the generator already did.
+  const isoByName = new Map(deck.countries.map((c) => [c.name, c.iso3]));
+  const problems = [];
+  let neighbourCluesSeen = 0;
+  for (const q of all["guess-country"]) {
+    const clue = q.clues.find((c) => c.label === "Neighbour");
+    if (!clue) continue;
+    neighbourCluesSeen++;
+    const m = clue.text.match(/^Shares a border with (.+)\.$/);
+    if (!m) {
+      problems.push(`${q.id}: neighbour clue text "${clue.text}" doesn't match the expected wording`);
+      continue;
+    }
+    const neighbourIso3 = isoByName.get(m[1]);
+    if (!neighbourIso3) {
+      problems.push(`${q.id}: neighbour clue names "${m[1]}", not a country in the deck`);
+      continue;
+    }
+    const answerIso3 = q.options[q.answer]?.iso3;
+    if (!answerIso3 || !isLandBorder(answerIso3, neighbourIso3)) {
+      problems.push(
+        `${q.id}: neighbour clue claims ${answerIso3 ?? "?"} borders ${neighbourIso3} ` +
+          `(${m[1]}), which is not a real land border`
+      );
+    }
+  }
+  check(
+    "guess-country: a Neighbour clue only ever names a genuine land-border country",
+    problems,
+    `${neighbourCluesSeen} neighbour clues checked against lib/atlas/land-borders.ts`
   );
 }
 
