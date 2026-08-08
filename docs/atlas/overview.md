@@ -39,6 +39,7 @@ Full detail in [`design.md`](./design.md).
 | `/atlas/[country]` | One country's full dossier: ~150 numbers grouped into sections (Land, People, Money, Trade, Health, Learning, Work, Connected, Nature, State), plus a big flag/name "face note", a portrait of a notable person, national anthem playback, live weather and clock at the capital, trade partners drawn as arcs on a mini map, neighbouring countries, and a history timeline. |
 | `/atlas/compare/[a]-vs-[b]` | Two (or up to five) countries side by side, same sections, the higher value in each row highlighted. |
 | `/atlas/rankings/[indicator]` | One statistic, every country, ranked — e.g. every country by GDP per person, richest to poorest. |
+| `/atlas/learn` | The training floor — five games plus two non-game features (Surprise me, Country of the day), so a visitor is asked something instead of just browsing. |
 
 A UV-lamp toggle on a country page dims everything except the facts where that country is a
 world top-10 or bottom-10 — "show me only what's extraordinary about this place."
@@ -58,9 +59,14 @@ Three reasons, in the owner's own words as captured in [`design.md`](./design.md
 
 ## What it deliberately doesn't do
 
-Explicitly out of scope, per [`design.md`](./design.md) §1: quizzes and games, a 3D globe, user
-accounts, favourites or saved comparisons, and any data source that requires an API key or a
-paid plan.
+Quizzes and games were out of scope for v1 (see [`design.md`](./design.md) §1), but that changed
+— the learning section at `/atlas/learn` shipped five games (spot the forgery, higher or lower,
+guess the flag, guess the country, where in the world) plus two non-game floor features
+(a surprise-me button, and a Country of the day card). Full detail in
+[`feature-checklist.md`](./feature-checklist.md).
+
+Still out of scope: a 3D globe, user accounts, favourites or saved comparisons, and any data
+source that requires an API key or a paid plan.
 
 ## Where the numbers come from
 

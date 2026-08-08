@@ -35,6 +35,12 @@ function slugFor(isos: readonly string[]): string {
 
 const SLOT_LETTERS = ['a', 'b', 'c', 'd', 'e'] as const
 
+/** Stable id for a result's `role="option"` element, so the input's
+ * `aria-activedescendant` can point at it. */
+function slotOptionId(iso3: string | undefined): string | undefined {
+  return iso3 ? `compare-slot-search-option-${iso3}` : undefined
+}
+
 /**
  * The picker and the comparison are one screen now, not two (owner's
  * request, verbatim: "there should not be a separate screen where you have
@@ -248,15 +254,19 @@ function SlotSearch({ countries, taken, onSelect, open, onOpenChange }: SlotSear
     )
   }
 
+  const showResults = results.length > 0
+  const activeOptionId = showResults ? slotOptionId(results[activeIndex]?.iso3) : undefined
+
   return (
     <div className={styles.slotSearch}>
       <input
         ref={inputRef}
         type="text"
         role="combobox"
-        aria-expanded={results.length > 0}
+        aria-expanded={showResults}
         aria-controls="compare-slot-search-listbox"
         aria-autocomplete="list"
+        aria-activedescendant={activeOptionId}
         aria-label="Add a country to compare"
         className={styles.slotSearchInput}
         placeholder="Search a country…"
@@ -284,10 +294,10 @@ function SlotSearch({ countries, taken, onSelect, open, onOpenChange }: SlotSear
           }
         }}
       />
-      {results.length > 0 && (
+      {showResults && (
         <ul id="compare-slot-search-listbox" role="listbox" className={styles.slotSearchListbox}>
           {results.map((c, i) => (
-            <li key={c.iso3} role="option" aria-selected={i === activeIndex}>
+            <li key={c.iso3} id={slotOptionId(c.iso3)} role="option" aria-selected={i === activeIndex}>
               <button
                 type="button"
                 className={styles.slotSearchOption}

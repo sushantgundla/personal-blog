@@ -29,8 +29,13 @@ import { CONFUSABLE_FLAG_PAIRS, areConfusableFlags, confusableWith } from '../co
 import { buildForgery } from '../questions/forgery';
 import { buildHigherLower, pairKey } from '../questions/higher-lower';
 import { buildFlagQuestion } from '../questions/flags';
+import { buildGuessCountry, CLUE_ORDER, populationBand } from '../questions/guess-country';
+import { buildWhereInTheWorld } from '../questions/where-in-the-world';
 import { buildSurpriseCard } from '../questions/surprise';
 import { buildRound, buildSurprise } from '../questions';
+import { COUNTRY_PATHS } from '../../geo/world-paths';
+
+const ALL_GAMES = ['forgery', 'higher-lower', 'flags', 'guess-country', 'where-in-the-world'];
 
 const EMPTY = new Set<string>();
 
@@ -337,6 +342,132 @@ describe('guess the flag', () => {
   });
 });
 
+describe('guess the country', () => {
+  test('four distinct countries, one correct answer, at least three clues', async () => {
+    const deck = await getDeck();
+    const rng = makeRng('guess-country-shape');
+    const questions = many(150, () => buildGuessCountry(deck, rng, EMPTY));
+    expect(questions.length).toBeGreaterThan(100);
+
+    for (const q of questions) {
+      expect(q.options).toHaveLength(4);
+      expect(new Set(q.options.map((o) => o.iso3)).size).toBe(4);
+      expect(new Set(q.options.map((o) => o.name)).size).toBe(4);
+      expect(q.clues.length).toBeGreaterThanOrEqual(3);
+      const answer = deck.countries.find((c) => c.iso3 === q.options[q.answer].iso3);
+      expect(answer).toBeTruthy();
+    }
+  });
+
+  test('clues run region -> population -> [language] -> [neighbour] -> capital, never reordered', async () => {
+    const deck = await getDeck();
+    const rng = makeRng('guess-country-order');
+    for (const q of many(200, () => buildGuessCountry(deck, rng, EMPTY))) {
+      const labels = q.clues.map((c) => c.label);
+      expect(new Set(labels).size).toBe(labels.length);
+      expect(labels[0]).toBe('Region');
+      expect(labels[labels.length - 1]).toBe('Capital');
+      const positions = labels.map((l) => CLUE_ORDER.indexOf(l));
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    }
+  });
+
+  test('every clue carries its own provenance, and the population clue matches the deck', async () => {
+    const deck = await getDeck();
+    const rng = makeRng('guess-country-provenance');
+    for (const q of many(150, () => buildGuessCountry(deck, rng, EMPTY))) {
+      for (const clue of q.clues) {
+        expect(['World Bank', 'Wikidata']).toContain(clue.provenance.source);
+        if (clue.provenance.source === 'World Bank') {
+          expect(clue.provenance.year).toMatch(/^\d{4}$/);
+        }
+      }
+      const popClue = q.clues.find((c) => c.label === 'Population');
+      if (popClue) {
+        const pop = deck.values['SP.POP.TOTL']?.[q.options[q.answer].iso3];
+        expect(pop).toBeTruthy();
+        expect(popClue.text).toContain(populationBand(pop[0]));
+      }
+    }
+  });
+
+  test('a country already used in the round is never asked about again', async () => {
+    const deck = await getDeck();
+    const rng = makeRng('guess-country-dedupe');
+    const used = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const q = buildGuessCountry(deck, rng, used);
+      if (!q) continue;
+      const iso3 = q.options[q.answer].iso3;
+      expect(used.has(iso3)).toBe(false);
+      used.add(iso3);
+    }
+  });
+
+  test('the verdict teaches all four countries and links to their dossiers', async () => {
+    const deck = await getDeck();
+    const rng = makeRng('guess-country-verdict');
+    for (const q of many(100, () => buildGuessCountry(deck, rng, EMPTY))) {
+      expect(q.verdict.rows).toHaveLength(4);
+      for (const row of q.verdict.rows) {
+        expect(row.href).toMatch(/^\/atlas\/[a-z]{3}$/);
+      }
+    }
+  });
+});
+
+describe('where in the world', () => {
+  test('options are [country, ELSEWHERE], answer is 0, the country has map geometry', async () => {
+    const deck = await getDeck();
+    const geometryIso3 = new Set(COUNTRY_PATHS.map((c) => c.iso3));
+    const rng = makeRng('wiw-shape');
+    const questions = many(150, () => buildWhereInTheWorld(deck, rng, EMPTY));
+    expect(questions.length).toBeGreaterThan(100);
+
+    for (const q of questions) {
+      expect(q.answer).toBe(0);
+      expect(q.options).toHaveLength(2);
+      expect(q.options[0].iso3).toBe(q.country.iso3);
+      expect(q.options[1]).toEqual({ iso3: 'ELSEWHERE', name: 'Elsewhere' });
+      expect(geometryIso3.has(q.country.iso3)).toBe(true);
+    }
+  });
+
+  test('only sovereign states are ever asked about', async () => {
+    const deck = await getDeck();
+    const sovereign = new Set(sovereignCountries(deck).map((c) => c.iso3));
+    const rng = makeRng('wiw-sovereign');
+    for (const q of many(150, () => buildWhereInTheWorld(deck, rng, EMPTY))) {
+      expect(sovereign.has(q.country.iso3)).toBe(true);
+    }
+  });
+
+  test('a country already used in the round is never asked about again', async () => {
+    const deck = await getDeck();
+    const rng = makeRng('wiw-dedupe');
+    const used = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const q = buildWhereInTheWorld(deck, rng, used);
+      if (!q) continue;
+      expect(used.has(q.country.iso3)).toBe(false);
+      used.add(q.country.iso3);
+    }
+  });
+
+  test('the verdict names the country and the "elsewhere" row has no dossier link', async () => {
+    const deck = await getDeck();
+    const rng = makeRng('wiw-verdict');
+    for (const q of many(100, () => buildWhereInTheWorld(deck, rng, EMPTY))) {
+      expect(q.verdict.rows).toHaveLength(2);
+      expect(q.verdict.rows[0].href).toBe(`/atlas/${q.country.iso3.toLowerCase()}`);
+      expect(q.verdict.rows[0].value).toBeTruthy();
+      expect(q.verdict.rows[1].label).toBe('Elsewhere');
+      expect(q.verdict.rows[1].href).toBeNull();
+      expect(q.provenance[0].source).toBe('Wikidata');
+    }
+  });
+});
+
 describe('surprise me', () => {
   test('every card is genuinely remarkable under §6', async () => {
     const deck = await getDeck();
@@ -393,7 +524,7 @@ describe('surprise me', () => {
 
 describe('buildRound', () => {
   test('the same seed always produces an identical round', async () => {
-    for (const game of ['forgery', 'higher-lower', 'flags']) {
+    for (const game of ALL_GAMES) {
       const a = await buildRound(game, 10, 'a-fixed-seed');
       const b = await buildRound(game, 10, 'a-fixed-seed');
       expect(a).toEqual(b);
@@ -412,7 +543,7 @@ describe('buildRound', () => {
   });
 
   test('every question carries the game it was asked for', async () => {
-    for (const game of ['forgery', 'higher-lower', 'flags']) {
+    for (const game of ALL_GAMES) {
       const round = await buildRound(game, 10, 'game-id');
       expect(round.game).toBe(game);
       for (const q of round.questions) {
@@ -426,12 +557,16 @@ describe('buildRound', () => {
   test('no question ever contains a country that is not a sovereign state', async () => {
     const deck = await getDeck();
     const sovereign = new Set(sovereignCountries(deck).map((c) => c.iso3));
-    for (const game of ['forgery', 'higher-lower', 'flags']) {
+    for (const game of ALL_GAMES) {
       for (let seed = 0; seed < 15; seed++) {
         const round = await buildRound(game, 20, `sovereign-${game}-${seed}`);
         for (const q of round.questions) {
+          // where-in-the-world's options include "ELSEWHERE", a sentinel
+          // for every wrong click rather than a second real country.
           const isos =
-            q.game === 'forgery' ? [q.country.iso3] : q.options.map((o) => o.iso3);
+            q.game === 'forgery' || q.game === 'where-in-the-world'
+              ? [q.country.iso3]
+              : q.options.map((o) => o.iso3);
           for (const iso of isos) expect(sovereign.has(iso)).toBe(true);
         }
       }
@@ -442,7 +577,7 @@ describe('buildRound', () => {
   });
 
   test('question ids are unique inside a round, so React keys are safe', async () => {
-    for (const game of ['forgery', 'higher-lower', 'flags']) {
+    for (const game of ALL_GAMES) {
       const round = await buildRound(game, 20, 'unique-ids');
       const ids = round.questions.map((q) => q.id);
       expect(new Set(ids).size).toBe(ids.length);

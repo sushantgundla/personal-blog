@@ -169,6 +169,15 @@ map works with JavaScript disabled.
 
 ## 6. Backlog
 
+> **Update, 2026-08-08.** The learning section shipped. It went out with three games (forgery,
+> higher-lower, flags) plus a Surprise me button — see
+> `docs/superpowers/specs/2026-08-03-atlas-learn-design.md` — then grew two more games the same
+> day: guess-country and where-in-the-world, plus a Country of the day card. Five games total;
+> Surprise me and Country of the day are floor features, not games. §6.1
+> is left below as written, for the history; see that spec's own "what shipped after v1" note
+> for what actually got built and where it diverged. Several §6.2 items are now done too — each
+> is struck through in place rather than removed.
+
 ### 6.1 The learning section — the big one
 
 **The ask, in the owner's words:** a place where someone can say "surprise me" and get a fact
@@ -227,15 +236,21 @@ defaulting to a generic quiz UI, which would look like every other quiz.
 
 ### 6.2 Smaller items
 
-- **`npm run lint` does not work.** Install ESLint and actually run it.
-- **The compare screen shows each country's flag and name three times** — in the slots, in the
-  cards, and in the ledger header. Collapse to two.
+- ~~**`npm run lint` does not work.** Install ESLint and actually run it.~~ **Done, 2026-08-08.**
+  `eslint` and `eslint-config-next` were installed but never declared in `package.json`, so a
+  clean `npm ci` broke it. Both are now declared; `npx next lint` reports zero errors.
+- ~~**The compare screen shows each country's flag and name three times** — in the slots, in the
+  cards, and in the ledger header. Collapse to two.~~ **Done, 2026-08-08, for 3–5 countries.**
+  The 2-country case still shows it three times on purpose — there the third repeat is
+  `FaceNote.tsx`, the full hero banknote, which was kept deliberately rather than collapsed.
 - **Landmark photos, people watermarks and the history timeline** were verified by agents but
-  never inspected by a human. Worth one careful look.
+  never inspected by a human. Worth one careful look. Still open.
 - **A snapshot freshness indicator.** The data has a capture date; when it is months old the
-  page should say so more loudly than it currently does.
+  page should say so more loudly than it currently does. Still open.
 - **Scheduled snapshot refresh.** Today it is a manual script. A weekly job that rebuilds and
-  opens a PR would keep it honest without anyone remembering.
+  opens a PR would keep it honest without anyone remembering. **Still open, deliberately.**
+  Looked at 2026-08-08 and skipped on purpose — the full sweep takes hours (see §3's "Rebuilding
+  the snapshot" above) and would likely exceed a CI job's time limit.
 
 ---
 

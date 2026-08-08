@@ -12,8 +12,8 @@ export default function GameNotFound() {
       <span className="atlas-serial">BENCH · CLOSED</span>
       <h1 className={styles.notFoundTitle}>No such bench</h1>
       <p className={styles.notFoundBody}>
-        The floor runs three benches — spot the forgery, higher or lower, and guess the flag.
-        Whatever you asked for is not one of them.
+        The floor runs five benches — spot the forgery, higher or lower, guess the flag, guess
+        the country, and where in the world. Whatever you asked for is not one of them.
       </p>
       <Link href="/atlas/learn" className={styles.backLink}>
         ← Back to the floor

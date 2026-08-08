@@ -47,10 +47,28 @@ const GAMES: Record<GameId, GameCopy> = {
     instruction: 'One flag, four countries. Name the issuer.',
     house: 'Every flag on this floor was drawn from the same plate as the dossiers.',
   },
+  'guess-country': {
+    id: 'guess-country',
+    name: 'Guess the country',
+    instruction: 'Clues arrive one at a time, vaguest first. Name the country before you need them all.',
+    house: 'Every clue you ask for costs you. The bench pays best for a name called early.',
+  },
+  'where-in-the-world': {
+    id: 'where-in-the-world',
+    name: 'Where in the world',
+    instruction: 'Named a country. Click its shape on the map.',
+    house: 'The map is the whole answer sheet. Find the shape, not a name on a list.',
+  },
 }
 
 function isGameId(value: string): value is GameId {
-  return value === 'forgery' || value === 'higher-lower' || value === 'flags'
+  return (
+    value === 'forgery' ||
+    value === 'higher-lower' ||
+    value === 'flags' ||
+    value === 'guess-country' ||
+    value === 'where-in-the-world'
+  )
 }
 
 export function generateStaticParams() {
@@ -78,7 +96,9 @@ export default function RunPage({ params }: { params: { game: string } }) {
           ← Back to the floor
         </Link>
         <span className="atlas-serial" aria-hidden="true">
-          BENCH {copy.id.toUpperCase().replace('-', '·')}
+          {/* A global replace, not just the first hyphen — 'where-in-the-world'
+              has three of them, and a single-match .replace() left two behind. */}
+          BENCH {copy.id.toUpperCase().replace(/-/g, '·')}
         </span>
       </div>
 

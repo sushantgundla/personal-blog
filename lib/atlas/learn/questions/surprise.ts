@@ -32,7 +32,12 @@ const MIN_OUT_OF_FOR_EXTREME = 60;
 /** Countries to deal before giving up. */
 const MAX_ATTEMPTS = 60;
 
-interface Candidate {
+/**
+ * Exported for lib/atlas/learn/questions/country-of-day.ts, which reuses
+ * `candidatesFor` wholesale rather than reimplementing "what counts as
+ * remarkable" a second time — see that file's header for why.
+ */
+export interface Candidate {
   indicator: DeckIndicator;
   value: number;
   year: string;
@@ -99,8 +104,14 @@ function printsAsBrokenPercent(indicator: DeckIndicator, value: number): boolean
   return indicator.format === "percent" && value > 100;
 }
 
-/** Everything remarkable this country has. */
-function candidatesFor(deck: Deck, country: DeckCountry): Candidate[] {
+/**
+ * Everything remarkable this country has.
+ *
+ * Exported: country-of-day.ts calls this directly rather than picking a
+ * single best candidate the way `buildSurpriseCard` does below, because a
+ * day's card shows a handful of facts, not one.
+ */
+export function candidatesFor(deck: Deck, country: DeckCountry): Candidate[] {
   const out: Candidate[] = [];
   for (const indicator of deck.indicators) {
     const entry = deckValue(deck, indicator.code, country.iso3);
@@ -125,7 +136,7 @@ function candidatesFor(deck: Deck, country: DeckCountry): Candidate[] {
  * Rank 3 of 189 on infant deaths (higher is worse, so rank 1 is the lowest)
  * gives `{ place: 3, word: "lowest" }`.
  */
-function describeRank(
+export function describeRank(
   indicator: DeckIndicator,
   rank: number
 ): { place: number; word: "highest" | "lowest" } {
@@ -183,7 +194,7 @@ function decimalsToShow(value: number): number {
  * Applies to any format, not just percentages: a currency or per-1,000
  * measure can round to zero the same way.
  */
-function measureText(indicator: DeckIndicator, value: number): string {
+export function measureText(indicator: DeckIndicator, value: number): string {
   const printed = formatMeasure(indicator, value);
   // A true zero is a true zero, and prints as one.
   if (value === 0) return printed;

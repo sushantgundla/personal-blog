@@ -9,7 +9,13 @@
     "lint": "next lint",
     "atlas:iso": "node scripts/atlas/build-iso.mjs",
     "atlas:geo": "node scripts/atlas/build-geo.mjs",
-    "atlas:deck": "node scripts/atlas/build-deck.mjs"
+    "atlas:deck": "node scripts/atlas/build-deck.mjs",
+    "atlas:comtrade": "node scripts/atlas/build-comtrade-codes.mjs",
+    "atlas:people": "node scripts/atlas/build-people.mjs",
+    "atlas:snapshot": "node --experimental-loader=./scripts/atlas/ts-resolve-hook.mjs scripts/atlas/build-snapshot.mjs",
+    "atlas:verify": "node scripts/atlas/verify-indicators.mjs",
+    "atlas:learn-selfcheck": "node scripts/atlas/learn-selfcheck.mjs",
+    "atlas:smoke": "node scripts/atlas/smoke.mjs"
   },
   "dependencies": {
     "next": "^14.2.0",
@@ -30,6 +36,8 @@
     "autoprefixer": "^10.4.0",
 "postcss": "^8.4.0",
     "d3-geo": "^3.1.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
     "tailwindcss": "^3.4.0",
     "topojson-client": "^3.1.0",
     "typescript": "^5.4.0",

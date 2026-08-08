@@ -125,7 +125,7 @@ export default async function RankingPage({ params, searchParams }: RankingPageP
           {!rankable && withValueCount > 0 && (
             <p className="atlas-body" style={{ marginTop: '1rem', color: 'var(--note-thread)' }} role="note">
               Too few countries report {def.label.toLowerCase()} for a rank or a world average to mean anything —
-              below is just what each country that has a figure actually reported, and the year it's from.
+              below is just what each country that has a figure actually reported, and the year it’s from.
             </p>
           )}
 

@@ -23,7 +23,7 @@
 // country files already exist and skips them, checkpoints after every
 // country (not just at the end) so an interrupted run loses nothing, and
 // paces itself with PAUSE_MS between countries on top of worldbank.ts's own
-// retry/backoff+semaphore. Expect a full run over all ~251 countries to
+// retry/backoff+semaphore. Expect a full run over all ~250 countries to
 // take up to an hour, more if the APIs are throttling hard when it runs —
 // that's fine, it runs offline, never on a visitor's request.
 //

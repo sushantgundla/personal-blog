@@ -57,19 +57,37 @@ function notInIsoTable<T>(iso3: string): Promise<SourceResult<T>> {
   return Promise.resolve({ ok: false, reason: `${iso3} is not in the local ISO table` });
 }
 
+/**
+ * content/atlas/famous-people.json (712 KB) parsed once per process and
+ * reused for every getDossier() call, rather than re-read and re-parsed on
+ * each one — the same module-scope memo shape rankings.ts already uses for
+ * its own snapshot (allRankingsPromise / getAllRankings below it). Created
+ * on first use, kept for the life of the process.
+ */
+let famousPeopleFilePromise: Promise<Record<string, Person[]>> | null = null;
+
+async function loadFamousPeopleFile(): Promise<Record<string, Person[]>> {
+  try {
+    const filePath = path.join(process.cwd(), "content", "atlas", "famous-people.json");
+    const raw = await readFile(filePath, "utf-8");
+    return JSON.parse(raw) as Record<string, Person[]>;
+  } catch {
+    return {};
+  }
+}
+
+function getFamousPeopleFile(): Promise<Record<string, Person[]>> {
+  if (!famousPeopleFilePromise) famousPeopleFilePromise = loadFamousPeopleFile();
+  return famousPeopleFilePromise;
+}
+
 /** content/atlas/famous-people.json — generated at build time by
  * scripts/atlas/build-people.mjs because the live SPARQL query takes 26.8s
  * for a country the size of India. Missing file/entry is a normal empty
  * state, not an error. */
 async function loadFamousPeople(iso3: string): Promise<SourceResult<Person[]>> {
-  try {
-    const filePath = path.join(process.cwd(), "content", "atlas", "famous-people.json");
-    const raw = await readFile(filePath, "utf-8");
-    const all = JSON.parse(raw) as Record<string, Person[]>;
-    return { ok: true, data: all[iso3] ?? [] };
-  } catch {
-    return { ok: true, data: [] };
-  }
+  const all = await getFamousPeopleFile();
+  return { ok: true, data: all[iso3] ?? [] };
 }
 
 const SNAPSHOT_DIR = path.join(process.cwd(), "content", "atlas", "snapshot", "countries");

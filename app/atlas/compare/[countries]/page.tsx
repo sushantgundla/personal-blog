@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { BY_ISO3, ISO_COUNTRIES, type IsoCountry } from '@/lib/atlas/iso-countries'
 import { getDossier } from '@/lib/atlas/dossier'
 import { countryInk, type CountryInk } from '@/lib/atlas/ink'
-import { formatValue, formatYear, toHttps } from '@/lib/atlas/format'
+import { formatValue, formatYear } from '@/lib/atlas/format'
 import type { IndicatorValue } from '@/lib/atlas/types'
 import { FaceNote } from '../../_components/FaceNote'
 import { CompareSheet } from '../../_components/CompareSheet'
@@ -26,14 +26,20 @@ interface CompactIdentity {
   iso3: string
   name: string
   ink: CountryInk
-  flagUrl: string | null
   population: IndicatorValue | null
 }
 
 /**
- * The three-to-five-country identity row: flag, name in the country's own
- * ink, one headline number (population — the same figure FaceNote leads
- * with). Sized for this row, not shrunk from the full face note: the
+ * The three-to-five-country identity row: one headline number (population —
+ * the same figure FaceNote leads with), colour-coded to the country via the
+ * ink bar. Flag and name are deliberately not repeated here — the slots row
+ * right above and the ledger header right below already carry both, so a
+ * third copy here was pure duplication (spec §6.2). The country name is
+ * still present for screen readers via the sr-only span, so this remains
+ * identifiable without sight; sighted users read the colour against the
+ * slot/ledger header it matches.
+ *
+ * Sized for this row, not shrunk from the full face note: the
  * denomination's clamp tops out at 2rem regardless of viewport width, so
  * it never overflows even the narrowest of five columns.
  */
@@ -42,13 +48,7 @@ function CompactIdentityStrip({ countries }: { countries: readonly CompactIdenti
     <div className={styles.miniStrip}>
       {countries.map((c) => (
         <div key={c.iso3} className={styles.miniCard} style={{ ['--note-ink' as string]: c.ink.hex }}>
-          <div className={styles.miniHeader}>
-            {c.flagUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={toHttps(c.flagUrl)} alt="" className={styles.miniFlag} />
-            )}
-            <span className={styles.miniName}>{c.name}</span>
-          </div>
+          <span className="sr-only">{c.name}</span>
           <span className={styles.miniInkBar} aria-hidden="true" />
           <div className={styles.miniDenominationRow}>
             <span className="atlas-label">Population</span>
@@ -214,7 +214,6 @@ export default async function ComparePage({ params }: { params: { countries: str
               iso3: country.iso3,
               name: dossiers[i].name,
               ink: inks[i],
-              flagUrl: columns[i].flagUrl,
               population: columns[i].indicators.find((v) => v.code === 'SP.POP.TOTL') ?? null,
             }))}
           />

@@ -35,6 +35,11 @@ browser.
 > - **Routes** — `/atlas/compare/[a]-vs-[b]` in the table below is really the dynamic segment
 >   `app/atlas/compare/[countries]/page.tsx`, and it was built to handle **2 to 5 countries**,
 >   not just 2 — see `MAX_FULL_FACE_NOTES` in that file.
+> - **§1 "Out of scope for v1: Quizzes and games (explicitly declined)"** — no longer true.
+>   The learning section at `/atlas/learn` shipped 2026-08-08: five games plus two non-game
+>   floor features (Surprise me, Country of the day).
+>   See [`feature-checklist.md`](./feature-checklist.md) and
+>   `docs/superpowers/specs/2026-08-03-atlas-learn-design.md` for what was actually built.
 >
 > Numbers used elsewhere in this spec (e.g. "~160 indicators" in §3.2) are the plan's estimate;
 > the shipped catalogue in `lib/atlas/indicators.ts` has **151** entries — see `data-sources.md`.

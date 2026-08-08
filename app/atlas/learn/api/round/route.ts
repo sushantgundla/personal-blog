@@ -86,7 +86,10 @@ export async function GET(request: NextRequest) {
 
   if (game === '') {
     return NextResponse.json(
-      { error: 'Name a game: game=forgery, higher-lower, flags or surprise.' },
+      {
+        error:
+          'Name a game: game=forgery, higher-lower, flags, guess-country, where-in-the-world or surprise.',
+      },
       { status: 400, headers: NO_STORE_HEADERS }
     )
   }
@@ -113,7 +116,9 @@ export async function GET(request: NextRequest) {
 
   if (!isGameId(game)) {
     return NextResponse.json(
-      { error: `"${game}" is not a game here. Try forgery, higher-lower or flags.` },
+      {
+        error: `"${game}" is not a game here. Try forgery, higher-lower, flags, guess-country or where-in-the-world.`,
+      },
       { status: 400, headers: NO_STORE_HEADERS }
     )
   }
