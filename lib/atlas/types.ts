@@ -153,15 +153,32 @@ export interface WikidataFacts {
   /** P417 — real Wikidata property, direction country -> saint. Populated
    * for maybe a quarter of countries (mostly Catholic ones); empty is normal. */
   patronSaints: string[];
-  unescoSites: UnescoSite[];
+  /**
+   * Empty for a country with genuinely no UNESCO sites (common — most sites
+   * on Wikidata have no image, and plenty of countries have zero). Optional,
+   * not just possibly-empty, for the same reason as `neighbours` below: a
+   * failed sub-fetch inside fetchDossierFacts (lib/atlas/sources/wikidata.ts)
+   * must leave this key out (`undefined`) rather than write `[]`, or a fetch
+   * failure reads back exactly like a real "no sites" country. Fixed
+   * 2026-08-08 — see `neighbours`'s doc comment below for the incident this
+   * came from.
+   */
+  unescoSites?: UnescoSite[];
   /**
    * Wikidata P47 — bordering countries, empty for islands (a normal state,
-   * not an error) and also empty if the live fetch failed, same collapse
-   * unescoSites above already does. Optional, not just possibly-empty: the
-   * dossier snapshot files written before 2026-08-03 genuinely don't have
-   * this key at all (JSON.parse gives `undefined`, not `[]`) — every reader
-   * must treat "missing" as its own "not fetched yet" state, distinct from
+   * not an error). Optional, not just possibly-empty: the dossier snapshot
+   * files written before 2026-08-03 genuinely don't have this key at all
+   * (JSON.parse gives `undefined`, not `[]`), and a failed live fetch must
+   * produce that same `undefined`, never `[]` — every reader must treat
+   * "missing" as its own "not fetched / fetch failed" state, distinct from
    * "fetched, zero neighbours". See app/atlas/_components/Neighbours.tsx.
+   *
+   * Fixed 2026-08-08: fetchDossierFacts and build-snapshot.mjs's
+   * patchNeighbours used to collapse a failed fetchNeighbours call to `[]`
+   * (`result.ok ? result.data : []`) — indistinguishable from a real island.
+   * During the 2026-08-08 sweep this silently blanked AZE, CAN, KEN and LBN,
+   * caught only by an independent cross-check afterwards. Both now leave
+   * this field alone on failure instead.
    */
   neighbours?: NeighbourCountry[];
 }

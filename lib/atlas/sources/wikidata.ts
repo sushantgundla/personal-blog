@@ -198,8 +198,12 @@ export async function fetchDossierFacts(
         ? { name: str(row, "lowestLabel")!, elevationM: num(row, "lowestElev") }
         : null,
       patronSaints: str(row, "patrons")?.split("|").filter(Boolean) ?? [],
-      unescoSites: unesco.ok ? unesco.data : [],
-      neighbours: neighbours.ok ? neighbours.data : [],
+      // ok ? data : undefined, never : [] — see WikidataFacts's doc comment
+      // on unescoSites/neighbours. A failed sub-fetch must leave the key out
+      // (JSON.stringify drops an `undefined` value), not write an empty
+      // array that then reads back as a genuine "no sites"/"island" country.
+      unescoSites: unesco.ok ? unesco.data : undefined,
+      neighbours: neighbours.ok ? neighbours.data : undefined,
     };
     return { ok: true, data: facts };
   } catch (err) {

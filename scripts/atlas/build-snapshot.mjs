@@ -43,7 +43,11 @@ import { fetchTradeSummary } from "../../lib/atlas/sources/comtrade.ts";
 import { fetchCapitalWeather } from "../../lib/atlas/sources/meteo.ts";
 import { fetchRate } from "../../lib/atlas/sources/fx.ts";
 import { getOverrides } from "../../lib/atlas/overrides.ts";
-import { computeAllRankings } from "../../lib/atlas/rankings.ts";
+// From rankings-data.ts, not rankings.ts — rankings.ts imports `next/cache`
+// for its Data Cache layer, which this plain-Node script can't resolve (see
+// rankings-data.ts's doc comment). This script only ever needed
+// computeAllRankings, which has no such dependency.
+import { computeAllRankings } from "../../lib/atlas/rankings-data.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
@@ -276,7 +280,17 @@ async function patchNeighbours(force = false) {
   const captured = await loadAlreadyCaptured();
   let patched = 0;
   let skipped = 0;
-  let failed = 0;
+  let readFailed = 0;
+  // iso3s whose live fetchNeighbours call failed. Fixed 2026-08-08: this
+  // used to write `result.ok ? result.data : []` — a failed fetch collapsed
+  // to the same empty array a genuine island returns, which silently blanked
+  // AZE, CAN, KEN and LBN during that day's sweep (caught only by an
+  // independent cross-check afterwards). Now a failure leaves the file's
+  // existing neighbours field untouched (undefined if it never had one) and
+  // is collected here so it's visible in both the console summary and
+  // content/atlas/snapshot/.sweep-status.json, instead of looking identical
+  // to a real island.
+  const fetchFailures = [];
 
   for (const iso3 of captured) {
     const filePath = countryPath(iso3);
@@ -285,7 +299,7 @@ async function patchNeighbours(force = false) {
       data = JSON.parse(await readFile(filePath, "utf-8"));
     } catch (err) {
       console.log(`${iso3}: FAILED to read/parse (${err.message})`);
-      failed++;
+      readFailed++;
       continue;
     }
 
@@ -305,14 +319,34 @@ async function patchNeighbours(force = false) {
     }
 
     const result = await fetchNeighbours(country.qid);
-    data.wikidata.data.neighbours = result.ok ? result.data : [];
+    if (!result.ok) {
+      fetchFailures.push({ iso3, name: country.name, reason: result.reason });
+      console.log(
+        `${iso3} (${country.name}): FAILED to fetch neighbours (${result.reason}) — left unchanged, will retry on next run`
+      );
+      await writeStatus("running", {
+        lastCountry: iso3,
+        lastResult: `neighbours-fetch-failed: ${result.reason}`,
+      });
+      await sleep(1500);
+      continue;
+    }
+
+    data.wikidata.data.neighbours = result.data;
     await saveCountry(iso3, data);
-    console.log(`${iso3} (${country.name}): ${result.ok ? result.data.length : 0} neighbour(s)${result.ok ? "" : ` — fetch failed (${result.reason}), recorded as empty, will not retry automatically`}`);
+    console.log(`${iso3} (${country.name}): ${result.data.length} neighbour(s)`);
+    await writeStatus("running", { lastCountry: iso3, lastResult: `neighbours-patched: ${result.data.length}` });
     patched++;
     await sleep(1500);
   }
 
-  console.log(`\nNeighbours patch: ${patched} patched, ${skipped} already had it or had no wikidata, ${failed} failed to read.`);
+  console.log(
+    `\nNeighbours patch: ${patched} patched, ${skipped} already had it or had no wikidata, ${readFailed} failed to read, ${fetchFailures.length} failed to fetch (left unchanged).`
+  );
+  if (fetchFailures.length > 0) {
+    console.log(`Fetch failures, will retry on next run: ${fetchFailures.map((f) => f.iso3).join(", ")}`);
+  }
+  return { patched, skipped, readFailed, fetchFailures };
 }
 
 async function buildCountries({ limit, only, force }) {
@@ -361,8 +395,13 @@ async function main() {
   await writeStatus("running", { startedAt: new Date().toISOString() });
 
   if (patchNeighboursOnly) {
-    await patchNeighbours(force);
-    await writeStatus("done");
+    const summary = await patchNeighbours(force);
+    await writeStatus(
+      "done",
+      summary.fetchFailures.length > 0
+        ? { neighboursFetchFailed: summary.fetchFailures.map((f) => f.iso3) }
+        : {}
+    );
     console.log("\nDone.");
     return;
   }
