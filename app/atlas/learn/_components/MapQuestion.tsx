@@ -30,10 +30,18 @@ const SORTED_COUNTRIES = COUNTRY_PATHS.slice().sort((a, b) => a.name.localeCompa
 
 const NAME_BY_ISO3 = new Map(COUNTRY_PATHS.map((c) => [c.iso3, c.name] as const))
 const REGION_BY_ISO3 = new Map(ISO_COUNTRIES.map((c) => [c.iso3, c.region ?? null] as const))
+const PATH_BY_ISO3 = new Map(COUNTRY_PATHS.map((c) => [c.iso3, c] as const))
 
 function nameOf(iso3: string): string {
   return NAME_BY_ISO3.get(iso3) ?? iso3
 }
+
+/** A keyboard-focused country counts as visible only once it clears this —
+ * below it, a shape is too small to tell apart from its neighbours even
+ * though it is technically on screen (this is what made Solomon Islands
+ * unclickable at the default zoom). Screen px, not viewBox units, since
+ * that's what a player actually judges "can I see this" by. */
+const MIN_VISIBLE_PX = 26
 
 /**
  * Click the named country on the map. The only game on this floor whose
@@ -43,7 +51,11 @@ function nameOf(iso3: string): string {
  * borrowed: the same geometry (`COUNTRY_PATHS`), the same pan/zoom engine
  * (`useMapTransform`) the dossier's own plate uses at app/atlas/_components/
  * Plate.tsx. Nothing under app/atlas/_components/ is edited to get this;
- * everything here is a new, smaller composition of what already exists.
+ * everything here is a new, smaller composition of what already exists —
+ * including the wheel-to-zoom and two-finger pinch handling below, which
+ * mirrors Plate.tsx's own pointer/wheel orchestration built on the same
+ * hook primitives (`zoomAt`, `panByScreenDelta`) rather than copying that
+ * component itself.
  *
  * Two independent ways to answer:
  *
@@ -71,8 +83,22 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
 
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
-  const { transform, zoomStep, reset, beginDrag, dragTo, endDrag, wasDragged, clearDragged, isDragging, minScale, maxScale } =
-    useMapTransform(svgRef, VB_W, VB_H)
+  const {
+    transform,
+    zoomAt,
+    zoomStep,
+    panByScreenDelta,
+    reset,
+    beginDrag,
+    dragTo,
+    endDrag,
+    wasDragged,
+    clearDragged,
+    worldToClient,
+    isDragging,
+    minScale,
+    maxScale,
+  } = useMapTransform(svgRef, VB_W, VB_H)
 
   // A fresh card: nothing clicked, nothing focused, the view reset. Same
   // reset-on-question.id pattern GuessCountryQuestion uses for its own
@@ -89,11 +115,65 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
     return SORTED_COUNTRIES.findIndex((c) => c.iso3 === iso3)
   }
 
+  /** Pan/zoom the plate so `iso3` is actually visible — not just technically
+   * on screen. Fixes the bug where tabbing to a small country (e.g. Solomon
+   * Islands) left it either off the current pan, or too small at the
+   * default zoom to make out at all. Only moves the view when the country
+   * genuinely needs it: already-visible, reasonably sized countries (most
+   * of them, at the default zoom) don't cause the map to jump on every
+   * arrow-key press. */
+  function ensureVisible(iso3: string) {
+    const country = PATH_BY_ISO3.get(iso3)
+    const wrap = wrapRef.current
+    if (!country || !wrap) return
+    const rect = wrap.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return
+    const client = worldToClient(country.centroid[0], country.centroid[1])
+    if (!client) return
+
+    const [minX, minY, maxX, maxY] = country.bbox
+    const pxPerUnitX = (rect.width / VB_W) * transform.scale
+    const pxPerUnitY = (rect.height / VB_H) * transform.scale
+    const screenW = (maxX - minX) * pxPerUnitX
+    const screenH = (maxY - minY) * pxPerUnitY
+
+    const edge = 20
+    const offscreen =
+      client.x < rect.left + edge ||
+      client.x > rect.right - edge ||
+      client.y < rect.top + edge ||
+      client.y > rect.bottom - edge
+    const tiny = screenW < MIN_VISIBLE_PX && screenH < MIN_VISIBLE_PX
+    if (!offscreen && !tiny) return
+
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+
+    // Centre the country first — panByScreenDelta works in current screen
+    // pixels regardless of scale, same primitive Plate.tsx's own drag-to-pan
+    // uses.
+    panByScreenDelta(cx - client.x, cy - client.y)
+
+    if (tiny) {
+      const bboxW = Math.max(maxX - minX, 0.0001)
+      const bboxH = Math.max(maxY - minY, 0.0001)
+      const scaleForW = MIN_VISIBLE_PX / ((rect.width / VB_W) * bboxW)
+      const scaleForH = MIN_VISIBLE_PX / ((rect.height / VB_H) * bboxH)
+      const targetScale = Math.min(maxScale, Math.max(transform.scale, scaleForW, scaleForH))
+      const factor = targetScale / transform.scale
+      // zoomAt anchors on (cx, cy) — the same point the plate was just
+      // centred on above — so the country stays centred as it zooms in.
+      if (factor > 1.02) zoomAt(cx, cy, factor)
+    }
+  }
+
   function moveFocus(delta: number) {
     const n = SORTED_COUNTRIES.length
     const cur = focusIndexOf(focusedIso3)
     const next = cur === -1 ? (delta > 0 ? 0 : n - 1) : (cur + delta + n) % n
-    setFocusedIso3(SORTED_COUNTRIES[next]!.iso3)
+    const iso3 = SORTED_COUNTRIES[next]!.iso3
+    setFocusedIso3(iso3)
+    ensureVisible(iso3)
   }
 
   function typeAhead(letter: string) {
@@ -103,7 +183,9 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
     for (let step = 1; step <= n; step++) {
       const idx = (cur + step + n) % n
       if (SORTED_COUNTRIES[idx]!.name.toLowerCase().startsWith(lower)) {
-        setFocusedIso3(SORTED_COUNTRIES[idx]!.iso3)
+        const iso3 = SORTED_COUNTRIES[idx]!.iso3
+        setFocusedIso3(iso3)
+        ensureVisible(iso3)
         return
       }
     }
@@ -117,10 +199,33 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
   }
 
   function handleMapFocus() {
-    if (!disabled && !answered && !focusedIso3) setFocusedIso3(SORTED_COUNTRIES[0]!.iso3)
+    if (!disabled && !answered && !focusedIso3) {
+      const iso3 = SORTED_COUNTRIES[0]!.iso3
+      setFocusedIso3(iso3)
+      ensureVisible(iso3)
+    }
   }
 
   function handleMapKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // Zoom is reachable from the keyboard even after answering — the same
+    // three keys Plate.tsx's own map binds (+/-/0), chosen because the
+    // listbox pattern here already owns the arrow keys for moving between
+    // countries.
+    if (e.key === '+' || e.key === '=') {
+      e.preventDefault()
+      zoomStep(1)
+      return
+    }
+    if (e.key === '-' || e.key === '_') {
+      e.preventDefault()
+      zoomStep(-1)
+      return
+    }
+    if (e.key === '0') {
+      e.preventDefault()
+      reset()
+      return
+    }
     if (disabled || answered) return
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
       e.preventDefault()
@@ -134,12 +239,16 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
     }
     if (e.key === 'Home') {
       e.preventDefault()
-      setFocusedIso3(SORTED_COUNTRIES[0]!.iso3)
+      const iso3 = SORTED_COUNTRIES[0]!.iso3
+      setFocusedIso3(iso3)
+      ensureVisible(iso3)
       return
     }
     if (e.key === 'End') {
       e.preventDefault()
-      setFocusedIso3(SORTED_COUNTRIES[SORTED_COUNTRIES.length - 1]!.iso3)
+      const iso3 = SORTED_COUNTRIES[SORTED_COUNTRIES.length - 1]!.iso3
+      setFocusedIso3(iso3)
+      ensureVisible(iso3)
       return
     }
     if (e.key === 'Enter' || e.key === ' ') {
@@ -153,24 +262,77 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
     }
   }
 
-  // Single-pointer drag-to-pan, mirroring Plate.tsx's own pointer handlers
-  // (beginDrag/dragTo/endDrag come straight from the shared useMapTransform
-  // hook). Pinch-zoom is left out — the zoom buttons below cover the same
-  // need with far less code, and this card is small enough that dragging
-  // one finger is all panning it needs.
+  // Wheel-to-zoom needs a non-passive native listener — React's own onWheel
+  // prop is registered passive, so calling preventDefault() there is
+  // silently ignored and the page would scroll instead of the map zooming.
+  // Same reasoning, same code shape as Plate.tsx's own wheel effect.
+  useEffect(() => {
+    const node = wrapRef.current
+    if (!node) return
+    function handleWheel(e: WheelEvent) {
+      e.preventDefault()
+      const factor = Math.exp(-e.deltaY * 0.0015)
+      zoomAt(e.clientX, e.clientY, factor)
+    }
+    node.addEventListener('wheel', handleWheel, { passive: false })
+    return () => node.removeEventListener('wheel', handleWheel)
+  }, [zoomAt])
+
+  // Every finger/pointer currently down. One finger drags to pan, two
+  // fingers pinch to zoom — the same plain-pointer-events approach (no
+  // gesture library) Plate.tsx uses for its own map.
+  const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const pinchStartDist = useRef<number | null>(null)
+
+  function pinchDistance(): number | null {
+    if (activePointers.current.size !== 2) return null
+    const [a, b] = Array.from(activePointers.current.values())
+    return Math.hypot(a.x - b.x, a.y - b.y)
+  }
+
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0 && e.pointerType === 'mouse') return
     e.currentTarget.setPointerCapture(e.pointerId)
-    beginDrag(e.clientX, e.clientY)
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (activePointers.current.size === 1) {
+      beginDrag(e.clientX, e.clientY)
+    } else if (activePointers.current.size === 2) {
+      pinchStartDist.current = pinchDistance()
+    }
   }
+
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (e.buttons === 1) dragTo(e.clientX, e.clientY)
+    if (!activePointers.current.has(e.pointerId)) return
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+    if (activePointers.current.size === 2) {
+      const [a, b] = Array.from(activePointers.current.values())
+      const dist = Math.hypot(a.x - b.x, a.y - b.y)
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+      if (pinchStartDist.current) zoomAt(mid.x, mid.y, dist / pinchStartDist.current)
+      pinchStartDist.current = dist
+    } else if (activePointers.current.size === 1 && e.buttons === 1) {
+      dragTo(e.clientX, e.clientY)
+    }
   }
-  function handlePointerUp() {
-    endDrag()
+
+  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    activePointers.current.delete(e.pointerId)
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+
+    if (activePointers.current.size === 0) {
+      endDrag()
+    } else if (activePointers.current.size === 1) {
+      pinchStartDist.current = null
+      // One finger lifted out of a pinch — restart the drag baseline from
+      // the remaining finger so panning doesn't jump.
+      const [remaining] = Array.from(activePointers.current.values())
+      beginDrag(remaining.x, remaining.y)
+    }
   }
-  // A drag that moved the map shouldn't also commit an answer on release —
-  // same guard Plate.tsx uses for its own country links.
+
+  // A drag or pinch that moved the map shouldn't also commit an answer on
+  // release — same guard Plate.tsx uses for its own country links.
   function handleClickCapture(e: React.MouseEvent<HTMLDivElement>) {
     if (wasDragged()) {
       e.preventDefault()
@@ -216,7 +378,7 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
           className={`${styles.mapWrap} ${isDragging ? styles.mapWrapDragging : ''}`}
           data-answered={answered}
           role="listbox"
-          aria-label="World map. Arrow keys move between countries, type a letter to jump to a name, Enter or Space answers. Click a country to answer directly."
+          aria-label="World map. Arrow keys move between countries, type a letter to jump to a name, Enter or Space answers. Plus, minus and zero zoom and reset. Click, scroll or pinch to zoom, and drag to pan."
           aria-activedescendant={focusedIso3 ? `wiw-opt-${focusedIso3}` : undefined}
           tabIndex={0}
           onFocus={handleMapFocus}
@@ -232,7 +394,19 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
             <g transform={`translate(${transform.tx} ${transform.ty}) scale(${transform.scale})`}>
               {COUNTRY_PATHS.map((c) => {
                 const state = stateOf(c.iso3)
-                const classNames = [styles.mapPath, state === 'idle' ? 'atlas-hatch' : '', state === 'focused' ? 'is-active' : '']
+                // atlas.css's highlight rule is the compound selector
+                // .atlas-hatch.is-active — it needs both classes on the
+                // same element to fire at all. Dropping atlas-hatch on
+                // 'focused' (the previous code) meant is-active alone never
+                // matched anything, so the keyboard cursor had no visible
+                // fill highlight — only a thin 1.5px stroke, easy to miss
+                // on a small country. atlas-hatch now stays for every state
+                // except right/wrong, which get their own inline fill below.
+                const classNames = [
+                  styles.mapPath,
+                  state === 'right' || state === 'wrong' ? '' : 'atlas-hatch',
+                  state === 'focused' ? 'is-active' : '',
+                ]
                   .filter(Boolean)
                   .join(' ')
                 // Inline, not a CSS class, for the right/wrong fill — the

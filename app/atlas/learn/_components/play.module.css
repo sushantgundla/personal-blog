@@ -733,9 +733,17 @@
   z-index: 1;
 }
 
+/* min-width, not a fixed width: at a fixed 1.9rem "Reset" (five letters)
+   overflowed the box and was cut off by .mapWrap's overflow: hidden — the
+   glyph buttons (+, −) never showed it because a single character always
+   fits. min-width keeps + and − the same small square as before (their
+   content never exceeds it) while letting Reset grow to fit its own label,
+   the same fix Plate.tsx's own .zoomButton in plate.module.css already
+   uses for this identical row of three buttons. */
 .mapZoomButton {
-  width: 1.9rem;
+  min-width: 1.9rem;
   height: 1.9rem;
+  padding: 0 0.35rem;
   display: grid;
   place-items: center;
   font-family: 'JetBrains Mono', monospace;
