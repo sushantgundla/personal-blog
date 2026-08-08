@@ -573,6 +573,207 @@
   color: var(--note-intaglio-dim);
 }
 
+/* --- guess the country -------------------------------------------------- */
+
+/* One clue at a time, broadest first. The list only ever grows within a
+   question — nothing here reorders or removes a row, which is what makes
+   "answered after N of M clues" an honest thing to print underneath it. */
+.clueList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.clueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  animation: playClueIn 260ms var(--atlas-ease) both;
+}
+
+.clueLabel {
+  flex: none;
+  min-width: 6.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+}
+
+.clueText {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--note-intaglio);
+  overflow-wrap: anywhere;
+}
+
+@keyframes playClueIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.revealButton {
+  align-self: flex-start;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  background: transparent;
+  border: 1px dashed var(--note-rule);
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.revealButton:hover:not(:disabled),
+.revealButton:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+.clueScore {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+}
+
+/* --- where in the world -------------------------------------------------- */
+
+.mapStage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+/* Same 1000x500 ratio as WORLD_VIEWBOX (lib/atlas/geo/world-paths.ts), so
+   the plate never letterboxes or crops. Fluid width, fixed aspect — this is
+   what keeps the map usable at 375px without a horizontal scrollbar. */
+.mapWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: 1px solid var(--note-rule);
+  background: var(--note-plate);
+  overflow: hidden;
+  cursor: grab;
+  /* This element owns its own drag-to-pan (see MapQuestion.tsx's pointer
+     handlers) — without this, touch scrolling on the page fights it. */
+  touch-action: none;
+  outline: none;
+}
+
+.mapWrap:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--note-ember);
+}
+
+.mapWrapDragging {
+  cursor: grabbing;
+}
+
+.mapSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mapPlate {
+  fill: var(--note-plate);
+}
+
+.mapPath {
+  stroke: var(--note-rule);
+  stroke-width: 0.5;
+  cursor: pointer;
+  transition: opacity 0.2s var(--atlas-ease), stroke 0.2s var(--atlas-ease);
+}
+
+/* The keyboard's virtual focus — the same treatment .atlas-hatch.is-active
+   already gives a hovered country on the real plate, so a keyboard player
+   sees the identical highlight a mouse player does. */
+.mapPath[data-state='focused'] {
+  stroke: var(--note-ember);
+  stroke-width: 1.5;
+}
+
+.mapPath[data-state='right'],
+.mapPath[data-state='wrong'] {
+  stroke-width: 1.25;
+}
+
+/* Once answered, everything but the two shapes that matter steps back —
+   the same idiom .options[data-answered='true'] .option[data-state='idle']
+   uses for the pick-list games. */
+.mapWrap[data-answered='true'] .mapPath[data-state='idle'] {
+  opacity: 0.35;
+}
+
+.mapZoom {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  display: flex;
+  gap: 0.35rem;
+  z-index: 1;
+}
+
+.mapZoomButton {
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--note-intaglio-dim);
+  background: var(--note-paper);
+  border: 1px solid var(--note-rule);
+  cursor: pointer;
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+}
+
+.mapZoomButton:hover:not(:disabled),
+.mapZoomButton:focus-visible {
+  color: var(--note-ember);
+  border-color: var(--note-ember);
+}
+
+.mapZoomButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mapStatus {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--note-intaglio-dim);
+}
+
+.mapProximity {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--note-intaglio-dim);
+}
+
 /* ---------------------------------------------------------- the verdict */
 
 .verdict {
@@ -1141,7 +1342,9 @@
 .ledgerLink:focus-visible,
 .missLink:focus-visible,
 .provenanceLink:focus-visible,
-.backLink:focus-visible {
+.backLink:focus-visible,
+.revealButton:focus-visible,
+.mapZoomButton:focus-visible {
   outline: 2px solid var(--note-ember);
   outline-offset: 2px;
 }
@@ -1163,7 +1366,16 @@
   .ledgerLink,
   .missLink,
   .provenanceLink,
-  .backLink {
+  .backLink,
+  .revealButton,
+  .mapPath,
+  .mapZoomButton {
     transition: none !important;
+  }
+
+  /* The clue list's drop-in — the loudest motion this game has that the
+     stamp doesn't already own. */
+  .clueRow {
+    animation: none !important;
   }
 }

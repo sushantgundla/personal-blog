@@ -8,6 +8,8 @@ import { recordAnswer, recordRun, type Progress } from '@/lib/atlas/learn/progre
 import { ForgeryQuestion } from './ForgeryQuestion'
 import { HigherLowerQuestion } from './HigherLowerQuestion'
 import { FlagQuestion } from './FlagQuestion'
+import { GuessCountryQuestion } from './GuessCountryQuestion'
+import { MapQuestion } from './MapQuestion'
 import { Verdict } from './Verdict'
 import { RunSummary } from './RunSummary'
 import styles from './play.module.css'
@@ -230,7 +232,11 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
         return
       }
 
-      if (phase === 'asking' && current) {
+      // Where in the world has no short pick-list — its two "options" are
+      // an internal right/wrong bookkeeping detail, not something 1/2
+      // should silently answer. Its own component owns the keyboard here
+      // (arrow keys, type-ahead, Enter — see MapQuestion.tsx).
+      if (phase === 'asking' && current && current.game !== 'where-in-the-world') {
         const n = Number.parseInt(event.key, 10)
         if (Number.isInteger(n) && n >= 1 && n <= Math.min(current.options.length, 9)) {
           event.preventDefault()
@@ -357,6 +363,12 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
         {current.game === 'flags' && (
           <FlagQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
         )}
+        {current.game === 'guess-country' && (
+          <GuessCountryQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
+        )}
+        {current.game === 'where-in-the-world' && (
+          <MapQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
+        )}
       </article>
 
       {answered && picked !== null && <Verdict question={current} picked={picked} />}
@@ -366,6 +378,10 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
           <button ref={continueRef} type="button" className={styles.primaryAction} onClick={advance}>
             {isLast ? 'See the run' : 'Next question'}
           </button>
+        ) : current.game === 'where-in-the-world' ? (
+          <span className={styles.hint} aria-hidden="true">
+            click a country, or tab to the map and use the arrow keys
+          </span>
         ) : (
           <span className={styles.hint} aria-hidden="true">
             press 1–{Math.min(current.options.length, 9)} to answer

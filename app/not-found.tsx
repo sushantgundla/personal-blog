@@ -7,7 +7,7 @@ export default function NotFound() {
         404
       </h1>
       <p className="text-on-surface-variant text-lg mb-10 max-w-md mx-auto">
-        This page doesn't exist, or it wandered off somewhere.
+        This page doesn’t exist, or it wandered off somewhere.
       </p>
       <Link
         href="/"

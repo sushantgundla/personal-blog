@@ -9,6 +9,12 @@ export interface AtlasSearchProps {
   countries: readonly IsoCountry[]
 }
 
+/** Stable id for a result's `role="option"` element, so the input's
+ * `aria-activedescendant` can point at it. */
+function optionId(iso3: string | undefined): string | undefined {
+  return iso3 ? `atlas-search-option-${iso3}` : undefined
+}
+
 /**
  * The keyboard and mobile path onto the plate — never a consolation prize.
  *
@@ -102,15 +108,19 @@ export function AtlasSearch({ countries }: AtlasSearchProps) {
     }
   }
 
+  const showResults = open && results.length > 0
+  const activeOptionId = showResults ? optionId(results[activeIndex]?.iso3) : undefined
+
   const searchUi = (
     <div className={`${styles.search} ${styles.searchFloating}`} role="search">
       <input
         ref={inputRef}
         type="text"
         role="combobox"
-        aria-expanded={open && results.length > 0}
+        aria-expanded={showResults}
         aria-controls="atlas-search-listbox"
         aria-autocomplete="list"
+        aria-activedescendant={activeOptionId}
         aria-label="Search countries"
         className={`${styles.searchInput} ${styles.searchInputFloating}`}
         placeholder="Search a country — press /"
@@ -124,10 +134,10 @@ export function AtlasSearch({ countries }: AtlasSearchProps) {
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onKeyDown={handleKeyDown}
       />
-      {open && results.length > 0 && (
+      {showResults && (
         <ul id="atlas-search-listbox" role="listbox" className={`${styles.searchListbox} ${styles.searchListboxUp}`}>
           {results.map((c, i) => (
-            <li key={c.iso3} role="option" aria-selected={i === activeIndex}>
+            <li key={c.iso3} id={optionId(c.iso3)} role="option" aria-selected={i === activeIndex}>
               <a
                 href={`/atlas/${c.iso3}`}
                 className={styles.searchOption}

@@ -1,8 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { TimeSeriesPoint } from '@/lib/atlas/types'
-import { useReveal } from '@/app/v4/_components/ScrollFx'
 
 export interface SparklineProps {
   points: readonly TimeSeriesPoint[]
@@ -10,23 +9,75 @@ export interface SparklineProps {
   height?: number
 }
 
+// A dossier page mounts ~20 Sparklines, and app/v4's useReveal gives each
+// one its own IntersectionObserver. They all sit below the fold and fire
+// almost immediately on scroll, so one observer shared by every Sparkline
+// on the page does the same job — same threshold, same rootMargin, same
+// one-shot "reveal once, then stop watching" behaviour — for a fraction of
+// the setup cost. Kept local to this file rather than folded into the
+// shared useReveal hook in app/v4/_components/ScrollFx.tsx, since that hook
+// is used elsewhere and this sharing is specific to Sparkline's own mount
+// pattern.
+const SPARKLINE_REVEAL_THRESHOLD = 0.4
+let sharedRevealObserver: IntersectionObserver | null = null
+const sharedRevealCallbacks = new Map<Element, () => void>()
+
+function getSharedRevealObserver(): IntersectionObserver {
+  if (!sharedRevealObserver) {
+    sharedRevealObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          const callback = sharedRevealCallbacks.get(entry.target)
+          if (!callback) continue
+          sharedRevealCallbacks.delete(entry.target)
+          sharedRevealObserver?.unobserve(entry.target)
+          callback()
+        }
+      },
+      { threshold: SPARKLINE_REVEAL_THRESHOLD, rootMargin: '0px 0px -8% 0px' }
+    )
+  }
+  return sharedRevealObserver
+}
+
+/** Same contract as app/v4's useReveal(0.4): fires once when the element
+ * enters the viewport, then stops watching it — just backed by one shared
+ * observer instead of one per call site. */
+function useSharedReveal<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const observer = getSharedRevealObserver()
+    sharedRevealCallbacks.set(el, () => setVisible(true))
+    observer.observe(el)
+
+    return () => {
+      sharedRevealCallbacks.delete(el)
+      observer.unobserve(el)
+    }
+  }, [])
+
+  return { ref, visible }
+}
+
 /**
  * A 1960->now time series rendered as a security thread rather than a
  * chart: no axes, no gridlines, no legend — just a polyline with a
  * slight sine wobble for the texture of an engraved metallic thread, and
  * an ember dot on the latest value. Draws itself on with
- * stroke-dashoffset once it scrolls into view (via app/v4's useReveal);
+ * stroke-dashoffset once it scrolls into view (via useSharedReveal above);
  * fully visible immediately with JavaScript off or reduced motion, since
  * the base .atlas-sparkline-path class carries no hidden state of its
  * own — only .atlas-sparkline-draw (added here once visible) does, and
  * atlas.css already kills that animation under prefers-reduced-motion.
- *
- * useReveal is typed for HTMLElement, so the ref sits on a wrapping div
- * rather than the <svg> itself — keeps this file from having to touch
- * that shared hook.
  */
 export function Sparkline({ points, width = 120, height = 32 }: SparklineProps) {
-  const { ref, visible } = useReveal<HTMLDivElement>(0.4)
+  const { ref, visible } = useSharedReveal<HTMLDivElement>()
 
   const built = useMemo(() => {
     const valid = points.filter(

@@ -310,38 +310,6 @@ export async function fetchTimeSeries(
 }
 
 /**
- * Fetch one indicator for every country (for rankings / choropleth). Uses
- * `mrv=1` because `mrnev=1` is HTTP 400 on `country/all`.
- */
-export async function fetchAllCountries(
-  code: string
-): Promise<
-  SourceResult<{
-    rows: { iso3: string; name: string; value: number | null; year: string | null }[];
-    lastUpdated: string | null;
-  }>
-> {
-  try {
-    const url = `${BASE}/country/all/indicator/${encodeURIComponent(
-      code
-    )}?source=2&format=json&mrv=1&per_page=400`;
-    const resp = await fetchWorldBank(url, REVALIDATE_WEEK);
-    const meta = metaFromResponse(resp);
-    const rows = rowsFromResponse(resp)
-      .filter((row) => (row.country as { value: string }).value !== "Aggregates")
-      .map((row) => ({
-        iso3: row.countryiso3code,
-        name: row.country.value,
-        value: row.value,
-        year: row.date ?? null,
-      }));
-    return { ok: true, data: { rows, lastUpdated: meta.lastupdated ?? null } };
-  } catch (err) {
-    return { ok: false, reason: err instanceof Error ? err.message : String(err) };
-  }
-}
-
-/**
  * Fetch a `RANKING_LOOKBACK_YEARS`-wide date range for many indicators,
  * every country, in one batched call per `RANKING_BATCH_SIZE` codes — the
  * `country/all` equivalent of what `fetchTimeSeries` already does for a

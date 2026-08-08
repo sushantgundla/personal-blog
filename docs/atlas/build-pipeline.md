@@ -24,12 +24,14 @@ waste an hour:
 |---|---|---|---|---|
 | `scripts/atlas/build-iso.mjs` | `lib/atlas/iso-countries.ts` | — | Wikidata SPARQL | `npm run atlas:iso` |
 | `scripts/atlas/build-geo.mjs` | `lib/atlas/geo/world-paths.ts` | `lib/atlas/iso-countries.ts` (parsed as text, not imported — see below), `world-atlas` npm package (bundled TopoJSON, no network) | none | `npm run atlas:geo` |
-| `scripts/atlas/build-comtrade-codes.mjs` | `lib/atlas/comtrade-codes.ts` | — | UN Comtrade reference files (`Reporters.json`, `partnerAreas.json`) | none — run directly |
-| `scripts/atlas/build-people.mjs` | `content/atlas/famous-people.json` | `lib/atlas/iso-countries.ts` (parsed as text) | Wikidata SPARQL | none — run directly |
-| `scripts/atlas/build-snapshot.mjs` | `content/atlas/snapshot/countries/*.json`, `content/atlas/snapshot/rankings.json` | `lib/atlas/iso-countries.ts`, `indicators.ts`, `overrides.ts`, `rankings.ts` (imported directly as TypeScript) | World Bank, Wikidata, Wikipedia, UN Comtrade, Open-Meteo, Frankfurter | **none — see below** |
-| `scripts/atlas/verify-indicators.mjs` | console report only, no file written | `lib/atlas/indicators.ts` (parsed as text) | World Bank | none — run directly |
-| `scripts/atlas/smoke.mjs` | console pass/fail only, no file written | the four static files above | none (offline) | none — run directly |
-| `scripts/atlas/ts-resolve-hook.mjs` | nothing on its own — a Node module-resolution hook used *by* `build-snapshot.mjs` | — | — | not run directly |
+| `scripts/atlas/build-comtrade-codes.mjs` | `lib/atlas/comtrade-codes.ts` | — | UN Comtrade reference files (`Reporters.json`, `partnerAreas.json`) | `npm run atlas:comtrade` |
+| `scripts/atlas/build-people.mjs` | `content/atlas/famous-people.json` | `lib/atlas/iso-countries.ts` (parsed as text) | Wikidata SPARQL | `npm run atlas:people` |
+| `scripts/atlas/build-snapshot.mjs` | `content/atlas/snapshot/countries/*.json`, `content/atlas/snapshot/rankings.json` | `lib/atlas/iso-countries.ts`, `indicators.ts`, `overrides.ts`, `rankings.ts` (imported directly as TypeScript) | World Bank, Wikidata, Wikipedia, UN Comtrade, Open-Meteo, Frankfurter | `npm run atlas:snapshot` — see below |
+| `scripts/atlas/build-deck.mjs` | `content/atlas/learn/deck.json` | `content/atlas/snapshot/rankings.json`, `content/atlas/snapshot/countries/*.json` | none (reads the committed snapshot, offline) | `npm run atlas:deck` |
+| `scripts/atlas/verify-indicators.mjs` | console report only, no file written | `lib/atlas/indicators.ts` (parsed as text) | World Bank | `npm run atlas:verify` |
+| `scripts/atlas/learn-selfcheck.mjs` | console pass/fail only, no file written | `lib/atlas/learn/deck.ts` (which reads `content/atlas/learn/deck.json`), `lib/atlas/learn/questions/index.ts`, `lib/atlas/learn/quiz-indicators.ts`, `lib/atlas/iso-countries.ts`, `lib/atlas/learn/confusable.ts` (all imported directly as TypeScript, self-registers `ts-resolve-hook.mjs`) | none (offline) | `npm run atlas:learn-selfcheck` |
+| `scripts/atlas/smoke.mjs` | console pass/fail only, no file written | the four static files above | none (offline) | `npm run atlas:smoke` |
+| `scripts/atlas/ts-resolve-hook.mjs` | nothing on its own — a Node module-resolution hook used *by* `build-snapshot.mjs` and `learn-selfcheck.mjs` | — | — | not run directly |
 
 ## Build order, from a clean checkout
 
@@ -37,14 +39,15 @@ Later scripts depend on earlier scripts' output, so this order matters the first
 time the ISO table changes):
 
 ```bash
-npm run atlas:iso                                    # 1. lib/atlas/iso-countries.ts
-npm run atlas:geo                                     # 2. lib/atlas/geo/world-paths.ts (needs #1)
-node scripts/atlas/build-comtrade-codes.mjs            # 3. lib/atlas/comtrade-codes.ts (independent of #1/#2, but conventionally run here)
-node scripts/atlas/build-people.mjs                    # 4. content/atlas/famous-people.json (needs #1)
-node --experimental-loader=./scripts/atlas/ts-resolve-hook.mjs scripts/atlas/build-snapshot.mjs
-                                                        # 5. content/atlas/snapshot/* (needs #1, #3, #4 is NOT required — see note below)
-node scripts/atlas/verify-indicators.mjs               # 6. QA only, run before shipping new indicator codes
-node scripts/atlas/smoke.mjs                           # 7. QA only, cheap sanity check, safe to run anytime
+npm run atlas:iso                                     # 1. lib/atlas/iso-countries.ts
+npm run atlas:geo                                      # 2. lib/atlas/geo/world-paths.ts (needs #1)
+npm run atlas:comtrade                                 # 3. lib/atlas/comtrade-codes.ts (independent of #1/#2, but conventionally run here)
+npm run atlas:people                                   # 4. content/atlas/famous-people.json (needs #1)
+npm run atlas:snapshot                                 # 5. content/atlas/snapshot/* (needs #1, #3, #4 is NOT required — see note below)
+npm run atlas:deck                                      # 6. content/atlas/learn/deck.json (needs #5)
+npm run atlas:verify                                    # 7. QA only, run before shipping new indicator codes
+npm run atlas:learn-selfcheck                           # 8. QA only, run after touching the learning section's question generators
+npm run atlas:smoke                                     # 9. QA only, cheap sanity check, safe to run anytime
 ```
 
 Step 4 (`build-people.mjs`) doesn't have to run before step 5 — `build-snapshot.mjs`
@@ -55,8 +58,8 @@ file takes effect immediately without a snapshot rebuild.
 
 ## `build-snapshot.mjs` — the important one, and its exact command
 
-**This is not wired into `package.json`.** `atlas:iso` and `atlas:geo` are npm scripts;
-`build-snapshot.mjs` is not, and must be run with this exact command:
+`npm run atlas:snapshot` runs it, but the underlying command is exact and worth knowing if
+you ever need to run it by hand:
 
 ```bash
 node --experimental-loader=./scripts/atlas/ts-resolve-hook.mjs scripts/atlas/build-snapshot.mjs

@@ -344,31 +344,6 @@
   background: var(--note-paper);
 }
 
-.miniHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.miniFlag {
-  flex: none;
-  width: 22px;
-  height: auto;
-  border: 1px solid var(--note-rule);
-}
-
-.miniName {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--note-ink, var(--note-intaglio));
-}
-
 .miniInkBar {
   display: block;
   width: 2.5rem;

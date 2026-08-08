@@ -31,7 +31,7 @@ function hexToRgbString(hex: string): string {
  *
  * The rosette and the ink are seeded from the game id through exactly the
  * machinery every country note uses (`guillochePath`, `countryInk`) — which
- * is why the four cards on the floor each carry a different, balanced
+ * is why every card on the floor carries a different, balanced
  * ornament without anyone drawing one.
  *
  * A client component only so it can show the visitor's record. The card

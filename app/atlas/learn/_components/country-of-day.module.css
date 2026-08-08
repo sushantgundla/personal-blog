@@ -1,0 +1,184 @@
+/* ============================================================
+   Country of the day — the front-door note that shows, not deals,
+   one country a day.
+
+   Belongs to CountryOfDayCard.tsx alone. floor.module.css and
+   surprise.module.css are deliberately untouched: this sits beside those
+   sections, not inside the game grid or the dealt-card modal, so it earns
+   its own small module rather than bending either of theirs to a third
+   shape.
+
+   Same rule as the rest of the app — every colour, font and easing curve
+   comes from ../../atlas.css. Nothing here invents a palette. The visual
+   vocabulary matches the dealt Surprise card (surprise.module.css's
+   `.face`): a printed date and label along the top, a name, then the
+   remarkable facts, then a way to the full dossier.
+   ============================================================ */
+
+.note {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+/* The inner cutting guide — the dashed rule printed just inside every
+   note's own edge on this floor. Purely decorative. */
+.note::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--note-rule);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* The country's own rosette, bleeding off the bottom-right corner — the
+   same treatment SurpriseCard.tsx gives its floor card. */
+.rosette {
+  position: absolute;
+  right: -3rem;
+  bottom: -3rem;
+  width: 15rem;
+  height: 15rem;
+  z-index: 0;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+/* The flag as a small struck seal — the same ringed treatment every other
+   flag on this floor gets. */
+.flag {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--note-seal);
+  opacity: 0.92;
+}
+
+.flagImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.name {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.375rem, 5vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--note-intaglio);
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The handful of remarkable facts — a short ledger of its own inside the
+   card, one dashed-ruled row per fact. */
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fact {
+  padding-bottom: 0.65rem;
+  border-bottom: 1px dashed var(--note-rule);
+}
+
+.fact:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.factHeadline {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: var(--note-intaglio);
+  margin: 0 0 0.2rem;
+  text-wrap: balance;
+}
+
+.factDetail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--note-intaglio-dim);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  /* A long detail string wraps; it never widens the card. */
+  overflow-wrap: anywhere;
+}
+
+/* The "· World Bank · 2024" tail — same colour as the rest of the detail
+   line, so the source reads as part of the sentence rather than a badge. */
+.factSource {
+  opacity: 0.85;
+}
+
+.foot {
+  margin-top: 0.2rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--note-rule);
+}
+
+.link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--note-ember);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s var(--atlas-ease);
+}
+
+.link:hover,
+.link:focus-visible {
+  border-bottom-color: var(--note-ember);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .link {
+    transition: none !important;
+  }
+}

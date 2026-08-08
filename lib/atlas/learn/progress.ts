@@ -33,8 +33,14 @@ export const STORAGE_KEY = 'atlas.learn.v1';
 /** The wall holds the last 20 runs. Older ones fall off the bottom. */
 export const MAX_RUNS = 20;
 
-/** The three real games, in the order the floor lays them out. */
-export const GAME_IDS: readonly GameId[] = ['forgery', 'higher-lower', 'flags'];
+/** The five real games, in the order the floor lays them out. */
+export const GAME_IDS: readonly GameId[] = [
+  'forgery',
+  'higher-lower',
+  'flags',
+  'guess-country',
+  'where-in-the-world',
+];
 
 /**
  * Plain-English names for the games, shared by the floor's cards and the
@@ -45,6 +51,8 @@ export const GAME_LABELS: Record<GameId, string> = {
   forgery: 'Spot the forgery',
   'higher-lower': 'Higher or lower',
   flags: 'Guess the flag',
+  'guess-country': 'Guess the country',
+  'where-in-the-world': 'Where in the world',
 };
 
 /** One game's lifetime record. */
@@ -273,6 +281,8 @@ export function emptyProgress(): Progress {
       forgery: emptyStat(),
       'higher-lower': emptyStat(),
       flags: emptyStat(),
+      'guess-country': emptyStat(),
+      'where-in-the-world': emptyStat(),
     },
     currentStreak: 0,
     bestStreak: 0,
@@ -287,7 +297,13 @@ function count(value: unknown, fallback = 0): number {
 }
 
 function isGameId(value: unknown): value is GameId {
-  return value === 'forgery' || value === 'higher-lower' || value === 'flags';
+  return (
+    value === 'forgery' ||
+    value === 'higher-lower' ||
+    value === 'flags' ||
+    value === 'guess-country' ||
+    value === 'where-in-the-world'
+  );
 }
 
 function sanitiseStat(raw: unknown): GameStat {
@@ -340,6 +356,8 @@ function sanitise(raw: unknown): Progress {
       forgery: sanitiseStat(games.forgery),
       'higher-lower': sanitiseStat(games['higher-lower']),
       flags: sanitiseStat(games.flags),
+      'guess-country': sanitiseStat(games['guess-country']),
+      'where-in-the-world': sanitiseStat(games['where-in-the-world']),
     },
     currentStreak,
     bestStreak: Math.max(currentStreak, count(r.bestStreak)),

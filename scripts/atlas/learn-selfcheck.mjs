@@ -54,7 +54,7 @@ process.on("warning", (w) => {
 
 register(pathToFileURL(path.join(__dirname, "ts-resolve-hook.mjs")));
 
-const { buildRound, buildSurprise } = await import(
+const { buildRound, buildSurprise, buildCountryOfDay } = await import(
   pathToFileURL(path.join(repoRoot, "lib/atlas/learn/questions/index.ts")).href
 );
 const { getDeck } = await import(
@@ -68,6 +68,12 @@ const { ISO_COUNTRIES } = await import(
 );
 const { CONFUSABLE_FLAG_PAIRS, areConfusableFlags } = await import(
   pathToFileURL(path.join(repoRoot, "lib/atlas/learn/confusable.ts")).href
+);
+const { CLUE_ORDER, populationBand } = await import(
+  pathToFileURL(path.join(repoRoot, "lib/atlas/learn/questions/guess-country.ts")).href
+);
+const { COUNTRY_PATHS } = await import(
+  pathToFileURL(path.join(repoRoot, "lib/atlas/geo/world-paths.ts")).href
 );
 
 // ---------------------------------------------------------------- harness
@@ -107,12 +113,22 @@ function valueOf(code, iso3) {
 
 // ------------------------------------------------------------- generation
 
-const GAMES = ["forgery", "higher-lower", "flags"];
+const GAMES = ["forgery", "higher-lower", "flags", "guess-country", "where-in-the-world"];
 const TARGET_PER_GAME = 500;
 const PER_ROUND = 20;
 
-const rounds = { forgery: [], "higher-lower": [], flags: [] };
+const rounds = {
+  forgery: [],
+  "higher-lower": [],
+  flags: [],
+  "guess-country": [],
+  "where-in-the-world": [],
+};
 const shortRounds = [];
+
+/** ISO3 codes with a shape at the map's bundled resolution — derived from
+ *  the real geometry file, the same way where-in-the-world.ts derives it. */
+const GEOMETRY_ISO3 = new Set(COUNTRY_PATHS.map((c) => c.iso3));
 
 for (const game of GAMES) {
   let built = 0;
@@ -130,6 +146,8 @@ const all = {
   forgery: rounds.forgery.flatMap((r) => r.questions),
   "higher-lower": rounds["higher-lower"].flatMap((r) => r.questions),
   flags: rounds.flags.flatMap((r) => r.questions),
+  "guess-country": rounds["guess-country"].flatMap((r) => r.questions),
+  "where-in-the-world": rounds["where-in-the-world"].flatMap((r) => r.questions),
 };
 
 const surprises = [];
@@ -139,8 +157,9 @@ for (let i = 0; i < TARGET_PER_GAME; i++) {
 
 console.log(
   `Generated ${all.forgery.length} forgery, ${all["higher-lower"].length} higher-lower, ` +
-    `${all.flags.length} flags, ${surprises.length} surprise cards ` +
-    `from the deck captured ${deck.capturedAt}.\n`
+    `${all.flags.length} flags, ${all["guess-country"].length} guess-country, ` +
+    `${all["where-in-the-world"].length} where-in-the-world, ` +
+    `${surprises.length} surprise cards from the deck captured ${deck.capturedAt}.\n`
 );
 
 for (const game of GAMES) {
@@ -206,7 +225,13 @@ function figureOf(text) {
 
 // --------------------------------------------------- checks: every question
 
-const everyQuestion = [...all.forgery, ...all["higher-lower"], ...all.flags];
+const everyQuestion = [
+  ...all.forgery,
+  ...all["higher-lower"],
+  ...all.flags,
+  ...all["guess-country"],
+  ...all["where-in-the-world"],
+];
 
 {
   const problems = [];
@@ -215,6 +240,11 @@ const everyQuestion = [...all.forgery, ...all["higher-lower"], ...all.flags];
     if (q.game === "forgery") isos.push(q.country.iso3);
     if (q.game === "higher-lower") for (const o of q.options) isos.push(o.iso3);
     if (q.game === "flags") for (const o of q.options) isos.push(o.iso3);
+    if (q.game === "guess-country") for (const o of q.options) isos.push(o.iso3);
+    // Not `q.options` — one of its two entries is "ELSEWHERE", a sentinel
+    // for every wrong click, never a real ISO3. `q.country` is the one
+    // genuine country the question is about.
+    if (q.game === "where-in-the-world") isos.push(q.country.iso3);
     for (const iso of isos) {
       if (AGGREGATES.includes(iso)) {
         problems.push(`${q.id}: aggregate "${iso}" used as a country`);
@@ -237,7 +267,8 @@ const everyQuestion = [...all.forgery, ...all["higher-lower"], ...all.flags];
   const problems = [];
   for (const q of everyQuestion) {
     const isos = [];
-    if (q.game === "forgery") isos.push(q.country.iso3);
+    // Same "ELSEWHERE" caveat as the aggregate check above.
+    if (q.game === "forgery" || q.game === "where-in-the-world") isos.push(q.country.iso3);
     else for (const o of q.options) isos.push(o.iso3);
     for (const iso of isos) {
       if (!sovereign.has(iso)) {
@@ -258,7 +289,13 @@ const everyQuestion = [...all.forgery, ...all["higher-lower"], ...all.flags];
 }
 
 {
-  const expected = { forgery: 3, "higher-lower": 2, flags: 4 };
+  const expected = {
+    forgery: 3,
+    "higher-lower": 2,
+    flags: 4,
+    "guess-country": 4,
+    "where-in-the-world": 2,
+  };
   const problems = [];
   for (const q of everyQuestion) {
     if (q.options.length !== expected[q.game]) {
@@ -303,14 +340,18 @@ const everyQuestion = [...all.forgery, ...all["higher-lower"], ...all.flags];
     }
     for (const r of q.verdict.rows) {
       if (!r.label || !r.value) problems.push(`${q.id}: verdict row is missing a label or value`);
-      if (!r.href) problems.push(`${q.id}: verdict row "${r.label}" has no dossier link`);
+      // where-in-the-world's second row is "Elsewhere" — a sentinel for
+      // every wrong click, not a country, so it honestly has no dossier.
+      const isElsewhereRow = q.game === "where-in-the-world" && r.label === "Elsewhere";
+      if (!r.href && !isElsewhereRow) problems.push(`${q.id}: verdict row "${r.label}" has no dossier link`);
       // §6: "A missing value is never a question. No dashes, no zeroes
       // standing in for absence." `formatValue` prints an em dash for a
       // missing number, so one appearing where a figure belongs means a null
-      // reached a card. Checked on the two games that carry numbers; a flag
-      // card's rows carry facts, and there a lone dash honestly means
-      // Wikidata knows nothing else about that country.
-      if (q.game !== "flags" && /(^|[\s(])—([\s)]|$)/.test(r.value)) {
+      // reached a card. Checked on the two games that carry numbers; flags
+      // and guess-country rows carry facts about a *distractor*, not the
+      // answer, and there a lone dash honestly means Wikidata knows nothing
+      // else about that particular country.
+      if (q.game !== "flags" && q.game !== "guess-country" && /(^|[\s(])—([\s)]|$)/.test(r.value)) {
         problems.push(`${q.id}: verdict row "${r.label}" prints a missing-value dash`);
       }
     }
@@ -674,6 +715,143 @@ const everyQuestion = [...all.forgery, ...all["higher-lower"], ...all.flags];
   check("flags: no flag repeats in a round", problems);
 }
 
+// ----------------------------------------------------- checks: guess-country
+
+{
+  const problems = [];
+  for (const q of all["guess-country"]) {
+    const isos = q.options.map((o) => o.iso3);
+    const names = q.options.map((o) => o.name);
+    if (new Set(isos).size !== 4) problems.push(`${q.id}: options are not four distinct countries`);
+    if (new Set(names).size !== 4) problems.push(`${q.id}: two options share a name`);
+    if (!countryByIso3.has(q.options[q.answer]?.iso3)) {
+      problems.push(`${q.id}: the answer is not a deck country`);
+    }
+  }
+  check("guess-country: four distinct countries, one correct answer", problems);
+}
+
+{
+  // §7: "Clue order must go broad -> narrow." Checked as a subsequence of
+  // CLUE_ORDER rather than an exact match, since a card missing a language or
+  // a neighbour is legitimate — the labels it does carry must never reorder.
+  const problems = [];
+  const clueCounts = { 3: 0, 4: 0, 5: 0 };
+  for (const q of all["guess-country"]) {
+    if (q.clues.length < 3) problems.push(`${q.id}: only ${q.clues.length} clues, need at least 3`);
+    clueCounts[q.clues.length] = (clueCounts[q.clues.length] ?? 0) + 1;
+
+    const labels = q.clues.map((c) => c.label);
+    if (new Set(labels).size !== labels.length) {
+      problems.push(`${q.id}: a clue label repeats — ${labels.join(", ")}`);
+    }
+    let cursor = -1;
+    for (const label of labels) {
+      const at = CLUE_ORDER.indexOf(label);
+      if (at === -1) {
+        problems.push(`${q.id}: unknown clue label "${label}"`);
+        continue;
+      }
+      if (at <= cursor) {
+        problems.push(`${q.id}: clues out of order — "${labels.join(" -> ")}"`);
+        break;
+      }
+      cursor = at;
+    }
+    if (labels[0] !== "Region") problems.push(`${q.id}: first clue is "${labels[0]}", expected Region`);
+    if (labels[labels.length - 1] !== "Capital") {
+      problems.push(`${q.id}: last clue is "${labels[labels.length - 1]}", expected Capital`);
+    }
+
+    // The population clue's band must actually contain the deck's real
+    // figure — the vague clue and the precise verdict must never disagree.
+    const popClue = q.clues.find((c) => c.label === "Population");
+    if (popClue) {
+      const pop = valueOf("SP.POP.TOTL", q.options[q.answer].iso3);
+      if (!pop) {
+        problems.push(`${q.id}: population clue printed but the deck has no SP.POP.TOTL for this country`);
+      } else if (!popClue.text.includes(populationBand(pop[0]))) {
+        problems.push(`${q.id}: population clue "${popClue.text}" does not match band "${populationBand(pop[0])}"`);
+      }
+    }
+
+    for (const clue of q.clues) {
+      if (!clue.provenance || (clue.provenance.source !== "World Bank" && clue.provenance.source !== "Wikidata")) {
+        problems.push(`${q.id}: clue "${clue.label}" has no valid provenance`);
+      }
+      if (clue.provenance?.source === "World Bank" && !/^\d{4}$/.test(String(clue.provenance.year))) {
+        problems.push(`${q.id}: clue "${clue.label}" is World Bank but its year is "${clue.provenance.year}"`);
+      }
+    }
+  }
+  check(
+    "guess-country: clues run broad to narrow, region first, capital last, every clue sourced",
+    problems,
+    `clue counts — 3: ${clueCounts[3] ?? 0}, 4: ${clueCounts[4] ?? 0}, 5: ${clueCounts[5] ?? 0}`
+  );
+}
+
+{
+  const problems = [];
+  for (const round of rounds["guess-country"]) {
+    const seen = new Set();
+    for (const q of round.questions) {
+      const iso = q.options[q.answer].iso3;
+      if (seen.has(iso)) problems.push(`${round.roundId}: ${iso} appears twice`);
+      seen.add(iso);
+    }
+  }
+  check("guess-country: no country repeats in a round", problems);
+}
+
+// ------------------------------------------------- checks: where-in-the-world
+
+{
+  const problems = [];
+  for (const q of all["where-in-the-world"]) {
+    if (q.answer !== 0) problems.push(`${q.id}: answer is ${q.answer}, expected 0`);
+    const isos = q.options.map((o) => o.iso3);
+    const names = q.options.map((o) => o.name);
+    if (isos.length !== 2 || isos[1] !== "ELSEWHERE") {
+      problems.push(`${q.id}: options are [${isos.join(", ")}], expected [<iso3>, "ELSEWHERE"]`);
+    }
+    if (names.length !== 2 || names[1] !== "Elsewhere") {
+      problems.push(`${q.id}: option names are [${names.join(", ")}], expected [<name>, "Elsewhere"]`);
+    }
+    if (isos[0] !== q.country.iso3) {
+      problems.push(`${q.id}: options[0] "${isos[0]}" does not match country "${q.country.iso3}"`);
+    }
+    // The hard bar: every country ever asked about must actually have a
+    // shape at this map's resolution, or the question is unanswerable.
+    if (!GEOMETRY_ISO3.has(q.country.iso3)) {
+      problems.push(`${q.id}: "${q.country.iso3}" has no shape in lib/atlas/geo/world-paths.ts`);
+    }
+    if (!q.country.region) {
+      problems.push(`${q.id}: country has no region, so the verdict's facts line would be empty`);
+    }
+    for (const iso of q.country.neighbours) {
+      if (!realIso3.has(iso)) problems.push(`${q.id}: neighbour "${iso}" is not a real country`);
+    }
+  }
+  check(
+    "where-in-the-world: options are [country, ELSEWHERE], answer is 0, the country has map geometry",
+    problems,
+    `${GEOMETRY_ISO3.size} of ${deck.countries.length} deck countries have a shape`
+  );
+}
+
+{
+  const problems = [];
+  for (const round of rounds["where-in-the-world"]) {
+    const seen = new Set();
+    for (const q of round.questions) {
+      if (seen.has(q.country.iso3)) problems.push(`${round.roundId}: ${q.country.iso3} appears twice`);
+      seen.add(q.country.iso3);
+    }
+  }
+  check("where-in-the-world: no country appears twice in a round", problems);
+}
+
 // -------------------------------------------------------- checks: surprise
 
 {
@@ -744,6 +922,84 @@ const everyQuestion = [...all.forgery, ...all["higher-lower"], ...all.flags];
     problems,
     `tier1 ${tiers[1]}, tier2 ${tiers[2]}, tier3 ${tiers[3]}`
   );
+}
+
+// ------------------------------------------------------- checks: country of the day
+
+// A synthetic run of 120 consecutive dates starting well before any real
+// deploy, so these checks never depend on what today happens to be.
+const COD_DATES = [];
+for (let i = 0; i < 120; i++) {
+  const d = new Date(Date.UTC(2026, 0, 1));
+  d.setUTCDate(d.getUTCDate() + i);
+  COD_DATES.push(d.toISOString().slice(0, 10));
+}
+const codByDate = new Map(COD_DATES.map((date) => [date, buildCountryOfDay(deck, date)]));
+
+{
+  const problems = [];
+  for (const [date, card] of codByDate) {
+    if (!card) problems.push(`${date}: no card at all — nothing in the deck cleared the remarkable bar`);
+  }
+  check("country of the day: every one of 120 consecutive dates produced a card", problems);
+}
+
+{
+  const problems = [];
+  const sameDate = "2026-08-08";
+  const a = JSON.stringify(buildCountryOfDay(deck, sameDate));
+  const b = JSON.stringify(buildCountryOfDay(deck, sameDate));
+  if (a !== b) problems.push(`${sameDate}: two builds for the same date differ`);
+  const other = JSON.stringify(buildCountryOfDay(deck, "2026-08-09"));
+  if (a === other) problems.push(`2026-08-08 and 2026-08-09 produced an identical card`);
+  check("country of the day: the same date always yields the same card", problems);
+}
+
+{
+  // Spread, not stuck: across 120 dates the pick should visit a good many
+  // distinct countries, not repeat a small handful. No single threshold is
+  // "the" right number — this only fails if the draw is obviously broken,
+  // e.g. every date landing on the same one or two countries.
+  const distinct = new Set([...codByDate.values()].filter(Boolean).map((c) => c.iso3));
+  const problems =
+    distinct.size >= 20 ? [] : [`only ${distinct.size} distinct countries across ${COD_DATES.length} dates`];
+  check("country of the day: dates spread across many countries", problems, `${distinct.size} distinct`);
+}
+
+{
+  const problems = [];
+  for (const [date, card] of codByDate) {
+    if (!card) continue;
+    if (!realIso3.has(card.iso3)) problems.push(`${date}: "${card.iso3}" is not a real country`);
+    const sovereign = new Set(deck.countries.filter((c) => c.sovereign).map((c) => c.iso3));
+    if (!sovereign.has(card.iso3)) problems.push(`${date}: "${card.iso3}" is not a sovereign state`);
+    if (!card.href.startsWith("/atlas/")) problems.push(`${date}: href "${card.href}" is not a dossier link`);
+    if (card.date !== date) problems.push(`${date}: card.date is "${card.date}", expected "${date}"`);
+    if (card.facts.length === 0) problems.push(`${date}: card has no facts`);
+    const labels = card.facts.map((f) => f.headline);
+    if (new Set(labels).size !== labels.length) problems.push(`${date}: two facts have the same headline`);
+    for (const fact of card.facts) {
+      if (!fact.headline || !fact.detail) problems.push(`${date}: a fact is missing its headline or detail`);
+      if (!fact.provenance) {
+        problems.push(`${date}: a fact has no provenance`);
+        continue;
+      }
+      if (fact.provenance.source !== "World Bank" && fact.provenance.source !== "Wikidata") {
+        problems.push(`${date}: fact provenance source "${fact.provenance.source}"`);
+      }
+      if (!/^\d{4}$/.test(String(fact.provenance.year))) {
+        problems.push(`${date}: fact provenance year "${fact.provenance.year}"`);
+      }
+      if (!fact.provenance.href || !fact.provenance.href.startsWith("/atlas/")) {
+        problems.push(`${date}: fact provenance href "${fact.provenance.href}" is not a dossier link`);
+      }
+      const blob = JSON.stringify(fact);
+      for (const bad of ["NaN", "undefined", "$NaN", "Infinity"]) {
+        if (blob.includes(bad)) problems.push(`${date}: fact text contains "${bad}"`);
+      }
+    }
+  }
+  check("country of the day: only a real sovereign country, every fact sourced and dated", problems);
 }
 
 // ------------------------------------------------------- checks: the deck

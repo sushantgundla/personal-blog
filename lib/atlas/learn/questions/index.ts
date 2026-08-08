@@ -3,9 +3,11 @@
 // `buildRound` is where the per-round de-duplication lives, because it is the
 // only place that can see a whole run of ten at once:
 //
-//   - forgery      — no country appears twice
-//   - higher-lower — no pairing appears twice, in either order
-//   - flags        — no flag appears twice
+//   - forgery        — no country appears twice
+//   - higher-lower   — no pairing appears twice, in either order
+//   - flags          — no flag appears twice
+//   - guess-country  — no country appears twice
+//   - where-in-the-world — no country appears twice
 //
 // Everything is driven by one `Rng` seeded from the round's seed, and each
 // generator draws from it in order, so the same seed always produces the same
@@ -23,12 +25,20 @@ import { hashString } from "../../hash";
 import { buildForgery } from "./forgery";
 import { buildHigherLower, pairKey } from "./higher-lower";
 import { buildFlagQuestion } from "./flags";
+import { buildGuessCountry } from "./guess-country";
+import { buildWhereInTheWorld } from "./where-in-the-world";
 import { buildSurpriseCard } from "./surprise";
 
 export { buildForgery } from "./forgery";
 export { buildHigherLower, pairKey } from "./higher-lower";
 export { buildFlagQuestion } from "./flags";
-export { buildSurpriseCard, ordinal } from "./surprise";
+export { buildGuessCountry, CLUE_ORDER, populationBand } from "./guess-country";
+export { buildWhereInTheWorld } from "./where-in-the-world";
+export { buildSurpriseCard, candidatesFor, ordinal } from "./surprise";
+// Not a game — see country-of-day.ts's header. Exported here alongside
+// everything else this file re-exports so the route handler and the
+// self-check both have one door into lib/atlas/learn/questions/.
+export { buildCountryOfDay, utcDateStamp } from "./country-of-day";
 
 /** §7 clamps `count` to 1..20 at the route; this is the same ceiling, enforced here too. */
 const MAX_QUESTIONS = 20;
@@ -40,7 +50,13 @@ const MAX_QUESTIONS = 20;
  */
 const MAX_CONSECUTIVE_FAILURES = 5;
 
-export const GAME_IDS: readonly GameId[] = ["forgery", "higher-lower", "flags"];
+export const GAME_IDS: readonly GameId[] = [
+  "forgery",
+  "higher-lower",
+  "flags",
+  "guess-country",
+  "where-in-the-world",
+];
 
 /** Type guard for the route handler's `?game=` parameter. */
 export function isGameId(value: string): value is GameId {
@@ -81,9 +97,15 @@ export async function buildRound(
       if (question) {
         usedPairs.add(pairKey(question.options[0]!.iso3, question.options[1]!.iso3));
       }
-    } else {
+    } else if (game === "flags") {
       question = buildFlagQuestion(deck, rng, usedIso3);
       if (question) usedIso3.add(question.options[question.answer]!.iso3);
+    } else if (game === "guess-country") {
+      question = buildGuessCountry(deck, rng, usedIso3);
+      if (question) usedIso3.add(question.options[question.answer]!.iso3);
+    } else {
+      question = buildWhereInTheWorld(deck, rng, usedIso3);
+      if (question) usedIso3.add(question.country.iso3);
     }
 
     if (!question) {

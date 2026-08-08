@@ -72,7 +72,11 @@ export function CapitalClock({ capital, coordinates, iso3 }: CapitalClockProps) 
     <div className={styles.utilityNote}>
       <span className="atlas-label">Capital time</span>
       <div className={styles.clockFace}>
-        <span className={styles.clockTime} aria-live={now ? 'polite' : undefined}>
+        <span
+          className={styles.clockTime}
+          aria-live="off"
+          aria-label={`Local time in ${capital}${reading ? `: ${reading.time} (${reading.label})` : ''}`}
+        >
           {reading ? reading.time : '--:--:--'}
         </span>
         <span className="atlas-serial">

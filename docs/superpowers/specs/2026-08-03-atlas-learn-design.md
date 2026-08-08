@@ -417,3 +417,43 @@ executed, and `npm run lint` does not work because ESLint was never installed. S
 - Question authoring by hand. Every question is generated; hand-written ones rot.
 - Currency and motto questions — see §5.
 - Guess the country, Where in the world, Country of the day — wanted, but not v1.
+
+---
+
+## 13. What shipped after this spec (2026-08-08)
+
+This section records what changed after the v1 build above. The rest of this document is left
+as originally written.
+
+**Two more games, plus the Country of the day card §12 called out as "not v1," all shipped:**
+
+- **Guess the country** (`/atlas/learn/guess-country`) — one hidden country, clues revealed one
+  at a time, broad to narrow: Region → Population (banded, not exact) → Language → Neighbour →
+  Capital. Four country names offered. **Diverges from this spec's `GameId` union in §4** (which
+  only lists `'forgery' | 'higher-lower' | 'flags'`) — the shipped `lib/atlas/learn/types.ts`
+  adds `'guess-country'` and `'where-in-the-world'`. The score shown to the player falls with
+  each clue revealed (100/80/60/40/20), but that is a **display-only** number kept on the
+  client — whether a run counts as right or wrong for the grade ladder in §8 stays binary, same
+  as every other game. Language stands in for the currency clue this spec's backlog predecessor
+  suggested (§6.1 of `atlas-handover-and-backlog.md`), because §5's "currency is excluded from
+  the deck" rule still holds — Wikidata's currency data is wrong often enough to disqualify it.
+- **Where in the world** (`/atlas/learn/where-in-the-world`) — the player is named a country and
+  clicks it on the reused engraved map (`lib/atlas/geo/world-paths.ts`, the same geometry
+  `/atlas` uses). Only the 174 of 250 countries that have map geometry at this resolution are
+  ever asked. Fully keyboard-playable — the map doubles as a listbox: arrow keys, Home/End,
+  type-ahead, Enter. A wrong click is told how far off it was in honest terms — neighbour, same
+  region, or a different part of the world — never a fabricated kilometre distance, because
+  inverting the map's d3-geo projection in the browser would mean shipping `d3-geo` to the
+  client for a number nobody asked for. New file: `lib/atlas/learn/geo-proximity.ts`.
+- **Country of the day**, on the floor at `/atlas/learn` — one country, the same for everyone,
+  derived deterministically from the UTC date via the same seeded PRNG the other games use, so
+  it needs no storage. **It is not a game** — no `GameId`, no `/atlas/learn/[game]` route — it
+  renders as a plain async server component,
+  `app/atlas/learn/_components/CountryOfDayCard.tsx`, specifically so there is no client-side
+  "what day is it" re-check and therefore no hydration mismatch to guard against.
+  `app/atlas/learn/page.tsx` gained `export const revalidate = 3600` so the page picks up a new
+  day within an hour of UTC midnight without going fully dynamic.
+
+None of this was checked in a real browser as of this writing — see
+[`feature-checklist.md`](../../atlas/feature-checklist.md) for what "works" means there and
+what still needs a human to look at it.

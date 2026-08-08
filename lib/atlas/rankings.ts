@@ -26,6 +26,7 @@
 // exists. See lib/atlas/dossier.ts for the same pattern applied per-country.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { unstable_cache } from "next/cache";
 import { BY_ISO3 } from "./iso-countries";
 import { ALL_INDICATOR_CODES, INDICATORS_BY_CODE } from "./indicators";
 import { fetchIndicatorsAllCountries } from "./sources/worldbank";
@@ -193,15 +194,54 @@ export function getRankingsSnapshotCapturedAt(): string | null {
   return cachedSnapshotCapturedAt;
 }
 
-async function readRankingsSnapshot(): Promise<Map<string, SourceResult<Ranking>> | null> {
+/** The Next Data Cache tag for the rankings snapshot — no route revalidates
+ * it today (unlike dossier.ts's per-country tag), it exists so the cached
+ * value can be told apart from other unstable_cache entries and, if a
+ * refresh path is ever added, invalidated the same way. */
+const RANKINGS_CACHE_TAG = "atlas-rankings";
+
+/**
+ * content/atlas/snapshot/rankings.json (2.9 MB) is memoized per warm process
+ * by allRankingsPromise below, but that buys nothing on a Vercel cold
+ * start — every cold instance pays the same parse again. This wraps the
+ * read in Next's Data Cache (unstable_cache), which — like dossier.ts's use
+ * of it for getDossier — is a real store Vercel shares across every
+ * instance and region, so only the first cold start after a deploy actually
+ * parses the file.
+ *
+ * The cached value is a plain, already-JSON-shaped record (capturedAt +
+ * the Record straight from JSON.parse), not a Map — unstable_cache persists
+ * whatever it's given through Next's own serialization, and a Map does not
+ * survive that round trip. The Map conversion, and setting
+ * cachedSnapshotCapturedAt, both stay in readRankingsSnapshot below, outside
+ * the cached function, so they still happen on every call — including a
+ * cache *hit* in a process that never ran loadRankingsSnapshotFile itself.
+ */
+async function loadRankingsSnapshotFile(): Promise<{
+  capturedAt: string | null;
+  rankings: RankingsSnapshotFile["rankings"];
+} | null> {
   try {
     const raw = await readFile(SNAPSHOT_PATH, "utf-8");
     const parsed = JSON.parse(raw) as RankingsSnapshotFile;
-    cachedSnapshotCapturedAt = parsed.capturedAt ?? null;
-    return new Map(Object.entries(parsed.rankings));
+    return { capturedAt: parsed.capturedAt ?? null, rankings: parsed.rankings };
   } catch {
     return null;
   }
+}
+
+function getCachedRankingsSnapshotFile() {
+  return unstable_cache(loadRankingsSnapshotFile, ["atlas-rankings-v1"], {
+    tags: [RANKINGS_CACHE_TAG],
+    revalidate: false, // forever — there is no refresh route for rankings, a new deploy resets the Data Cache anyway
+  })();
+}
+
+async function readRankingsSnapshot(): Promise<Map<string, SourceResult<Ranking>> | null> {
+  const snapshot = await getCachedRankingsSnapshotFile();
+  if (!snapshot) return null;
+  cachedSnapshotCapturedAt = snapshot.capturedAt;
+  return new Map(Object.entries(snapshot.rankings));
 }
 
 async function loadAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
