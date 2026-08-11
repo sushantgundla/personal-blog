@@ -306,6 +306,11 @@
   font-style: italic;
   font-size: clamp(1.5rem, 3.2vw, 2.25rem);
   line-height: 1;
+  /* Set in capitals to sit with the plate's other headings — THE STANDINGS,
+     PAINT THE WORLD, COMPARE COUNTRIES — which are all uppercase. The tracking
+     opens it up a little; capitals at this size set too tight otherwise. */
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--note-ember);
   text-decoration: none;
   transition: color 0.2s var(--atlas-ease);
