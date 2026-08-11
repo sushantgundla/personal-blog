@@ -297,7 +297,9 @@
 .floorBandLead {
   display: inline-flex;
   width: fit-content;
+  max-width: 100%;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 0.5rem;
   font-family: 'Bodoni Moda', Georgia, serif;
   font-weight: 700;
@@ -339,12 +341,19 @@
   color: var(--note-intaglio-dim);
 }
 
-/* The live variant of .floorBandSub — same slot, same size, but a link:
-   FloorBand.tsx renders this instead of the plain <p> whenever a Country
-   of the day is available (effectively always; see buildCountryOfDay's own
-   doc comment for the one rare case it isn't). Two classes rather than one
-   with a modifier because the fallback genuinely never needs hover/focus
-   styling — it isn't a link. */
+/* Groups Country of the day with the grade chip on .floorBandTop's right
+   side — a cluster of live, changes-per-visitor-and-per-day content,
+   distinct from the fixed headline+caption on the left. Country of the day
+   is optional (buildCountryOfDay can return null on the one rare day
+   nothing in the deck clears the remarkable bar); FloorGradeChip always
+   renders, so this cluster is never empty. */
+.floorBandMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.1rem;
+}
+
 .floorBandSubLink {
   margin: 0;
   font-family: 'JetBrains Mono', monospace;
