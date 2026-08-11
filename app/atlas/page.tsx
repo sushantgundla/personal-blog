@@ -6,10 +6,22 @@ import { ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
 import { INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
 import { getRanking } from '@/lib/atlas/rankings'
 import type { Ranking } from '@/lib/atlas/types'
+import { FloorBand } from './_components/FloorBand'
 import { Plate } from './_components/Plate'
 import styles from './_components/plate.module.css'
 
-export const revalidate = 604800 // World Bank indicators move a few times a year — see docs spec §3.1
+// World Bank indicators move a few times a year — see docs spec §3.1 — which
+// is why this used to sit at 604800 (a week). Dropped to an hour on
+// 2026-08-11 when FloorBand (below) started carrying the daily Country of
+// the day: a week-long window would freeze that pick until the next deploy.
+// This doesn't cost extra World Bank calls — getRanking (lib/atlas/rankings.ts)
+// reads a committed snapshot file cached forever via
+// unstable_cache(..., { revalidate: false }), reset only by a new deploy — so
+// lowering this number only changes how often this page's own HTML
+// regenerates, which is cheap, not how often outside data gets fetched.
+// Matches the cadence app/atlas/learn/page.tsx already uses for the same
+// reason.
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'The Atlas — every country in the world, engraved',
@@ -91,32 +103,21 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
             a row in the standings, then open a country to read its note.
           </p>
         </div>
-        <div className={styles.introRight}>
-          <nav className={styles.introLinks} aria-label="More ways into The Atlas">
-            <Link href="/atlas/compare" className={styles.introLink}>
-              Compare countries →
-            </Link>
-            <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
-              Full rankings →
-            </Link>
-          </nav>
-
-          {/* Redesigned 2026-08-11: the only routes in were this row's tiny
-              link and the matching one in app/atlas/layout.tsx's top bar —
-              both read as chrome and got skipped. The owner's complaint was
-              that the floor holds five games, a grade, and a wall of past
-              runs, and was advertised the same size as "Full rankings →".
-              This is its own card now, not a third item in the link row —
-              see .floorDoor in plate.module.css. */}
-          <Link href="/atlas/learn" className={styles.floorDoor}>
-            <span aria-hidden="true" className={`atlas-perforated-h ${styles.floorDoorPerf}`} />
-            <span className={styles.floorDoorLabel}>
-              The training floor <span aria-hidden="true" className={styles.floorDoorArrow}>→</span>
-            </span>
-            <span className={styles.floorDoorSub}>Five games. A grade to climb. A wall of your runs.</span>
+        <nav className={styles.introLinks} aria-label="More ways into The Atlas">
+          <Link href="/atlas/compare" className={styles.introLink}>
+            Compare countries →
           </Link>
-        </div>
+          <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
+            Full rankings →
+          </Link>
+        </nav>
       </div>
+
+      {/* Redesigned 2026-08-11: the training floor's entry used to be
+          .floorDoor, a card in this corner — the owner looked at it live and
+          said "cant see it". Full-width band instead, its own row between
+          .intro and the map+rail below; see FloorBand.tsx. */}
+      <FloorBand />
 
       <Plate
         countryPaths={COUNTRY_PATHS}

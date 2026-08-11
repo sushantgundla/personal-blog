@@ -205,17 +205,6 @@
   color: var(--note-intaglio-dim);
 }
 
-/* Groups the two plain nav links with the training floor card below them —
-   see .floorDoor. Keeps "more views of this same map" (introLink) reading
-   as one light row while the floor gets a taller, distinct unit of its
-   own underneath, both still hugging the right edge of .intro. */
-.introRight {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.6rem;
-}
-
 .introLinks {
   display: flex;
   gap: 1.25rem;
@@ -241,113 +230,218 @@
   border-color: var(--note-intaglio);
 }
 
-/* Redesigned 2026-08-11 — was .introLinkStrong, a framed chip riding third
-   in .introLinks, the same height as "Compare countries →" beside it. The
-   owner: "the Training floor button is so small, there is so much inside
-   it." Behind it sit five games, a grade you climb, and a wall of past
-   runs — that deserved its own card, not a chip the same size as a plain
-   nav link. Whole thing is one <a>, so the headline and the one-line
-   contents summary are both inside the same click target. Still the
-   plate's existing ember-border vocabulary (the metric dial's own selected
-   chip, .dialChipActive, wears the same frame) — not a new kind of
-   control, just given room to say what's inside. */
-.floorDoor {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.3rem;
-  width: fit-content;
-  max-width: 100%;
-  padding: 0.7rem 0.85rem 0.6rem;
-  background: var(--note-paper-hi);
-  border: 1px solid var(--note-ember);
-  border-top: none;
-  text-decoration: none;
-  color: var(--note-intaglio);
-  transition: background 0.2s var(--atlas-ease), transform 0.2s var(--atlas-ease);
-}
-
-/* The perforated top edge — the same cutting guide the uncut sheet uses
-   between two notes (atlas.css §3, .atlas-perforated-h). Reads as "torn
-   from the plate above, tear here to go in" instead of a fourth flat rule
-   on the page. Pulled to the card's own outer edges with negative margins
-   so the dashed line spans the full border width below it, not just the
-   padding box. */
-.floorDoorPerf {
-  display: block;
-  margin: 0 -0.85rem 0.35rem;
-  width: calc(100% + 1.7rem);
-}
-
-.floorDoorLabel {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8125rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--note-ember);
-  white-space: nowrap;
-  transition: color 0.2s var(--atlas-ease);
-}
-
-/* Nudges right on hover/focus — the one bit of motion on the card, kept
-   separate from .floorDoor's own background/transform so reduced motion
-   (below) can silence it without touching the colour change. */
-.floorDoorArrow {
-  display: inline-block;
-  transition: transform 0.2s var(--atlas-ease);
-}
-
-.floorDoorSub {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
-  color: var(--note-intaglio-dim);
-  max-width: 22rem;
-  transition: color 0.2s var(--atlas-ease);
-}
-
-/* Fills solid on hover, same move .introLinkStrong used to make — the row
-   above only changes colour, so the card has somewhere brighter to go and
-   stays the loudest thing in .intro. */
-.floorDoor:hover,
-.floorDoor:focus-visible {
-  background: var(--note-ember);
-  transform: translateY(-1px);
-}
-
-.floorDoor:hover .floorDoorLabel,
-.floorDoor:focus-visible .floorDoorLabel {
-  color: var(--note-void);
-}
-
-.floorDoor:hover .floorDoorSub,
-.floorDoor:focus-visible .floorDoorSub {
-  color: var(--note-void);
-  opacity: 0.75;
-}
-
-.floorDoor:hover .floorDoorArrow,
-.floorDoor:focus-visible .floorDoorArrow {
-  transform: translateX(3px);
-}
-
-.floorDoor:focus-visible {
-  outline: 2px solid var(--note-ember);
-  outline-offset: 2px;
-}
-
 @media (max-width: 640px) {
   .intro {
     flex-direction: column;
     align-items: flex-start;
   }
-  .introRight {
+}
+
+/* ---------------------------------------------------------- floor band
+
+   Redesigned 2026-08-11 — replaces .floorDoor, a card pinned to .intro's
+   top-right corner (commit 77575ae). Live, the owner said "cant see it":
+   at ~330x70px next to a full-bleed world map, no amount of framing read
+   as anything but furniture. This is a full-width row instead — its own
+   child in .page's flex column (see FloorBand.tsx), sitting between
+   .intro and .layout so the map still leads but the floor is unmissable
+   as the second thing on the page. .page's fixed viewport budget (the
+   page-shell comment up top) means this band's height comes straight out
+   of the map's — kept deliberately compact for that reason: one wrapped
+   header row plus one row of five short links, not a showcase.
+
+   Grew a Country of the day the same day, in the same budget — see
+   .floorBandSubLink below. It took the old caption's slot rather than
+   adding a row, so the band is still two rows total. */
+.floorBand {
+  position: relative;
+  flex: none;
+  background: var(--note-paper);
+  border-bottom: 1px solid var(--note-rule);
+}
+
+/* The perforated top edge — the same cutting guide the uncut sheet uses
+   between two notes (atlas.css §3, .atlas-perforated-h). Reads as "torn
+   from the plate above" rather than a fifth flat rule on the page. */
+.floorBandPerf {
+  display: block;
+  width: 100%;
+}
+
+.floorBandInner {
+  padding: 0.75rem 1.25rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.floorBandTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+}
+
+.floorBandHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+/* The headline lever this redesign pulls: .floorDoorLabel above was
+   13px mono, easy to read straight past. This borrows .introTitle's own
+   scale (Bodoni Moda, the plate's title face) so the floor gets a second
+   headline-weight line on the page, not a caption. */
+.floorBandLead {
+  display: inline-flex;
+  width: fit-content;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: clamp(1.5rem, 3.2vw, 2.25rem);
+  line-height: 1;
+  color: var(--note-ember);
+  text-decoration: none;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.floorBandLead:hover,
+.floorBandLead:focus-visible {
+  color: var(--note-intaglio);
+}
+
+.floorBandLead:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 3px;
+}
+
+.floorBandArrow {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.15rem;
+  transition: transform 0.2s var(--atlas-ease);
+}
+
+.floorBandLead:hover .floorBandArrow,
+.floorBandLead:focus-visible .floorBandArrow {
+  transform: translateX(4px);
+}
+
+.floorBandSub {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--note-intaglio-dim);
+}
+
+/* The live variant of .floorBandSub — same slot, same size, but a link:
+   FloorBand.tsx renders this instead of the plain <p> whenever a Country
+   of the day is available (effectively always; see buildCountryOfDay's own
+   doc comment for the one rare case it isn't). Two classes rather than one
+   with a modifier because the fallback genuinely never needs hover/focus
+   styling — it isn't a link. */
+.floorBandSubLink {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.floorBandSubLink:hover,
+.floorBandSubLink:focus-visible {
+  color: var(--note-intaglio);
+}
+
+.floorBandSubLink:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+.floorBandSubName {
+  color: var(--note-ember);
+}
+
+/* FloorGradeChip.tsx — the one piece of live content, a visitor's own
+   grade off the ladder in lib/atlas/learn/progress.ts. ◉ echoes the mark
+   GradeSeal.tsx uses for the rung currently held. */
+.floorBandGrade {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.floorBandGrade:hover,
+.floorBandGrade:focus-visible {
+  color: var(--note-ember);
+}
+
+.floorBandGrade:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+.floorBandGradeMark {
+  color: var(--note-ember);
+}
+
+/* The five games, named — what actually separates a full-width band from
+   a bigger version of the same corner card. Real links, not a list of
+   labels: each one is its own way in. flex-wrap, not the .dialChips
+   horizontal-scroll pattern — five short names wrap to a second line
+   cleanly at any width this band ever hits, so nothing needs a scroll
+   gesture to be seen. */
+.floorBandGames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.floorBandGame {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.65rem;
+  background: var(--note-paper-hi);
+  border: 1px solid var(--note-rule);
+  color: var(--note-intaglio-dim);
+  text-decoration: none;
+  transition: border-color 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease),
+    background 0.2s var(--atlas-ease);
+}
+
+.floorBandGame:hover,
+.floorBandGame:focus-visible {
+  border-color: var(--note-ember);
+  color: var(--note-ember);
+  background: var(--note-paper);
+}
+
+.floorBandGame:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .floorBandTop {
+    flex-direction: column;
     align-items: flex-start;
-    width: 100%;
-  }
-  .floorDoor {
-    width: 100%;
   }
 }
 
@@ -869,11 +963,11 @@
     transition: none !important;
   }
 
-  .floorDoor {
-    transition: none !important;
-  }
-
-  .floorDoorArrow {
+  .floorBandLead,
+  .floorBandArrow,
+  .floorBandGrade,
+  .floorBandGame,
+  .floorBandSubLink {
     transition: none !important;
   }
 }
