@@ -14,8 +14,8 @@
 // - Every fact carries the query's run time as "asOf", per §3.7.
 import type { NeighbourCountry, Person, SourceResult, UnescoSite, WikidataFacts } from "../types";
 import { commonsThumbnail, toHttps } from "../format";
-import { ISO_COUNTRIES } from "../iso-countries";
-import { isLandBorder } from "../land-borders";
+import { BY_ISO3, ISO_COUNTRIES } from "../iso-countries";
+import { neighboursOf } from "../land-borders";
 
 const ENDPOINT = "https://query.wikidata.org/sparql";
 const USER_AGENT =
@@ -239,11 +239,11 @@ export async function fetchUnescoSites(
 }
 
 /**
- * Bordering countries — Wikidata P47. Exported separately from
- * fetchDossierFacts (not just inlined there) so
- * scripts/atlas/build-snapshot.mjs can patch just this field into a snapshot
- * file written before this existed, without re-fetching everything else for
- * that country — see the script's `--patch-neighbours` flag.
+ * Bordering countries. Exported separately from fetchDossierFacts (not just
+ * inlined there) so scripts/atlas/build-snapshot.mjs can patch just this
+ * field into a snapshot file written before this existed, without
+ * re-fetching everything else for that country — see the script's
+ * `--patch-neighbours` and `--patch-neighbours-local` flags.
  *
  * Fixed 2026-08-03: this used to live entirely inside
  * app/atlas/_components/Neighbours.tsx as its own standalone live query,
@@ -252,35 +252,59 @@ export async function fetchUnescoSites(
  * after every other panel got fast. Neighbours.tsx now just renders
  * `dossier.wikidata.data.neighbours`.
  *
- * Fixed 2026-08-08: P47 ("shares border with") also carries maritime and
- * disputed relationships — Wikidata returned "Maldives shares a border with
- * United Kingdom" and "India shares a border with Indonesia" here, both
- * live on production. No qualifier on the statement distinguishes land from
- * maritime (checked directly against query.wikidata.org), so this filters
- * against lib/atlas/land-borders.ts, a small standalone land-border table —
- * see its file header for where that data comes from.
+ * Fixed 2026-08-08: Wikidata's P47 ("shares border with") also carries
+ * maritime and disputed relationships — "Maldives shares a border with
+ * United Kingdom" and "India shares a border with Indonesia" were both real
+ * P47 facts, live on production, and false claims for a land border. No
+ * qualifier on the statement distinguishes land from maritime (checked
+ * directly against query.wikidata.org), so this used to run a P47 query and
+ * filter its result against lib/atlas/land-borders.ts, a small standalone
+ * land-border table.
+ *
+ * Fixed 2026-08-11: filtering only ever removed a bad P47 pair, it could
+ * never add a real land border P47 doesn't assert at all — six real
+ * borders (Belgium-Netherlands, Germany-Netherlands, China-Hong Kong,
+ * China-Macau, Israel-Palestine, Suriname-French Guiana) were quietly
+ * missing this way, even though land-borders.ts has always known about all
+ * six. This now runs the other way: `neighboursOf` (land-borders.ts) is the
+ * source of truth for *which* countries border this one, full stop. The P47
+ * query below is kept only to supply a flag image for each — a neighbour it
+ * doesn't mention gets flagImageUrl: null, which Neighbours.tsx already
+ * renders as a plain two-letter fallback badge, the same as any other
+ * country with no captured flag.
  */
 export async function fetchNeighbours(qid: string): Promise<SourceResult<NeighbourCountry[]>> {
   try {
     const sourceIso3 = QID_TO_COUNTRY.get(qid)?.iso3 ?? null;
+    if (!sourceIso3) {
+      // Not a country our ISO table knows — land-borders.ts can't place it
+      // either, so there is nothing to report.
+      return { ok: true, data: [] };
+    }
+
     const rows = await sparql(neighboursQuery(qid));
-    const seen = new Set<string>();
-    const neighbours: NeighbourCountry[] = [];
+    const flagByIso3 = new Map<string, string | null>();
     for (const row of rows) {
       const neighbourQid = str(row, "neighbour")?.split("/").pop() ?? "";
       const country = QID_TO_COUNTRY.get(neighbourQid);
-      // A neighbour not in our ~250-row ISO table (disputed territories,
-      // historical entities) is skipped rather than linked to a 404.
-      if (!country || seen.has(country.iso3)) continue;
-      // Not a genuine land border — see the "Fixed 2026-08-08" note above.
-      if (!sourceIso3 || !isLandBorder(sourceIso3, country.iso3)) continue;
-      seen.add(country.iso3);
-      neighbours.push({
-        iso3: country.iso3,
-        name: str(row, "neighbourLabel") ?? country.name,
-        flagImageUrl: commonsThumbnail(toHttps(str(row, "flag")), 64),
-      });
+      if (country) flagByIso3.set(country.iso3, str(row, "flag") ?? null);
     }
+
+    const neighbours: NeighbourCountry[] = neighboursOf(sourceIso3)
+      .map((iso3): NeighbourCountry | null => {
+        const country = BY_ISO3[iso3];
+        // land-borders.ts's own invariant is that every ISO3 in it is also
+        // in lib/atlas/iso-countries.ts (see its file header) — this is
+        // defensive, not an expected path.
+        if (!country) return null;
+        return {
+          iso3,
+          name: country.name,
+          flagImageUrl: commonsThumbnail(toHttps(flagByIso3.get(iso3) ?? null), 64),
+        };
+      })
+      .filter((n): n is NeighbourCountry => n !== null);
+
     neighbours.sort((a, b) => a.name.localeCompare(b.name));
     return { ok: true, data: neighbours };
   } catch (err) {

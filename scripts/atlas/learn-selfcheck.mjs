@@ -75,7 +75,7 @@ const { CLUE_ORDER, populationBand } = await import(
 const { COUNTRY_PATHS } = await import(
   pathToFileURL(path.join(repoRoot, "lib/atlas/geo/world-paths.ts")).href
 );
-const { isLandBorder } = await import(
+const { isLandBorder, ALL_LAND_BORDER_PAIRS } = await import(
   pathToFileURL(path.join(repoRoot, "lib/atlas/land-borders.ts")).href
 );
 
@@ -1047,6 +1047,39 @@ const codByDate = new Map(COD_DATES.map((date) => [date, buildCountryOfDay(deck,
 }
 
 // ------------------------------------------------------- checks: the deck
+
+{
+  // The other direction of the "guess-country: a Neighbour clue only ever
+  // names a genuine land-border country" check above: that one proves the
+  // deck never *invents* a border. This proves it never *drops* a real one
+  // — every pair lib/atlas/land-borders.ts asserts must show up on both
+  // sides of deck.countries[].neighbours, since land-borders.ts is now the
+  // source of truth for that field (fetchNeighbours in
+  // lib/atlas/sources/wikidata.ts builds it directly from the table, not by
+  // filtering Wikidata), not deck.countries.neighbours read back against
+  // itself. Walks ALL_LAND_BORDER_PAIRS (the raw pair list), not
+  // isLandBorder (a membership test, not an enumeration).
+  const problems = [];
+  for (const [a, b] of ALL_LAND_BORDER_PAIRS) {
+    const countryA = countryByIso3.get(a);
+    const countryB = countryByIso3.get(b);
+    if (!countryA || !countryB) {
+      problems.push(`${a}-${b}: one side is not in the deck at all`);
+      continue;
+    }
+    if (!countryA.neighbours.includes(b)) {
+      problems.push(`${a} (${countryA.name}) is missing ${b} (${countryB.name}) from its neighbours`);
+    }
+    if (!countryB.neighbours.includes(a)) {
+      problems.push(`${b} (${countryB.name}) is missing ${a} (${countryA.name}) from its neighbours`);
+    }
+  }
+  check(
+    "deck: every land-borders.ts pair appears on both sides of deck.countries[].neighbours",
+    problems,
+    `${ALL_LAND_BORDER_PAIRS.length} pairs checked`
+  );
+}
 
 {
   const problems = [];

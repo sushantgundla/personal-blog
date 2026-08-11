@@ -17,7 +17,18 @@ export interface NeighboursProps {
 }
 
 /**
- * One-click hops to bordering countries, sourced from Wikidata P47.
+ * One-click hops to bordering countries. *Which* countries appear here
+ * comes from lib/atlas/land-borders.ts, not Wikidata — see
+ * NeighbourCountry's doc comment (lib/atlas/types.ts) and fetchNeighbours'
+ * (lib/atlas/sources/wikidata.ts) for why. A neighbour with no flag image
+ * on Wikidata (or one land-borders.ts knows about that Wikidata's "shares
+ * border with" query doesn't mention at all) still renders here, just with
+ * the plain two-letter fallback badge below instead of a flag.
+ *
+ * content/atlas/learn/deck.json's `neighbours` field (scripts/atlas/
+ * build-deck.mjs) is built from the same snapshot this panel reads, through
+ * the same land-borders.ts, so the two always agree on which countries
+ * border which — see land-borders.ts's file header.
  *
  * Fixed 2026-08-03: this used to run its own live SPARQL query per country,
  * deliberately outside lib/atlas/sources/wikidata.ts — which meant it never
