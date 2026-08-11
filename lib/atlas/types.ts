@@ -120,7 +120,11 @@ export interface UnescoSite {
   coordinates: { lat: number; lng: number } | null;
 }
 
-/** One bordering country — Wikidata P47. */
+/** One bordering country. Which countries appear here comes from
+ * lib/atlas/land-borders.ts (the source of truth for a real land border),
+ * not from Wikidata's P47 — see fetchNeighbours' doc comment
+ * (lib/atlas/sources/wikidata.ts) for why. flagImageUrl is filled in from
+ * Wikidata's P47 result where it has one; null when it doesn't. */
 export interface NeighbourCountry {
   iso3: string;
   name: string;
@@ -165,13 +169,15 @@ export interface WikidataFacts {
    */
   unescoSites?: UnescoSite[];
   /**
-   * Wikidata P47 — bordering countries, empty for islands (a normal state,
-   * not an error). Optional, not just possibly-empty: the dossier snapshot
-   * files written before 2026-08-03 genuinely don't have this key at all
-   * (JSON.parse gives `undefined`, not `[]`), and a failed live fetch must
-   * produce that same `undefined`, never `[]` — every reader must treat
-   * "missing" as its own "not fetched / fetch failed" state, distinct from
-   * "fetched, zero neighbours". See app/atlas/_components/Neighbours.tsx.
+   * Bordering countries, from lib/atlas/land-borders.ts (see
+   * NeighbourCountry's doc comment) — empty for islands and other countries
+   * with genuinely no land border (a normal state, not an error). Optional,
+   * not just possibly-empty: the dossier snapshot files written before
+   * 2026-08-03 genuinely don't have this key at all (JSON.parse gives
+   * `undefined`, not `[]`), and a failed live fetch must produce that same
+   * `undefined`, never `[]` — every reader must treat "missing" as its own
+   * "not fetched / fetch failed" state, distinct from "fetched, zero
+   * neighbours". See app/atlas/_components/Neighbours.tsx.
    *
    * Fixed 2026-08-08: fetchDossierFacts and build-snapshot.mjs's
    * patchNeighbours used to collapse a failed fetchNeighbours call to `[]`

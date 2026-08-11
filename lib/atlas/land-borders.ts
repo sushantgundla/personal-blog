@@ -38,6 +38,21 @@
 // in this table) still works the day the snapshot catches up, without
 // anyone having to touch this file again.
 //
+// Fixed 2026-08-11: "filter, never to add" above used to be true of the
+// whole pipeline, not just build-deck.mjs — fetchNeighbours in
+// lib/atlas/sources/wikidata.ts only ever intersected Wikidata's P47 result
+// with this table, so a real land border P47 doesn't assert at all could
+// never appear, however long this table has known about it. Six such gaps
+// were live: Belgium-Netherlands, Germany-Netherlands, China-Hong Kong,
+// China-Macau, Israel-Palestine and Suriname-French Guiana (all six pairs
+// are already in RAW_PAIRS below — they were never missing *here*, only
+// from what a "shares border with" query returns). `neighboursOf` below is
+// this table's answer to "who borders this country" on its own — the
+// enumeration now runs the other way: fetchNeighbours lists a country's
+// neighbours *from this table* and asks Wikidata only for a flag image to
+// go with each one. See fetchNeighbours' own doc comment for the flag side
+// of that.
+//
 // One hand-verified correction on top of mledoze: its `borders` field lists
 // IND-LKA (India-Sri Lanka) as a land border. Sri Lanka is an island — the
 // Palk Strait separates it from India, no land crossing exists — so that
@@ -383,4 +398,40 @@ export const LAND_BORDER_PAIRS: ReadonlySet<string> = new Set(
 /** True only for two ISO3 codes that share a real land boundary. */
 export function isLandBorder(a: string, b: string): boolean {
   return LAND_BORDER_PAIRS.has(pairKey(a, b));
+}
+
+/** The raw pair list, exported for scripts/atlas/learn-selfcheck.mjs's
+ * completeness check — it needs every pair to walk, not just a membership
+ * test (isLandBorder above answers "is this pair real", not "list every
+ * real pair"). */
+export const ALL_LAND_BORDER_PAIRS: ReadonlyArray<readonly [string, string]> = RAW_PAIRS;
+
+/** ISO3 -> the set of ISO3s it shares a real land border with, built once
+ * from RAW_PAIRS. Backs neighboursOf below. */
+const NEIGHBOURS_BY_ISO3: ReadonlyMap<string, ReadonlySet<string>> = (() => {
+  const map = new Map<string, Set<string>>();
+  function add(a: string, b: string): void {
+    let set = map.get(a);
+    if (!set) {
+      set = new Set();
+      map.set(a, set);
+    }
+    set.add(b);
+  }
+  for (const [a, b] of RAW_PAIRS) {
+    add(a, b);
+    add(b, a);
+  }
+  return map;
+})();
+
+/**
+ * Every ISO3 this one shares a real land border with, per this table alone
+ * — the source of truth, not a filter on some other source. Sorted for
+ * determinism (callers that need names/flags look those up separately; this
+ * only says *which* countries — see fetchNeighbours in
+ * lib/atlas/sources/wikidata.ts for how the rest gets attached).
+ */
+export function neighboursOf(iso3: string): string[] {
+  return Array.from(NEIGHBOURS_BY_ISO3.get(iso3) ?? []).sort();
 }

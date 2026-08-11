@@ -328,12 +328,15 @@ function buildIndicators(rankingsFile) {
 function buildCountry(iso, snapshot) {
   const facts = snapshot?.wikidata?.ok ? snapshot.wikidata.data : null;
 
-  // Wikidata's P47 ("shares border with") also carries maritime and stale
-  // relationships (Maldives-United Kingdom, Kiribati-United States,
-  // Sudan-Uganda before South Sudan split off) — see land-borders.ts's file
-  // header for why no qualifier on the statement lets Wikidata sort that out
-  // itself. isLandBorder is the filter: a neighbour survives into the deck
-  // only if it's also a real land border.
+  // facts.neighbours is already land-borders.ts's own answer to "who
+  // borders this country" — fetchNeighbours (lib/atlas/sources/wikidata.ts)
+  // builds it from land-borders.ts directly, not from Wikidata's P47 (see
+  // its doc comment for why: P47 carries maritime/stale relationships and,
+  // separately, misses real borders like Belgium-Netherlands entirely).
+  // isLandBorder is kept here anyway as a second, independent check — a
+  // stale or hand-edited snapshot file could in principle disagree with the
+  // table, and this is the one place that would ever be caught, given the
+  // dossier panel and the deck both read from this same snapshot field.
   const neighbours = Array.isArray(facts?.neighbours)
     ? facts.neighbours
         .map((n) => n?.iso3)

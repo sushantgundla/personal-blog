@@ -30,11 +30,12 @@
 // Usage:
 //   node scripts/atlas/build-snapshot.mjs [--limit N] [--only ISO3,ISO3] [--force] [--skip-rankings] [--skip-countries]
 //   node scripts/atlas/build-snapshot.mjs --patch-neighbours   (see below)
+//   node scripts/atlas/build-snapshot.mjs --patch-neighbours-local   (see below, no network)
 import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ISO_COUNTRIES } from "../../lib/atlas/iso-countries.ts";
+import { BY_ISO3, ISO_COUNTRIES } from "../../lib/atlas/iso-countries.ts";
 import { ALL_INDICATOR_CODES, CHART_INDICATOR_CODES } from "../../lib/atlas/indicators.ts";
 import { fetchLatestIndicators, fetchTimeSeries } from "../../lib/atlas/sources/worldbank.ts";
 import { fetchDossierFacts, fetchNeighbours } from "../../lib/atlas/sources/wikidata.ts";
@@ -43,6 +44,8 @@ import { fetchTradeSummary } from "../../lib/atlas/sources/comtrade.ts";
 import { fetchCapitalWeather } from "../../lib/atlas/sources/meteo.ts";
 import { fetchRate } from "../../lib/atlas/sources/fx.ts";
 import { getOverrides } from "../../lib/atlas/overrides.ts";
+import { neighboursOf } from "../../lib/atlas/land-borders.ts";
+import { toHttps, commonsThumbnail } from "../../lib/atlas/format.ts";
 // From rankings-data.ts, not rankings.ts — rankings.ts imports `next/cache`
 // for its Data Cache layer, which this plain-Node script can't resolve (see
 // rankings-data.ts's doc comment). This script only ever needed
@@ -349,6 +352,122 @@ async function patchNeighbours(force = false) {
   return { patched, skipped, readFailed, fetchFailures };
 }
 
+/**
+ * One Commons flag URL, resized to the 64px width Neighbours.tsx and the
+ * neighbour panel use. `flagImageUrl` on a country's own captured file is
+ * already sized for its own dossier page (320px, via fetchDossierFacts'
+ * commonsThumbnail call in wikidata.ts) and already carries a `?width=320` —
+ * appending `&width=64` on top of that would double up the query string
+ * rather than replace it (see format.ts's commonsThumbnail doc comment), so
+ * the existing width is stripped before the real one is applied. Mirrors
+ * build-deck.mjs's normaliseImageUrl, pinned at the one width this needs.
+ */
+function neighbourFlagUrl(rawFlagImageUrl) {
+  const https = toHttps(rawFlagImageUrl ?? null);
+  if (!https) return null;
+  if (!https.includes("/Special:FilePath/")) return https;
+  return commonsThumbnail(https.split("?")[0], 64);
+}
+
+/**
+ * Rebuilds every already-captured country file's wikidata.data.neighbours
+ * field from lib/atlas/land-borders.ts alone — no network call, no live
+ * query, just the local table and the local snapshot files already on disk.
+ *
+ * Added 2026-08-11 when land-borders.ts became the source of truth for a
+ * country's neighbour list rather than a filter on Wikidata's P47 result
+ * (see fetchNeighbours' doc comment in lib/atlas/sources/wikidata.ts). A
+ * real land border the table has always known about but P47 never asserted
+ * (Belgium-Netherlands, Germany-Netherlands, China-Hong Kong, China-Macau,
+ * Israel-Palestine, Suriname-French Guiana) can't reach the *committed*
+ * snapshot through a live fetch of the country that's missing it — the
+ * query still won't mention it. Recomputing every file locally is what
+ * actually closes that gap, without the hour-plus a live --patch-neighbours
+ * sweep of all ~250 countries would cost for a change nothing live-fetched
+ * would ever fix.
+ *
+ * A neighbour's flag is recycled from that neighbour's own already-captured
+ * file (its own wikidata.data.flagImageUrl) rather than fetched — every
+ * country's flag is already sitting in its own snapshot file, so reading it
+ * is a second local file read, never a network call. A neighbour with no
+ * captured flag (or no snapshot file at all — no country in this table
+ * should lack one, but a partial local checkout could) gets
+ * flagImageUrl: null, exactly like any other country with no captured flag;
+ * Neighbours.tsx already renders a two-letter fallback badge for that.
+ */
+async function patchNeighboursLocal() {
+  const captured = await loadAlreadyCaptured();
+  const files = new Map();
+  let readFailed = 0;
+  for (const iso3 of captured) {
+    try {
+      files.set(iso3, JSON.parse(await readFile(countryPath(iso3), "utf-8")));
+    } catch (err) {
+      console.log(`${iso3}: FAILED to read/parse (${err.message})`);
+      readFailed++;
+    }
+  }
+
+  function flagFor(iso3) {
+    const data = files.get(iso3);
+    if (!data?.wikidata?.ok) return null;
+    return neighbourFlagUrl(data.wikidata.data.flagImageUrl ?? null);
+  }
+
+  let patched = 0;
+  let unchanged = 0;
+  let skipped = 0;
+  let netAdded = 0;
+
+  for (const [iso3, data] of files) {
+    if (!data.wikidata?.ok) {
+      skipped++;
+      continue;
+    }
+    if (!BY_ISO3[iso3]) {
+      skipped++;
+      continue;
+    }
+
+    const rebuilt = neighboursOf(iso3)
+      .map((nIso3) => {
+        const n = BY_ISO3[nIso3];
+        if (!n) return null; // defensive — see land-borders.ts's own invariant
+        return { iso3: nIso3, name: n.name, flagImageUrl: flagFor(nIso3) };
+      })
+      .filter((n) => n !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const before = Array.isArray(data.wikidata.data.neighbours)
+      ? data.wikidata.data.neighbours.map((n) => n.iso3).sort()
+      : null;
+    const after = rebuilt.map((n) => n.iso3).sort();
+    const changed = before === null || JSON.stringify(before) !== JSON.stringify(after);
+
+    if (!changed) {
+      unchanged++;
+      continue;
+    }
+
+    const added = after.filter((c) => !before?.includes(c));
+    if (added.length > 0) {
+      console.log(`${iso3} (${BY_ISO3[iso3].name}): +${added.join(", ")}`);
+      netAdded += added.length;
+    }
+
+    data.wikidata.data.neighbours = rebuilt;
+    await saveCountry(iso3, data);
+    patched++;
+  }
+
+  console.log(
+    `\nNeighbours local patch: ${patched} file(s) changed (${netAdded} neighbour(s) added net), ` +
+      `${unchanged} already matched land-borders.ts, ${skipped} skipped (no wikidata data), ` +
+      `${readFailed} failed to read.`
+  );
+  return { patched, unchanged, skipped, readFailed, netAdded };
+}
+
 async function buildCountries({ limit, only, force }) {
   const already = force ? new Set() : await loadAlreadyCaptured();
   const queue = ISO_COUNTRIES.filter(
@@ -391,8 +510,16 @@ async function main() {
   const skipRankings = args.includes("--skip-rankings");
   const skipCountries = args.includes("--skip-countries");
   const patchNeighboursOnly = args.includes("--patch-neighbours");
+  const patchNeighboursLocalOnly = args.includes("--patch-neighbours-local");
 
   await writeStatus("running", { startedAt: new Date().toISOString() });
+
+  if (patchNeighboursLocalOnly) {
+    await patchNeighboursLocal();
+    await writeStatus("done");
+    console.log("\nDone.");
+    return;
+  }
 
   if (patchNeighboursOnly) {
     const summary = await patchNeighbours(force);
