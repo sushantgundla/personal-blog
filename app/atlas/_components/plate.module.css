@@ -205,15 +205,22 @@
   color: var(--note-intaglio-dim);
 }
 
+/* Groups the two plain nav links with the training floor card below them —
+   see .floorDoor. Keeps "more views of this same map" (introLink) reading
+   as one light row while the floor gets a taller, distinct unit of its
+   own underneath, both still hugging the right edge of .intro. */
+.introRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
 .introLinks {
   display: flex;
   gap: 1.25rem;
   flex-wrap: wrap;
-  /* .introLinkStrong below is a framed chip and so is taller than its two
-     underlined siblings. Without this the flex default (stretch) would
-     drag those two to the chip's height and drop their underline to the
-     bottom of it; centred, the three sit on one line. */
-  align-items: center;
+  align-items: baseline;
 }
 
 .introLink {
@@ -234,41 +241,113 @@
   border-color: var(--note-intaglio);
 }
 
-/* Added 2026-08-04: the way into the learning section from the plate.
-   /atlas/learn used to be reachable only from the "the training floor →"
-   link in app/atlas/layout.tsx's top bar, which is the same small mono
-   line as the "← sushantgundla.com" link next to it and is easy to read
-   straight past.
-
-   It rides in this same nav, third after "Full rankings →", but framed
-   rather than underlined: the other two are more views of this same map,
-   this one is a different room, and it was asked for as a button. The
-   frame is the one the metric dial's own selected chip already wears
-   (.dialChipActive — ember border on raised paper), so this is existing
-   plate vocabulary rather than a new kind of control. */
-.introLinkStrong {
-  padding: 0.4rem 0.7rem;
+/* Redesigned 2026-08-11 — was .introLinkStrong, a framed chip riding third
+   in .introLinks, the same height as "Compare countries →" beside it. The
+   owner: "the Training floor button is so small, there is so much inside
+   it." Behind it sit five games, a grade you climb, and a wall of past
+   runs — that deserved its own card, not a chip the same size as a plain
+   nav link. Whole thing is one <a>, so the headline and the one-line
+   contents summary are both inside the same click target. Still the
+   plate's existing ember-border vocabulary (the metric dial's own selected
+   chip, .dialChipActive, wears the same frame) — not a new kind of
+   control, just given room to say what's inside. */
+.floorDoor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.7rem 0.85rem 0.6rem;
   background: var(--note-paper-hi);
   border: 1px solid var(--note-ember);
-  transition: background 0.2s var(--atlas-ease), color 0.2s var(--atlas-ease),
-    border-color 0.2s var(--atlas-ease);
+  border-top: none;
+  text-decoration: none;
+  color: var(--note-intaglio);
+  transition: background 0.2s var(--atlas-ease), transform 0.2s var(--atlas-ease);
 }
 
-/* Fills solid on hover — the row's other two only change colour, so the
-   chip has somewhere brighter to go and stays the loudest thing in it.
-   Must come after .introLink:hover above, which it overrides at equal
-   specificity. */
-.introLinkStrong:hover,
-.introLinkStrong:focus-visible {
+/* The perforated top edge — the same cutting guide the uncut sheet uses
+   between two notes (atlas.css §3, .atlas-perforated-h). Reads as "torn
+   from the plate above, tear here to go in" instead of a fourth flat rule
+   on the page. Pulled to the card's own outer edges with negative margins
+   so the dashed line spans the full border width below it, not just the
+   padding box. */
+.floorDoorPerf {
+  display: block;
+  margin: 0 -0.85rem 0.35rem;
+  width: calc(100% + 1.7rem);
+}
+
+.floorDoorLabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--note-ember);
+  white-space: nowrap;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+/* Nudges right on hover/focus — the one bit of motion on the card, kept
+   separate from .floorDoor's own background/transform so reduced motion
+   (below) can silence it without touching the colour change. */
+.floorDoorArrow {
+  display: inline-block;
+  transition: transform 0.2s var(--atlas-ease);
+}
+
+.floorDoorSub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--note-intaglio-dim);
+  max-width: 22rem;
+  transition: color 0.2s var(--atlas-ease);
+}
+
+/* Fills solid on hover, same move .introLinkStrong used to make — the row
+   above only changes colour, so the card has somewhere brighter to go and
+   stays the loudest thing in .intro. */
+.floorDoor:hover,
+.floorDoor:focus-visible {
   background: var(--note-ember);
-  border-color: var(--note-ember);
+  transform: translateY(-1px);
+}
+
+.floorDoor:hover .floorDoorLabel,
+.floorDoor:focus-visible .floorDoorLabel {
   color: var(--note-void);
+}
+
+.floorDoor:hover .floorDoorSub,
+.floorDoor:focus-visible .floorDoorSub {
+  color: var(--note-void);
+  opacity: 0.75;
+}
+
+.floorDoor:hover .floorDoorArrow,
+.floorDoor:focus-visible .floorDoorArrow {
+  transform: translateX(3px);
+}
+
+.floorDoor:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {
   .intro {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .introRight {
+    align-items: flex-start;
+    width: 100%;
+  }
+  .floorDoor {
+    width: 100%;
   }
 }
 
@@ -790,7 +869,11 @@
     transition: none !important;
   }
 
-  .introLinkStrong {
+  .floorDoor {
+    transition: none !important;
+  }
+
+  .floorDoorArrow {
     transition: none !important;
   }
 }

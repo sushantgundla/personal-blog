@@ -91,21 +91,31 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
             a row in the standings, then open a country to read its note.
           </p>
         </div>
-        <nav className={styles.introLinks} aria-label="More ways into The Atlas">
-          <Link href="/atlas/compare" className={styles.introLink}>
-            Compare countries →
+        <div className={styles.introRight}>
+          <nav className={styles.introLinks} aria-label="More ways into The Atlas">
+            <Link href="/atlas/compare" className={styles.introLink}>
+              Compare countries →
+            </Link>
+            <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
+              Full rankings →
+            </Link>
+          </nav>
+
+          {/* Redesigned 2026-08-11: the only routes in were this row's tiny
+              link and the matching one in app/atlas/layout.tsx's top bar —
+              both read as chrome and got skipped. The owner's complaint was
+              that the floor holds five games, a grade, and a wall of past
+              runs, and was advertised the same size as "Full rankings →".
+              This is its own card now, not a third item in the link row —
+              see .floorDoor in plate.module.css. */}
+          <Link href="/atlas/learn" className={styles.floorDoor}>
+            <span aria-hidden="true" className={`atlas-perforated-h ${styles.floorDoorPerf}`} />
+            <span className={styles.floorDoorLabel}>
+              The training floor <span aria-hidden="true" className={styles.floorDoorArrow}>→</span>
+            </span>
+            <span className={styles.floorDoorSub}>Five games. A grade to climb. A wall of your runs.</span>
           </Link>
-          <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
-            Full rankings →
-          </Link>
-          {/* Added 2026-08-04: the only route into the learning section was
-              the matching link in app/atlas/layout.tsx's top bar, which
-              reads as chrome and gets skipped. Framed rather than
-              underlined like the two above it — see .introLinkStrong. */}
-          <Link href="/atlas/learn" className={`${styles.introLink} ${styles.introLinkStrong}`}>
-            The training floor →
-          </Link>
-        </nav>
+        </div>
       </div>
 
       <Plate
