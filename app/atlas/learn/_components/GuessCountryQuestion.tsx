@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { GuessCountryQuestion as GuessCountryQuestionData } from '@/lib/atlas/learn/types'
 import styles from './play.module.css'
 
@@ -31,36 +31,58 @@ function pointsForClueCount(cluesShown: number): number {
 }
 
 /**
+ * Whether an answer has just landed and, if so, how many clues were showing.
+ *
+ * Pulled out as a pure function — no hooks, no component — so the parity it
+ * guarantees between answering by click and answering by keyboard can be
+ * unit tested without rendering anything. See
+ * lib/atlas/learn/__tests__/guess-country-question.test.ts.
+ *
+ * `picked` is null while the question is still open; the moment it turns
+ * non-null is exactly when `revealedCount` should freeze, regardless of
+ * *how* it got picked — a click on an option here, or PlayScreen's window
+ * `keydown` handler calling the `onPick` prop directly. Once picked,
+ * `revealedCount` cannot change again (the reveal button disappears), so
+ * returning it on every later call is harmless, not a second freeze.
+ */
+export function answeredAtFor(picked: number | null, revealedCount: number): number | null {
+  return picked === null ? null : revealedCount
+}
+
+/**
  * One hidden country, described by clues revealed one at a time, broadest
  * first — region, then a population band, then (where the deck has them) an
  * official language and a neighbour, then the capital last.
  *
  * The clue list only ever grows: `revealedCount` tracks how many are showing
  * and resets on every new question via the `question.id` effect below, the
- * same pattern PlayScreen itself uses for `picked`. `answeredAtRef` freezes
- * the count the instant the player picks an option — after that the panel
+ * same pattern PlayScreen itself uses for `picked`. `answeredAt` freezes the
+ * count the instant the player picks an option — after that the panel
  * quietly reveals every remaining clue (for the read-through) but the score
  * badge keeps quoting the moment of the decision, not the state after it.
  */
 export function GuessCountryQuestion({ question, picked, disabled, onPick }: GuessCountryQuestionProps) {
   const answered = picked !== null
   const [revealedCount, setRevealedCount] = useState(1)
-  const answeredAtRef = useRef(1)
+  /** How many clues were showing the instant the player picked — frozen in
+   *  state (not a ref) because the freeze has to survive to the very render
+   *  that shows the score line below; a ref written from an effect updates
+   *  silently and never repaints the number it just changed. */
+  const [answeredAt, setAnsweredAt] = useState(1)
 
   useEffect(() => {
     setRevealedCount(1)
-    answeredAtRef.current = 1
+    setAnsweredAt(1)
   }, [question.id])
+
+  useEffect(() => {
+    const next = answeredAtFor(picked, revealedCount)
+    if (next !== null) setAnsweredAt(next)
+  }, [picked, revealedCount])
 
   function revealNext() {
     if (disabled) return
     setRevealedCount((n) => Math.min(question.clues.length, n + 1))
-  }
-
-  function pick(index: number) {
-    if (disabled) return
-    answeredAtRef.current = revealedCount
-    onPick(index)
   }
 
   // Once answered, show every clue that was on the card — this is a teaching
@@ -97,8 +119,8 @@ export function GuessCountryQuestion({ question, picked, disabled, onPick }: Gue
 
       {answered && (
         <p className={styles.clueScore}>
-          Answered after {answeredAtRef.current} of {question.clues.length}{' '}
-          {answeredAtRef.current === 1 ? 'clue' : 'clues'} — worth {pointsForClueCount(answeredAtRef.current)}{' '}
+          Answered after {answeredAt} of {question.clues.length}{' '}
+          {answeredAt === 1 ? 'clue' : 'clues'} — worth {pointsForClueCount(answeredAt)}{' '}
           points.
         </p>
       )}
@@ -112,7 +134,7 @@ export function GuessCountryQuestion({ question, picked, disabled, onPick }: Gue
               data-state={stateOf(i)}
               data-picked={picked === i}
               disabled={disabled}
-              onClick={() => pick(i)}
+              onClick={() => onPick(i)}
             >
               <span className={styles.optionKey} aria-hidden="true">
                 {i + 1}
