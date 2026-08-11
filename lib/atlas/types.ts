@@ -131,6 +131,20 @@ export interface NeighbourCountry {
   flagImageUrl: string | null;
 }
 
+/** One dated fact for the history timeline, beyond the founding/independence
+ * date already carried on `independenceDate`. Sourced from Wikidata's own
+ * "significant event" property (P793, restricted to events that carry their
+ * own point-in-time/start-time — most don't) and from UN membership (P463
+ * toward Q1065, with its P580 start-time qualifier). Both are structured,
+ * dated facts, not free text, so they don't carry the vandalism risk
+ * lib/atlas/overrides.ts exists for — see fetchHistoryEvents in
+ * lib/atlas/sources/wikidata.ts for the query. */
+export interface HistoryEvent {
+  label: string;
+  /** ISO 8601, same shape every other Wikidata date on this dossier uses. */
+  date: string;
+}
+
 /** The Wikidata dossier facts. Head of state / government are NEVER sourced
  * here — see lib/atlas/overrides.ts. Every other field must carry asOf. */
 export interface WikidataFacts {
@@ -187,6 +201,16 @@ export interface WikidataFacts {
    * this field alone on failure instead.
    */
   neighbours?: NeighbourCountry[];
+  /**
+   * Additional dated history events beyond `independenceDate` — see
+   * HistoryEvent's doc comment for where these come from. Same optional-vs-
+   * empty-array convention as `unescoSites`/`neighbours` above: `undefined`
+   * means the sub-fetch never ran or failed, `[]` means it ran and this
+   * country genuinely has none on file (common — most countries have no
+   * P793 significant event with its own date, and non-UN-member territories
+   * have no UN accession date either).
+   */
+  historyEvents?: HistoryEvent[];
 }
 
 export interface WikipediaSummary {

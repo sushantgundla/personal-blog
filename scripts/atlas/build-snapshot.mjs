@@ -31,6 +31,7 @@
 //   node scripts/atlas/build-snapshot.mjs [--limit N] [--only ISO3,ISO3] [--force] [--skip-rankings] [--skip-countries]
 //   node scripts/atlas/build-snapshot.mjs --patch-neighbours   (see below)
 //   node scripts/atlas/build-snapshot.mjs --patch-neighbours-local   (see below, no network)
+//   node scripts/atlas/build-snapshot.mjs --patch-history   (see below)
 import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,7 +39,7 @@ import { fileURLToPath } from "node:url";
 import { BY_ISO3, ISO_COUNTRIES } from "../../lib/atlas/iso-countries.ts";
 import { ALL_INDICATOR_CODES, CHART_INDICATOR_CODES } from "../../lib/atlas/indicators.ts";
 import { fetchLatestIndicators, fetchTimeSeries } from "../../lib/atlas/sources/worldbank.ts";
-import { fetchDossierFacts, fetchNeighbours } from "../../lib/atlas/sources/wikidata.ts";
+import { fetchDossierFacts, fetchNeighbours, fetchHistoryEvents } from "../../lib/atlas/sources/wikidata.ts";
 import { fetchSummary } from "../../lib/atlas/sources/wikipedia.ts";
 import { fetchTradeSummary } from "../../lib/atlas/sources/comtrade.ts";
 import { fetchCapitalWeather } from "../../lib/atlas/sources/meteo.ts";
@@ -468,6 +469,82 @@ async function patchNeighboursLocal() {
   return { patched, unchanged, skipped, readFailed, netAdded };
 }
 
+/**
+ * Backfills `wikidata.data.historyEvents` into every already-captured
+ * country file — added 2026-08-11 when the History panel grew beyond the
+ * single P571 date it used to show alone (see HistoryStrip.tsx). Same
+ * shape as patchNeighbours above: one small SPARQL query per country
+ * (fetchHistoryEvents, exported from wikidata.ts for exactly this), not a
+ * full country re-fetch, and a failed fetch leaves the file's existing
+ * historyEvents untouched (undefined if it never had one) rather than
+ * writing `[]` over it — see patchNeighbours' 2026-08-08 comment for why
+ * that distinction matters: a fetch failure must never read back identical
+ * to a country that genuinely has no extra dated events on file.
+ */
+async function patchHistory(force = false) {
+  const captured = await loadAlreadyCaptured();
+  let patched = 0;
+  let skipped = 0;
+  let readFailed = 0;
+  const fetchFailures = [];
+
+  for (const iso3 of captured) {
+    const filePath = countryPath(iso3);
+    let data;
+    try {
+      data = JSON.parse(await readFile(filePath, "utf-8"));
+    } catch (err) {
+      console.log(`${iso3}: FAILED to read/parse (${err.message})`);
+      readFailed++;
+      continue;
+    }
+
+    if (!data.wikidata?.ok) {
+      skipped++;
+      continue;
+    }
+    if (!force && Array.isArray(data.wikidata.data.historyEvents)) {
+      skipped++;
+      continue;
+    }
+
+    const country = ISO_COUNTRIES.find((c) => c.iso3 === iso3);
+    if (!country) {
+      skipped++;
+      continue;
+    }
+
+    const result = await fetchHistoryEvents(country.qid);
+    if (!result.ok) {
+      fetchFailures.push({ iso3, name: country.name, reason: result.reason });
+      console.log(
+        `${iso3} (${country.name}): FAILED to fetch history (${result.reason}) — left unchanged, will retry on next run`
+      );
+      await writeStatus("running", {
+        lastCountry: iso3,
+        lastResult: `history-fetch-failed: ${result.reason}`,
+      });
+      await sleep(1500);
+      continue;
+    }
+
+    data.wikidata.data.historyEvents = result.data;
+    await saveCountry(iso3, data);
+    console.log(`${iso3} (${country.name}): ${result.data.length} history event(s)`);
+    await writeStatus("running", { lastCountry: iso3, lastResult: `history-patched: ${result.data.length}` });
+    patched++;
+    await sleep(1500);
+  }
+
+  console.log(
+    `\nHistory patch: ${patched} patched, ${skipped} already had it or had no wikidata, ${readFailed} failed to read, ${fetchFailures.length} failed to fetch (left unchanged).`
+  );
+  if (fetchFailures.length > 0) {
+    console.log(`Fetch failures, will retry on next run: ${fetchFailures.map((f) => f.iso3).join(", ")}`);
+  }
+  return { patched, skipped, readFailed, fetchFailures };
+}
+
 async function buildCountries({ limit, only, force }) {
   const already = force ? new Set() : await loadAlreadyCaptured();
   const queue = ISO_COUNTRIES.filter(
@@ -511,6 +588,7 @@ async function main() {
   const skipCountries = args.includes("--skip-countries");
   const patchNeighboursOnly = args.includes("--patch-neighbours");
   const patchNeighboursLocalOnly = args.includes("--patch-neighbours-local");
+  const patchHistoryOnly = args.includes("--patch-history");
 
   await writeStatus("running", { startedAt: new Date().toISOString() });
 
@@ -528,6 +606,16 @@ async function main() {
       summary.fetchFailures.length > 0
         ? { neighboursFetchFailed: summary.fetchFailures.map((f) => f.iso3) }
         : {}
+    );
+    console.log("\nDone.");
+    return;
+  }
+
+  if (patchHistoryOnly) {
+    const summary = await patchHistory(force);
+    await writeStatus(
+      "done",
+      summary.fetchFailures.length > 0 ? { historyFetchFailed: summary.fetchFailures.map((f) => f.iso3) } : {}
     );
     console.log("\nDone.");
     return;

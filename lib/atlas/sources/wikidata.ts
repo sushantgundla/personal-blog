@@ -12,7 +12,14 @@
 //   other OPTIONAL clauses duplicates the whole row (confirmed live against
 //   Tuvalu, which has two circulating currencies).
 // - Every fact carries the query's run time as "asOf", per §3.7.
-import type { NeighbourCountry, Person, SourceResult, UnescoSite, WikidataFacts } from "../types";
+import type {
+  HistoryEvent,
+  NeighbourCountry,
+  Person,
+  SourceResult,
+  UnescoSite,
+  WikidataFacts,
+} from "../types";
 import { commonsThumbnail, toHttps } from "../format";
 import { BY_ISO3, ISO_COUNTRIES } from "../iso-countries";
 import { neighboursOf } from "../land-borders";
@@ -156,6 +163,73 @@ function unescoQuery(qid: string): string {
 } LIMIT 50`;
 }
 
+// Q1065 — United Nations. The only organisation membership this queries:
+// P463 ("member of") is a huge, noisy property (technical bodies, elected
+// UN Security Council terms that recur every couple of years, etc — checked
+// live against India, which alone returns 20+ rows), and picking which
+// memberships are "historically significant" for 195 different countries is
+// exactly the kind of editorial call the handover doc rules out. UN
+// accession is the one membership that is close to universal, unambiguous,
+// and genuinely a country's own history rather than a footnote.
+const UN_QID = "Q1065";
+
+/**
+ * History timeline entries beyond `independenceDate`, from two structured
+ * (not free-text) Wikidata facts:
+ *  - P793 "significant event", restricted to events that carry their own
+ *    point-in-time (P585) or start-time (P580) — most P793 rows don't, and
+ *    an undated row can't go on a timeline.
+ *  - P463 "member of" United Nations (Q1065), qualified with its P580 start
+ *    time — see UN_QID's comment above for why only this one membership.
+ * Neither reads a free-text field, so neither carries the vandalism risk
+ * lib/atlas/overrides.ts exists for (see this file's header comment).
+ * Sorted ascending and capped — a timeline, not a dump; five is plenty for
+ * even the most eventful countries seen while building this (Japan returned
+ * 18 dated P793 rows).
+ */
+function historyQuery(qid: string): string {
+  return `SELECT ?label ?date WHERE {
+  {
+    wd:${qid} wdt:P793 ?event .
+    ?event rdfs:label ?label . FILTER(lang(?label) = "en")
+    OPTIONAL { ?event wdt:P585 ?p585 . }
+    OPTIONAL { ?event wdt:P580 ?p580 . }
+    BIND(COALESCE(?p585, ?p580) AS ?date)
+    FILTER(BOUND(?date))
+  } UNION {
+    wd:${qid} p:P463 ?stmt .
+    ?stmt ps:P463 wd:${UN_QID} .
+    ?stmt pq:P580 ?date .
+    BIND("Joined the United Nations" AS ?label)
+  }
+} ORDER BY ?date LIMIT 12`;
+}
+
+export async function fetchHistoryEvents(qid: string): Promise<SourceResult<HistoryEvent[]>> {
+  try {
+    const rows = await sparql(historyQuery(qid));
+    const seenDates = new Set<string>();
+    const events: HistoryEvent[] = [];
+    for (const row of rows) {
+      const label = str(row, "label");
+      const date = str(row, "date");
+      if (!label || !date) continue;
+      // Two P793 rows can land on the same day (confirmed live: a country's
+      // own independence event duplicating its P571 inception date) — keep
+      // the first, which ORDER BY/insertion leaves as whichever SPARQL
+      // returned first for that date.
+      const day = date.slice(0, 10);
+      if (seenDates.has(day)) continue;
+      seenDates.add(day);
+      events.push({ label, date });
+      if (events.length >= 5) break;
+    }
+    return { ok: true, data: events };
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 function driveSide(label: string | null): "left" | "right" | null {
   if (label === "left" || label === "right") return label;
   return null;
@@ -170,6 +244,7 @@ export async function fetchDossierFacts(
     const row = rows[0] ?? {};
     const unesco = await fetchUnescoSites(qid);
     const neighbours = await fetchNeighbours(qid);
+    const history = await fetchHistoryEvents(qid);
 
     const facts: WikidataFacts = {
       asOf: new Date().toISOString(),
@@ -204,6 +279,7 @@ export async function fetchDossierFacts(
       // array that then reads back as a genuine "no sites"/"island" country.
       unescoSites: unesco.ok ? unesco.data : undefined,
       neighbours: neighbours.ok ? neighbours.data : undefined,
+      historyEvents: history.ok ? history.data : undefined,
     };
     return { ok: true, data: facts };
   } catch (err) {
