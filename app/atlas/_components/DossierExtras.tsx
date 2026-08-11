@@ -59,7 +59,11 @@ export function DossierExtras({ dossier }: DossierExtrasProps) {
 
       <PeopleWatermarks people={people} iso3={dossier.iso3} countryName={dossier.name} />
 
-      <HistoryStrip independenceDate={wikidata?.independenceDate ?? null} countryName={dossier.name} />
+      <HistoryStrip
+        independenceDate={wikidata?.independenceDate ?? null}
+        historyEvents={wikidata?.historyEvents}
+        countryName={dossier.name}
+      />
 
       <SizeOverlayLazy iso3={dossier.iso3} countryName={dossier.name} />
 
