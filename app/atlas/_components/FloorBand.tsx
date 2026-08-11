@@ -22,24 +22,22 @@ import styles from './plate.module.css'
  * real games. FloorGradeChip is one piece of live, localStorage-backed
  * content; see that file for why reading it is hydration-safe.
  *
- * The owner's brief was explicit that the band should also carry today's
- * Country of the day, not just the five games — a reason to look again
- * tomorrow, not a static door. Sub-line 2026-08-11: the old caption ("Five
- * games. A grade to climb. A wall of your runs.") went stale the moment the
- * five games were named as their own links below it, so that slot is now
- * the day's country instead — same size, same position, no extra row and
- * no extra height for .page's fixed viewport budget (see the comment on
- * .floorBand in plate.module.css). It links straight to that country's own
- * dossier note, not back to /atlas/learn — the headline above already
- * covers "go to the floor", so the country line's whole point is to send
- * the click somewhere specific instead.
- *
- * A server component, like the rest of /atlas's landing page: the pick for
- * today comes from buildCountryOfDay/utcDateStamp exactly the way
- * app/atlas/learn/_components/CountryOfDayCard.tsx derives its own, so
- * there is no client-side `new Date()` here either, and nothing that could
- * disagree with what the server already rendered. See app/atlas/page.tsx's
- * own `revalidate` comment for why that number had to drop once this landed.
+ * His caption ("Five games. A grade to climb. A wall of your runs.") stays
+ * put under the headline — it names the one thing the games row below
+ * still doesn't, the wall of past runs — and Country of the day rides
+ * alongside the grade in its own cluster on the right instead of replacing
+ * it. Derived the same server-only way
+ * app/atlas/learn/_components/CountryOfDayCard.tsx already does it:
+ * `buildCountryOfDay` is a pure function of the UTC date, baked into this
+ * page's own HTML, so there is no client-side `new Date()` to disagree with
+ * it. It links straight to that country's own dossier note — the headline
+ * above already covers "go to the floor", so this link's whole point is to
+ * send the click somewhere specific instead. getDeck() memoises the file
+ * read at module scope (see deck.ts), so calling it here costs nothing
+ * extra beyond the first request of the process; app/atlas/learn/page.tsx
+ * calling it too just reuses the same settled promise. See
+ * app/atlas/page.tsx's own `revalidate` comment for why that number had to
+ * drop once this landed.
  */
 export async function FloorBand() {
   const deck = await getDeck()
@@ -58,18 +56,22 @@ export async function FloorBand() {
                 →
               </span>
             </Link>
-            {countryOfDay ? (
+            <p className={styles.floorBandSub}>Five games. A grade to climb. A wall of your runs.</p>
+          </div>
+
+          <div className={styles.floorBandMeta}>
+            {/* Absent only if not one sovereign country in the whole deck
+                clears the remarkable bar — the same rare failure
+                CountryOfDayCard.tsx already treats as "omit the section". */}
+            {countryOfDay && (
               <Link href={countryOfDay.href} className={styles.floorBandSubLink}>
                 Country of the day —{' '}
                 <span className={styles.floorBandSubName}>{countryOfDay.name}</span>{' '}
                 <span aria-hidden="true">→</span>
               </Link>
-            ) : (
-              <p className={styles.floorBandSub}>Five games. A grade to climb. A wall of your runs.</p>
             )}
+            <FloorGradeChip />
           </div>
-
-          <FloorGradeChip />
         </div>
 
         <nav className={styles.floorBandGames} aria-label="The five training-floor games">
