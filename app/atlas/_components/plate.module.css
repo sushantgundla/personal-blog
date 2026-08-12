@@ -730,7 +730,51 @@
   min-width: 0;
 }
 
-.cartoucheName {
+/* ---------------------------------------------------------------------------
+   Why the class name is written twice below (and in ten other places across
+   the atlas stylesheets). It is not a typo. Deleting the repeat brings back a
+   144px country name covering three quarters of the map.
+
+   atlas.css defines the shared type primitives — .atlas-face-name,
+   .atlas-denomination, .atlas-label, .atlas-serial, .atlas-microtext — and
+   each of them sets a font-size. Components deliberately put a primitive AND
+   a CSS-module class on the same element, taking the family, weight and
+   colour from the primitive while the module overrides the size for that one
+   spot. Cartouche.tsx does exactly that:
+
+     <div className={`atlas-face-name ${styles.cartoucheName}`}>
+
+   The problem is that `.atlas-face-name` and `.cartoucheName` are both single
+   class selectors, so they have identical specificity (0,1,0). CSS breaks
+   that tie on source order — whichever declaration the bundler emitted last
+   wins. Nothing in this project pins that order: it falls out of Next.js's
+   chunking and the import graph, and it changes on its own. Commit dd8186e
+   added unrelated rules to this file, the emitted order flipped, and
+   .atlas-face-name's clamp(3.5rem, 11vw, 9rem) started beating the 1.15rem
+   below. That is the live bug.
+
+   Repeating the class — `.cartoucheName.cartoucheName` — is a no-op for
+   matching (an element either carries the class or it does not) but it raises
+   specificity to (0,2,0). That beats the primitive's (0,1,0) outright, so the
+   module wins by the cascade's own rules rather than by luck of file order.
+   No component has to change.
+
+   Do NOT try to solve this with @layer in atlas.css instead. It was tried and
+   reverted: Tailwind's preflight is unlayered and includes
+   `h1,h2,... { font-size: inherit }`, and an unlayered declaration beats a
+   layered one at ANY specificity. Layering the primitives collapsed the
+   dossier's country name from its clamp down to 16px on /atlas/IND.
+
+   The same trick, with the same reasoning, already guards
+   .faceName.faceNameCompact in dossier.module.css.
+
+   One caveat when adding a doubled rule: it now outranks every OTHER
+   single-class module rule that lands on the same element, not just the
+   primitive. Check the siblings before doubling — see .ledgerWinnerValue in
+   compare.module.css for a rule that had to be doubled for exactly that
+   reason.
+   ------------------------------------------------------------------------ */
+.cartoucheName.cartoucheName {
   font-size: 1.15rem;
   line-height: 1.05;
   white-space: nowrap;
@@ -743,7 +787,8 @@
   white-space: nowrap;
 }
 
-.cartoucheValue {
+/* Doubled class — see the long note on .cartoucheName above. */
+.cartoucheValue.cartoucheValue {
   font-size: 0.95rem;
 }
 

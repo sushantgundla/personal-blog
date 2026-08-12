@@ -225,8 +225,14 @@
   flex-wrap: wrap;
 }
 
-/* Reuses .atlas-denomination's face; only the size is floor-specific. */
-.gradeNumber {
+/* Reuses .atlas-denomination's face; only the size is floor-specific.
+
+   The class is repeated on purpose. It raises specificity to (0,2,0) so
+   this font-size beats .atlas-denomination's own, which sits at the same
+   (0,1,0) on the same element and would otherwise win or lose purely on
+   the order the bundler emitted the two stylesheets in. Full explanation
+   on .cartoucheName in app/atlas/_components/plate.module.css. */
+.gradeNumber.gradeNumber {
   font-size: clamp(2.25rem, 7vw, 3.375rem);
   line-height: 1;
 }
