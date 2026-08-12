@@ -283,6 +283,10 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
   // gesture library) Plate.tsx uses for its own map.
   const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map())
   const pinchStartDist = useRef<number | null>(null)
+  // Which pointerIds this element currently holds capture for — see the
+  // capture-on-move comment in handlePointerMove for why this can't just be
+  // "every pointerId that went down".
+  const capturedPointers = useRef<Set<number>>(new Set())
 
   function pinchDistance(): number | null {
     if (activePointers.current.size !== 2) return null
@@ -292,11 +296,22 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
 
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0 && e.pointerType === 'mouse') return
-    e.currentTarget.setPointerCapture(e.pointerId)
+    // No setPointerCapture here on purpose — see handlePointerMove. Capturing
+    // the very first pointerdown (the old code did this unconditionally) is
+    // what broke a plain click: once this wrapper holds capture, Chrome can
+    // retarget the click that follows pointerup to the wrapper itself
+    // instead of whatever was actually under the finger — a zoom button or a
+    // country shape — so that element's own onClick never runs. A single
+    // click never needs capture; only a drag that leaves the element does.
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (activePointers.current.size === 1) {
       beginDrag(e.clientX, e.clientY)
     } else if (activePointers.current.size === 2) {
+      // A second finger down is already an unambiguous pinch, never a click
+      // on a button or shape, so it's safe to capture immediately — this
+      // keeps the gesture tracking even if a finger drifts off the wrapper.
+      e.currentTarget.setPointerCapture(e.pointerId)
+      capturedPointers.current.add(e.pointerId)
       pinchStartDist.current = pinchDistance()
     }
   }
@@ -313,12 +328,23 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
       pinchStartDist.current = dist
     } else if (activePointers.current.size === 1 && e.buttons === 1) {
       dragTo(e.clientX, e.clientY)
+      // The pointer has now moved past the hook's own drag threshold — this
+      // is a real drag, not a click, so it's safe (and necessary, to keep
+      // tracking a fast drag that leaves the wrapper's bounds) to capture
+      // from here on.
+      if (wasDragged() && !capturedPointers.current.has(e.pointerId)) {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        capturedPointers.current.add(e.pointerId)
+      }
     }
   }
 
   function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
     activePointers.current.delete(e.pointerId)
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    if (capturedPointers.current.has(e.pointerId)) {
+      capturedPointers.current.delete(e.pointerId)
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    }
 
     if (activePointers.current.size === 0) {
       endDrag()
