@@ -31,26 +31,36 @@
   z-index: 200;
   pointer-events: none;
   /* rgba, not the token, because a box-shadow needs an alpha and
-     --note-void is an opaque hex. This is that same colour at 92%. The
+     --note-void is an opaque hex. This is that same colour at 72%. The
      @supports block below upgrades it to the live token where color-mix
      is available, so a palette change carries through.
 
-     92, not the 74 this shipped with for an afternoon: the Atlas is a
-     near-black page, so laying more near-black over it at three-quarters
-     strength changed almost nothing — checked in the browser on
-     2026-08-13 and the standings rail was still perfectly readable
-     beside the lit map, which makes the spotlight pointless. There is no
-     light theme to worry about here (--note-void is declared once in
-     atlas.css, not per-theme), so the scrim can go this hard safely. The
-     text underneath still shows as a ghost, which is what you want — the
-     page should look asleep, not deleted. */
-  --tour-scrim: rgba(8, 7, 6, 0.92);
+     This number has been wrong in both directions in one day, and the
+     reason is the same both times: the Atlas is a near-black page, and
+     you cannot dim near-black with more near-black. At 74 nothing
+     visibly changed — the standings rail read exactly as well dimmed as
+     lit, so the spotlight pointed at nothing. Pushing to 92 did make a
+     difference, but the wrong one: the un-lit page went essentially
+     black, and the owner said the rest of the page "is so dark it's not
+     even visible". A tour that deletes the page is worse than one that
+     barely marks it, because the whole point is showing you where a
+     thing sits among the others.
+
+     So the scrim comes back to 72, where the page behind it stays
+     clearly readable — you can still read the rail and the labels — and
+     the work of separating lit from un-lit moves to the hole itself,
+     which now carries an ember bloom (see .hole). The lit thing has to
+     be lit. Leaving it merely uncovered was never going to be enough on
+     a page this dark. There is no light theme to worry about
+     (--note-void is declared once in atlas.css, not per-theme), so this
+     value holds everywhere. */
+  --tour-scrim: rgba(8, 7, 6, 0.72);
   animation: tourOverlayIn 220ms var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
 
 @supports (color: color-mix(in srgb, red, blue)) {
   .overlay {
-    --tour-scrim: color-mix(in srgb, var(--note-void, #080706) 92%, transparent);
+    --tour-scrim: color-mix(in srgb, var(--note-void, #080706) 72%, transparent);
   }
 }
 
@@ -71,15 +81,31 @@
    punched out of it — and it moves between steps as one object rather
    than four panels sliding independently.
 
-   Two shadows, in this order: the 1px ember ring paints on top of the
-   scrim, so the target reads as deliberately chosen rather than merely
-   left uncovered. */
+   Three shadows, and the order matters: a box-shadow list paints
+   first-listed on top, so it reads ring, then bloom, then scrim. Put the
+   scrim anywhere but last and it covers the bloom.
+
+     1. the 1px ember ring — the target is deliberately chosen, not just
+        left uncovered;
+     2. a wide, soft ember bloom spilling outward from the same edge.
+        This is what actually makes the spotlight read. The scrim can
+        only take the page from near-black to slightly-more-near-black
+        (see the --tour-scrim comment above), so the difference between
+        lit and un-lit has to be added light, not subtracted light. 30%
+        alpha over a 30px blur: warm enough to see at a glance, quiet
+        enough that it stays a plate under a lamp rather than a glowing
+        rectangle. --note-ember-rgb (atlas.css) is the ember as bare
+        channels, which is the only way to give it an alpha here; it
+        swaps to the violet ember under the UV lamp along with
+        everything else;
+     3. the 9999px scrim that dims everything else. */
 .hole {
   position: absolute;
   border-radius: 4px;
   pointer-events: none;
   box-shadow:
     0 0 0 1px var(--note-ember, #ff6b2b),
+    0 0 30px 2px rgba(var(--note-ember-rgb, 255, 107, 43), 0.3),
     0 0 0 9999px var(--tour-scrim);
   transition:
     left 0.35s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)),
