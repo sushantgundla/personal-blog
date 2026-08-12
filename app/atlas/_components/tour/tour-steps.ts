@@ -84,36 +84,25 @@ export const FLOOR_TOUR_KEY = 'atlas.tour.floor.v1';
  */
 export const TOUR_START_EVENT = 'atlas:tour:start';
 
-/** `/atlas` — the plate itself. Six stops. */
+/**
+ * `/atlas` — the plate itself. Six stops, in the page's own reading order:
+ * top to bottom, and left before right where two things share a row.
+ *
+ *   ways-in  the intro links row, at the very top
+ *   floor    the training floor band, just under it
+ *   rail     the standings, top of the left column
+ *   dial     paint the world, top of the map column
+ *   map      the map itself
+ *   search   the box in the map's bottom-right corner
+ *
+ * Ordered this way on 2026-08-13. It used to open on the map and then jump
+ * back up to the search, the dial, the rail and the links, which meant the
+ * page scrolled up and down under you and you never got a sense of how it
+ * is laid out. Following the page instead means each step is next to the
+ * one before it, so by the end you have been walked down the page once and
+ * know where everything sits.
+ */
 export const PLATE_STEPS: readonly TourStep[] = [
-  {
-    id: 'plate-map',
-    target: 'map',
-    title: 'The world, engraved',
-    body: 'Hover a country to see its name, drag to move, scroll to zoom. Click any country to open its note.',
-    allowTargetClick: false,
-  },
-  {
-    id: 'plate-search',
-    target: 'search',
-    title: 'Search',
-    body: 'Know the country already? Type its name here.',
-    allowTargetClick: true,
-  },
-  {
-    id: 'plate-dial',
-    target: 'dial',
-    title: 'The dial',
-    body: 'Paint the world by one measure — population, income, life expectancy. The map recolours.',
-    allowTargetClick: true,
-  },
-  {
-    id: 'plate-rail',
-    target: 'rail',
-    title: 'The standings',
-    body: 'Every country ranked by whatever the dial is showing. Click a row to open it.',
-    allowTargetClick: false,
-  },
   {
     id: 'plate-ways-in',
     target: 'ways-in',
@@ -127,6 +116,34 @@ export const PLATE_STEPS: readonly TourStep[] = [
     title: 'The training floor',
     body: 'Five games built from this same data, with a grade to climb.',
     allowTargetClick: false,
+  },
+  {
+    id: 'plate-rail',
+    target: 'rail',
+    title: 'The standings',
+    body: 'Every country ranked by whatever the dial is showing. Click a row to open it.',
+    allowTargetClick: false,
+  },
+  {
+    id: 'plate-dial',
+    target: 'dial',
+    title: 'The dial',
+    body: 'Paint the world by one measure — population, income, life expectancy. The map recolours.',
+    allowTargetClick: true,
+  },
+  {
+    id: 'plate-map',
+    target: 'map',
+    title: 'The world, engraved',
+    body: 'Hover a country to see its name, drag to move, scroll to zoom. Click any country to open its note.',
+    allowTargetClick: false,
+  },
+  {
+    id: 'plate-search',
+    target: 'search',
+    title: 'Search',
+    body: 'Know the country already? Type its name here.',
+    allowTargetClick: true,
   },
 ];
 

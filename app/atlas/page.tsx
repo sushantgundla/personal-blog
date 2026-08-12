@@ -95,34 +95,49 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
           design review: "not easy to understand or navigate". A real
           heading (there wasn't one before — just this paragraph), one
           sentence beneath it, no marketing copy, plus the two routes the
-          plate itself doesn't otherwise link to. */}
+          plate itself doesn't otherwise link to.
+
+          Two rows since 2026-08-13: the title centred on its own line, then
+          the sentence and the links sharing the line below it. Before that
+          the title and sentence were stacked in a .introText column on the
+          left with the links opposite — and the title, still carrying the
+          global .atlas-face-name, rendered at up to 144px and swallowed the
+          top of the page. The word is now just "Atlas" and the face is set
+          by .introTitle alone; see plate.module.css. The <title> metadata
+          above and the site header still say "The Atlas" — that is the
+          section's name, this is a heading on it. */}
       <div className={styles.intro}>
-        <div className={styles.introText}>
-          <h1 className={`atlas-face-name ${styles.introTitle}`}>The Atlas</h1>
+        <h1 className={styles.introTitle}>Atlas</h1>
+        <div className={styles.introRow}>
           <p className={styles.introLine}>
             The world, engraved as banknotes — one note per country. Hover the map, search, or pick
             a row in the standings, then open a country to read its note.
           </p>
+          {/* data-tour is how the guided tour finds this row — see
+              _components/tour/tour-steps.ts, which spotlights it as "two more
+              ways in", now the tour's opening stop. The tour itself is
+              mounted once in app/atlas/layout.tsx. */}
+          <nav
+            className={styles.introLinks}
+            aria-label="More ways into The Atlas"
+            data-tour="ways-in"
+          >
+            <Link href="/atlas/compare" className={styles.introLink}>
+              Compare countries →
+            </Link>
+            <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
+              Full rankings →
+            </Link>
+            {/* The way back into the tour once it has run once and written its
+                localStorage key. A client component dropped into this server
+                component, which is fine and does not make this page a client
+                one. It borrows .introLink so it reads as the third link in the
+                row rather than a button; it is a <button> because it navigates
+                nowhere. It renders nothing on routes with no tour, so it is
+                safe here even though this row is only ever on /atlas. */}
+            <TourReplayLink className={styles.introLink} />
+          </nav>
         </div>
-        {/* data-tour is how the guided tour finds this row — see
-            _components/tour/tour-steps.ts, which spotlights it as "two more
-            ways in". The tour itself is mounted once in app/atlas/layout.tsx. */}
-        <nav className={styles.introLinks} aria-label="More ways into The Atlas" data-tour="ways-in">
-          <Link href="/atlas/compare" className={styles.introLink}>
-            Compare countries →
-          </Link>
-          <Link href={`/atlas/rankings/${DEFAULT_METRIC}`} className={styles.introLink}>
-            Full rankings →
-          </Link>
-          {/* The way back into the tour once it has run once and written its
-              localStorage key. A client component dropped into this server
-              component, which is fine and does not make this page a client
-              one. It borrows .introLink so it reads as the third link in the
-              row rather than a button; it is a <button> because it navigates
-              nowhere. It renders nothing on routes with no tour, so it is
-              safe here even though this row is only ever on /atlas. */}
-          <TourReplayLink className={styles.introLink} />
-        </nav>
       </div>
 
       {/* Redesigned 2026-08-11: the training floor's entry used to be

@@ -165,35 +165,66 @@
 
 /* ---------------------------------------------------------- landing intro */
 
+/* Two stacked rows, not one wide row: the title centred on its own line,
+   then the sentence and the ways-in links side by side beneath it. It was
+   a single row until 2026-08-13, with the title and sentence stacked in a
+   .introText column on the left and the links on the right — the title
+   dominated that layout instead of heading it. */
 .intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background: var(--note-void);
+  padding: 0.65rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--note-rule);
+}
+
+/* The old .intro row, now demoted to the second line: the sentence on the
+   left, the ways-in links on the right, sharing a baseline. */
+.introRow {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 1.5rem;
   flex-wrap: wrap;
-  background: var(--note-void);
-  padding: 0.9rem 1.25rem;
-  border-bottom: 1px solid var(--note-rule);
 }
 
-.introText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
+/* The plate's own title. It carried the global .atlas-face-name class until
+   2026-08-13, and that was the problem: .atlas-face-name is the *dossier's*
+   name — clamp(3.5rem, 11vw, 9rem) — sized to fill a full-bleed banknote,
+   and it beat this file's own font-size on specificity, so the word rendered
+   at up to 144px and ate the top of the page. The face is declared here
+   instead, and nothing global touches it any more.
 
-/* The page had no heading at all before — just a paragraph. This is the
-   plate's own title, so it borrows the face note's own typeface
-   (atlas-face-name, Bodoni Moda) rather than a generic H1 style, just at a
-   fraction of the face note's own huge size — this sits in a slim intro
-   bar, not full-bleed, and the intro bar's height comes straight out of
-   .page's fixed budget (see the page-shell comment above), so it can't be
-   allowed to balloon. */
+   This bar's height comes straight out of .page's fixed viewport budget
+   (see the page-shell comment at the top of this file) — every pixel it
+   takes is a pixel off the map — so it is deliberately set as a small
+   line of spaced capitals, A T L A S, in the plate's own Bodoni: a heading
+   rather than a hoarding. The tracking is doing the work the size used to.
+
+   The two-stop text-shadow is a warm halo behind the word, not a glow on
+   it: wide and very faint first, tighter and slightly stronger second, no
+   animation. This is a banknote under a lamp, so it stays at the edge of
+   noticeable. --note-ember-rgb (atlas.css) is the ember as bare channels,
+   the only way to give it an alpha; it swaps to violet under the UV lamp
+   with everything else. */
 .introTitle {
   margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
-  line-height: 1;
+  text-align: center;
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+  line-height: 1.05;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  /* Letter-spacing is added after every letter, including the last, so a
+     centred word sits one space left of true centre. Pushing it back by the
+     same amount is the standard fix. */
+  text-indent: 0.18em;
+  color: var(--note-intaglio);
+  text-shadow:
+    0 0 28px rgba(var(--note-ember-rgb, 255, 107, 43), 0.28),
+    0 0 9px rgba(var(--note-ember-rgb, 255, 107, 43), 0.16);
 }
 
 .introLine {
@@ -230,10 +261,24 @@
   border-color: var(--note-intaglio);
 }
 
+/* .intro is a column at every width now, so the phone case is only about
+   what happens inside it: the title stops being centred (a centred heading
+   over a left-aligned paragraph reads as a mistake once the bar is narrow
+   enough to see both edges at once), and the sentence and the links stop
+   sharing a line — there is no room to set them apart, and space-between
+   with no space left just jams them together. */
 @media (max-width: 640px) {
-  .intro {
+  .introTitle {
+    text-align: left;
+    /* No trailing-space correction needed once it is left-aligned; the
+       indent would just push the word in from the edge. */
+    text-indent: 0;
+  }
+
+  .introRow {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.5rem;
   }
 }
 
@@ -309,9 +354,12 @@
 }
 
 /* The headline lever this redesign pulls: .floorDoorLabel above was
-   13px mono, easy to read straight past. This borrows .introTitle's own
-   scale (Bodoni Moda, the plate's title face) so the floor gets a second
-   headline-weight line on the page, not a caption. */
+   13px mono, easy to read straight past. This is set in the plate's title
+   face (Bodoni Moda) at roughly the scale .introTitle sits at, so the floor
+   gets a second headline-weight line on the page, not a caption. The two
+   sizes are stated separately rather than shared: .introTitle answers to
+   .intro's own height budget and has already been resized once without
+   this line wanting to follow. */
 .floorBandLead {
   display: inline-flex;
   width: fit-content;
