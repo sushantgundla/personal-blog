@@ -440,6 +440,15 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
                 // order, the same reason Plate.tsx paints its own ranked
                 // countries inline rather than through a class.
                 const fill = state === 'right' ? 'var(--note-ember)' : state === 'wrong' ? 'var(--note-rust)' : undefined
+                // No <title> here, deliberately. SVG <title> is what the
+                // browser draws as a native tooltip, so hovering any shape
+                // used to pop up that country's name — which hands over the
+                // answer to a game whose whole instruction is "find the
+                // shape, not a name on a list". It also flickers on click,
+                // and because a tooltip is browser chrome rather than page
+                // content it never shows up in a screenshot, which is why it
+                // survived several rounds of testing. aria-label below is
+                // what a screen reader reads; it draws nothing.
                 return (
                   <path
                     key={c.iso3}
@@ -452,9 +461,7 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
                     data-state={state}
                     style={{ fill, vectorEffect: 'non-scaling-stroke' } as React.CSSProperties}
                     onClick={() => commit(c.iso3)}
-                  >
-                    <title>{c.name}</title>
-                  </path>
+                  />
                 )
               })}
             </g>
