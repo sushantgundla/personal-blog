@@ -358,7 +358,12 @@
   gap: 0.2rem;
 }
 
-.miniDenomination {
+/* The class is repeated on purpose here and three more times in this file.
+   It raises specificity to (0,2,0) so the module's font-size beats the
+   same-specificity type primitive in app/atlas/atlas.css, which would
+   otherwise win or lose purely on the order the bundler emitted the two
+   stylesheets in. Full explanation on .cartoucheName in plate.module.css. */
+.miniDenomination.miniDenomination {
   font-size: clamp(1.125rem, 2.4vw, 2rem);
   color: var(--note-intaglio);
 }
@@ -477,7 +482,8 @@
   text-align: right;
 }
 
-.ledgerValue {
+/* Doubled class — see .miniDenomination above. */
+.ledgerValue.ledgerValue {
   font-size: clamp(0.9375rem, 1.6vw, 1.375rem);
   color: var(--note-intaglio-dim);
 }
@@ -486,9 +492,19 @@
    two-sided lean bar no longer generalises past two columns — see
    CompareNote's winnerIndex. Paired with `atlas-remarkable` from
    atlas.css so a winning cell also fluoresces correctly under the UV
-   lamp; that global rule is more specific than this one and wins there,
-   ember is the default everywhere else. */
-.ledgerWinnerValue {
+   lamp; that global rule is `.atlas-root.uv-on .atlas-remarkable` at
+   (0,3,0) and still wins there, ember is the default everywhere else.
+
+   The class is doubled here for a second, different reason than the size
+   overrides elsewhere in this file. CompareNote puts .ledgerValue and
+   .ledgerWinnerValue on the SAME span, and .ledgerValue sets a colour of
+   its own. Doubling .ledgerValue above took it to (0,2,0), which would
+   outrank a single-class .ledgerWinnerValue and repaint every winning
+   cell back to intaglio-dim — the winner would silently stop being
+   ember. Both rules have to sit at the same specificity for source order
+   to keep deciding between them, as it always did. If you ever undouble
+   .ledgerValue, undouble this one in the same edit. */
+.ledgerWinnerValue.ledgerWinnerValue {
   color: var(--note-ember);
 }
 
@@ -581,7 +597,8 @@
   color: var(--note-intaglio);
 }
 
-.bondValue {
+/* Doubled class — see .miniDenomination above. */
+.bondValue.bondValue {
   flex: none;
   font-size: 0.9375rem;
 }

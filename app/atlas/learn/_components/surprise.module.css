@@ -399,7 +399,11 @@
   border-bottom: 1px dashed var(--note-rule);
 }
 
-.factLabel {
+/* The class is repeated on purpose. It raises specificity to (0,2,0) so this
+   rule beats the .atlas-label primitive sharing the element, rather than the
+   two trading places on bundler emit order. Full explanation on
+   .cartoucheName in app/atlas/_components/plate.module.css. */
+.factLabel.factLabel {
   flex: none;
 }
 

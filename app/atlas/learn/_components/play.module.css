@@ -178,7 +178,12 @@
   transform: scale(1.35);
 }
 
-.railSerial {
+/* The class is repeated on purpose here and twice more in this file. It
+   raises specificity to (0,2,0) so the module rule beats the
+   same-specificity type primitive in app/atlas/atlas.css that shares the
+   element, instead of the two trading places on whatever order the bundler
+   emitted them in. Full explanation on .cartoucheName in plate.module.css. */
+.railSerial.railSerial {
   opacity: 0.75;
 }
 
@@ -945,8 +950,9 @@
 }
 
 /* Tabular so a column of numbers lines up like a real ledger — the same
-   reason .atlas-denomination sets it. */
-.ledgerValue {
+   reason .atlas-denomination sets it. Doubled class — see .railSerial
+   above. */
+.ledgerValue.ledgerValue {
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
   font-size: 1rem;
@@ -1091,7 +1097,8 @@
   min-height: 12rem;
 }
 
-.stateLabel {
+/* Doubled class — see .railSerial above. */
+.stateLabel.stateLabel {
   display: block;
 }
 

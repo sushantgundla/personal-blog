@@ -513,7 +513,13 @@
   flex: 1;
 }
 
-.threadCaption {
+/* The class is repeated on purpose, for the same reason .faceNameCompact
+   above carries two classes: it raises specificity to (0,2,0) so this
+   font-size beats .atlas-serial's, which sits at the same (0,1,0) on the
+   same element and would otherwise win or lose purely on the order the
+   bundler emitted the two stylesheets in. Full explanation on .cartoucheName
+   in app/atlas/_components/plate.module.css. */
+.threadCaption.threadCaption {
   font-size: 0.5625rem;
   white-space: nowrap;
 }

@@ -62,7 +62,11 @@
   break-inside: avoid;
 }
 
-.rowLabel {
+/* The class is repeated on purpose. It raises specificity to (0,2,0) so this
+   rule beats the .atlas-label primitive sharing the element, rather than the
+   two trading places on bundler emit order. Full explanation on
+   .cartoucheName in app/atlas/_components/plate.module.css. */
+.rowLabel.rowLabel {
   white-space: nowrap;
 }
 
