@@ -1,13 +1,18 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { TOUR_START_EVENT, tourForPath } from './tour-steps';
-import { clearTourSeen } from './tour-storage';
+import { TOUR_KEY, TOUR_START_EVENT, tourRouteFor } from './tour-steps';
+import { clearTourResume, clearTourSeen } from './tour-storage';
 import styles from './tour.module.css';
 
 /**
  * "Take the tour →" — the way back in once the tour has been seen and its
  * localStorage key written.
+ *
+ * The same button on both pages, and it starts the walk that belongs to where
+ * it is pressed: from /atlas the whole ten, which carries on into the training
+ * floor by itself; from /atlas/learn just that page's four. AtlasTour works
+ * that out from the route — this button only says "go".
  *
  * It talks to AtlasTour through one DOM event rather than React context or a
  * shared store. The two components can then sit anywhere in the tree (this one
@@ -20,14 +25,17 @@ import styles from './tour.module.css';
  */
 export function TourReplayLink({ className }: { className?: string }) {
   const pathname = usePathname();
-  const tour = tourForPath(pathname);
+  const route = tourRouteFor(pathname);
 
   /* Only /atlas and /atlas/learn have a tour to replay. Rendering nothing
      elsewhere means the link is safe to drop into a shared layout later. */
-  if (!tour) return null;
+  if (!route) return null;
 
   const start = () => {
-    clearTourSeen(tour.key);
+    clearTourSeen(TOUR_KEY);
+    /* Any half-finished walk still noted down is over — this is a fresh one
+       from the top, and a stale marker would drag it to the wrong step. */
+    clearTourResume();
     window.dispatchEvent(new CustomEvent(TOUR_START_EVENT));
   };
 

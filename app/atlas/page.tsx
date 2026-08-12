@@ -8,6 +8,7 @@ import { getRanking } from '@/lib/atlas/rankings'
 import type { Ranking } from '@/lib/atlas/types'
 import { FloorBand } from './_components/FloorBand'
 import { Plate } from './_components/Plate'
+import { PlateTitle } from './_components/PlateTitle'
 import { TourReplayLink } from './_components/tour/TourReplayLink'
 import styles from './_components/plate.module.css'
 
@@ -105,9 +106,17 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
           top of the page. The word is now just "Atlas" and the face is set
           by .introTitle alone; see plate.module.css. The <title> metadata
           above and the site header still say "The Atlas" — that is the
-          section's name, this is a heading on it. */}
+          section's name, this is a heading on it.
+
+          The <h1> moved into PlateTitle.tsx on 2026-08-13 — it is still the
+          same word in the same face at the same size, but the letters are now
+          lit by a warm ember light that follows the pointer, because the
+          static halo it used to carry could not be seen at all. That makes it
+          a client component; dropping one into this server component is fine
+          and does not make this page a client one (TourReplayLink below is
+          the same trick). */}
       <div className={styles.intro}>
-        <h1 className={styles.introTitle}>Atlas</h1>
+        <PlateTitle />
         <div className={styles.introRow}>
           <p className={styles.introLine}>
             The world, engraved as banknotes — one note per country. Hover the map, search, or pick

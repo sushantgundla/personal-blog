@@ -2,17 +2,41 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { usePathname } from 'next/navigation';
-import { TOUR_START_EVENT, tourForPath, type TourStep } from './tour-steps';
-import { clearTourSeen, hasSeenTour, markTourSeen } from './tour-storage';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  TOUR_KEY,
+  TOUR_START_EVENT,
+  TOUR_STEPS,
+  queueForStart,
+  tourRouteFor,
+  type TourRoute,
+  type TourStep,
+} from './tour-steps';
+import {
+  clearTourResume,
+  clearTourSeen,
+  hasSeenTour,
+  markTourSeen,
+  readTourResume,
+  writeTourResume,
+} from './tour-storage';
 import styles from './tour.module.css';
 
 /**
- * The first-visit tour for /atlas and /atlas/learn.
+ * The first-visit tour for /atlas and /atlas/learn — one walk across both.
  *
- * Mounted once, in app/atlas/layout.tsx, for the whole section. It reads the
- * route and picks a step list (tour-steps.ts); on any other /atlas/* route it
- * renders nothing at all. One component, one overlay, one card.
+ * Mounted once, in app/atlas/layout.tsx, for the whole section. On any other
+ * /atlas/* route it renders nothing at all. One component, one overlay, one
+ * card.
+ *
+ * The walk spans two pages. Started on /atlas it is ten steps: six on the
+ * plate, then **Next** on the last of them navigates to /atlas/learn and the
+ * remaining four carry on there, with the counter running straight through
+ * "1 of 10" to "10 of 10". Started on /atlas/learn by somebody who arrived
+ * there directly, it is just that page's four. Crossing the page is the only
+ * genuinely awkward part of this file, and it is handled in one place: `cross`
+ * writes down where to pick up, `router.push`es, and the resume effect puts
+ * the next card up once the new page has something to point at.
  *
  * It never asks any other component to cooperate. The pages only carry a
  * `data-tour="..."` attribute; everything else — dimming the page, cutting a
@@ -38,6 +62,16 @@ const NARROW_MAX = 640;
 const SETTLE_MS = 400;
 /** How long after the last scroll/resize event the hole is allowed to glide again. */
 const TRACKING_SETTLE_MS = 160;
+/**
+ * How long to wait after arriving on the other page before looking for the
+ * step we walked over to show. Shorter than SETTLE_MS: this is a client-side
+ * navigation into a page whose data Next has usually already fetched, not a
+ * cold arrival, and the walk should not feel like it stalled at the seam.
+ */
+const ARRIVE_MS = 140;
+/** Gap between attempts at finding that step's target, and how many to make. */
+const ARRIVE_RETRY_MS = 100;
+const ARRIVE_TRIES = 12;
 
 /** A target's position in viewport coordinates. Plain numbers, not a live DOMRect. */
 interface Rect {
@@ -45,6 +79,21 @@ interface Rect {
   left: number;
   width: number;
   height: number;
+}
+
+/**
+ * A walk that is waiting for its page — set while crossing between /atlas and
+ * /atlas/learn, and set again on arrival if a hard reload landed in that gap.
+ *
+ * `at` is a step **id** rather than a number on purpose. The queue is
+ * re-filtered when the new page arrives (country of the day can be absent),
+ * so a number could point at a different step by the time it is read; an id
+ * either finds its step or honestly does not.
+ */
+interface PendingResume {
+  at: string;
+  /** Where the walk was started, which is what decides how long it is. */
+  startRoute: TourRoute;
 }
 
 /** Where the card sits and which way its little triangle points. */
@@ -74,9 +123,28 @@ function findTarget(target: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-tour="${target}"]`);
 }
 
+/**
+ * Drop the steps that have nothing to point at — but only ever the ones
+ * belonging to the page being shown right now.
+ *
+ * That restriction is what lets the walk span two pages at all. A missing
+ * target is a real case rather than defensive padding: country of the day can
+ * legitimately be absent on a day when nothing clears its bar, and dropping it
+ * up front is what keeps the "3 of 9" counter honest. But a step on the *other*
+ * page is missing for a completely different reason — its page has not been
+ * visited yet — and treating that the same way would silently delete the whole
+ * second half of the walk the moment it started. So a step is only a candidate
+ * for dropping while you are standing on its own page, and the filter runs
+ * again on arrival at the second page for exactly that reason.
+ */
+function dropMissing(queue: readonly TourStep[], route: TourRoute): readonly TourStep[] {
+  return queue.filter((step) => step.route !== route || findTarget(step.target) !== null);
+}
+
 export function AtlasTour() {
   const pathname = usePathname();
-  const tour = useMemo(() => tourForPath(pathname), [pathname]);
+  const router = useRouter();
+  const route = useMemo(() => tourRouteFor(pathname), [pathname]);
   const titleId = useId();
   const bodyId = useId();
 
@@ -94,13 +162,19 @@ export function AtlasTour() {
   const [mounted, setMounted] = useState(false);
 
   /**
-   * The surviving steps for this route, or `null` when no tour is running.
-   * Set once when a tour starts — steps whose target is missing from the DOM
-   * are dropped there, so everything downstream (including the "2 of 6"
-   * counter) counts only steps that can actually be shown.
+   * The steps queued for this run, or `null` when no tour is running.
+   *
+   * Set when a walk starts and set again when it arrives on the second page.
+   * Steps whose target is missing are dropped there (see `dropMissing`), so
+   * everything downstream — including the "2 of 10" counter — counts only
+   * steps that can actually be shown. It holds the steps for *both* pages
+   * during a full walk, which is what makes the counter run straight through
+   * the page boundary instead of restarting at one.
    */
   const [steps, setSteps] = useState<readonly TourStep[] | null>(null);
   const [index, setIndex] = useState(0);
+  /** Set while the walk is between pages; no card is shown until it clears. */
+  const [pending, setPending] = useState<PendingResume | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
   const [cardPos, setCardPos] = useState<CardPos | null>(null);
   const [narrow, setNarrow] = useState(false);
@@ -110,6 +184,12 @@ export function AtlasTour() {
   const cardRef = useRef<HTMLDivElement | null>(null);
   /** Whatever had focus before the tour opened, so it can be handed back. */
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  /**
+   * Which page this walk was started on. A ref rather than state because
+   * nothing renders from it — it is only read when writing down where to
+   * resume, and re-rendering the overlay because of it would be pointless.
+   */
+  const startRouteRef = useRef<TourRoute | null>(null);
   /**
    * Held in a ref, not state: it is read inside event handlers and effects
    * that must not re-run just because the visitor changed the setting.
@@ -141,87 +221,243 @@ export function AtlasTour() {
     };
   }, []);
 
-  /* A route change ends whatever was running. Without this, walking from
-     /atlas to /atlas/learn mid-tour would leave the plate's card on screen
-     pointing at a hole whose target no longer exists. */
+  /**
+   * A route change takes down whatever was on screen — and then decides
+   * whether the walk itself is over.
+   *
+   * The card and the hole always go. They were measured against a page that
+   * is no longer there, and leaving them up would point a hole at a target
+   * that has gone.
+   *
+   * What survives is the walk, and only when the resume marker says this
+   * arrival was the walk's own doing: a marker naming a step that lives on the
+   * page we have just landed on means `cross` put it there a moment ago (or a
+   * hard reload interrupted exactly that). Anything else is ordinary
+   * navigation — somebody clicking away, or the browser going back — and that
+   * ends the walk and tears the marker up, so it cannot resurrect itself on a
+   * page it was never meant to reach.
+   */
   useEffect(() => {
     setSteps(null);
     setIndex(0);
     setRect(null);
     setCardPos(null);
-  }, [pathname]);
+
+    const resume = readTourResume();
+    const heading = resume ? TOUR_STEPS.find((s) => s.id === resume.at) : undefined;
+    if (heading && route && heading.route === route) return;
+
+    clearTourResume();
+    setPending(null);
+    startRouteRef.current = null;
+  }, [pathname, route]);
 
   /**
-   * Start the tour for this route.
+   * Start a walk here, from the top.
    *
-   * Steps whose target is not in the DOM are dropped here, before anything is
-   * shown. Country of the day can legitimately be absent on a day when
-   * nothing clears its bar, so this is a real case rather than defensive
-   * padding — and dropping up front is what keeps the counter honest.
+   * How many steps it gets depends on where "here" is — all ten from the
+   * plate, the training floor's own four from the training floor. See
+   * `queueForStart`.
    */
   const begin = useCallback(() => {
-    if (!tour) return;
-    const live = tour.steps.filter((s) => findTarget(s.target) !== null);
-    if (live.length === 0) return;
+    if (!route) return;
+    const queue = dropMissing(queueForStart(route), route);
+    /* Nothing on *this* page to point at. The steps for the other page are
+       still in the queue at this moment, so counting the queue would say
+       "plenty" and open the tour onto a card with no target. */
+    if (!queue.some((step) => step.route === route)) return;
     const active = document.activeElement;
     returnFocusRef.current = active instanceof HTMLElement ? active : null;
-    setSteps(live);
+    startRouteRef.current = route;
+    clearTourResume();
+    setPending(null);
+    setSteps(queue);
     setIndex(0);
     setCardPos(null);
-  }, [tour]);
+  }, [route]);
 
   /**
    * Finish, or skip — the same ending either way. Both write the key: someone
-   * who dismisses the tour has said "not again", not "ask me tomorrow".
+   * who dismisses the tour has said "not again", not "ask me tomorrow". Both
+   * also tear up the resume marker, so a walk abandoned half-way across the
+   * seam does not come back on the next page load.
    */
   const end = useCallback(() => {
-    if (tour) markTourSeen(tour.key);
+    markTourSeen(TOUR_KEY);
+    clearTourResume();
+    setPending(null);
     setSteps(null);
     setIndex(0);
     setRect(null);
     setCardPos(null);
+    startRouteRef.current = null;
     const back = returnFocusRef.current;
     returnFocusRef.current = null;
     if (back && document.contains(back)) back.focus();
-  }, [tour]);
+  }, []);
+
+  /**
+   * Walk to the other page and carry on at `step`.
+   *
+   * The marker goes to sessionStorage *before* navigating, not after: if the
+   * visitor hard-reloads in the gap, or the navigation itself is a full page
+   * load, the note is already written and the walk is picked back up rather
+   * than dying at the seam. Everything after this is the resume effect's job,
+   * which the pending flag hands over to.
+   */
+  const cross = useCallback(
+    (step: TourStep) => {
+      const from = startRouteRef.current ?? step.route;
+      writeTourResume({ at: step.id, from });
+      setPending({ at: step.id, startRoute: from });
+      router.push(step.route);
+    },
+    [router],
+  );
 
   /* Reads `index` straight rather than through a setState updater: ending the
-     tour is a side effect, and React calls updaters twice in development, so
-     an updater that ended the tour would write the storage key twice. */
+     tour, and navigating, are both side effects, and React calls updaters
+     twice in development — an updater that ended the tour would write the
+     storage key twice, and one that navigated would push twice. */
   const goNext = useCallback(() => {
     if (!steps) return;
     if (index >= steps.length - 1) {
       end();
       return;
     }
+    const next = steps[index + 1];
+    if (route && next.route !== route) {
+      cross(next);
+      return;
+    }
     setIndex(index + 1);
-  }, [steps, index, end]);
+  }, [steps, index, end, route, cross]);
 
+  /* Back crosses the seam too, the same way. Without it, stepping back from
+     the first training-floor card would show a card pointing at the plate,
+     which is not on screen. */
   const goBack = useCallback(() => {
-    setIndex((i) => (i > 0 ? i - 1 : i));
-  }, []);
+    if (!steps || index === 0) return;
+    const prev = steps[index - 1];
+    if (route && prev.route !== route) {
+      cross(prev);
+      return;
+    }
+    setIndex(index - 1);
+  }, [steps, index, route, cross]);
 
-  /* First visit: wait for the page to settle, then run. Nothing happens on a
-     route with no tour, or once the key is written. */
+  /**
+   * Two ways a walk begins on this page: picking one back up mid-crossing, or
+   * a genuine first visit.
+   *
+   * Resume wins, and has to. Mid-walk the "seen" key is not written yet — it
+   * is only written at the end — so a hard reload on /atlas/learn during a
+   * ten-step walk would otherwise look exactly like a first visit and start a
+   * fresh four-step one, throwing away where the visitor had got to.
+   */
   useEffect(() => {
-    if (!mounted || !tour) return;
-    if (hasSeenTour(tour.key)) return;
+    if (!mounted || !route) return;
+    if (pending || steps) return;
+
+    const resume = readTourResume();
+    if (resume) {
+      const at = TOUR_STEPS.find((s) => s.id === resume.at);
+      const from = tourRouteFor(resume.from);
+      if (at && from && at.route === route) {
+        setPending({ at: resume.at, startRoute: from });
+        return;
+      }
+      /* It names a step that is not on this page, or a build ago. Not ours. */
+      clearTourResume();
+    }
+
+    if (hasSeenTour(TOUR_KEY)) return;
     const timer = window.setTimeout(begin, SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [mounted, tour, begin]);
+  }, [mounted, route, begin, pending, steps]);
+
+  /**
+   * Arrive on the other page and put the next card up.
+   *
+   * The queue is rebuilt from scratch here rather than carried over, so the
+   * steps of the page we have just landed on get their missing-target check —
+   * the only moment they can have one. The steps of the page behind us pass
+   * through untouched; `dropMissing` will not look at them, which matters
+   * because their targets are certainly gone by now.
+   *
+   * The retries are for the gap between the route changing and the new page
+   * actually being painted. A step that is still not there after all of them
+   * is treated as genuinely absent, and the walk carries on at whatever
+   * survived after it — or ends, if nothing did.
+   */
+  useEffect(() => {
+    if (!pending || !route) return;
+
+    /* `cross` sets the pending flag and asks the router to move in the same
+       breath, but the move is a fetch and takes a moment, so this effect runs
+       once while we are still standing on the old page. Waiting for the step's
+       own page to be the page we are on is what stops the training floor's
+       first card being drawn over the plate. */
+    const heading = TOUR_STEPS.find((step) => step.id === pending.at);
+    if (!heading || heading.route !== route) return;
+
+    let tries = 0;
+    let timer = 0;
+
+    const attempt = () => {
+      timer = 0;
+      const full = queueForStart(pending.startRoute);
+      const queue = dropMissing(full, route);
+      let at = queue.findIndex((step) => step.id === pending.at);
+
+      if (at === -1 && tries < ARRIVE_TRIES) {
+        tries += 1;
+        timer = window.setTimeout(attempt, ARRIVE_RETRY_MS);
+        return;
+      }
+
+      if (at === -1) {
+        const wanted = full.findIndex((step) => step.id === pending.at);
+        at = wanted === -1 ? -1 : queue.findIndex((step) => full.indexOf(step) >= wanted);
+      }
+
+      setPending(null);
+      clearTourResume();
+
+      if (at === -1) {
+        /* Nothing left worth showing. That is the end of the walk, and the
+           key gets written — the visitor has been shown what there was. */
+        end();
+        return;
+      }
+
+      const active = document.activeElement;
+      returnFocusRef.current = active instanceof HTMLElement ? active : null;
+      startRouteRef.current = pending.startRoute;
+      setSteps(queue);
+      setIndex(at);
+      setRect(null);
+      setCardPos(null);
+    };
+
+    timer = window.setTimeout(attempt, ARRIVE_MS);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [pending, route, end]);
 
   /* "Take the tour →" anywhere on the page reaches us through one DOM event.
      The link clears the key too, but clearing here as well means the tour
      also restarts if some other code fires the event later. */
   useEffect(() => {
-    if (!mounted || !tour) return;
+    if (!mounted || !route) return;
     const onStart = () => {
-      clearTourSeen(tour.key);
+      clearTourSeen(TOUR_KEY);
       begin();
     };
     window.addEventListener(TOUR_START_EVENT, onStart);
     return () => window.removeEventListener(TOUR_START_EVENT, onStart);
-  }, [mounted, tour, begin]);
+  }, [mounted, route, begin]);
 
   /**
    * Bring the current step's target into view, measure it, and keep measuring
@@ -511,6 +747,12 @@ export function AtlasTour() {
         className={`${styles.card} ${narrow ? styles.cardPinned : ''}`}
         style={cardStyle}
       >
+        {/* Position within the steps queued for *this* walk, not within the
+            master list. A walk started on the plate has all ten queued and
+            counts "1 of 10" straight across the page boundary; one started on
+            the training floor by somebody who arrived there directly has four
+            and counts "1 of 4". Either way the number the visitor sees always
+            matches the number of cards they are actually going to get. */}
         <p className={styles.counter}>
           {index + 1} of {steps.length}
         </p>

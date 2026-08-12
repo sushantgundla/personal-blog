@@ -202,12 +202,23 @@
    line of spaced capitals, A T L A S, in the plate's own Bodoni: a heading
    rather than a hoarding. The tracking is doing the work the size used to.
 
-   The two-stop text-shadow is a warm halo behind the word, not a glow on
-   it: wide and very faint first, tighter and slightly stronger second, no
-   animation. This is a banknote under a lamp, so it stays at the edge of
-   noticeable. --note-ember-rgb (atlas.css) is the ember as bare channels,
-   the only way to give it an alpha; it swaps to violet under the UV lamp
-   with everything else. */
+   The lighting was a static two-stop text-shadow until 2026-08-13 — a warm
+   halo behind the word, wide and very faint, held at the edge of noticeable.
+   The owner looked at that live and said he could not see any effect at all,
+   which is fair: a faint halo behind a small line of capitals on a near-black
+   bar is nothing. It is now a light that follows his pointer (PlateTitle.tsx
+   renders the word one letter per span and feeds this file four numbers), on
+   top of a resting halo several times stronger than the one it replaced.
+
+   Everything below is paint only. Nothing here adds a single pixel to the
+   bar's height — the glows are absolutely positioned pseudo-elements and the
+   letter lift is a transform, neither of which takes part in layout. That is
+   not a nicety: this bar's height comes straight out of .page's fixed
+   viewport budget, so a taller heading is a shorter map.
+
+   --note-ember-rgb (atlas.css) is the ember as bare channels, the only way to
+   give it an alpha; it swaps to violet under the UV lamp with everything
+   else, so the whole effect follows the lamp for free. */
 .introTitle {
   margin: 0;
   text-align: center;
@@ -222,9 +233,120 @@
      same amount is the standard fix. */
   text-indent: 0.18em;
   color: var(--note-intaglio);
+  /* One text node has no break opportunities inside it; five inline-block
+     letters have four. Without this the word could split across two lines on
+     a very narrow screen, which would take the bar's height with it. */
+  white-space: nowrap;
+}
+
+/* A wrapper that shrink-wraps to the word itself, which is the point of it:
+   .introTitle is a full-width block, so a glow centred on *it* would sit in
+   the middle of the bar — right for the centred desktop layout, wrong the
+   moment the phone breakpoint below left-aligns the heading. Hung off the
+   word instead, both glows follow the type wherever it sits, and the em-based
+   insets scale with the clamp()ed font-size on their own.
+
+   It is also the element PlateTitle.tsx measures and writes to: --tx, --px,
+   --py and --lit are all set here and inherit down to the letters. */
+.introTitleWord {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+}
+
+/* Layer one, the resting halo — no custom properties anywhere in it, so it
+   paints correctly on the very first frame, before hydration, on a phone, and
+   under reduced motion. It is the entire effect for anyone who never brings a
+   pointer near it, which is why it is set well above the old text-shadow's
+   0.28-at-28px: it has to read as a lamp behind the plate, not a rumour of
+   one. The slow breathe is what keeps it from looking like a flat printed
+   smudge — seven seconds is long enough that you notice it is alive without
+   ever catching it moving. */
+.introTitleWord::before {
+  content: '';
+  position: absolute;
+  inset: -0.6em -0.75em;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    62% 128% at 50% 50%,
+    rgba(var(--note-ember-rgb, 255, 107, 43), 0.2) 0%,
+    rgba(var(--note-ember-rgb, 255, 107, 43), 0.07) 45%,
+    rgba(var(--note-ember-rgb, 255, 107, 43), 0) 74%
+  );
+  animation: introTitleBreathe 7s ease-in-out infinite;
+}
+
+/* Layer two, the light that follows the pointer. --px/--py are the pointer's
+   position relative to the word's own box in bare px, so the `+ 0.75em` and
+   `+ 0.6em` here are just this box's own inset added back — which is why
+   those two numbers are written once as ems above and reused, rather than
+   agreed by hand between this file and PlateTitle.tsx.
+
+   Its strength is multiplied by --lit, which is 0 whenever the pointer is
+   away. That is what makes this layer cost nothing at rest: fully
+   transparent, and identical to not being there. */
+.introTitleWord::after {
+  content: '';
+  position: absolute;
+  inset: -0.6em -0.75em;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle 2.4em at calc(var(--px, 0) * 1px + 0.75em) calc(var(--py, 0) * 1px + 0.6em),
+    rgba(var(--note-ember-rgb, 255, 107, 43), calc(var(--lit, 0) * 0.34)) 0%,
+    rgba(var(--note-ember-rgb, 255, 107, 43), calc(var(--lit, 0) * 0.12)) 42%,
+    rgba(var(--note-ember-rgb, 255, 107, 43), 0) 72%
+  );
+}
+
+/* One letter. inline-block because `transform` does nothing to an inline box,
+   and the lift is a transform; letter-spacing still applies between atomic
+   inline boxes, so the A T L A S tracking is exactly what it was.
+
+   The distance falloff is done here in plain calc() rather than in JavaScript
+   on purpose — PlateTitle.tsx writes one number for the whole word and this
+   rule turns it into five different brightnesses, instead of the script
+   reaching into five elements every frame.
+
+   --d  how far this letter is from the pointer, measured in letters and
+        divided by 1.15 — the reach, in letters, at which a letter is down to
+        about half. Signed, and that is fine:
+   --near  1 / (1 + d²) needs no abs(), can never go negative, and falls off
+        smoothly forever instead of hitting a hard edge the eye can find.
+   --heat  --near gated by --lit, so all of the movement switches off
+        together when the pointer goes away and the letters settle back to a
+        single even resting glow rather than a frozen snapshot of wherever
+        the cursor last was. */
+.introTitleLetter {
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  --d: calc((var(--tx, 2) - var(--cx, 0)) / 1.15);
+  --near: calc(1 / (1 + var(--d) * var(--d)));
+  --heat: calc(var(--near) * var(--lit, 0));
+  transform: translateY(calc(var(--heat) * -3px));
+  color: color-mix(
+    in srgb,
+    var(--note-intaglio),
+    var(--note-ember) calc(var(--heat) * 55%)
+  );
   text-shadow:
-    0 0 28px rgba(var(--note-ember-rgb, 255, 107, 43), 0.28),
-    0 0 9px rgba(var(--note-ember-rgb, 255, 107, 43), 0.16);
+    0 0 calc(10px + var(--heat) * 18px)
+      rgba(var(--note-ember-rgb, 255, 107, 43), calc(0.3 + var(--heat) * 0.42)),
+    0 0 calc(3px + var(--heat) * 6px)
+      rgba(var(--note-ember-rgb, 255, 107, 43), calc(0.18 + var(--heat) * 0.4));
+  will-change: transform;
+}
+
+@keyframes introTitleBreathe {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .introLine {
@@ -1093,5 +1215,25 @@
   .floorBandGame,
   .floorBandSubLink {
     transition: none !important;
+  }
+
+  /* The pointer-lit heading, 2026-08-13. PlateTitle.tsx already refuses to
+     attach a single listener when this query matches, so --lit stays 0 and
+     both the lift and the pointer glow are mathematically zero anyway; this
+     is here so the promise holds even if that check is ever lost, and to stop
+     the resting halo's slow breathe, which is the one piece of motion that
+     runs with no pointer involved at all. What survives is the static halo —
+     the effect a reduced-motion visitor should get: visible, and still. */
+  .introTitleLetter {
+    transform: none !important;
+  }
+
+  .introTitleWord::before {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  .introTitleWord::after {
+    background: none !important;
   }
 }
