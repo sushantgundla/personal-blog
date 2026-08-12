@@ -280,7 +280,11 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
           furniture strip below, where the serial number used to sit, so
           the control is on the plate, next to the thing it changes.
           Removing it gives the standings the rail's full height. */}
-      <aside className={styles.rail}>
+      {/* data-tour marks the elements the guided tour spotlights; the script
+          lives in _components/tour/tour-steps.ts and finds them by this
+          attribute alone, so the tour needs no import here and nothing in
+          this file changes if the tour is dropped. */}
+      <aside className={styles.rail} data-tour="rail">
         <RankRail
           rows={railRows}
           indicator={activeIndicatorDef}
@@ -301,7 +305,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
             a moment ago, with the country counts tightened alongside it so
             the whole strip still reads as one quiet line of plate
             furniture. */}
-        <div className={styles.furnitureRow}>
+        <div className={styles.furnitureRow} data-tour="dial">
           <MetricDial
             indicators={dialIndicators}
             active={activeMetric}
@@ -318,6 +322,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
         <div
           className={`${styles.mapWrap} ${isDragging ? styles.mapWrapDragging : ''}`}
           ref={mapWrapRef}
+          data-tour="map"
           onMouseMove={handleContainerMouseMove}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -406,7 +411,15 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
                 Sits above the zoom hint/buttons so its dropdown (opens
                 upward — .searchListboxUp) has clear room and never covers
                 them. */}
-            <AtlasSearch countries={allCountries} />
+            {/* The wrapper exists only to give the tour something to
+                spotlight that is the search box and nothing else.
+                data-tour on .cornerCluster itself would have been simpler,
+                but that cluster also holds the zoom hint and the three zoom
+                buttons, and a step whose words are "type its name here"
+                should not have a hole cut around the Reset button. */}
+            <div className={styles.tourSearchWrap} data-tour="search">
+              <AtlasSearch countries={allCountries} />
+            </div>
             {/* The map gives no other sign it's more than a static image —
                 this is the one quiet hint that scroll/drag/arrow keys do
                 something. aria-hidden since the svg's own aria-label

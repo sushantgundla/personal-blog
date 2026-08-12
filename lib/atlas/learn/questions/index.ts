@@ -50,12 +50,20 @@ const MAX_QUESTIONS = 20;
  */
 const MAX_CONSECUTIVE_FAILURES = 5;
 
+/**
+ * The same five ids as `GAME_IDS` in lib/atlas/learn/progress.ts, in the same
+ * order, so the questions module has its own door and a caller here never has
+ * to reach into the progress module. Reordered with it on 2026-08-13 (best
+ * first — see that file for why). Order does not matter to `isGameId` below,
+ * which only asks whether an id is in the list; it is kept identical so the
+ * two lists never look like they disagree.
+ */
 export const GAME_IDS: readonly GameId[] = [
+  "guess-country",
+  "flags",
+  "where-in-the-world",
   "forgery",
   "higher-lower",
-  "flags",
-  "guess-country",
-  "where-in-the-world",
 ];
 
 /** Type guard for the route handler's `?game=` parameter. */

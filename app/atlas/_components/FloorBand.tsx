@@ -44,20 +44,43 @@ export async function FloorBand() {
   const countryOfDay = buildCountryOfDay(deck, utcDateStamp())
 
   return (
-    <div className={styles.floorBand}>
+    // data-tour is the guided tour's handle on this band — its last stop on
+    // /atlas ("the training floor"). Attribute only: the tour finds it with
+    // a querySelector from app/atlas/layout.tsx and this file imports
+    // nothing from it.
+    <div className={styles.floorBand} data-tour="floor">
       <span aria-hidden="true" className={`atlas-perforated-h ${styles.floorBandPerf}`} />
 
       <div className={styles.floorBandInner}>
         <div className={styles.floorBandTop}>
-          <div className={styles.floorBandHead}>
-            <Link href="/atlas/learn" className={styles.floorBandLead}>
-              The training floor
+          {/* One link, not two elements next to a link. Until 2026-08-13 the
+              <Link> wrapped only the words + arrow and the caption was a
+              sibling <p>; the owner looked at the live page and never once
+              tried clicking the headline, because at headline size, with no
+              underline and no cursor change, it read as decoration. The
+              routing was always fine — this is an affordance fix. Making the
+              anchor the whole left block roughly triples the click target and,
+              more usefully, lets the caption light up with the headline so the
+              cluster reads as one thing you can press.
+
+              The caption is a <span> rather than a <p> for that reason: it now
+              lives inside the anchor, so it also becomes part of the link's
+              accessible name ("The training floor → Five games. A grade to
+              climb. A wall of your runs."), which happens to read correctly.
+              .floorBandLeadWords exists so the hover underline lands on the
+              words alone — the arrow sits inside .floorBandLead and would
+              otherwise be underlined along with them. */}
+          <Link href="/atlas/learn" className={styles.floorBandHead}>
+            <span className={styles.floorBandLead}>
+              <span className={styles.floorBandLeadWords}>The training floor</span>
               <span aria-hidden="true" className={styles.floorBandArrow}>
                 →
               </span>
-            </Link>
-            <p className={styles.floorBandSub}>Five games. A grade to climb. A wall of your runs.</p>
-          </div>
+            </span>
+            <span className={styles.floorBandSub}>
+              Five games. A grade to climb. A wall of your runs.
+            </span>
+          </Link>
 
           <div className={styles.floorBandMeta}>
             {/* Absent only if not one sovereign country in the whole deck

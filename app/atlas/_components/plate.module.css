@@ -283,11 +283,29 @@
   gap: 0.5rem 1.5rem;
 }
 
+/* This *is* the link, as of 2026-08-13 — headline, arrow and caption all
+   sit inside one <a> (see FloorBand.tsx for why). It was already a flex
+   column holding two children, so the anchor slots straight into the same
+   box; what it gains is the affordance the old headline-only link never
+   had. `cursor: pointer` is what a <Link> gives you anyway, but stated
+   here because a block-shaped link is easy to mistake for a layout div on
+   a later read, and `text-decoration: none` is needed so the caption does
+   not pick up the browser's default anchor underline at rest. */
 .floorBandHead {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* The focus ring moved up here with the anchor, so it now draws around the
+   whole cluster rather than the headline alone. Same 2px --note-ember it
+   always was. */
+.floorBandHead:focus-visible {
+  outline: 2px solid var(--note-ember);
+  outline-offset: 3px;
 }
 
 /* The headline lever this redesign pulls: .floorDoorLabel above was
@@ -316,14 +334,22 @@
   transition: color 0.2s var(--atlas-ease);
 }
 
-.floorBandLead:hover,
-.floorBandLead:focus-visible {
+.floorBandHead:hover .floorBandLead,
+.floorBandHead:focus-visible .floorBandLead {
   color: var(--note-intaglio);
 }
 
-.floorBandLead:focus-visible {
-  outline: 2px solid var(--note-ember);
-  outline-offset: 3px;
+/* The underline is the whole point of the affordance fix, and it is on the
+   words only — .floorBandLeadWords wraps the text so the arrow beside it
+   stays clean. No text-decoration-color is set on purpose: the words have
+   just turned --note-intaglio on this same hover, and an underline in a
+   different colour underneath them reads as a rendering fault rather than
+   a deliberate two-tone. currentColor keeps the two together. */
+.floorBandHead:hover .floorBandLeadWords,
+.floorBandHead:focus-visible .floorBandLeadWords {
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  text-decoration-thickness: 1px;
 }
 
 .floorBandArrow {
@@ -333,17 +359,28 @@
   transition: transform 0.2s var(--atlas-ease);
 }
 
-.floorBandLead:hover .floorBandArrow,
-.floorBandLead:focus-visible .floorBandArrow {
+.floorBandHead:hover .floorBandArrow,
+.floorBandHead:focus-visible .floorBandArrow {
   transform: translateX(4px);
 }
 
+/* A <span> now, not a <p> — it lives inside the anchor, and `display: block`
+   is what keeps it on its own line there. It lifts out of the dim tone on
+   hover so the whole block reads as one hover state instead of a headline
+   that lights while the line under it stays dead. */
 .floorBandSub {
+  display: block;
   margin: 0;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   color: var(--note-intaglio-dim);
+  transition: color 0.2s var(--atlas-ease);
+}
+
+.floorBandHead:hover .floorBandSub,
+.floorBandHead:focus-visible .floorBandSub {
+  color: var(--note-intaglio);
 }
 
 /* Groups Country of the day with the grade chip on .floorBandTop's right
@@ -577,6 +614,26 @@
      "Search a country — press /" lost its trailing "/". Widened just
      enough for that text to render whole. */
   max-width: min(260px, calc(100% - 1.5rem));
+}
+
+/* A pass-through box around <AtlasSearch> inside .cornerCluster, so the
+   guided tour has a `data-tour="search"` element that is the search box
+   alone and not the zoom hint and buttons beside it (Plate.tsx).
+
+   `display: contents` is the obvious way to add a box that changes no
+   layout, and it is wrong here: an element with `display: contents`
+   generates no box at all, so getBoundingClientRect() returns zeros and the
+   tour would cut its spotlight hole at the top-left corner of the screen.
+   A flex column instead. Two things make it invisible to layout: `width:
+   100%` reproduces what .search already asks for, which matters because
+   .cornerCluster is `align-items: flex-end` and a shrink-to-fit wrapper
+   would collapse the input to its content width instead of the cluster's
+   260px; and a column flex container with no gap stretches its single child
+   to full width, exactly as the block-level .search was before. */
+.tourSearchWrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 /* The one quiet line telling a first-time visitor the map responds to
@@ -977,7 +1034,12 @@
     transition: none !important;
   }
 
+  /* .floorBandSub joined this list on 2026-08-13, when it started fading
+     its colour along with the headline on hover. Anything that got a
+     transition has to be listed here or the promise this block makes is
+     only half true. */
   .floorBandLead,
+  .floorBandSub,
   .floorBandArrow,
   .floorBandGrade,
   .floorBandGame,

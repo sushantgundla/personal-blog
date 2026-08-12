@@ -27,6 +27,32 @@
   padding: 1.5rem 1rem 4rem;
 }
 
+/* A pass-through box the guided tour can point at. GradeSeal,
+   CountryOfDayCard and ResultsWall are components rather than elements, so
+   page.tsx has nowhere to put a `data-tour` attribute without reaching into
+   files it doesn't own; this wraps them instead.
+
+   Not `display: contents`, which would be the natural choice for a box that
+   changes no layout: an element with `display: contents` generates no box,
+   so getBoundingClientRect() returns zeros and the tour would cut its
+   spotlight hole in the screen's top-left corner. A flex column is the
+   nearest thing that still measures — .page is itself a flex column, so a
+   wrapper is one flex item exactly as its single child was, and a column
+   flex container with no gap stretches that child to full width just as
+   block layout did.
+
+   The `:empty` rule covers one real case: CountryOfDayCard returns null if
+   not one country in the deck clears its remarkable bar, and without this an
+   empty wrapper would still be a flex item and add .page's 2.75rem gap. */
+.tourWrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.tourWrap:empty {
+  display: none;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
