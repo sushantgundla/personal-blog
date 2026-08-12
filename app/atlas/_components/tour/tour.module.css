@@ -1,0 +1,333 @@
+/* ============================================================
+   THE TOUR — the overlay, the cut-out and the card.
+
+   Every colour and face here comes from ../../atlas.css's tokens
+   (--note-paper, --note-void, --note-ember, --note-intaglio,
+   --note-intaglio-dim, --note-rule, --atlas-ease). Each one carries a
+   literal fallback as well, because this overlay is the one piece of the
+   Atlas that could plausibly be mounted outside .atlas-root one day — a
+   portal, a future shared layout — and a tour that renders with no colours
+   at all would be worse than one that renders slightly plain.
+
+   The vocabulary is the rest of the Atlas's: engraved banknote. Paper
+   ground, a hairline rule, mono small-caps labels, a Bodoni title, ember
+   for the one thing you are meant to do next.
+   ============================================================ */
+
+/* ---------------------------------------------------------- the overlay
+
+   A fixed layer over the whole viewport, above every piece of plate
+   furniture (the cartouche and corner cluster top out at z-index 40, the
+   search dropdown at 50, the film grain at 60).
+
+   It is `pointer-events: none` itself. It is NOT the thing that blocks
+   clicks — the four .shutter panels are (see AtlasTour.tsx). If this layer
+   swallowed clicks, the hole would be a hole you could see through but not
+   click through, because a `pointer-events: none` child hands the click
+   back to its parent, not to the page below. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  /* rgba, not the token, because a box-shadow needs an alpha and
+     --note-void is an opaque hex. This is that same colour at 92%. The
+     @supports block below upgrades it to the live token where color-mix
+     is available, so a palette change carries through.
+
+     92, not the 74 this shipped with for an afternoon: the Atlas is a
+     near-black page, so laying more near-black over it at three-quarters
+     strength changed almost nothing — checked in the browser on
+     2026-08-13 and the standings rail was still perfectly readable
+     beside the lit map, which makes the spotlight pointless. There is no
+     light theme to worry about here (--note-void is declared once in
+     atlas.css, not per-theme), so the scrim can go this hard safely. The
+     text underneath still shows as a ghost, which is what you want — the
+     page should look asleep, not deleted. */
+  --tour-scrim: rgba(8, 7, 6, 0.92);
+  animation: tourOverlayIn 220ms var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@supports (color: color-mix(in srgb, red, blue)) {
+  .overlay {
+    --tour-scrim: color-mix(in srgb, var(--note-void, #080706) 92%, transparent);
+  }
+}
+
+@keyframes tourOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------- the cut-out
+
+   The dimming is a single 9999px box-shadow spreading outward from a
+   transparent box sized to the target. The element's own box stays clear,
+   so what you get is the whole screen dimmed with one bright rectangle
+   punched out of it — and it moves between steps as one object rather
+   than four panels sliding independently.
+
+   Two shadows, in this order: the 1px ember ring paints on top of the
+   scrim, so the target reads as deliberately chosen rather than merely
+   left uncovered. */
+.hole {
+  position: absolute;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px var(--note-ember, #ff6b2b),
+    0 0 0 9999px var(--tour-scrim);
+  transition:
+    left 0.35s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)),
+    top 0.35s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)),
+    width 0.35s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)),
+    height 0.35s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* While the page is actually scrolling, the glide has to go. The hole is
+   re-measured every frame there, and easing each of those measurements
+   would leave it trailing behind the target it is supposed to be sitting
+   on. AtlasTour adds this class on scroll/resize and drops it 160ms after
+   the movement stops, which leaves the step-to-step glide intact. */
+.holeTracking {
+  transition: none;
+}
+
+/* One of the transparent panels that tile the screen around the hole and
+   eat every click. Invisible; the .hole's shadow does all the painting. */
+.shutter {
+  position: absolute;
+  pointer-events: auto;
+}
+
+/* ---------------------------------------------------------- the card */
+
+.card {
+  position: fixed;
+  z-index: 210;
+  pointer-events: auto;
+  width: min(21rem, calc(100vw - 2rem));
+  padding: 0.9rem 1rem 0.85rem;
+  background: var(--note-paper, #1a1613);
+  border: 1px solid var(--note-rule, #2e2721);
+  /* A hairline of ember down the left edge — the same "this one is live"
+     mark the dial's active chip and the floor band's headline use. */
+  border-left: 2px solid var(--note-ember, #ff6b2b);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+  outline: none;
+}
+
+/* Under 640px the card stops chasing the hole. There is no room beside
+   anything on a phone, and a card that jumps around the screen between
+   steps is harder to read than one that stays where you last saw it. */
+.cardPinned {
+  top: auto;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  width: auto;
+}
+
+.counter {
+  margin: 0 0 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--note-intaglio-dim, #a2988a);
+}
+
+.title {
+  margin: 0 0 0.35rem;
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  color: var(--note-intaglio, #e9e1d2);
+}
+
+.body {
+  margin: 0 0 0.85rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--note-intaglio-dim, #a2988a);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Both buttons share the plate's mono small-caps furniture voice. Skip is
+   quiet and on the left; Next carries the ember and sits on the right,
+   where the eye lands last. */
+.skip,
+.next {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.4rem 0.65rem;
+  transition:
+    color 0.15s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)),
+    border-color 0.15s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1)),
+    background 0.15s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.skip {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--note-intaglio-dim, #a2988a);
+  padding-left: 0;
+}
+
+.skip:hover,
+.skip:focus-visible {
+  color: var(--note-intaglio, #e9e1d2);
+}
+
+.next {
+  background: var(--note-paper-hi, #231d18);
+  border: 1px solid var(--note-ember, #ff6b2b);
+  color: var(--note-ember, #ff6b2b);
+}
+
+.next:hover,
+.next:focus-visible {
+  background: var(--note-ember, #ff6b2b);
+  color: var(--note-void, #080706);
+}
+
+.skip:focus-visible,
+.next:focus-visible {
+  outline: 2px solid var(--note-ember, #ff6b2b);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- the pointer
+
+   A small triangle on the card's edge aimed at the hole's centre.
+   AtlasTour sets --tour-arrow-x (its offset from the card's left edge) and
+   data-side (which edge it hangs off). Built from two stacked triangles —
+   the back one in the border colour, the front one in the paper colour,
+   1px in front — so the card's hairline border appears to continue around
+   the point instead of stopping dead at it. */
+.arrow {
+  position: absolute;
+  left: var(--tour-arrow-x, 50%);
+  width: 0;
+  height: 0;
+  margin-left: -7px;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+}
+
+.arrow[data-side='below'] {
+  top: -7px;
+  border-bottom: 7px solid var(--note-rule, #2e2721);
+}
+
+.arrow[data-side='above'] {
+  bottom: -7px;
+  border-top: 7px solid var(--note-rule, #2e2721);
+}
+
+.arrow::after {
+  content: '';
+  position: absolute;
+  left: -7px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+}
+
+.arrow[data-side='below']::after {
+  top: 1px;
+  border-bottom: 7px solid var(--note-paper, #1a1613);
+}
+
+.arrow[data-side='above']::after {
+  bottom: 1px;
+  border-top: 7px solid var(--note-paper, #1a1613);
+}
+
+/* ---------------------------------------------------------- replay link
+
+   TourReplayLink renders a <button>, and pages pass in their own link
+   class. `replayReset` strips only the button chrome that would show
+   through such a class: the grey face, the three borders that are not the
+   bottom one, and the top/side padding. It deliberately touches no
+   shorthand (`border`, `padding`, `font`) and neither colour nor font,
+   because those are exactly what the page's own class sets, and CSS module
+   files have no guaranteed order between them. */
+.replayReset {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border-top: 0 none;
+  border-left: 0 none;
+  border-right: 0 none;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+/* The standalone look, for when no class is passed. Deliberately the same
+   shape as .introLink in ../plate.module.css — mono small-caps in ember
+   over a dashed rule — so a bare <TourReplayLink /> already belongs. */
+.replayLink {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--note-ember, #ff6b2b);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--note-ember, #ff6b2b);
+  padding-bottom: 0.1rem;
+  transition: color 0.2s var(--atlas-ease, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.replayLink:hover,
+.replayLink:focus-visible {
+  color: var(--note-intaglio, #e9e1d2);
+  border-color: var(--note-intaglio, #e9e1d2);
+}
+
+.replayLink:focus-visible {
+  outline: 2px solid var(--note-ember, #ff6b2b);
+  outline-offset: 3px;
+}
+
+/* ---------------------------------------------------------- reduced motion
+
+   The tour still runs; it just stops sliding. No fade on the overlay, no
+   glide on the hole between steps, no button transitions. AtlasTour makes
+   the matching change in JS by passing `behavior: 'auto'` to
+   scrollIntoView, so the page jumps to each target instead of gliding. */
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    animation: none !important;
+  }
+
+  .hole {
+    transition: none !important;
+  }
+
+  .skip,
+  .next,
+  .replayLink {
+    transition: none !important;
+  }
+}

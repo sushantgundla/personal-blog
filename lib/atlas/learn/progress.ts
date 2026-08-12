@@ -33,13 +33,31 @@ export const STORAGE_KEY = 'atlas.learn.v1';
 /** The wall holds the last 20 runs. Older ones fall off the bottom. */
 export const MAX_RUNS = 20;
 
-/** The five real games, in the order the floor lays them out. */
+/**
+ * The five real games, in the order the floor lays them out.
+ *
+ * Reordered 2026-08-13, best first. The old order — forgery, higher-lower,
+ * flags, guess-country, where-in-the-world — was simply the order they were
+ * built in; the owner has since played all five and ranked them by how fun
+ * they actually are, and the floor should lead with the best one rather
+ * than with whatever happened to ship first.
+ *
+ * Reordering costs nothing anyone has earned: `Progress.games` is a
+ * `Record<GameId, GameStat>` and `RunRecord.game` stores an id, so saved
+ * progress is keyed by name and never by position. Nothing in the codebase
+ * indexes this array by number — keep it that way, and this list stays free
+ * to be reordered again.
+ *
+ * Must stay in step with the second `GAME_IDS` in
+ * lib/atlas/learn/questions/index.ts and with `GAMES` in
+ * app/atlas/learn/page.tsx.
+ */
 export const GAME_IDS: readonly GameId[] = [
+  'guess-country',
+  'flags',
+  'where-in-the-world',
   'forgery',
   'higher-lower',
-  'flags',
-  'guess-country',
-  'where-in-the-world',
 ];
 
 /**

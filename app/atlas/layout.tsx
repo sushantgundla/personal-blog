@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import Link from 'next/link'
+import { AtlasTour } from './_components/tour/AtlasTour'
 import './atlas.css'
 
 /**
@@ -103,6 +104,20 @@ export default function AtlasLayout({ children }: { children: React.ReactNode })
       </header>
 
       <main className="flex-1">{children}</main>
+
+      {/* Mounted once for the whole section rather than per page, because it
+          is the same component either way: AtlasTour reads usePathname() and
+          picks its own step list from tourForPath() in tour-steps.ts, which
+          returns null for every /atlas/* route that isn't the plate or the
+          training floor — so on a dossier, a comparison or a rankings table
+          this renders nothing at all. Mounting it here also means the tour
+          survives a client-side navigation between /atlas and /atlas/learn
+          without being torn down and re-created.
+
+          Last in the tree on purpose: it paints a full-screen dim layer with
+          a hole cut in it, and being last keeps it above the page content in
+          paint order without needing a z-index fight with .atlas-top-bar. */}
+      <AtlasTour />
     </div>
   )
 }
