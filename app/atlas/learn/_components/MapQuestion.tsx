@@ -198,12 +198,32 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
     onPick(iso3 === correctIso3 ? 0 : 1)
   }
 
+  // Seeding a focused country is for keyboard players: Tab lands on the map
+  // with nothing selected, so arrows would have nowhere to start. A MOUSE
+  // click also focuses this wrapper, and doing it there was a real bug — it
+  // jumped the selection to a fixed country and `ensureVisible` then panned
+  // and zoomed the map onto it, so clicking anywhere looked like a phantom
+  // click landing in the middle of the map, on the same country every time.
+  //
+  // :focus-visible is exactly this distinction — the browser sets it for
+  // keyboard focus and withholds it for a pointer. Guarded because it is
+  // matched against a selector, and an old engine that does not know it
+  // throws rather than returning false; on that path we simply do nothing,
+  // which leaves the mouse behaving correctly.
   function handleMapFocus() {
-    if (!disabled && !answered && !focusedIso3) {
-      const iso3 = SORTED_COUNTRIES[0]!.iso3
-      setFocusedIso3(iso3)
-      ensureVisible(iso3)
+    if (disabled || answered || focusedIso3) return
+    const wrap = wrapRef.current
+    if (!wrap) return
+    let viaKeyboard = false
+    try {
+      viaKeyboard = wrap.matches(':focus-visible')
+    } catch {
+      viaKeyboard = false
     }
+    if (!viaKeyboard) return
+    const iso3 = SORTED_COUNTRIES[0]!.iso3
+    setFocusedIso3(iso3)
+    ensureVisible(iso3)
   }
 
   function handleMapKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
