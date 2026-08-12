@@ -1,5 +1,5 @@
 /**
- * The tour's script — two step lists and the two localStorage keys, and
+ * The tour's script — one ordered step list and the one localStorage key, and
  * nothing else. Plain data with no React and no `window` touch, so both
  * AtlasTour.tsx (which runs the tour) and TourReplayLink.tsx (which restarts
  * it) can import it without either one owning the other.
@@ -7,6 +7,13 @@
  * The copy here is the whole point of the tour, so it lives in one file
  * rather than being scattered through the JSX: changing what the Atlas says
  * about itself should be a one-file edit.
+ *
+ * There used to be two lists here and two keys — a six-step tour on /atlas and
+ * a separate four-step tour on /atlas/learn, each starting on its own page's
+ * first visit. That meant most people saw the first one and never the second,
+ * because nothing walked them across. It is one walk now: ten steps, and the
+ * step that spotlights the training floor band hands you over to the floor
+ * itself. The `route` field on each step is what makes that possible.
  */
 
 /**
@@ -40,9 +47,28 @@ export type TourTarget =
   | 'games'
   | 'wall';
 
+/**
+ * The two Atlas pages the tour walks through, in the order it walks them.
+ *
+ * Every other /atlas/* route — a dossier, a comparison, a rankings table, a
+ * single game — has no tour at all. Those pages are one thing each and explain
+ * themselves.
+ */
+export type TourRoute = '/atlas' | '/atlas/learn';
+
 export interface TourStep {
   /** Stable key for React and for reading the code; never shown. */
   id: string;
+  /**
+   * Which page this step lives on.
+   *
+   * Two jobs, both load-bearing. It tells AtlasTour that pressing **Next**
+   * here has to walk the visitor to another page before the next card can go
+   * up. And it protects the steps of the page you are not standing on yet
+   * from the "drop steps whose target is missing" filter, which would
+   * otherwise delete the whole second half of the tour the moment it started.
+   */
+  route: TourRoute;
   /** Which `[data-tour="..."]` element this step spotlights. */
   target: TourTarget;
   /** The card's heading — three or four words. */
@@ -58,23 +84,22 @@ export interface TourStep {
    * standings rail, the ways-in links, the floor band) and would abandon the
    * tour half-way through, so the hole is inert and only **Next** moves you
    * on. See the shutter comment in AtlasTour.tsx for how that is enforced.
+   *
+   * The floor band stays inert even though **Next** now goes to that same
+   * page: a real click would navigate without the tour knowing, so the tour
+   * would find itself on /atlas/learn with no idea it had moved.
    */
   allowTargetClick: boolean;
 }
 
-export interface TourDefinition {
-  /** The localStorage key that remembers this tour was seen. */
-  key: string;
-  steps: readonly TourStep[];
-}
-
 /**
- * The two keys. The `v1` suffix is a version, not decoration: rewriting the
- * steps later means bumping to `v2`, which re-runs the tour for everyone who
- * already saw the old one, without needing any migration code.
+ * The one key. The `v2` suffix is a version, not decoration: it deliberately
+ * does not match either of the two `v1` keys the old split tours wrote, so
+ * everybody who saw the old pair of tours is shown this single walk once, and
+ * no migration code is needed to do it. Rewriting the steps again later means
+ * bumping to `v3`.
  */
-export const PLATE_TOUR_KEY = 'atlas.tour.plate.v1';
-export const FLOOR_TOUR_KEY = 'atlas.tour.floor.v1';
+export const TOUR_KEY = 'atlas.tour.v2';
 
 /**
  * The event TourReplayLink fires and AtlasTour listens for. A plain DOM
@@ -85,8 +110,10 @@ export const FLOOR_TOUR_KEY = 'atlas.tour.floor.v1';
 export const TOUR_START_EVENT = 'atlas:tour:start';
 
 /**
- * `/atlas` — the plate itself. Six stops, in the page's own reading order:
- * top to bottom, and left before right where two things share a row.
+ * The whole walk — ten stops across two pages, in the order they are shown.
+ *
+ * `/atlas`, following the page's own reading order, top to bottom and left
+ * before right where two things share a row:
  *
  *   ways-in  the intro links row, at the very top
  *   floor    the training floor band, just under it
@@ -101,10 +128,22 @@ export const TOUR_START_EVENT = 'atlas:tour:start';
  * is laid out. Following the page instead means each step is next to the
  * one before it, so by the end you have been walked down the page once and
  * know where everything sits.
+ *
+ * Then `/atlas/learn`, the training floor:
+ *
+ *   grade    your grade seal
+ *   cotd     country of the day
+ *   games    the grid of five
+ *   wall     the runs you have finished
+ *
+ * The seam is between `plate-search` and `floor-grade`. Pressing Next on the
+ * last /atlas step is what carries you over; the `plate-floor` card earlier on
+ * is the one that warns you it is coming.
  */
-export const PLATE_STEPS: readonly TourStep[] = [
+export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: 'plate-ways-in',
+    route: '/atlas',
     target: 'ways-in',
     title: 'Two more ways in',
     body: 'Put countries side by side, or read a full ranked table.',
@@ -112,13 +151,15 @@ export const PLATE_STEPS: readonly TourStep[] = [
   },
   {
     id: 'plate-floor',
+    route: '/atlas',
     target: 'floor',
     title: 'The training floor',
-    body: 'Five games built from this same data, with a grade to climb.',
+    body: 'Five games built from this same data, with a grade to climb. This tour walks you in there at the end.',
     allowTargetClick: false,
   },
   {
     id: 'plate-rail',
+    route: '/atlas',
     target: 'rail',
     title: 'The standings',
     body: 'Every country ranked by whatever the dial is showing. Click a row to open it.',
@@ -126,6 +167,7 @@ export const PLATE_STEPS: readonly TourStep[] = [
   },
   {
     id: 'plate-dial',
+    route: '/atlas',
     target: 'dial',
     title: 'The dial',
     body: 'Paint the world by one measure — population, income, life expectancy. The map recolours.',
@@ -133,6 +175,7 @@ export const PLATE_STEPS: readonly TourStep[] = [
   },
   {
     id: 'plate-map',
+    route: '/atlas',
     target: 'map',
     title: 'The world, engraved',
     body: 'Hover a country to see its name, drag to move, scroll to zoom. Click any country to open its note.',
@@ -140,17 +183,15 @@ export const PLATE_STEPS: readonly TourStep[] = [
   },
   {
     id: 'plate-search',
+    route: '/atlas',
     target: 'search',
     title: 'Search',
     body: 'Know the country already? Type its name here.',
     allowTargetClick: true,
   },
-];
-
-/** `/atlas/learn` — the training floor. Four stops. */
-export const FLOOR_STEPS: readonly TourStep[] = [
   {
     id: 'floor-grade',
+    route: '/atlas/learn',
     target: 'grade',
     title: 'Your grade',
     body: 'It climbs as you answer correctly, across every game.',
@@ -158,6 +199,7 @@ export const FLOOR_STEPS: readonly TourStep[] = [
   },
   {
     id: 'floor-cotd',
+    route: '/atlas/learn',
     target: 'cotd',
     title: 'Country of the day',
     body: 'One country picked out every day. Worth a look before you start.',
@@ -165,6 +207,7 @@ export const FLOOR_STEPS: readonly TourStep[] = [
   },
   {
     id: 'floor-games',
+    route: '/atlas/learn',
     target: 'games',
     title: 'The five games',
     body: 'Best first. Ten questions a run.',
@@ -172,6 +215,7 @@ export const FLOOR_STEPS: readonly TourStep[] = [
   },
   {
     id: 'floor-wall',
+    route: '/atlas/learn',
     target: 'wall',
     title: 'The wall',
     body: 'Every run you finish hangs here.',
@@ -180,16 +224,32 @@ export const FLOOR_STEPS: readonly TourStep[] = [
 ];
 
 /**
- * Which tour, if any, belongs to a route.
+ * Is there a tour on this route, and if so which page is it?
  *
  * Exact matches only. A dossier (`/atlas/USA`), a comparison, a rankings
- * table or a single game gets no tour at all — those pages are one thing
- * each and explain themselves. Returning `null` is what makes AtlasTour
- * render nothing on them even though it is mounted once for the whole
- * section in app/atlas/layout.tsx.
+ * table or a single game gets nothing. Returning `null` is what makes
+ * AtlasTour render nothing on them even though it is mounted once for the
+ * whole section in app/atlas/layout.tsx, and what makes TourReplayLink
+ * disappear there too.
  */
-export function tourForPath(pathname: string | null | undefined): TourDefinition | null {
-  if (pathname === '/atlas') return { key: PLATE_TOUR_KEY, steps: PLATE_STEPS };
-  if (pathname === '/atlas/learn') return { key: FLOOR_TOUR_KEY, steps: FLOOR_STEPS };
+export function tourRouteFor(pathname: string | null | undefined): TourRoute | null {
+  if (pathname === '/atlas') return '/atlas';
+  if (pathname === '/atlas/learn') return '/atlas/learn';
   return null;
+}
+
+/**
+ * Which steps a run gets, given where it was started.
+ *
+ * Start on /atlas and you get all ten — the walk crosses into the training
+ * floor half-way through and the counter reads "1 of 10" the whole way.
+ *
+ * Start on /atlas/learn and you get only that page's four, numbered "1 of 4".
+ * Somebody who arrived at the training floor directly has never seen the
+ * plate, so walking them backwards through it would be strange, and numbering
+ * their first card "7 of 10" would be stranger still.
+ */
+export function queueForStart(route: TourRoute): readonly TourStep[] {
+  if (route === '/atlas') return TOUR_STEPS;
+  return TOUR_STEPS.filter((step) => step.route === route);
 }
