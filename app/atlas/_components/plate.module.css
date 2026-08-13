@@ -156,6 +156,43 @@
   filter: brightness(1.3);
 }
 
+/* ---------------------------------------------------------- map hatch
+
+   A local copy of atlas.css's .atlas-hatch / .atlas-hatch-dense pair, added
+   2026-08-13. Identical paint — same colours, same widths, same transition —
+   with one difference: it fills from #plate-hatch and #plate-hatch-dense,
+   the zoom-corrected patterns Plate.tsx renders inside the map's own <svg>,
+   instead of the shared #atlas-hatch pair in app/atlas/layout.tsx. The
+   shared patterns are laid out in the referencing path's user space, which
+   on this map includes the zoom, so their lines spread and thickened as you
+   zoomed in; Plate.tsx's <defs> comment has the full explanation.
+
+   Nothing else changes. atlas.css's .atlas-hatch rules and layout.tsx's
+   defs stay exactly as they were — app/atlas/learn/_components/
+   MapQuestion.tsx's map still fills from them and needs them unchanged. */
+.hatch {
+  fill: url(#plate-hatch);
+  stroke: var(--note-intaglio-dim);
+  stroke-width: 0.5;
+  transition: fill 0.25s var(--atlas-ease), stroke 0.25s var(--atlas-ease);
+}
+
+/* The three ways a country lights up, all landing on the dense hatch.
+
+   .atlas-hatch's own `:focus-visible` is written on the path itself, and on
+   this map that selector can never match: Tab lands on the wrapping <a>
+   (.countryLink), never on the <path> inside it — see the onFocus comment in
+   Plate.tsx. So the focus case is written the way focus is actually wired
+   here, as a descendant of .countryLink:focus-visible, which is the same
+   relationship .countryPath's existing focus ring rule above already uses.
+   That rule sets the stroke; this one adds the fill it was missing. */
+.hatch:hover,
+.countryLink:focus-visible .hatch,
+.hatchActive {
+  fill: url(#plate-hatch-dense);
+  stroke: var(--note-ember);
+}
+
 /* Registration crosses, four corners of the plate. Decorative. */
 .regCross {
   stroke: var(--note-seal);
@@ -1231,6 +1268,14 @@
   .countryPath {
     transition: none !important;
     transition-delay: 0s !important;
+  }
+
+  /* .hatch lands on the same element as .countryPath, so the !important
+     above already covers it — stated anyway, because atlas.css's own
+     reduced-motion block lists .atlas-hatch explicitly and the local copy
+     should be as easy to find. */
+  .hatch {
+    transition: none !important;
   }
 
   .cartouche {

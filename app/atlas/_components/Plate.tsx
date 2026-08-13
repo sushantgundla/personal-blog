@@ -269,6 +269,18 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
     setHoverSource(iso3 ? 'rail' : null)
   }
 
+  /* The number that makes the engraving hatch hold still while the map zooms.
+     See the <defs> block below for the whole story; this is just the guard.
+     useMapTransform clamps scale into [MIN_SCALE, MAX_SCALE] = [1, 8], so it
+     is never 0 and never absent today — but a bad frame here would write
+     `scale(Infinity)` or `scale(NaN)` into an SVG attribute, and a malformed
+     patternTransform makes the pattern (and therefore every country's fill)
+     disappear outright rather than merely look wrong. Falling back to 1 costs
+     nothing and turns that whole class of failure into "the hatch scales with
+     the map for one frame". */
+  const hatchInverseZoom =
+    Number.isFinite(transform.scale) && transform.scale > 0 ? 1 / transform.scale : 1
+
   const hoveredPath = hoverIso3 ? pathsByIso3.get(hoverIso3) : null
   const hoveredPopRow = hoverIso3 ? popByIso3.get(hoverIso3) : undefined
   const hoveredMetricRow = hoverIso3 && activeRanking ? activeRanking.rows.find((r) => r.iso3 === hoverIso3) : undefined
@@ -340,6 +352,63 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
             role="img"
             aria-label={`World map, ${countryPaths.length} of ${allCountries.length} countries engraved. Use search or the standings list to reach any country.`}
           >
+            {/* The plate's own copies of the engraving hatch, and the one
+                reason they exist instead of the shared #atlas-hatch /
+                #atlas-hatch-dense in app/atlas/layout.tsx.
+
+                Fixed 2026-08-13. A `patternUnits="userSpaceOnUse"` pattern is
+                laid out in the user space of the element that *references* it
+                — and for these country paths that user space includes the
+                `<g transform="… scale(N)">` immediately below, which is the
+                zoom. So at 4x zoom the 4-unit pitch was painting as 16 units
+                and the 0.5 stroke as 2: the lines drifted apart and fattened
+                as you zoomed in, which is the opposite of how a real engraving
+                behaves. The lines are a surface texture of the plate, not
+                features of the terrain, so they should look identical at every
+                zoom level.
+
+                `scale(1 / transform.scale)` on the pattern cancels the <g>'s
+                `scale(transform.scale)` exactly. Because it is uniform it
+                cancels both things at once — the tile's pitch AND the line's
+                stroke-width — so both stay fixed in screen pixels at any zoom
+                with no second correction needed anywhere. (The paths' own
+                hover/focus stroke is handled separately, by the
+                `vectorEffect: 'non-scaling-stroke'` set further down.)
+
+                The shared defs cannot simply be fixed in place: they know
+                nothing about this map's zoom, and app/atlas/learn's
+                MapQuestion.tsx renders an unzoomed map off the same two ids,
+                where dividing by anything would be wrong. Hence two new ids
+                here — unique in the document, so nothing collides — with the
+                same geometry and colours as the shared pair.
+
+                Living inside this <svg> rather than in a memoised child is
+                deliberate and free: `transform` is state on this component, so
+                the country list below re-renders on every zoom frame either
+                way. Two <pattern> nodes add nothing measurable to that. */}
+            <defs>
+              {/* Resting state for land — mirrors #atlas-hatch. */}
+              <pattern
+                id="plate-hatch"
+                width="4"
+                height="4"
+                patternTransform={`rotate(45) scale(${hatchInverseZoom})`}
+                patternUnits="userSpaceOnUse"
+              >
+                <line x1="0" y1="0" x2="0" y2="4" stroke="var(--note-intaglio-dim)" strokeWidth={0.5} />
+              </pattern>
+              {/* Hover / focus / active state — mirrors #atlas-hatch-dense. */}
+              <pattern
+                id="plate-hatch-dense"
+                width="2"
+                height="2"
+                patternTransform={`rotate(45) scale(${hatchInverseZoom})`}
+                patternUnits="userSpaceOnUse"
+              >
+                <line x1="0" y1="0" x2="0" y2="2" stroke="var(--note-ember)" strokeWidth={0.6} />
+              </pattern>
+            </defs>
+
             <rect x={VB_X} y={VB_Y} width={VB_W} height={VB_H} fill="var(--note-plate)" />
 
             <g transform={`translate(${transform.tx} ${transform.ty}) scale(${transform.scale})`}>
@@ -356,11 +425,18 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
                   ? `${c.name} — population ${formatValue(popRow.value, 'number')} (${popRow.year ?? '—'})`
                   : c.name
 
+                /* styles.hatch, not the global 'atlas-hatch': the shared
+                   class fills from the shared patterns, which grow with the
+                   zoom (see the <defs> above). styles.hatchActive replaces
+                   the global 'is-active' for the same reason — the pair only
+                   ever meant anything together, so both moved into the module
+                   at once. app/atlas/learn's MapQuestion.tsx still uses the
+                   global pair and is untouched. */
                 const classNames = [
                   styles.countryPath,
-                  paint ? styles.painted : 'atlas-hatch',
+                  paint ? styles.painted : styles.hatch,
                   'atlas-vt-map-path',
-                  !paint && isHover ? 'is-active' : '',
+                  !paint && isHover ? styles.hatchActive : '',
                 ]
                   .filter(Boolean)
                   .join(' ')
