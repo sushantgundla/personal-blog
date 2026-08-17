@@ -80,12 +80,26 @@ function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element 
     </div>
   )
 
+  // Most links here are internal paths, but a project can point at something
+  // off-site (a GitHub repo, say). next/link is for routes this app owns — it
+  // prefetches and routes on the client, which an outside URL cannot serve — so
+  // an external link gets a plain anchor that opens in a new tab instead.
+  // Detected by the "http" prefix, not by a domain, so any host works.
+  const isExternal = !!project.link && /^https?:\/\//.test(project.link)
+  const linkStyle = { display: 'block', height: '100%', textDecoration: 'none', color: 'inherit' }
+
   return (
     <Reveal delay={delay}>
       {project.link ? (
-        <Link href={project.link} style={{ display: 'block', height: '100%', textDecoration: 'none', color: 'inherit' }}>
-          {card}
-        </Link>
+        isExternal ? (
+          <a href={project.link} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+            {card}
+          </a>
+        ) : (
+          <Link href={project.link} style={linkStyle}>
+            {card}
+          </Link>
+        )
       ) : (
         card
       )}

@@ -88,10 +88,14 @@ export const projects: Project[] = [
     organization: 'Draup',
     period: '2021 – 2024',
     description:
-      'An LLM powered RAG system that queries a corpus of 300M job descriptions and returns answers in under 10 seconds at production scale.',
-    impact: 'Sub 10 second latency at 300M document scale',
+      'An LLM powered RAG system that queries a corpus of 300M job descriptions and returns answers in under 10 seconds at production scale. That engine is the work here, started and built between 2021 and 2024. Draup carried it on afterwards and shipped it as Curie, a product they sell today — the link goes to that product page, which is their team\'s work, not to the system underneath it.',
+    impact: 'Sub 10 second latency at 300M document scale — the groundwork Curie was later built on',
     tags: ['RAG', 'LLMs', 'NLP', 'Semantic Search'],
+    // Stays 'confidential': the badge describes the work in this entry, which
+    // was internal and cannot be shown. The link is to someone else's finished
+    // product, and the description says so, so the two do not disagree.
     status: 'confidential',
+    link: 'https://draup.com/curie',
   },
   {
     slug: 'domain-language-model',
@@ -103,6 +107,21 @@ export const projects: Project[] = [
     impact: '5%+ gain on downstream NLP tasks',
     tags: ['Transformers', 'PyTorch', 'NLP', 'RoBERTa'],
     status: 'confidential',
+  },
+  // Sits at the end of the work grid, immediately before The Atlas: the grid
+  // renders array order and stops before the experiments, so this closes the
+  // work list while keeping the two 2026 personal projects next to each other.
+  {
+    slug: 'context-grid',
+    title: 'context-grid',
+    organization: 'Personal Project',
+    period: '2026',
+    description:
+      'A test bench for the machinery that feeds documents to a language model. Almost every rule of thumb in this field is advice nobody measured, so this measures it on your own documents and your own questions, and ranks what comes out on quality, speed and cost. The answer key is stored as a stretch of characters in the original document rather than as a chunk number, so a set of test questions written once stays correct even after you change how the documents are cut up.',
+    impact: 'On PyPI under MIT, still an early release — it turns retrieval folklore into numbers on your own documents.',
+    tags: ['Python', 'RAG', 'Retrieval', 'Evaluation', 'Benchmarking', 'CLI'],
+    status: 'open-source',
+    link: 'https://github.com/sushantgundla/context-grid',
   },
   {
     slug: 'the-atlas',
