@@ -9,7 +9,6 @@ import { Reveal } from '../_components/Reveal'
 type Filter = 'all' | ProjectStatus
 
 const STATUS_LABEL: Record<ProjectStatus, string> = {
-  production: 'Production',
   confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
   experiment: 'Experiments',
@@ -17,7 +16,6 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'production', label: 'Production' },
   { value: 'open-source', label: 'Open Source' },
   { value: 'confidential', label: 'Confidential' },
   { value: 'experiment', label: 'Experiments' },

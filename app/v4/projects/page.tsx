@@ -9,7 +9,6 @@ export const metadata: Metadata = {
 }
 
 const statusLabels: Record<ProjectStatus, string> = {
-  production: 'Production',
   confidential: 'Enterprise / Confidential',
   'open-source': 'Open Source',
   experiment: 'Experiments',
@@ -17,7 +16,7 @@ const statusLabels: Record<ProjectStatus, string> = {
 
 // Work statuses first, experiments last — it's a separate kind of thing
 // (built for curiosity, not for a job), not competing with the work above.
-const statusOrder: ProjectStatus[] = ['production', 'confidential', 'open-source', 'experiment']
+const statusOrder: ProjectStatus[] = ['confidential', 'open-source', 'experiment']
 
 export default function V4Projects() {
   const groups = statusOrder
