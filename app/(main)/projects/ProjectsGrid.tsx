@@ -21,13 +21,52 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'experiment', label: 'Experiments' },
 ]
 
+/**
+ * The page is three blocks, one per status, in this order — not one big work
+ * grid with the odd ones tacked on underneath.
+ *
+ * It used to be two: everything non-experiment in a single grid, then
+ * Experiments. That put the one open-source project last in the work grid,
+ * where it landed as a lone narrow column at the end of a row of Enterprise
+ * cards with empty space beside it. It read as leftover, which is the opposite
+ * of what it is.
+ *
+ * Open Source leads because it is the only work here anyone can actually go and
+ * look at. The Enterprise projects are the bigger body of work but they are
+ * described, not shown, so they read second. Experiments stay last: they are
+ * the smallest claim on a reader's attention.
+ *
+ * Order in this array is the order on the page. `wide` means the block runs its
+ * cards full width instead of in columns.
+ */
+const BLOCKS: { status: ProjectStatus; heading: string; caption: string; wide?: boolean }[] = [
+  {
+    status: 'open-source',
+    heading: 'Open Source',
+    caption: 'My own work, and public',
+    wide: true,
+  },
+  {
+    status: 'confidential',
+    heading: 'Enterprise',
+    caption: 'Built at work, so the details stay inside',
+  },
+  {
+    status: 'experiment',
+    heading: 'Experiments',
+    caption: 'Built out of curiosity, not for work',
+  },
+]
+
 interface ProjectCardProps {
   project: Project
   dimmed: boolean
   delay: number
+  /** Card runs the full width of its block, so cap its prose. See ProjectBlock. */
+  wide?: boolean
 }
 
-function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element {
+function ProjectCard({ project, dimmed, delay, wide = false }: ProjectCardProps): JSX.Element {
   const card = (
     <div
       className={project.link ? 'prism-card prism-card-lift prism-col' : 'prism-card prism-col'}
@@ -41,7 +80,11 @@ function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element 
         transition: 'opacity var(--prism-dur) var(--prism-ease), transform var(--prism-dur) var(--prism-ease)',
       }}
     >
-      <div className="prism-col" style={{ gap: '0.6rem' }}>
+      {/* A full-width card has no column to hold its line length down, so on a
+          wide screen the description would run as one long line across the
+          whole page. Cap the text at the site's reading measure; the tag row
+          below is short chips and can keep the full width. */}
+      <div className="prism-col" style={{ gap: '0.6rem', maxWidth: wide ? 'var(--prism-measure)' : undefined }}>
         <div
           className="prism-col"
           style={{ alignItems: 'flex-start', gap: '10px' }}
@@ -105,13 +148,100 @@ function ProjectCard({ project, dimmed, delay }: ProjectCardProps): JSX.Element 
   )
 }
 
+interface ProjectBlockProps {
+  status: ProjectStatus
+  heading: string
+  caption: string
+  projects: Project[]
+  /** True when this block does not match the active filter. */
+  dimmed: boolean
+  /** Where this block's cards sit in the page-wide reveal stagger. */
+  delayOffset: number
+  wide: boolean
+  first: boolean
+}
+
+function ProjectBlock({
+  status,
+  heading,
+  caption,
+  projects,
+  dimmed,
+  delayOffset,
+  wide,
+  first,
+}: ProjectBlockProps): JSX.Element {
+  // A real landmark, not a styled label: each block is a <section> named by its
+  // own heading, so the three groups can be jumped between with a screen
+  // reader. h2 because the page owns the h1 ("Projects") in page.tsx.
+  const headingId = `projects-${status}`
+
+  return (
+    <section
+      aria-labelledby={headingId}
+      style={{ marginTop: first ? undefined : 'clamp(32px, 4vh, 48px)' }}
+    >
+      <Reveal>
+        <div
+          className="prism-row"
+          style={{
+            alignItems: 'baseline',
+            gap: '12px',
+            marginBottom: '18px',
+            // The heading fades with its cards. Dimming the cards alone left a
+            // bright title sitting over a block of faded content, which read as
+            // a rendering fault rather than as "not what you filtered for".
+            opacity: dimmed ? 0.35 : 1,
+            transition: 'opacity var(--prism-dur) var(--prism-ease)',
+          }}
+        >
+          <h2 id={headingId} className="prism-eyebrow">
+            {heading}
+          </h2>
+          <span className="prism-mono prism-muted" style={{ fontSize: '0.85em' }}>
+            {caption}
+          </span>
+        </div>
+      </Reveal>
+      <div className="prism-grid" data-cols={wide ? '1' : '2'}>
+        {projects.map((project, i) => (
+          <ProjectCard
+            key={project.slug}
+            project={project}
+            dimmed={dimmed}
+            delay={Math.min(delayOffset + i, 6) * 60}
+            wide={wide}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element {
   const [filter, setFilter] = useState<Filter>('all')
 
-  // Experiments are personal, curiosity-built projects — kept out of the
-  // work grid and shown as their own group underneath, not mixed in.
-  const workProjects = useMemo(() => projects.filter((p) => p.status !== 'experiment'), [projects])
-  const experimentProjects = useMemo(() => projects.filter((p) => p.status === 'experiment'), [projects])
+  // One entry per BLOCKS row, in page order, carrying its own projects and its
+  // slot in the reveal stagger. Empty blocks drop out here, so a status with no
+  // projects never renders a heading over nothing.
+  const blocks = useMemo(() => {
+    let offset = 0
+    return BLOCKS.map((block) => {
+      const items = projects.filter((p) => p.status === block.status)
+      const delayOffset = offset
+      offset += items.length
+      return {
+        ...block,
+        items,
+        delayOffset,
+        // Full width is for a block holding a single project — that is the case
+        // the narrow-column-with-a-gap problem was about. If a second project
+        // ever joins it, the ordinary two-column grid is the better shape and
+        // this falls back to it on its own.
+        wide: block.wide === true && items.length === 1,
+      }
+    }).filter((block) => block.items.length > 0)
+  }, [projects])
 
   const visibleCount = useMemo(() => {
     if (filter === 'all') return projects.length
@@ -154,39 +284,23 @@ export function ProjectsGrid({ projects }: { projects: Project[] }): JSX.Element
         </div>
       </Reveal>
 
-      <div className="prism-grid" data-cols="2">
-        {workProjects.map((project, i) => (
-          <ProjectCard
-            key={project.slug}
-            project={project}
-            dimmed={filter !== 'all' && project.status !== filter}
-            delay={Math.min(i, 6) * 60}
-          />
-        ))}
-      </div>
-
-      {experimentProjects.length > 0 && (
-        <div style={{ marginTop: 'clamp(32px, 4vh, 48px)' }}>
-          <Reveal>
-            <div className="prism-row" style={{ alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
-              <span className="prism-eyebrow">Experiments</span>
-              <span className="prism-mono prism-muted" style={{ fontSize: '0.85em' }}>
-                Built out of curiosity, not for work
-              </span>
-            </div>
-          </Reveal>
-          <div className="prism-grid" data-cols="2">
-            {experimentProjects.map((project, i) => (
-              <ProjectCard
-                key={project.slug}
-                project={project}
-                dimmed={filter !== 'all' && project.status !== filter}
-                delay={Math.min(workProjects.length + i, 6) * 60}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Filtering dims rather than removes, so the page never reflows under
+          the reader and the blocks they did not pick stay legible in place.
+          Because a block now holds exactly one status, the whole block dims
+          together — heading included. */}
+      {blocks.map((block, i) => (
+        <ProjectBlock
+          key={block.status}
+          status={block.status}
+          heading={block.heading}
+          caption={block.caption}
+          projects={block.items}
+          dimmed={filter !== 'all' && block.status !== filter}
+          delayOffset={block.delayOffset}
+          wide={block.wide}
+          first={i === 0}
+        />
+      ))}
     </>
   )
 }

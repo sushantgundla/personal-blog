@@ -419,6 +419,16 @@ html:has(.prism-root) body {
   gap: clamp(16px, 2.5vw, 28px);
 }
 
+/* One column on purpose, at every width. The bare .prism-grid rule is auto-fit,
+   so a block holding a single item still spreads to however many 280px columns
+   fit and leaves the item sitting in a narrow slot with dead space beside it.
+   data-cols='1' is the opt-out: use it when an item is meant to run the full
+   width of its block. Cap the prose inside with --prism-measure — the grid
+   stops controlling line length once there is only one column. */
+.prism-grid[data-cols='1'] {
+  grid-template-columns: 1fr;
+}
+
 .prism-grid[data-cols='2'] {
   grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
 }
