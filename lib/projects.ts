@@ -1,4 +1,8 @@
-export type ProjectStatus = 'production' | 'confidential' | 'open-source' | 'experiment'
+// Three states, not four. There used to be a 'production' badge sitting beside
+// 'confidential', which drew a line that does not exist: everything built at
+// work is internal, whether or not it is live. If it is not open source and it
+// is not a personal experiment, it is confidential.
+export type ProjectStatus = 'confidential' | 'open-source' | 'experiment'
 
 export interface Project {
   slug: string
@@ -22,7 +26,7 @@ export const projects: Project[] = [
       'A platform that lets any team define agents, teams of agents, and multi-step workflows from configuration, instead of rebuilding the same infrastructure for every new AI feature.',
     impact: 'Powers AI features across multiple MyPDI product lines',
     tags: ['Agentic AI', 'MCP', 'LLMs', 'Workflows', 'Multi-tenant'],
-    status: 'production',
+    status: 'confidential',
     link: '/articles/building-a-platform-for-agents',
   },
   {
@@ -34,7 +38,7 @@ export const projects: Project[] = [
       'A conversational assistant that holds coherent multi-turn conversations, routes each question to the right specialist automatically, and answers grounded in real business data.',
     impact: 'Grounded, multi-tenant conversational AI for retail and petroleum customers',
     tags: ['Chatbot', 'RAG', 'LLMs', 'Conversational AI', 'Agentic AI', 'Multi-tenant'],
-    status: 'production',
+    status: 'confidential',
     link: '/articles/a-chatbot-that-remembers',
   },
   {
@@ -46,7 +50,7 @@ export const projects: Project[] = [
       'The knowledge layer behind MyPDI: it turns messy real-world documents and structured sources into one consistent, queryable knowledge base, resiliently and without manual babysitting.',
     impact: 'Feeds reliable retrieval across the AI platform',
     tags: ['RAG', 'Ingestion', 'Knowledge Base', 'Data Pipelines', 'MLOps'],
-    status: 'production',
+    status: 'confidential',
     link: '/articles/the-ingestion-problem',
   },
   {
