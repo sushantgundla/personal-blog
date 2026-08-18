@@ -1,0 +1,11 @@
+---
+title: "Every Agent I Use Knows Me, and None of Them Compare Notes"
+date: "2026-08-17"
+tags: ["AI", "Agents", "Memory", "Dev Tools", "Context Engineering"]
+---
+
+I explained the same project to Claude Code, then to Codex, then to a browser agent, in the same week. Each one did fine. Each one started from nothing. The bottleneck in my multi-agent setup right now is not reasoning, it is that every tool behaves like a new hire on their first day.
+
+A small pile of projects landed this summer to fix exactly this. Memmy runs a local memory hub and scans your existing agent histories to turn months of accumulated context into something all of them can read. Memorix does the same over MCP across more than a dozen clients. Different bets, same observation: the interesting state is not in any one tool's session, it is in the overlap between them, and nobody was storing the overlap.
+
+What makes me think this sticks is that it is the natural next step after context engineering. We got good at deciding what goes into one window. We never decided where it lives between windows. Local-first is the right default here too, because a shared memory of how you work is roughly the most sensitive artefact your tooling will ever produce. I would rather that file sit on my disk than in someone's product roadmap.

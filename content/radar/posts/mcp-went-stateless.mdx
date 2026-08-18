@@ -1,0 +1,11 @@
+---
+title: "MCP Went Stateless, Which Is the Least Exciting Sign That Agents Grew Up"
+date: "2026-08-12"
+tags: ["AI", "Agents", "MCP", "Protocols", "Engineering"]
+---
+
+The 2026-07-28 spec for the Model Context Protocol rewrites the core transport, deprecates three long-standing features, hardens authorization against OAuth and OpenID Connect, and promotes MCP Apps and Tasks to first-class extensions. Nothing about it will trend. It is the most consequential agent release of the last two months anyway.
+
+The practical change is that a remote MCP server used to need sticky sessions, a shared session store, and a gateway smart enough to inspect traffic. Now it runs behind a plain round-robin load balancer and clients can cache the tool list. If you have ever operated anything at scale you know exactly what that sentence is worth. It is the difference between a demo you babysit and a service you page someone about.
+
+Protocols get boring in a specific order: first they work, then they scale, then they grow a deprecation policy. MCP now has all three, including a promise that deprecated features keep working for twelve months. That is not a research milestone. It is the sound of agents moving from the lab into the part of the org that has an on-call rota.
