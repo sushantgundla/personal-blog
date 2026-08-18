@@ -1,0 +1,11 @@
+---
+title: "Tracing Quietly Became the Thing You Cannot Ship Without"
+date: "2026-08-15"
+tags: ["AI", "Observability", "Evaluation", "Engineering", "Dev Tools"]
+---
+
+Two years ago LLM observability was a nice-to-have you added after the first bad week. The current crop — Langfuse at 28,000 stars and MIT licensed, Phoenix, MLflow, and the paid tiers above them — has turned it into the first thing a serious team installs, and I think the reason is agents rather than models.
+
+A single model call is easy to debug. You have the prompt, you have the answer, you can read both. An agent doing forty tool calls across six hours is a distributed system, and you are back to needing exactly what distributed systems always needed: a trace, a span, and a way to find the one step where it went wrong. The industry rediscovered observability from first principles, which is funny to watch and slightly embarrassing for all of us.
+
+The one thing I would push on is where the traces live. Your traces contain the actual prompts, the actual retrieved documents, and the actual customer inputs. That is a more sensitive dataset than your database in a lot of products, and it is worth deciding on purpose whether it leaves your infrastructure. That is the real argument for the self-hostable options, not the licence.

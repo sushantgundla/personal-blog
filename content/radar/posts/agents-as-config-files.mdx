@@ -1,0 +1,11 @@
+---
+title: "The Agent Is Becoming a Config File, and That Should Worry You Slightly"
+date: "2026-07-18"
+tags: ["AI", "Agents", "Agent Frameworks", "Engineering", "SDKs"]
+---
+
+Pydantic AI v2's capability is a bundle of tools, instructions, hooks and model settings that serialises cleanly, which means you can define a whole agent in YAML and never write the Python. The docs make a point of it: the surface is small enough that a model can write the spec for you.
+
+I like this a lot and I am wary of it in equal measure. The upside is real — a declarative agent is reviewable in a pull request, diffable, testable, and legible to someone who does not know the framework. That is a genuine improvement over five hundred lines of imperative wiring that only its author understands.
+
+The worry is the failure mode we already know from every other config-driven system. Behaviour that lives in YAML tends to escape the tests, because YAML does not look like code and nobody writes a unit test for a settings file. Then it grows conditionals, then templating, then a small unhappy language of its own. If you go this way, treat the spec as source: it goes in the repo, it gets reviewed, and something in CI actually runs it.

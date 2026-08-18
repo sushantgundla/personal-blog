@@ -1,0 +1,54 @@
+---
+title: "Cost Is a Design Constraint, and Pretending Otherwise Is Why Your AI Feature Got Cancelled"
+date: "2026-07-30"
+description: "Token spend is not a line item you optimise after launch. It shapes what you are allowed to build, and the teams who treat it as architecture ship features that survive the second invoice."
+tags: ["AI", "Cost", "Architecture"]
+---
+
+The most common way I have seen a working AI feature die is not a bug. It is a finance meeting. The thing shipped, people liked it, usage grew, and then somebody put the monthly inference bill next to the revenue the feature was attributable for and the answer was obviously no. Nobody had done anything wrong, exactly. They had just treated cost as something to look at later, and by the time later arrived the architecture had hardened around assumptions that were never affordable.
+
+I want to argue for the opposite instinct: token spend belongs in the design conversation, at the same table as latency and correctness, before any code exists.
+
+## Why this feels wrong, and why it is right anyway
+
+Every engineer has been told not to optimise prematurely, and it is good advice about CPU cycles. It is bad advice here, because the shape of the cost is different. In a normal service, cost scales with traffic and you can usually buy your way out with a bigger box. In an LLM system, cost scales with *how you decided to solve the problem*, and that decision is the hardest thing to change later.
+
+Consider two designs for the same feature. One stuffs a large document into the context on every request and asks the model to find the answer. The other retrieves three relevant passages and asks the same question. Both work. Both demo identically. One costs twenty times more per call, and the difference is not a tuning parameter — it is the whole architecture. You cannot refactor your way from the first to the second without building the retrieval layer you never built.
+
+That is what makes cost architectural. It is not that expensive things are bad. It is that the expensive decisions get made early, cheaply, in a design doc, by someone who has not yet seen a bill.
+
+## The three numbers worth knowing before you build
+
+I have converged on asking three questions before agreeing to build anything model-backed.
+
+**What does one successful outcome cost?** Not one API call — one finished piece of work, including the retries, the failed tool calls, the reasoning tokens, and the second pass when the first one was wrong. Teams consistently underestimate this by a factor of three or four, because they price the happy path and production is mostly not the happy path.
+
+**How does that number move with usage?** Some features are naturally bounded — a user writes one email, you summarise it once. Others compound quietly. An agent that re-reads its own history on every step has a cost curve that is quadratic in the length of the task, and it will feel fine in testing and terrifying in production. Know which shape you are on.
+
+**What is one outcome worth?** This is the question engineers skip and it is the only one that determines whether the feature survives. If the agent saves a support rep four minutes, you know roughly what four minutes cost. If a successful run costs more than the work it replaces, you have not built a product, you have built an expensive demo — and that is worth knowing on day one rather than in month seven.
+
+## Where the money actually goes
+
+When I have gone looking, the spend is rarely where people expect.
+
+It is almost never the final answer. It is the context. Retrieval that returns ten passages when three would do, conversation history replayed in full on every turn, tool output dumped in raw, system prompts that grew by accretion until nobody remembers what half of them are for. All of that is paid for on every single call, forever, and none of it shows up in a demo.
+
+The second biggest source is retries you did not know you had. A tool fails, the harness retries, the model tries a different approach, and one user-visible action quietly became six model calls. This is often correct behaviour — recovery is why agents work at all — but it needs to be measured rather than discovered.
+
+The third is running an expensive model on cheap work. Classification, extraction, routing, formatting: these are the boring ninety percent of most pipelines and they do not need the frontier. Yes, this is the routing logic everyone complains about maintaining. It is also the difference between a feature that scales and one that does not.
+
+## What changed this year, and what did not
+
+Prices have fallen hard. The current frontier costs roughly half what it did a year ago, and the labs have started competing openly on token efficiency rather than raw capability — the pitch is now "finishes the job in fewer tokens," not "scores higher."
+
+That genuinely removes some pressure, and it makes some previously silly designs reasonable. It does not remove the discipline, for a simple reason: every price cut has been immediately absorbed by longer-running agents. We did not pocket the savings. We spent them on tasks that run for an hour instead of a minute, which is exactly what you would expect and exactly why the bill did not go down.
+
+## Designing with the constraint instead of against it
+
+The teams I have seen handle this well do something that sounds obvious and is rare: they put a cost number on the dashboard next to the latency number from the first day, and they treat a regression in it as a bug.
+
+They also give every agent a budget it cannot exceed, and they make exceeding it a visible, reportable event rather than a silent overrun. Not because the budget is always right, but because a system that can tell you it ran out of room is one you can reason about. A system that cannot will surprise you at the worst possible moment.
+
+And they make the cheap path the default. Escalate to the expensive model when the cheap one signals uncertainty, not the other way around. The effort dials the labs have started shipping make this a parameter rather than a plumbing project, which is the most useful practical development of the last year.
+
+None of this is about being frugal. It is about knowing the number. A feature whose economics you understand can be argued for, priced, and defended. A feature whose economics nobody has measured is one bad invoice away from becoming someone's example of why AI did not work out for them.

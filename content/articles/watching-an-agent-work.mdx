@@ -1,0 +1,64 @@
+---
+title: "Nobody Designed the Interface for Watching a Machine Think"
+date: "2026-08-13"
+description: "Agents now run for minutes or hours, and the interface conventions we have — spinners, chat bubbles, progress bars — were all designed for something else. What you show while it works decides whether people trust the result."
+tags: ["AI", "Agents", "UX"]
+---
+
+The most underrated problem in agent products is not accuracy. It is the ninety seconds between asking and answering.
+
+We inherited two interface conventions and neither one fits. The spinner was designed for operations measured in hundreds of milliseconds, where the honest message is "this is happening, do not click again." The chat bubble was designed for a conversational exchange where the reply arrives whole. An agent doing real work is neither: it runs long enough that the user will context-switch away, it does things along the way that are worth knowing about, and it can go wrong in the middle in ways that are recoverable if a human notices in time.
+
+Show a spinner for that and you have built something that feels broken even when it works perfectly.
+
+## What the waiting is actually for
+
+The instinct is to treat the wait as dead time to be disguised — animate something, show a rotating list of encouraging messages, make it feel shorter. That is the wrong frame, and it comes from optimising a page load.
+
+The wait is doing three jobs, and only one of them is about patience.
+
+It is establishing **that the system understood the request**. The single most expensive failure in an agent product is running for four minutes on the wrong interpretation. If the first thing shown is what the agent thinks it was asked to do, the user can stop it in five seconds instead of finding out at the end.
+
+It is establishing **that the work is real**. There is a large difference in perceived quality between "thinking…" and "read 14 files, found 3 candidates, checking the second one." Not because the second is prettier, but because it is falsifiable. The user can see the shape of the work and judge whether it is sensible. Trust in these systems comes almost entirely from being able to check the reasoning, and a spinner is unfalsifiable by construction.
+
+And it is establishing **where to look when the answer is wrong**. Because sometimes it will be, and an answer with a visible trail is one a person can correct. An answer that appeared from behind a curtain has to be accepted or rejected whole.
+
+## The things worth showing
+
+Not everything. The raw trace is not an interface — dumping every tool call and every token of reasoning into the UI is honest and useless, and it makes the product feel like a log viewer.
+
+What has worked, in roughly the order I would add it:
+
+**The restatement.** One line, immediately, saying what it is about to do. Cheap to produce, catches the most expensive class of error.
+
+**Milestones, not steps.** "Searching the knowledge base" is a milestone. "Called tool `search_kb` with `{query: ...}`" is a step. Users want the first; engineers debugging want the second; they should not be the same view.
+
+**The current thing, named specifically.** "Reading `billing-service/config.yaml`" beats "Reading files." Specificity is what makes progress legible, and it costs nothing — you already have the filename.
+
+**Surprises.** If the agent hits an error and recovers, say so, briefly. Teams hide these because they look like failures. They are the opposite: an agent that says "that endpoint returned nothing, trying the other one" reads as competent. An agent that silently spends thirty seconds on a failed path reads as slow.
+
+**A way to interrupt.** This is the one most products skip and the one I would build first. If I can see it going the wrong way at step three, I want to stop it at step three. Not being able to is the single most frustrating thing about long-running agents, and the fix is mostly a plumbing question about cancellation rather than a design one.
+
+## Progress bars are a lie here, and that is fine
+
+A progress bar promises a denominator. Agents do not have one — the whole point is that the number of steps is discovered while working. Faking it produces the worst possible artefact: a bar that sits at 80% for two minutes, which teaches people that your progress indicator is decorative and, by extension, that the rest of your interface might be too.
+
+Elapsed time and a count of completed work is more honest and, oddly, more reassuring. "3 min 12s · 22 steps · reading `orders.sql`" tells someone everything they need: it is alive, it has done a lot, here is where it is. No promise, no lie.
+
+The one exception is when you genuinely do have a denominator — forty files to review, forty is the denominator. Use it there and nowhere else.
+
+## What happens when the user leaves
+
+They will. Any task long enough to need this interface is long enough that people go and do something else, and the design has to assume it.
+
+That makes the *end* of the wait a separate design problem from the wait itself. The result needs to be readable by someone who was not watching: what was asked, what was done, what changed, what needs their attention. The live view and the summary are different artefacts and they are usually built as if they were the same one.
+
+It also means notification is part of the feature, not a nice-to-have. And it means the transcript has to persist, because the first question a returning user asks is "what did it do while I was gone," and if the answer is only a final paragraph you have thrown away the one thing that makes the result checkable.
+
+## Why this is worth real effort
+
+The temptation is to treat all of this as polish to be added once the agent works. I would argue the opposite: the interface during the work is what determines whether the agent is *allowed* to work.
+
+People delegate to things they can supervise. The reason a competent junior gets more responsibility over time is not that they stop making mistakes, it is that you can see how they are approaching a problem and intervene early. Agents are in the same position, except that we have mostly built them behind a curtain and then wondered why nobody trusts them with anything important.
+
+Open the curtain and the whole calculus changes. Not because the agent got better, but because the person watching can finally tell.

@@ -1,0 +1,52 @@
+---
+title: "Most Multi-Agent Systems Are One Agent With Extra Steps"
+date: "2026-08-06"
+description: "Splitting a problem across several agents is a real technique with a narrow set of cases where it wins. Outside those cases it mostly buys you the same result, slower, with more ways to fail."
+tags: ["AI", "Agents", "Architecture"]
+---
+
+There is a diagram that shows up in almost every agent architecture deck. A box labelled Orchestrator, three or four boxes underneath it labelled Researcher, Planner, Writer, Critic, and arrows going down and back up. It looks like an org chart, which is exactly why people find it convincing. We know org charts work. We have all been in one.
+
+I have built versions of this diagram and I have taken versions of it apart. My honest position after doing both is that the majority of multi-agent systems in production would perform the same or better as a single well-built agent, and that the extra boxes are usually paying for a structure the problem did not ask for.
+
+That is not an argument against multi-agent work. It is an argument for knowing which of the three cases you are in, because there are exactly three where it genuinely wins.
+
+## What you actually pay for a second agent
+
+Before the cases, the bill. Every time you split a task across two agents you introduce a boundary, and boundaries in these systems are expensive in a way that is easy to miss.
+
+You pay in context. Agent A knows things that Agent B needs, and the only way to move them is to serialise them into a message. Everything not serialised is lost. In practice the handoff is a summary, and a summary is a lossy compression of a thing that was already a compression. Two hops in and the last agent is working from a photocopy of a photocopy.
+
+You pay in errors. Each boundary is a place where a misunderstanding can enter and not be caught, because the receiving agent has no way to know what the sending agent meant but did not say. Single agents make mistakes too, but they make them with full information in front of them, and they can notice and correct mid-task.
+
+You pay in debuggability. A single agent produces one transcript you can read top to bottom. Five agents produce five transcripts plus a coordination log, and finding the step where it went wrong stops being reading and starts being an investigation.
+
+And you pay in latency and money, obviously, though those are the least interesting costs because they are the most visible.
+
+## The three cases where it wins anyway
+
+**One: genuine parallelism over independent work.** If you have forty files to review and each review is independent, running forty agents is straightforwardly correct. There is no shared state, so there is no boundary cost — the only thing crossing the boundary is a result. This is the case that actually works, and it is embarrassingly the case people use least, because it is unglamorous fan-out rather than a clever org chart.
+
+**Two: context isolation as a feature.** Sometimes you want an agent that has not seen the previous reasoning, because the previous reasoning would bias it. A verifier that reviews a claim without knowing who made it or why is more useful than a self-check, for the same reason a code reviewer who did not write the code is more useful than the author reading it again. Here the lossy boundary is the point.
+
+**Three: genuinely different capabilities.** One agent has database credentials, another has none. One runs a big expensive model, another runs a cheap fast one. One is allowed to write to production, another only reads. When the split follows a real difference in permissions or cost, the boundary is buying you something concrete.
+
+Notice what is missing from that list: "the task has several conceptual phases." Research, then plan, then write is a description of a process, not a reason to instantiate three agents. A single agent can research, plan and write, and it will do it with all the context intact and none of the handoff loss. Modelling your prompt as an org chart is a category error — you are not managing employees who go home at night, you are structuring a computation.
+
+## The failure mode nobody warns you about
+
+The specific way these systems go wrong is worth naming, because it is quiet.
+
+The orchestrator becomes a bottleneck of understanding. It is the only component with a view of the whole task, and it is making routing decisions based on summaries from agents that each only saw a slice. So the one component that most needs full information has the least. Meanwhile each sub-agent is confident, because it did its narrow job correctly, and none of them are positioned to notice that the overall answer drifted.
+
+The result is a system where every individual step looks fine in the logs and the output is subtly wrong, which is the hardest class of bug there is. Single agents fail loudly. Multi-agent systems fail politely.
+
+## What I do instead
+
+I start with one agent and a good harness — clear tools, carried state, honest error handling, a budget. I make that as good as it goes. Most of the time that is the finished product, and the org chart never gets drawn.
+
+When it does not work, I look at *why* before I reach for more agents. If it ran out of context, the fix is usually better retrieval or better state carrying, not a second agent. If it got confused between two unrelated concerns, that is a genuine signal to split — but split along the concern, not along the phase. If it is simply slow because there are two hundred independent items, that is fan-out, and fan-out is easy.
+
+And when I do split, I try to make every boundary carry as little as possible. The best multi-agent designs I have worked on look less like an org chart and more like a map-reduce: many identical workers doing independent things, one place that combines the results, and almost no conversation between them.
+
+The general lesson is one that predates all of this. Distributed systems are harder than single-process systems, and you distribute when the problem forces you to, not because the diagram looks organised. We learned that lesson expensively with microservices about ten years ago. It would be nice to not pay for it twice.

@@ -1,0 +1,11 @@
+---
+title: "Every Agent SDK Shipped the Same Four Features This Quarter"
+date: "2026-07-06"
+tags: ["AI", "Agents", "SDKs", "Agent Frameworks", "Engineering"]
+---
+
+Pydantic AI v2 went stable on 23 June. LlamaIndex Workflows 1.0 followed within a day. Vercel shipped AI SDK 7 on the 25th. Microsoft folded Semantic Kernel and AutoGen into one framework. Four independent teams, one window, and near-identical release notes: durable execution, human approval on tool calls, telemetry, and a serialisable agent definition.
+
+When competitors converge that hard that fast, they are not copying each other. They are all hitting the same wall at the same time, which is what happens when a technology finishes its prototype phase. Nobody needed durability when an agent ran for eleven seconds. Everybody needs it the moment an agent runs for six hours and a deploy lands in the middle.
+
+The useful thing to take from it is that the framework choice matters much less than it did a year ago. The abstractions have converged, so pick on the language you already write, the runtime you already operate, and the team that will still be maintaining it in two years. The interesting differences moved down a layer, into whether your durable execution runs on Temporal or on something you now have to babysit yourself.

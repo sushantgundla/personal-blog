@@ -1,0 +1,56 @@
+---
+title: "Before You Let an Agent Write Anything, Answer the Blast Radius Question"
+date: "2026-08-10"
+description: "The jump from an agent that reads to an agent that acts is the largest one in the field, and most teams make it by accident. What matters is not whether it will make a mistake, but what the worst mistake can reach."
+tags: ["AI", "Agents", "Security"]
+---
+
+There is a single decision that separates the AI features people are relaxed about from the ones that get escalated to a security review, and it is not model choice, or accuracy, or how the data is stored. It is whether the thing can change anything.
+
+An agent that reads is a search engine with better manners. If it is wrong, someone reads a wrong answer, and the wrongness stops there. An agent that writes is a member of staff with no judgment, infinite confidence, and root access to whatever you handed it. If it is wrong, the wrongness propagates. Everyone knows this in the abstract. Almost nobody makes the decision deliberately, because in practice the second one arrives as a small pull request on a Thursday that adds one more tool to an existing agent.
+
+The question I have learned to ask before that pull request merges is: what is the blast radius?
+
+## The question, precisely
+
+Not "will it make a mistake." It will. The models are good and they are not reliable in the way a database transaction is reliable, and any framing that depends on the agent being right is a framing that will fail eventually.
+
+The question is: **assume the agent does the most damaging thing its permissions allow. What happens?**
+
+That is a bounded, answerable, engineering question. It does not require predicting model behaviour. It requires enumerating capabilities, which you can actually do. And the answer sorts every agent I have built into one of three categories that turn out to need entirely different treatment.
+
+## The three categories
+
+**Reversible and contained.** The agent writes to a scratch branch, a draft, a staging table, a file in a directory nobody else reads. The worst case is wasted time and a confusing diff. This is where the vast majority of useful agent work lives, and it deserves almost no ceremony. If you find yourself building an approval workflow for something in this category, you are spending human attention on a risk that does not exist, and the cost of that is real: people who approve fifty harmless things stop reading the fifty-first.
+
+**Reversible but visible.** The agent sends a message, files a ticket, comments on a pull request, updates a record someone else will read. You can undo it, but you cannot un-send it — somebody saw it, and the cost is embarrassment or a colleague acting on something wrong. The right treatment here is usually not approval but attribution and rate limiting. Make it unmistakably clear the action came from an agent, cap how many it can take, and make the undo obvious to whoever received it.
+
+**Not reversible.** The agent deletes something, moves money, changes production configuration, emails a customer, force-pushes. There is no undo. This is the only category that genuinely needs a human in the loop, and because it is the only one, you can afford to make that loop good: a clear description of what is about to happen, in business terms rather than as a raw tool call, with a real chance to say no.
+
+The failure I see most is treating all three the same. Teams either gate everything, which trains everyone to click approve without reading, or gate nothing, which works right up until it does not.
+
+## Where the boundary should live
+
+A thing worth being blunt about: the boundary must be enforced outside the model.
+
+Every approach that relies on the model choosing not to do something is a soft boundary, and soft boundaries do not hold. Instructions in the system prompt are not a permission system. A tool that is defined but "the model has been told not to use in production" is a tool the model will eventually use in production, either through ordinary confusion or because something in its input talked it into it.
+
+The hard version is boring and it works. The agent runs with credentials scoped to exactly what it needs. The dangerous operation is not a tool it declines to call, it is a capability it does not have. If it should not delete, the token cannot delete. If it should only touch one table, the grant covers one table. This is ordinary least-privilege engineering and it is completely unglamorous, which is why it keeps getting skipped in favour of a better prompt.
+
+The framework releases this year have started to make this easier — signed tool approvals, sandboxes for code execution, first-class timeouts. Those are genuinely good primitives. They are not a substitute for the credentials being right underneath them.
+
+## The input problem
+
+There is a specific version of this that deserves its own paragraph, because it is the one that turns a mild risk into a serious one.
+
+The moment your agent reads anything from outside — a web page, an email, a document a user uploaded, a comment on an issue — its instructions and its data are coming through the same channel. Anything in that content can be an instruction, and the model has no reliable way to tell the difference. That is not a bug that gets patched; it is a property of how these systems work.
+
+So the blast radius question gets sharper: assume the most damaging thing its permissions allow, *directed by whoever wrote the content it just read*. If your agent has write access and also reads untrusted input, you have effectively given write access to strangers. Sometimes that is fine, because the writes are contained. Often nobody has done that multiplication.
+
+## The practical version
+
+What this looks like day to day is not a policy document. It is a habit.
+
+When a new tool gets added to an agent, someone asks which of the three categories it falls into and writes the answer down. If it is category three, the credential scoping and the approval flow are part of the same change, not a follow-up ticket. And if the agent reads untrusted input, that fact is treated as a property of the whole agent rather than of one tool, because it is.
+
+The teams that do this ship agents that do more, not less. That is the part I did not expect. Knowing exactly what the worst case is turns out to be what makes people comfortable extending the good cases — the argument stops being a vague conversation about trusting AI and becomes a specific one about a list of permissions. Vague fear blocks everything. A concrete, bounded risk gets approved.
