@@ -1,0 +1,60 @@
+---
+title: "The Only Moat You Control Is Being Able to Leave"
+date: "2026-08-17"
+description: "Open weights now land within points of the closed frontier, and the practical consequence is not that you should self-host. It is that the ability to switch has become a design property worth paying for."
+tags: ["AI", "LLMs", "Open Source"]
+---
+
+The largest open-weight model anyone has published is now 2.8 trillion parameters and trades blows with the closed frontier on coding. The download is about 1.4 terabytes, which is a polite way of saying that almost nobody reading this will serve it themselves.
+
+Both halves of that sentence matter, and most of the commentary picks one and drops the other. The open-source enthusiasts hear "matches the frontier" and conclude that self-hosting has arrived. The sceptics hear "1.4 terabytes" and conclude that nothing has changed. I think both are missing the actually useful consequence, which is not about where the weights run at all.
+
+## What open weights bought you, precisely
+
+They bought you a credible alternative. Not a cheaper bill, necessarily, and not independence — a floor under the price and a genuine exit.
+
+That distinction is worth being careful about because it changes what you do about it. If open weights meant self-hosting, the correct response would be a hardware plan. What they actually mean is that the closed labs now price against a public alternative that is close enough to be embarrassing. You can see it in the numbers: the current frontier costs roughly half what it did a year ago, and the labs have started leading their announcements with efficiency rather than capability. That is not generosity. That is a market with a substitute in it.
+
+You benefit from that whether or not you ever download a single weight. But you only benefit *fully* if you could actually switch, and that part is on you.
+
+## Lock-in is not where you think it is
+
+Ask a team how coupled they are to their model provider and they will usually point at the SDK. The SDK is the least of it. Swapping one client library for another is a day of work, and half the frameworks now do it for you.
+
+The real coupling lives in four less visible places.
+
+**Your prompts.** They were tuned against one model's quirks, over months, by people who mostly did not write down why. Move them and things break in ways nobody can explain, because the knowledge was never externalised — it lives in phrasings that happened to work.
+
+**Your tool definitions and output formats.** Structured output behaves differently across providers. So does tool-call reliability under pressure, and what happens at the edges when the model is uncertain. A pipeline that depends on a particular model's habit of always returning valid JSON is coupled to that habit.
+
+**Your evals — or their absence.** This is the big one. If you cannot measure quality, you cannot switch, because you have no way to know whether the new model is worse. Teams without evaluation sets are locked in regardless of their architecture, and they usually do not find out until they try to leave.
+
+**Provider-specific features you built on.** Caching semantics, effort dials, built-in tools, long-context behaviour. These are genuinely useful and using them is often correct. Just know when you are doing it.
+
+Notice that three of those four are things you would want anyway for entirely different reasons. Written-down prompt rationale, format-agnostic parsing, and a real eval set are good engineering independent of any switching argument. That is what makes portability a cheap moat: most of the work pays for itself twice.
+
+## The abstraction trap
+
+The obvious move is to build an abstraction layer over providers, and I want to caution against the maximal version of it.
+
+A thin layer that normalises the call, the streaming, and the tool-call shape is worth having and takes a week. A comprehensive layer that abstracts every provider capability behind a common interface is a project that never ends, and it has a specific cost: it flattens you to the intersection of what every provider supports, which means you cannot use the good parts of any of them. You end up with portability you never exercise, paid for with capability you needed.
+
+The version I would defend is narrower. Keep the call boundary thin and swappable. Keep the prompts in files with notes about why they say what they say. Keep an eval set that runs against any model on demand. Then use whatever provider-specific feature you like on top of that, knowing what it would cost to give up.
+
+Portability is not a property of your abstraction layer. It is a property of knowing what would break.
+
+## When you should actually run the weights
+
+There are real cases, and they are not usually about cost.
+
+Data that cannot leave your network is the strongest one, and it is a compliance answer rather than an engineering preference. A workload predictable and large enough that owning the hardware beats renting it is a second, and the arithmetic is less favourable than people assume once you include the people who keep it running. Needing a model that does not change underneath you — the same weights, the same behaviour, next year — is a third, and it is underrated. Fine-tuning on something proprietary is a fourth.
+
+What is not on the list is "it will be cheaper." At current API prices, for most workloads, it will not be, and the gap is wider once you count an engineer's time.
+
+## The thing to take from it
+
+The interesting shift of the last year is not that open models caught up. It is that catching up made switching plausible, and plausible switching is worth money even when you never do it.
+
+So the question I would ask of any system I am responsible for is not "which model should we use." It is "how long would it take us to run on a different one, and how would we know if it were worse." If the answer to the first is weeks and the answer to the second is a shrug, you have a dependency you did not choose, and the price of it is set by someone else.
+
+If the answer is a config change and a test run, then you get the benefits of the competition without any of the hardware — which is, for almost everyone, the whole prize.

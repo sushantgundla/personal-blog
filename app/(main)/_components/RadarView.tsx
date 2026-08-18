@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import type { RadarPick, RadarPost } from '@/lib/radar'
 import { Reveal } from './Reveal'
@@ -14,6 +17,60 @@ function formatDate(dateStr: string): string {
   return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+/** An entry passes the filter when it carries at least one selected tag. Empty selection passes everything. */
+function matchesTags(tags: string[], selected: Set<string>): boolean {
+  if (selected.size === 0) return true
+  return tags.some((tag) => selected.has(tag))
+}
+
+/** "Machine Learning" -> "machine-learning", for use as a DOM id. */
+function slugifyTag(tag: string): string {
+  return tag
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+/**
+ * A tag toggle: a visually hidden checkbox plus a `.prism-chip` label.
+ *
+ * Deliberately NOT a <button>. `.prism-root button` in prism.css (0,1,1) resets
+ * font, background and border, and it outranks `.prism-chip` (0,1,0) — a chip
+ * rendered as a button silently loses its pill in every theme. The /articles
+ * filter uses the same input + label pairing for exactly this reason.
+ */
+function TagToggle({
+  tag,
+  count,
+  checked,
+  onToggle,
+  idPrefix,
+}: {
+  tag: string
+  count?: number
+  checked: boolean
+  onToggle: (tag: string) => void
+  idPrefix: string
+}): JSX.Element {
+  const id = `${idPrefix}-${slugifyTag(tag)}`
+  return (
+    <>
+      <input
+        type="checkbox"
+        id={id}
+        className="prism-radar-tag-input"
+        checked={checked}
+        onChange={() => onToggle(tag)}
+      />
+      <label htmlFor={id} className={checked ? 'prism-chip prism-chip-on' : 'prism-chip'}>
+        <span>{tag}</span>
+        {count !== undefined && <span className="prism-radar-filter-tally">{count}</span>}
+        {count === undefined && <span aria-hidden="true">×</span>}
+      </label>
+    </>
+  )
+}
+
 function PulseEntry({ post, isLatest }: { post: RadarPost; isLatest: boolean }): JSX.Element {
   const paragraphs = post.content.trim().split(/\n\n+/)
 
@@ -23,11 +80,6 @@ function PulseEntry({ post, isLatest }: { post: RadarPost; isLatest: boolean }):
         <span className="prism-mono prism-muted" style={{ fontSize: '0.78em' }}>
           {formatDate(post.date)}
         </span>
-        {post.tags[0] && (
-          <span className="prism-chip" style={{ fontSize: '0.72em' }}>
-            {post.tags[0]}
-          </span>
-        )}
         {isLatest && (
           <span className="prism-badge" style={{ fontSize: '0.6rem', padding: '0.2em 0.55em' }}>
             Latest
@@ -44,6 +96,15 @@ function PulseEntry({ post, isLatest }: { post: RadarPost; isLatest: boolean }):
           </p>
         ))}
       </div>
+      {post.tags.length > 0 && (
+        <div className="prism-row" style={{ gap: '8px', marginTop: '12px' }}>
+          {post.tags.map((tag) => (
+            <span key={tag} className="prism-chip">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -106,53 +167,218 @@ function PickEntry({ pick, isLatest }: { pick: RadarPick; isLatest: boolean }): 
  * `.prism-grid[data-cols="2"]` collapses to one column (Pulses above Picks) once
  * the viewport can no longer fit two 320px columns side by side.
  *
+ * Above the grid sits a toolbar whose right-hand end opens a tag filter. Tags
+ * are OR-ed: an entry survives if it carries any selected tag, so selecting
+ * "Agents" and "Models" widens rather than narrows. Both columns share one
+ * selection, because the tag vocabulary is shared and a reader thinking about
+ * "Memory" wants the pulse and the pick together.
+ *
+ * This is a client component (state lives in `selected`) unlike the pure-CSS
+ * radio filter on /articles. Multi-select needs a real "clear all", live counts
+ * and an empty state, none of which a `:has()` chain gives you honestly.
+ *
  * Entries are page-scoped classes (`.prism-radar-*`), styled by the
- * `<style>` block below — the same pattern `articles/page.tsx` uses for its
- * tag filter. This keeps every visual rule (hover, focus, type colour) out
- * of inline `style={{}}`, which stays structural-only per docs/architecture/design-system.md.
+ * `<style>` block below. This keeps every visual rule (hover, focus, type colour)
+ * out of inline `style={{}}`, which stays structural-only per
+ * docs/architecture/design-system.md.
  */
 export function RadarView({ posts, picks }: RadarViewProps): JSX.Element {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const [isOpen, setIsOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement | null>(null)
+
+  /** Every tag across both columns, with how many entries carry it. Sorted by count, then name. */
+  const tagCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const tags of [...posts.map((p) => p.tags), ...picks.map((p) => p.tags)]) {
+      for (const tag of tags) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  }, [posts, picks])
+
+  const visiblePosts = useMemo(
+    () => posts.filter((post) => matchesTags(post.tags, selected)),
+    [posts, selected]
+  )
+  const visiblePicks = useMemo(
+    () => picks.filter((pick) => matchesTags(pick.tags, selected)),
+    [picks, selected]
+  )
+
+  // Close on Escape or on a click that lands outside the filter. Both listeners
+  // only exist while the panel is open, so the page carries no idle handlers.
+  useEffect(() => {
+    if (!isOpen) return
+
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+    function onPointerDown(event: PointerEvent): void {
+      const node = filterRef.current
+      if (node && !node.contains(event.target as Node)) setIsOpen(false)
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown)
+    }
+  }, [isOpen])
+
+  function toggleTag(tag: string): void {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
+  }
+
+  const activeCount = selected.size
+  const summary =
+    activeCount === 0
+      ? `${posts.length} pulses · ${picks.length} picks`
+      : `${visiblePosts.length} of ${posts.length} pulses · ${visiblePicks.length} of ${picks.length} picks`
+
   return (
     <>
-      <div className="prism-grid prism-radar-scope" data-cols="2" style={{ alignItems: 'start' }}>
-        <div className="prism-col" style={{ gap: 0 }}>
-          <div className="prism-row" style={{ justifyContent: 'space-between' }}>
-            <span className="prism-eyebrow prism-mono">01 / PULSES</span>
-            <span className="prism-mono prism-muted">{posts.length}</span>
-          </div>
-          <div className="prism-rule" style={{ marginTop: '14px' }} />
-          {posts.length === 0 ? (
-            <p className="prism-body prism-muted" style={{ marginTop: '20px' }}>
-              No pulses yet — check back soon.
-            </p>
-          ) : (
-            posts.map((post, i) => (
-              <Reveal key={post.slug} delay={(i % 6) * 50}>
-                <PulseEntry post={post} isLatest={i === 0} />
-                <div className="prism-rule" />
-              </Reveal>
-            ))
-          )}
-        </div>
+      <div className="prism-radar-scope">
+        {tagCounts.length > 1 && (
+          <div className="prism-radar-toolbar">
+            <span className="prism-mono prism-muted prism-radar-summary">{summary}</span>
 
-        <div className="prism-col" style={{ gap: 0 }}>
-          <div className="prism-row" style={{ justifyContent: 'space-between' }}>
-            <span className="prism-eyebrow prism-mono">02 / PICKS</span>
-            <span className="prism-mono prism-muted">{picks.length}</span>
+            <div className="prism-radar-filter" ref={filterRef}>
+              <button
+                type="button"
+                className="prism-btn-ghost prism-radar-filter-btn"
+                aria-expanded={isOpen}
+                aria-haspopup="true"
+                aria-controls="prism-radar-filter-panel"
+                onClick={() => setIsOpen((open) => !open)}
+              >
+                <span>Filter by tag</span>
+                {activeCount > 0 && (
+                  <span className="prism-badge prism-radar-filter-count">{activeCount}</span>
+                )}
+                <span className="prism-radar-filter-caret" data-open={isOpen} aria-hidden="true">
+                  ▾
+                </span>
+              </button>
+
+              {isOpen && (
+                <div
+                  id="prism-radar-filter-panel"
+                  className="prism-card prism-radar-filter-panel"
+                  role="group"
+                  aria-label="Filter radar entries by tag"
+                >
+                  <div className="prism-radar-filter-head">
+                    <span className="prism-eyebrow">
+                      {activeCount === 0 ? 'Showing everything' : `${activeCount} selected`}
+                    </span>
+                    <button
+                      type="button"
+                      className="prism-btn-quiet prism-radar-filter-clear"
+                      onClick={() => setSelected(new Set())}
+                      disabled={activeCount === 0}
+                    >
+                      Clear all
+                    </button>
+                  </div>
+
+                  <div className="prism-radar-filter-tags">
+                    {tagCounts.map(([tag, count]) => (
+                      <TagToggle
+                        key={tag}
+                        tag={tag}
+                        count={count}
+                        checked={selected.has(tag)}
+                        onToggle={toggleTag}
+                        idPrefix="prism-radar-tag"
+                      />
+                    ))}
+                  </div>
+
+                  <p className="prism-body prism-muted prism-radar-filter-hint">
+                    Pick more than one to widen the net — an entry shows if it matches any
+                    selected tag.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="prism-rule" style={{ marginTop: '14px' }} />
-          {picks.length === 0 ? (
-            <p className="prism-body prism-muted" style={{ marginTop: '20px' }}>
-              No picks yet — check back soon.
-            </p>
-          ) : (
-            picks.map((pick, i) => (
-              <Reveal key={pick.slug} delay={(i % 6) * 50}>
-                <PickEntry pick={pick} isLatest={i === 0} />
-                <div className="prism-rule" />
-              </Reveal>
-            ))
-          )}
+        )}
+
+        {activeCount > 0 && (
+          <div className="prism-radar-active">
+            {Array.from(selected).map((tag) => (
+              <TagToggle
+                key={tag}
+                tag={tag}
+                checked
+                onToggle={toggleTag}
+                idPrefix="prism-radar-active"
+              />
+            ))}
+            <button
+              type="button"
+              className="prism-btn-quiet prism-radar-filter-clear"
+              onClick={() => setSelected(new Set())}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        <div className="prism-grid" data-cols="2" style={{ alignItems: 'start' }}>
+          <div className="prism-col" style={{ gap: 0 }}>
+            <div className="prism-row" style={{ justifyContent: 'space-between' }}>
+              <span className="prism-eyebrow prism-mono">01 / PULSES</span>
+              <span className="prism-mono prism-muted">{visiblePosts.length}</span>
+            </div>
+            <div className="prism-rule" style={{ marginTop: '14px' }} />
+            {posts.length === 0 ? (
+              <p className="prism-body prism-muted" style={{ marginTop: '20px' }}>
+                No pulses yet — check back soon.
+              </p>
+            ) : visiblePosts.length === 0 ? (
+              <p className="prism-body prism-muted" style={{ marginTop: '20px' }}>
+                No pulses carry those tags. Try widening the filter.
+              </p>
+            ) : (
+              visiblePosts.map((post, i) => (
+                <Reveal key={post.slug} delay={(i % 6) * 50}>
+                  <PulseEntry post={post} isLatest={post.slug === posts[0]?.slug} />
+                  <div className="prism-rule" />
+                </Reveal>
+              ))
+            )}
+          </div>
+
+          <div className="prism-col" style={{ gap: 0 }}>
+            <div className="prism-row" style={{ justifyContent: 'space-between' }}>
+              <span className="prism-eyebrow prism-mono">02 / PICKS</span>
+              <span className="prism-mono prism-muted">{visiblePicks.length}</span>
+            </div>
+            <div className="prism-rule" style={{ marginTop: '14px' }} />
+            {picks.length === 0 ? (
+              <p className="prism-body prism-muted" style={{ marginTop: '20px' }}>
+                No picks yet — check back soon.
+              </p>
+            ) : visiblePicks.length === 0 ? (
+              <p className="prism-body prism-muted" style={{ marginTop: '20px' }}>
+                No picks carry those tags. Try widening the filter.
+              </p>
+            ) : (
+              visiblePicks.map((pick, i) => (
+                <Reveal key={pick.slug} delay={(i % 6) * 50}>
+                  <PickEntry pick={pick} isLatest={pick.slug === picks[0]?.slug} />
+                  <div className="prism-rule" />
+                </Reveal>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
@@ -227,10 +453,113 @@ export function RadarView({ posts, picks }: RadarViewProps): JSX.Element {
           border-color: color-mix(in srgb, var(--prism-accent-3) 40%, transparent);
           background: color-mix(in srgb, var(--prism-accent-3) 12%, transparent);
         }
+
+        /* ---- Tag filter -------------------------------------------------- */
+        /* The toolbar is deliberately OUTSIDE any .prism-reveal: that class
+           applies filter: blur(), which would make it a containing block and
+           trap the panel's positioning. */
+        .prism-radar-toolbar {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 18px;
+        }
+        .prism-radar-summary {
+          font-size: 0.8rem;
+        }
+        .prism-radar-filter {
+          position: relative;
+          margin-left: auto;
+        }
+        .prism-radar-filter-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5em;
+        }
+        .prism-radar-filter-count {
+          font-size: 0.6rem;
+          padding: 0.2em 0.5em;
+        }
+        .prism-radar-filter-caret {
+          font-size: 0.7em;
+          transition: transform var(--prism-dur-fast) var(--prism-ease);
+        }
+        .prism-radar-filter-caret[data-open="true"] {
+          transform: rotate(180deg);
+        }
+        /* Anchored to the button's right edge so it opens inward from the
+           right-hand end of the toolbar and never overflows the page gutter. */
+        .prism-radar-filter-panel {
+          position: absolute;
+          top: calc(100% + 10px);
+          right: 0;
+          z-index: 30;
+          width: min(360px, calc(100vw - 48px));
+          padding: 16px;
+          box-shadow: var(--prism-shadow-lg);
+        }
+        .prism-radar-filter-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 12px;
+        }
+        .prism-radar-filter-clear {
+          font-size: 0.75rem;
+        }
+        .prism-radar-filter-clear[disabled] {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .prism-radar-filter-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          max-height: 320px;
+          overflow-y: auto;
+        }
+        /* The checkbox behind each chip. Kept in the layout (not display:none)
+           so it stays focusable and reachable by a screen reader. */
+        .prism-radar-tag-input {
+          position: absolute;
+          opacity: 0;
+          width: 1px;
+          height: 1px;
+          pointer-events: none;
+        }
+        .prism-radar-scope label.prism-chip {
+          cursor: pointer;
+          font-size: 0.76rem;
+          padding: 0.38em 0.8em;
+        }
+        .prism-radar-tag-input:focus-visible + .prism-chip {
+          outline: 2px solid var(--prism-accent);
+          outline-offset: 3px;
+        }
+        .prism-radar-filter-tally {
+          color: var(--prism-faint);
+          font-size: 0.9em;
+        }
+        .prism-radar-filter-hint {
+          margin: 12px 0 0;
+          font-size: 0.78rem;
+        }
+        .prism-radar-active {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .prism-radar-entry,
           .prism-radar-arrow,
-          .prism-radar-pick-title {
+          .prism-radar-pick-title,
+          .prism-radar-filter-caret {
             transition: none;
           }
           .prism-radar-entry:hover,

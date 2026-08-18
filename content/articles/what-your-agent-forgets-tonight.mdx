@@ -1,0 +1,54 @@
+---
+title: "Everything Your Agent Learned Today, It Forgets Tonight"
+date: "2026-08-03"
+description: "Persistent memory is the obvious missing piece in every agent product, and the reason nobody has shipped it well is that remembering is easy and forgetting correctly is not."
+tags: ["AI", "Agents", "Memory"]
+---
+
+I explained the same codebase to three different agents in one week. Each of them did a competent job. Each of them started from nothing, asked the same three orientation questions, and made the same wrong assumption about where the configuration lived. By Friday I had explained my own project more times to software than to people, and it occurred to me that the bottleneck in my setup is not reasoning. Every tool I use behaves like a contractor on their first morning, permanently.
+
+The obvious fix is memory, and there is now a small industry forming around it. I think the fix is right and I think most attempts at it will be worse than nothing, for reasons that are worth being precise about.
+
+## Memory is not a bigger context window
+
+The first confusion to clear up is that context and memory are different things solving different problems, and the growth of one has obscured the need for the other.
+
+A context window is working memory. It holds what is relevant to the task in front of you and it is deliberately, correctly wiped when the task ends. Making it larger lets you hold a bigger task. It does nothing at all for the second task, tomorrow, in a different tool.
+
+Memory is the durable layer underneath: the things that stay true after the conversation ends. That this project uses pnpm and not npm. That the customer identifier in the warehouse is not the one in the application database. That I asked for shorter answers three weeks ago and meant it. None of this belongs in a context window by default, and all of it needs to be findable when it becomes relevant.
+
+Confusing the two produces the failure mode I see most often: a system that dutifully appends every previous conversation into the prompt, gets slower and more expensive every day, and gets *worse*, because the model is now reasoning over a pile of stale, contradictory, half-relevant history. That is not memory. That is hoarding.
+
+## The hard part is forgetting
+
+Storing things is trivial. Every team gets a working prototype in an afternoon — embed the conversation, stick it in a vector store, retrieve on similarity. It demos beautifully and it degrades in a specific, predictable way over about six weeks.
+
+The reason is that memories are not equally durable, and almost no system models this. Some facts are permanent — a person's name, a schema that has not changed in years. Some are true until they are not: the current sprint, the file you were working in, which branch is deployed. Some were never facts at all, just something you said in passing that the system helpfully enshrined forever. When a stale memory and a current reality disagree, an agent with a naive memory layer will confidently follow the memory, because it does not know that one of them has an expiry date.
+
+So the questions that actually matter are the unglamorous ones. How does a memory get superseded? What happens when two memories contradict? What decays on its own, and what needs to be true until explicitly revoked? Who can look at the pile and delete something? A memory system without an answer to "how does this get corrected" is not a feature, it is a slowly accumulating liability.
+
+## Whose memory is it
+
+The current crop of tools — local memory hubs that scan your existing agent histories, MCP servers that any client can mount — are converging on the right architectural instinct: the memory should belong to you, not to any one tool, and it should be readable by all of them.
+
+That is correct, and it raises the stakes considerably. A file that captures how you work, what you are building, what you tried and abandoned, and what your systems are named is close to the most sensitive artefact your tooling will ever produce. It is more revealing than your codebase, because it includes your reasoning. It is more revealing than your calendar, because it includes your mistakes.
+
+Which is why local-first is not a philosophical preference here, it is the sane default. I want that file on a disk I own, in a format I can read, with a way to open it up and delete a line. Any product that wants to hold it centrally needs a much better answer to "why" than "it is more convenient."
+
+## What I would actually build
+
+If I were building this into a product tomorrow, I would keep it deliberately small and deliberately visible.
+
+Small, because the temptation is to remember everything and the correct instinct is to remember almost nothing. A handful of durable facts, written deliberately, beats ten thousand auto-extracted ones. The test is whether a human would agree the thing is worth remembering after the conversation ends. Most of what happens in a session fails that test.
+
+Visible, because a memory the user cannot inspect is a bug they cannot report. If the agent is behaving oddly because of something it decided about me in March, I need to be able to find that line and remove it. The systems that get this right will feel like a notebook I keep. The ones that get it wrong will feel like being quietly profiled by my own tools, and people will turn them off.
+
+And correctable, above all. The single feature that separates a memory system that improves over months from one that rots is a cheap, obvious way to say "no, that is wrong, forget it." Not buried in settings. In the flow, where the mistake happened.
+
+## Why this is the next real step
+
+We spent the last two years getting good at context engineering — deciding what goes into the window, in what order, compressed how far. That work was necessary and it is largely solved in principle.
+
+What we never decided is where any of it lives between windows. The answer today is nowhere, which is why my agents are all excellent and all strangers. Fixing that is not a model problem and it is not a bigger-window problem. It is a data modelling problem about durability, contradiction, and expiry — which is to say it is a database problem, and we have been solving those for fifty years.
+
+That should be encouraging. It means the hard part is something our field already knows how to do well, as soon as we stop pretending that storing a conversation is the same as remembering it.

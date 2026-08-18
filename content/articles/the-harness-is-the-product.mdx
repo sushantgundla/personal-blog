@@ -1,0 +1,50 @@
+---
+title: "You Are Not Competing on the Model, You Are Competing on the Harness"
+date: "2026-07-26"
+description: "The scaffolding around a model — how tools are described, how state is carried, how failure is recovered from — moves real-world performance more than the model swap everyone argues about."
+tags: ["AI", "Agents", "Engineering"]
+---
+
+Every few months a new model tops the leaderboard, and every few months a team somewhere concludes that this is why their agent is mediocre. They swap the model, watch the numbers barely move, and quietly decide the whole category was overhyped. I have watched this happen enough times that I now assume the model is almost never the problem. The problem is the several hundred lines of unglamorous code sitting between the model and the world, and almost nobody treats that code as the thing they are actually building.
+
+The industry has started calling it the harness. It is a good word, because it captures something a word like "framework" misses: a harness is what lets a strong animal pull a heavy thing without hurting itself. The strength was already there. The harness is what converts it into work.
+
+## What the harness actually is
+
+Strip an agent down and there are maybe six decisions in it that matter, none of which are the model.
+
+The first is how you describe the tools. A tool is a function signature plus a docstring, and the docstring is a prompt whether you thought of it that way or not. I have seen a task go from failing half the time to passing consistently on the strength of rewriting one description from "searches the database" to a sentence explaining what is in the database, what a good query looks like, and when not to use it at all. Nothing else changed. The model was always capable of the reasoning; it just did not know what it was holding.
+
+The second is what comes back. Tool output is context, and context is expensive and easily poisoned. A tool that returns four thousand lines of JSON has not given the model information, it has given it a haystack and a new problem. The discipline is to return the smallest thing that answers the question, with a clear way to ask for more.
+
+The third is how state travels between steps. Agents forget in a very specific way: they remember the transcript and forget the situation. Which files have I already looked at, what did I conclude twenty steps ago, what have I already tried and ruled out. If your harness does not carry that forward deliberately, the model will rediscover the same dead end three times and you will blame it for being stupid.
+
+The fourth is what happens when something fails. This is the one teams get most wrong. A tool throws, and the harness either swallows it or dumps a raw stack trace into the context. Both are bad. What works is turning the failure into an instruction: here is what went wrong, here is what you might do differently. The model is remarkably good at recovering from a failure it can understand and completely helpless in front of one it cannot.
+
+The fifth is when to stop. Every agent needs a budget — steps, tokens, wall-clock — and a graceful way to give up that reports what it learned rather than dying silently. An agent that runs forever is not persistent, it is broken in a way that costs money.
+
+The sixth is what the model is allowed to do without asking. That one deserves its own essay, and it is less about performance than about whether anyone will let you deploy the thing.
+
+## Why this is where the leverage is
+
+None of the above requires a better model. All of it is ordinary engineering judgment applied to a slightly unfamiliar surface. And the effect sizes are large — larger, in my experience, than the gap between adjacent frontier models on the same task.
+
+That should be intuitive if you think about what a benchmark measures. A benchmark deliberately holds the harness constant so it can isolate the model. That is correct methodology and it is exactly why the numbers do not transfer. Your production system has a different harness, so the benchmark tells you about a system you do not run.
+
+There is a version of this that goes too far, and I want to be fair to it: the model does matter, and there is a floor below which no harness saves you. A model that cannot hold a plan across twenty steps will not be rescued by better tool descriptions. But most teams are not at that floor. Most teams are running a very capable model through a harness they wrote in an afternoon and never revisited.
+
+## How to tell which one is failing you
+
+The diagnostic I use is embarrassingly simple: read the transcript. Not the summary, not the final answer, the whole ugly trace of what the agent actually did.
+
+Nine times out of ten you will find the answer in the first thirty seconds. The model called a tool with obviously wrong arguments, which means the description was unclear. It re-read the same file four times, which means state was not carried. It got an error and then confidently pretended the error had not happened, which means the failure was not surfaced as something it could act on. It wandered off into an unrelated corner of the codebase, which means the task was underspecified and there was no budget to stop it.
+
+Those are all harness bugs. They look like model failures, because the visible symptom is the model doing something dumb, and it is much more satisfying to say "the model is dumb" than "I gave it a bad map."
+
+If you read the transcript and the model genuinely made a reasoning error — it had everything it needed, correctly presented, and still drew the wrong conclusion — then and only then is the model swap the right move.
+
+## The uncomfortable implication
+
+If the harness is where the leverage is, then most of the value you build with LLMs is ordinary software engineering, and the AI part is a component you rent. I think a lot of teams find that deflating, and I think it is the best news in the field.
+
+It means the skill is transferable. It means your seniority still counts for something. It means the thing that separates a product that works from a product that demos is the same thing it has always been: care taken over interfaces, error handling, and state. The models will keep getting better and that will keep being free. The harness is the part you own.
