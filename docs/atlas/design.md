@@ -53,7 +53,7 @@ country, and reads an enormous dossier about it — geography, economy, trade, s
 history, famous people, hundreds of numbers.
 
 It is a showcase project. It is linked from the Projects pages of every version of the site
-(`/projects`, `/v4/projects`, and any future `/vN/projects`), but it has its own design that does
+(`/projects`), but it has its own design that does
 not change when the surrounding site is redesigned. It owns its own layout, its own colour
 tokens, and its own chrome.
 
@@ -148,7 +148,7 @@ All CSS or small React. **No animation library.** Everything is `transform`, `op
 1. **Guilloché draw-on** — `stroke-dasharray`/`stroke-dashoffset` over 600–900 ms, then an
    infinite 90-second rotation.
 2. **Intaglio sheen** — a raking low-opacity linear-gradient with `mix-blend-mode: overlay`,
-   translated across on a 12 s loop. Reuses the `.v4-sweep` technique.
+   translated across on a 12 s loop. Reuses the `.atlas-sweep` technique.
 3. **Hatch densify on hover** — two SVG `<pattern>` definitions, swapped by changing one path's
    `fill` to the other pattern's `url()`.
 4. **The note prints** — on selection the plate goes `scale(.96)` + `saturate(.3)` and the note
@@ -160,10 +160,10 @@ All CSS or small React. **No animation library.** Everything is `transform`, `op
    hover.
 7. **UV lamp** — one class on the root swaps a set of custom properties; about a dozen elements
    cross-fade over 400 ms.
-8. **Magnetic buttons** — reuse `app/v4/_components/MagneticButton.tsx` on primary controls.
+8. **Magnetic buttons** — reuse `components/MagneticButton.tsx` on primary controls.
 
 Every effect gets a hard off-switch in one `@media (prefers-reduced-motion: reduce)` block, the
-same pattern as `app/v4/v4.css`. Content is visible by default; animation only ever adds.
+Content is visible by default; animation only ever adds.
 
 ---
 
@@ -444,7 +444,7 @@ If a component file grows past roughly 200 lines it is doing too much — split 
    size overlay, neighbours
 6. **Compare, rankings, trade bond, year slider**
 7. **Polish** — accessibility, reduced motion, mobile, performance, the indicator verification
-   sweep, links added to `/projects` and `/v4/projects`
+   sweep, links added to `/projects`
 
 ---
 

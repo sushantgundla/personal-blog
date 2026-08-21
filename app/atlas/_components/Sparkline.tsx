@@ -9,15 +9,13 @@ export interface SparklineProps {
   height?: number
 }
 
-// A dossier page mounts ~20 Sparklines, and app/v4's useReveal gives each
-// one its own IntersectionObserver. They all sit below the fold and fire
+// A dossier page mounts ~20 Sparklines. Giving each one its own
+// IntersectionObserver is wasteful: they all sit below the fold and fire
 // almost immediately on scroll, so one observer shared by every Sparkline
 // on the page does the same job — same threshold, same rootMargin, same
 // one-shot "reveal once, then stop watching" behaviour — for a fraction of
-// the setup cost. Kept local to this file rather than folded into the
-// shared useReveal hook in app/v4/_components/ScrollFx.tsx, since that hook
-// is used elsewhere and this sharing is specific to Sparkline's own mount
-// pattern.
+// the setup cost. Kept local to this file because the sharing is specific
+// to Sparkline's own mount pattern.
 const SPARKLINE_REVEAL_THRESHOLD = 0.4
 let sharedRevealObserver: IntersectionObserver | null = null
 const sharedRevealCallbacks = new Map<Element, () => void>()
@@ -41,9 +39,9 @@ function getSharedRevealObserver(): IntersectionObserver {
   return sharedRevealObserver
 }
 
-/** Same contract as app/v4's useReveal(0.4): fires once when the element
- * enters the viewport, then stops watching it — just backed by one shared
- * observer instead of one per call site. */
+/** Fires once when the element enters the viewport (threshold 0.4), then
+ * stops watching it — backed by one shared observer instead of one per
+ * call site. */
 function useSharedReveal<T extends HTMLElement>() {
   const ref = useRef<T | null>(null)
   const [visible, setVisible] = useState(false)

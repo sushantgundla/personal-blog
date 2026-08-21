@@ -28,7 +28,6 @@ app/                    Next.js App Router routes
     prism.css               Base stylesheet: every design token + the class vocabulary
     transitions.css      The seven "enter" animations played when a theme swaps
   old/                   The previous home page, kept at /old, noindex
-  v4/                    A separate design (Tailwind-based), its own layout, own routes
   atlas/                 "The Atlas" — a standalone data-viz app, its own layout, own routes
 components/             Shared components used outside app/(main): Header, Footer, SiteFrame, ArticleCard, RadarTabs, RadarPickCard, RadarPostCard, ThemeProvider
 content/                All MDX/JSON content, read from disk — never imported as modules
@@ -59,7 +58,7 @@ Take a request for `/articles/is-rag-dead` as the walkthrough:
 
 1. `app/layout.tsx` (root layout) always renders first: `<html>`, JSON-LD, font preconnects, `ThemeProvider` (next-themes, for the site-wide light/dark toggle — separate from the `/v2` dimension system), then `SiteFrame`.
 2. `components/SiteFrame.tsx` decides whether the route gets the legacy `Header`/`Footer` chrome. Only `/old` does; every other route (including this one) renders bare, because `app/(main)/layout.tsx` brings its own nav and footer.
-3. Because the URL has no `/old`, `/v4`, or `/atlas` prefix, Next.js resolves it inside the `(main)` route group: `app/(main)/layout.tsx` (`PrismLayout`) wraps the page. This mounts `Backdrop`, `DimensionEngine`, `Nav`, the `.prism-noise` overlay, `DimensionHUD`, and `Cursor` around the page content.
+3. Because the URL has no `/old` or `/atlas` prefix, Next.js resolves it inside the `(main)` route group: `app/(main)/layout.tsx` (`PrismLayout`) wraps the page. This mounts `Backdrop`, `DimensionEngine`, `Nav`, the `.prism-noise` overlay, `DimensionHUD`, and `Cursor` around the page content.
 4. `app/(main)/articles/[slug]/page.tsx` is a server component. It calls `getArticleBySlug(slug)` from `lib/articles.ts` (a `fs` read), 404s via `notFound()` if the slug doesn't exist, and renders the MDX body through `MDXRemote` with `rehype-highlight` and `rehype-slug`.
 5. Everything on the page is built from the `/v2` token + class vocabulary (`.prism-card`, `.prism-title`, etc.), so it repaints correctly no matter which of the 30 theme stylesheets is currently loaded. See `docs/architecture/design-system.md` for how that works.
 
@@ -71,10 +70,9 @@ The repo currently carries three unrelated styling approaches, kept strictly apa
 |---|---|---|
 | `app/(main)/*` (the live site, `/`) | Hand-written CSS, zero Tailwind, token-driven (`/v2` system) | See `docs/architecture/design-system.md`. This is the one that reskins with a single stylesheet swap. |
 | `app/old/*` | Tailwind, via `components/SiteFrame.tsx`'s legacy chrome | The previous home page, kept for reference, noindexed. |
-| `app/v4/*` | Tailwind, its own tokens in `app/v4/v4.css` | A separate, self-contained design prototype ("Bold Signal"). Not linked from primary nav. |
 | `app/atlas/*` | Its own CSS (`app/atlas/atlas.css`, CSS modules per component) | A standalone data-viz app (an interactive atlas of every country), fully separate chrome, no Header/Footer. |
 
-None of these share tokens or classes with each other. If you're editing a page, check which of the four route roots it's under before copying a pattern from a different one.
+None of these share tokens or classes with each other. If you're editing a page, check which of the three route roots it's under before copying a pattern from a different one.
 
 ## Where to go next
 

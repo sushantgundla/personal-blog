@@ -6,7 +6,7 @@
    threads, watermarks, perforations.
 
    Scoped entirely under .atlas-root so nothing here ever leaks into
-   globals.css or any versioned preview (v2, v4, ...). This file is
+   globals.css or any other route root. This file is
    the single source of visual truth for the whole /atlas app — every
    component only ever reaches for a class or custom property defined
    here. Keep it thorough and commented; nothing else documents the
@@ -49,7 +49,7 @@
   --note-ink: var(--note-rust);
   --note-ink-rgb: var(--note-rust-rgb);
 
-  /* Motion. One curve, borrowed from app/v4/v4.css, so the whole site
+  /* Motion. One curve for the whole site, so everything
      feels like one hand drew it. */
   --atlas-ease: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -414,7 +414,7 @@
 
 /* ============================================================
    7. Intaglio sheen — raking highlight, loops across the surface
-   Reuses the app/v4 .v4-sweep technique: a soft diagonal band of light
+   Uses the sweep technique: a soft diagonal band of light
    in overlay blend mode, translated across on a 12s loop.
    ============================================================ */
 
@@ -560,7 +560,7 @@
 }
 
 /* ============================================================
-   12. Magnetic controls — reuse app/v4/_components/MagneticButton.tsx;
+   12. Magnetic controls — reuse components/MagneticButton.tsx;
    this class only supplies the transition, the component supplies the
    transform via inline style.
    ============================================================ */

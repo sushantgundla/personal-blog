@@ -35,7 +35,7 @@ export function MagneticButton({
   }
 
   return (
-    <div ref={ref} onMouseMove={handleMove} onMouseLeave={handleLeave} className={`v4-magnetic ${className}`}>
+    <div ref={ref} onMouseMove={handleMove} onMouseLeave={handleLeave} className={`magnetic ${className}`}>
       {children}
     </div>
   )
