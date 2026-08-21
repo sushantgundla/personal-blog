@@ -71,10 +71,19 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ project, dimmed, delay, wide = false }: ProjectCardProps): JSX.Element {
+  // Most links here are internal paths, but a project can point at something
+  // off-site (a GitHub repo, say). next/link is for routes this app owns — it
+  // prefetches and routes on the client, which an outside URL cannot serve — so
+  // an external link gets a plain anchor that opens in a new tab instead.
+  // Detected by the "http" prefix, not by a domain, so any host works.
+  const isExternal = !!project.link && /^https?:\/\//.test(project.link)
+
   const card = (
     <div
       className={project.link ? 'prism-card prism-card-lift prism-col' : 'prism-card prism-col'}
       style={{
+        // The card link below is stretched over this box, so it anchors here.
+        position: 'relative',
         height: '100%',
         justifyContent: 'space-between',
         gap: '0.6rem',
@@ -115,6 +124,28 @@ function ProjectCard({ project, dimmed, delay, wide = false }: ProjectCardProps)
           </p>
         )}
       </div>
+      {project.docsLink && (
+        // Raised above the stretched card link, which covers the whole card and
+        // would otherwise swallow this click. Both links sit in the card's own
+        // stacking context -- the card sets `transform`, which creates one, so a
+        // z-index set outside the card could not be compared with this one.
+        <a
+          href={project.docsLink}
+          className="prism-mono"
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            alignSelf: 'flex-start',
+            marginTop: '10px',
+            fontSize: '0.85em',
+            fontWeight: 600,
+            color: 'var(--prism-accent)',
+            textDecoration: 'none',
+          }}
+        >
+          Read the docs →
+        </a>
+      )}
       <div className="prism-row" style={{ gap: '8px', marginTop: '10px' }}>
         {project.tags.map((tag) => (
           <span key={tag} className="prism-chip">
@@ -122,15 +153,18 @@ function ProjectCard({ project, dimmed, delay, wide = false }: ProjectCardProps)
           </span>
         ))}
       </div>
+      {project.link && project.docsLink && (
+        <a
+          href={project.link}
+          target={isExternal ? '_blank' : undefined}
+          rel={isExternal ? 'noopener noreferrer' : undefined}
+          aria-label={`${project.title} on GitHub`}
+          style={{ position: 'absolute', inset: 0, zIndex: 1 }}
+        />
+      )}
     </div>
   )
 
-  // Most links here are internal paths, but a project can point at something
-  // off-site (a GitHub repo, say). next/link is for routes this app owns — it
-  // prefetches and routes on the client, which an outside URL cannot serve — so
-  // an external link gets a plain anchor that opens in a new tab instead.
-  // Detected by the "http" prefix, not by a domain, so any host works.
-  const isExternal = !!project.link && /^https?:\/\//.test(project.link)
 
   // A third case: a path this app serves but does not own. /context-grid looks
   // internal and is not — next.config.js rewrites it to a separate Astro build
@@ -142,6 +176,15 @@ function ProjectCard({ project, dimmed, delay, wide = false }: ProjectCardProps)
     (path) => project.link === path || project.link?.startsWith(`${path}/`)
   )
   const linkStyle = { display: 'block', height: '100%', textDecoration: 'none', color: 'inherit' }
+
+  // A card carrying a second link cannot be wrapped in an anchor -- anchors do
+  // not nest, and the browser drops the inner one. The card link is instead a
+  // transparent anchor stretched over the whole card, with the second link
+  // raised above it. The card stays entirely clickable either way; only the
+  // markup differs.
+  if (project.link && project.docsLink) {
+    return <Reveal delay={delay}>{card}</Reveal>
+  }
 
   return (
     <Reveal delay={delay}>

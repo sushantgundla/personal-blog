@@ -14,6 +14,13 @@ export interface Project {
   tags: string[]
   status: ProjectStatus
   link?: string
+  /**
+   * A second destination, shown as its own link inside the card while the
+   * card itself still opens `link`. Only context-grid has one: its docs and
+   * its source are both worth reaching, and burying one behind the other
+   * makes the reader guess which they landed on.
+   */
+  docsLink?: string
 }
 
 export const projects: Project[] = [
@@ -125,11 +132,10 @@ export const projects: Project[] = [
     impact: 'On PyPI under MIT, still an early release — it turns retrieval folklore into numbers on your own documents.',
     tags: ['Python', 'RAG', 'Retrieval', 'Evaluation', 'Benchmarking', 'CLI'],
     status: 'open-source',
-    // The documentation rather than the repository. It is the better first
-    // stop -- it explains what the tool is for before showing the code -- and
-    // it carries a link back to GitHub in its own header, so nothing is lost.
-    // Served from /context-grid by a rewrite in next.config.js.
-    link: '/context-grid',
+    link: 'https://github.com/sushantgundla/context-grid',
+    // Served from this domain by a rewrite in next.config.js, not by a route
+    // in this app, so it must stay out of next/link. See ProjectsGrid.
+    docsLink: '/context-grid',
   },
   {
     slug: 'the-atlas',
