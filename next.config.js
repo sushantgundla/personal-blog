@@ -30,6 +30,22 @@ const nextConfig = {
       },
     ],
   },
+  // The context-grid documentation is a separate Astro build in its own Vercel project. It is
+  // served from a path here rather than its own subdomain so the docs live on the same domain
+  // as everything else, and so the docs project needs no domain of its own.
+  //
+  // The Astro site is built with `base: '/context-grid'`, so every link and asset URL it emits
+  // already carries that prefix -- which is what makes it correct here. Vercel, though, serves
+  // that build at the root of its own project domain rather than under the base, so the prefix
+  // is stripped on the way across. Both rules are needed: the first for the bare
+  // `/context-grid`, the second for every page and asset under it.
+  async rewrites() {
+    const docs = 'https://context-grid-blush.vercel.app'
+    return [
+      { source: '/context-grid', destination: docs },
+      { source: '/context-grid/:path*', destination: `${docs}/:path*` },
+    ]
+  },
 }
 
 module.exports = nextConfig
