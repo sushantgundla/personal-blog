@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MagneticButton } from '@/app/v4/_components/MagneticButton'
+import { MagneticButton } from '@/components/MagneticButton'
 import styles from './dossier.module.css'
 
 const STORAGE_KEY = 'atlas-uv-lamp'

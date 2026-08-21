@@ -340,5 +340,16 @@ body {
     'opsz' 24;
 }
 
-/* The /v4 redesign carries its own scoped styles in app/v4/v4.css.
-   Nothing for it lives in globals. */
+/* Magnetic button — the wrapper that MagneticButton.tsx nudges toward the
+   cursor. The transition is what makes the nudge glide instead of snap, and
+   what lets it settle back smoothly on mouse-leave. */
+.magnetic {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magnetic {
+    transition: none !important;
+  }
+}

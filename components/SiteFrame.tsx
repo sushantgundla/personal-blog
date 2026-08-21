@@ -12,8 +12,8 @@ import { Footer } from '@/components/Footer'
  * by default, and only the handful listed below still get the original
  * Header/Footer chrome.
  *
- * /old is the previous home page, kept for reference. /v4 and /atlas own their
- * own layouts.
+ * /old is the previous home page, kept for reference. /atlas owns its own
+ * layout.
  */
 const LEGACY_CHROME = /^\/old\b/
 

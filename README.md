@@ -36,7 +36,6 @@ country-explorer feature, how-to guides, and project history. Common starting po
 │   │   └── _lib/           # Route-group-local helpers
 │   ├── atlas/              # Country-explorer feature (/atlas)
 │   ├── old/                # Previous home page design, kept at /old, noindex'd
-│   ├── v4/                 # An earlier design iteration, predates the dimension redesign
 │   ├── layout.tsx          # Root layout
 │   └── globals.css         # Base global styles
 ├── components/              # Shared components (SiteFrame, etc.)

@@ -10,7 +10,7 @@ Every route passes through the root layout (`app/layout.tsx`), which renders `Si
 const LEGACY_CHROME = /^\/old\b/
 ```
 
-Only paths matching `/old` (and anything under it) get `Header`/`Footer`. Every other route — including `/`, `/v4/*`, and `/atlas/*` — renders bare from `SiteFrame`'s point of view and supplies its own chrome inside its own route-group layout. This is inverted from how it used to work: the redesign in `app/(main)/` is now the default, so the legacy chrome is the exception, kept alive only for `/old`.
+Only paths matching `/old` (and anything under it) get `Header`/`Footer`. Every other route — including `/` and `/atlas/*` — renders bare from `SiteFrame`'s point of view and supplies its own chrome inside its own route-group layout. This is inverted from how it used to work: the redesign in `app/(main)/` is now the default, so the legacy chrome is the exception, kept alive only for `/old`.
 
 ## `/` — the live site (`app/(main)`)
 
@@ -32,21 +32,6 @@ Layout: `app/(main)/layout.tsx` (`PrismLayout`). Mounts, in order: `Backdrop` (t
 File: `app/old/page.tsx`. Not inside `app/(main)`, so it does **not** get `PrismLayout` or any Prism styling — instead `SiteFrame` gives it the legacy `Header`/`Footer` chrome, and it's styled with Tailwind like the rest of the pre-redesign site.
 
 Kept for reference after the redesign shipped to `/`. Marked `robots: { index: false }` with `alternates: { canonical: '/' }` — it isn't meant to rank; indexing it alongside `/` would split ranking signals between two pages with near-identical content.
-
-## `/v4/*` — a separate design prototype ("Bold Signal")
-
-Layout: `app/v4/layout.tsx`. Fully self-contained: its own font loading, its own header (`V4Header`) and footer inline in the layout, its own stylesheet `app/v4/v4.css`, and Tailwind classes throughout (unlike `/v2`, `/v4` has no zero-Tailwind rule). Does not share tokens, classes, or chrome with `app/(main)` or `app/old`.
-
-| Route | File |
-|---|---|
-| `/v4` | `app/v4/page.tsx` |
-| `/v4/about` | `app/v4/about/page.tsx` |
-| `/v4/articles` | `app/v4/articles/page.tsx` |
-| `/v4/articles/[slug]` | `app/v4/articles/[slug]/page.tsx` |
-| `/v4/projects` | `app/v4/projects/page.tsx` |
-| `/v4/radar` | `app/v4/radar/page.tsx` |
-
-Not linked from the live site's primary nav (`app/(main)/_components/Nav.tsx` only links `/articles`, `/projects`, `/radar`, `/about`).
 
 ## `/atlas/*` — a standalone data-viz app
 
@@ -70,5 +55,4 @@ Data comes from `content/atlas/` (snapshot JSON, famous-people data) plus build-
 |---|---|---|---|
 | `/`, `/about`, `/articles*`, `/projects`, `/radar` | `app/(main)/layout.tsx` | Own `Nav`, no `Header`/`Footer` | `/v2` design system — see [design-system.md](./design-system.md) |
 | `/old` | root layout only | `Header`/`Footer` via `SiteFrame` | Tailwind |
-| `/v4/*` | `app/v4/layout.tsx` | Own `V4Header` + inline footer | Tailwind + `app/v4/v4.css` |
 | `/atlas/*` | `app/atlas/layout.tsx` | Own minimal top bar | `app/atlas/atlas.css` + CSS Modules |

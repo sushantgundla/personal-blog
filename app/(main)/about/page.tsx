@@ -10,9 +10,8 @@ export const metadata: Metadata = {
 }
 
 /**
- * Skill taxonomy for the "Technical Stack" section. Mirrors the grouping used
- * on the v4 prototype (app/v4/about/page.tsx) so the same four buckets show
- * up here. Anything in siteConfig.skills that doesn't match one of the four
+ * Skill taxonomy for the "Technical Stack" section. Groups the skills into
+ * four buckets. Anything in siteConfig.skills that doesn't match one of the four
  * label lists still renders — it lands in a trailing "Also" group instead of
  * being silently dropped.
  */

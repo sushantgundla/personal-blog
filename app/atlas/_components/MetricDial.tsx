@@ -1,7 +1,7 @@
 'use client'
 
 import type { IndicatorDef } from '@/lib/atlas/types'
-import { MagneticButton } from '@/app/v4/_components/MagneticButton'
+import { MagneticButton } from '@/components/MagneticButton'
 import styles from './plate.module.css'
 
 /** The colour ramp painted west-to-east across the plate. Warm/high at one
