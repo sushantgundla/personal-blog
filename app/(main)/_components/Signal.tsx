@@ -192,12 +192,14 @@ function LayerCard({
 
   return (
     <div
-      className="prism-card prism-card-lift prism-col"
+      className="prism-card prism-card-lift prism-layer-card prism-col"
       style={{
         gap: '0.4rem',
         paddingBlock: 'clamp(12px, 1.6vw, 16px)',
+        // Only the dim value lives inline — it is per-tile state. The transition
+        // that eases it (and the accent hover) is on .prism-layer-card in
+        // prism.css; an inline `transition` here would replace the card's own.
         opacity: dimmed ? 0.55 : 1,
-        transition: 'opacity var(--prism-dur-fast) var(--prism-ease)',
       }}
       onMouseEnter={() => onHover(item.id)}
       onMouseLeave={() => onHover(null)}
@@ -309,11 +311,13 @@ export function Signal(): JSX.Element {
                   return (
                     <span
                       key={skill.label}
-                      className={`prism-chip${emphasize ? ' prism-chip-on' : ''}`}
-                      style={{
-                        opacity: matches ? 1 : 0.4,
-                        transition: 'opacity var(--prism-dur-fast) var(--prism-ease), border-color var(--prism-dur-fast) var(--prism-ease), color var(--prism-dur-fast) var(--prism-ease), background var(--prism-dur-fast) var(--prism-ease)',
-                      }}
+                      className={`prism-chip prism-skill-chip${emphasize ? ' prism-chip-on' : ''}`}
+                      // Only the fade value lives inline — it is per-chip state.
+                      // The transition that eases it, and the accent hover, are
+                      // on .prism-skill-chip in prism.css; an inline `transition`
+                      // here would replace the chip's own and leave the lift and
+                      // shadow snapping.
+                      style={{ opacity: matches ? 1 : 0.4 }}
                     >
                       {skill.label}
                     </span>

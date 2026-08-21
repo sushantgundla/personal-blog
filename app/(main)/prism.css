@@ -24,6 +24,7 @@
    .prism-stack    vertical rhythm via `> * + * { margin-top }`           (§ LAYOUT)
 
    .prism-card / .prism-card-lift   panel / tile, workhorse of the page      (§ CONTAINERS)
+   .prism-layer-card                stack-diagram tile, accent hover          (§ CONTAINERS)
    .prism-panel                  larger bordered region                  (§ CONTAINERS)
 
    .prism-title / .prism-title-xl   display headline (huge, serif by default)(§ TYPE)
@@ -34,6 +35,7 @@
 
    .prism-btn / .prism-btn-ghost / .prism-btn-quiet   buttons                   (§ CONTROLS)
    .prism-chip / .prism-chip-on                    tag / pill / active pill  (§ CONTROLS)
+   .prism-skill-chip                               capability pill, accent hover (§ CONTROLS)
    .prism-link / .prism-icon-btn                   inline link / icon button (§ CONTROLS)
 
    .prism-rule / .prism-dot / .prism-frame / .prism-marquee / .prism-badge / .prism-kbd  (§ ORNAMENT)
@@ -668,6 +670,67 @@ html:has(.prism-root) body {
   transform: translate(var(--prism-lift-x), var(--prism-lift));
 }
 
+/* Stack-diagram tile (the "one connected platform" blocks on the home page).
+   A plain .prism-card-lift hover only nudges the border to --prism-line-2 and
+   the fill to --prism-surface-2, which is two greys apart from resting state —
+   next to invisible on a diagram where the neighbouring tiles simultaneously
+   dim to 0.55. These tiles get the theme's own accent instead, so the hovered
+   block reads as picked out rather than merely un-dimmed.
+
+   Every one of the 36 theme files defines --prism-accent and --prism-surface-2,
+   so nothing here needs a per-theme special case.
+
+   The !important and the .prism-root prefix are both load-bearing. Theme files
+   override .prism-card-lift:hover with !important on exactly these properties
+   (border-color, background, box-shadow), so a plain single-class rule loses
+   whatever the source order. Matching their !important and outranking their
+   (0,2,0) with (0,3,0) is what makes this win in all 36.
+
+   background-color, never the `background` shorthand — the shorthand resets
+   background-image, which would wipe --prism-surface-texture, and would also
+   drop the per-theme hover pattern some files layer on top (attention's
+   diagonal stripes, for one). Those stay, now over an accent-tinted fill.
+
+   The mix stays at 14%: enough to read as "this one", light enough that
+   --prism-text over it keeps its contrast in the pale themes (paper, daylight,
+   eink) as well as the dark ones. The unmixed --prism-surface-2 above it is the
+   fallback for anything without color-mix(). */
+.prism-root .prism-layer-card:hover,
+.prism-root .prism-layer-card:focus-visible {
+  border-color: var(--prism-accent) !important;
+  background-color: var(--prism-surface-2) !important;
+  background-color: color-mix(in srgb, var(--prism-accent) 14%, var(--prism-surface-2)) !important;
+  box-shadow: var(--prism-glow), var(--prism-shadow-lg) !important;
+}
+
+/* The tile owns its whole transition list here rather than in Signal.tsx.
+   An inline `style={{ transition: 'opacity ...' }}` on the element replaces
+   .prism-card's transition outright — inline always wins — which left the
+   accent fill, the border and the lift all snapping on instead of easing.
+   Opacity is in the list because the un-hovered tiles dim to 0.55 while a
+   sibling is hovered; only that value stays inline, since it is per-tile state. */
+.prism-layer-card {
+  transition: opacity var(--prism-dur-fast) var(--prism-ease),
+    transform var(--prism-dur) var(--prism-ease),
+    box-shadow var(--prism-dur) var(--prism-ease),
+    border-color var(--prism-dur) var(--prism-ease),
+    background-color var(--prism-dur) var(--prism-ease);
+}
+
+/* Base state carries the transition, so the label eases back out of the accent
+   on mouse-leave instead of snapping. */
+.prism-layer-card .prism-sub {
+  transition: color var(--prism-dur-fast) var(--prism-ease);
+}
+
+/* The tile's own label picks up the accent too. Without it the block changes
+   colour but the text sitting in it does not, which reads as a background
+   artefact rather than a deliberate highlight. */
+.prism-root .prism-layer-card:hover .prism-sub,
+.prism-root .prism-layer-card:focus-visible .prism-sub {
+  color: var(--prism-accent) !important;
+}
+
 .prism-panel {
   background-color: var(--prism-surface);
   background-image: var(--prism-surface-texture);
@@ -837,6 +900,40 @@ html:has(.prism-root) body {
 
 .prism-chip:active {
   transform: translateY(0);
+}
+
+/* Capability chip (the skill pills under "Capabilities" on the home page).
+   Same reasoning as .prism-layer-card above: the stock .prism-chip:hover moves
+   the border to --prism-line-2 and the fill to --prism-surface-3, two greys
+   that barely register on a pill this small. These pick up the theme's accent
+   instead, matching what .prism-chip-on already does for the active filter — so
+   hovering previews the same highlight that filtering applies.
+
+   .prism-root + !important for the same reason as the layer card: theme files
+   style chips at (0,2,0) with !important (solarized colours them by
+   :nth-of-type), so a plain .prism-skill-chip:hover would lose there.
+
+   16% rather than the card's 14% — a pill carries far less area, so it needs a
+   little more tint to read as highlighted at the same glance. The plain
+   --prism-surface-3 above it is the fallback where color-mix() is missing. */
+.prism-root .prism-skill-chip:hover,
+.prism-root .prism-skill-chip:focus-visible {
+  border-color: var(--prism-accent) !important;
+  color: var(--prism-accent) !important;
+  background-color: var(--prism-surface-3) !important;
+  background-color: color-mix(in srgb, var(--prism-accent) 16%, var(--prism-surface-3)) !important;
+}
+
+/* The chip owns its transition list here, not inline in Signal.tsx. Opacity is
+   in the list because chips outside the active filter fade to 0.4; only that
+   value stays inline, since it is per-chip state. */
+.prism-skill-chip {
+  transition: opacity var(--prism-dur-fast) var(--prism-ease),
+    border-color var(--prism-dur-fast) var(--prism-ease),
+    color var(--prism-dur-fast) var(--prism-ease),
+    background-color var(--prism-dur-fast) var(--prism-ease),
+    box-shadow var(--prism-dur-fast) var(--prism-ease),
+    transform var(--prism-dur-fast) var(--prism-ease);
 }
 
 .prism-chip-on {
