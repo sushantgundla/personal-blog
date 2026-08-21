@@ -58,6 +58,10 @@ const BLOCKS: { status: ProjectStatus; heading: string; caption: string; wide?: 
   },
 ]
 
+// Paths served from this domain by a rewrite in next.config.js rather than by a
+// route in this app. They must not be handed to next/link. See isProxied below.
+const PROXIED_PATHS = ['/context-grid']
+
 interface ProjectCardProps {
   project: Project
   dimmed: boolean
@@ -127,6 +131,16 @@ function ProjectCard({ project, dimmed, delay, wide = false }: ProjectCardProps)
   // an external link gets a plain anchor that opens in a new tab instead.
   // Detected by the "http" prefix, not by a domain, so any host works.
   const isExternal = !!project.link && /^https?:\/\//.test(project.link)
+
+  // A third case: a path this app serves but does not own. /context-grid looks
+  // internal and is not — next.config.js rewrites it to a separate Astro build
+  // in its own Vercel project. next/link would try to route it on the client
+  // and prefetch an RSC payload that does not exist, so it needs a plain anchor
+  // like an external link, but in the same tab because the URL stays on this
+  // domain.
+  const isProxied = !!project.link && PROXIED_PATHS.some(
+    (path) => project.link === path || project.link?.startsWith(`${path}/`)
+  )
   const linkStyle = { display: 'block', height: '100%', textDecoration: 'none', color: 'inherit' }
 
   return (
@@ -134,6 +148,10 @@ function ProjectCard({ project, dimmed, delay, wide = false }: ProjectCardProps)
       {project.link ? (
         isExternal ? (
           <a href={project.link} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+            {card}
+          </a>
+        ) : isProxied ? (
+          <a href={project.link} style={linkStyle}>
             {card}
           </a>
         ) : (

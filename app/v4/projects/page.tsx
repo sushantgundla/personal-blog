@@ -56,10 +56,23 @@ export default function V4Projects() {
               const delay = (rowIndex++ % 4) * 60
               const isArticleLink = project.link?.startsWith('/articles')
               const isAtlasLink = project.link === '/atlas'
-              const linkLabel = isArticleLink ? 'Read the deep dive' : isAtlasLink ? 'Explore the Atlas' : 'View project'
+              const isDocsLink = project.link === '/context-grid'
+              const linkLabel = isArticleLink
+                ? 'Read the deep dive'
+                : isAtlasLink
+                  ? 'Explore the Atlas'
+                  : isDocsLink
+                    ? 'Read the docs'
+                    : 'View project'
               const isExternal = !!project.link && !project.link.startsWith('/')
+              // /context-grid is served from this domain by a rewrite in
+              // next.config.js, not by a route in this app, so it has no /v4
+              // twin to prefix to and must be left exactly as written.
+              const isProxied = project.link === '/context-grid'
               const href = project.link
-                ? project.link.startsWith('/') && !project.link.startsWith('/atlas')
+                ? project.link.startsWith('/') &&
+                  !project.link.startsWith('/atlas') &&
+                  !isProxied
                   ? `/v4${project.link}`
                   : project.link
                 : undefined
