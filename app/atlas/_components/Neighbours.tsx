@@ -65,7 +65,14 @@ export function Neighbours({ neighbours, countryName }: NeighboursProps) {
           <a key={n.iso3} href={`/atlas/${n.iso3.toLowerCase()}`} className={styles.neighbourSeal}>
             {n.flagImageUrl ? (
               <span className={styles.neighbourFlag}>
-                <Image src={toHttps(n.flagImageUrl)} alt="" fill sizes="18px" className={styles.neighbourFlagImg} />
+                <Image
+                  src={toHttps(n.flagImageUrl)}
+                  alt=""
+                  fill
+                  sizes="18px"
+                  className={styles.neighbourFlagImg}
+                  unoptimized
+                />
               </span>
             ) : (
               <span className={styles.neighbourFlagFallback} aria-hidden="true">

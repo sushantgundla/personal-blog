@@ -19,6 +19,17 @@ const nextConfig = {
   // docs/atlas/design.md.
   staticPageGenerationTimeout: 420,
   images: {
+    // Vercel's free tier counts every optimized variant written to its image
+    // cache, and the default TTL is 60 seconds — so a page that gets traffic
+    // rewrites the same variants over and over and burns the quota. A month
+    // is fine here: the local portraits change only on deploy, and every
+    // remote Wikimedia image now passes through `unoptimized` instead.
+    minimumCacheTTL: 2678400,
+    // The optimizer writes one cache entry per width it is asked for. Only
+    // the two local portraits are optimized now, and neither is ever shown
+    // wider than ~620px, so the larger breakpoints only create dead entries.
+    deviceSizes: [640, 750, 828, 1080, 1200],
+    imageSizes: [64, 128, 256, 384],
     remotePatterns: [
       {
         protocol: 'https',

@@ -62,7 +62,14 @@ function PersonCard({ person, iso3 }: { person: Person; iso3: string }) {
     <div className={styles.personCard}>
       {person.imageUrl ? (
         <div className={`atlas-watermark ${styles.personPortraitWrap}`}>
-          <Image src={toHttps(person.imageUrl)} alt="" fill sizes="80px" className={styles.personPortraitImg} />
+          <Image
+            src={toHttps(person.imageUrl)}
+            alt=""
+            fill
+            sizes="80px"
+            className={styles.personPortraitImg}
+            unoptimized
+          />
         </div>
       ) : (
         <svg viewBox="0 0 80 80" aria-hidden="true" className={`atlas-guilloche ${styles.personPlate}`}>
