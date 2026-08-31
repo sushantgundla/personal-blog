@@ -52,7 +52,14 @@ export function LandmarkStrip({ sites, countryName }: LandmarkStripProps) {
           return (
             <figure key={site.qid} className={styles.landmarkCard}>
               <div className={styles.landmarkImageWrap}>
-                <Image src={toHttps(site.imageUrl!)} alt="" fill sizes="220px" className={styles.landmarkImg} />
+                <Image
+                  src={toHttps(site.imageUrl!)}
+                  alt=""
+                  fill
+                  sizes="220px"
+                  className={styles.landmarkImg}
+                  unoptimized
+                />
               </div>
               <figcaption className={styles.landmarkCaption}>
                 <span className={styles.landmarkName}>{site.name}</span>

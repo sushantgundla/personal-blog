@@ -142,6 +142,7 @@ export function FactsPanel({ wikidata, countryName }: FactsPanelProps) {
               fill
               sizes="44px"
               className={styles.emblemSealImg}
+              unoptimized
             />
           </div>
         )}
