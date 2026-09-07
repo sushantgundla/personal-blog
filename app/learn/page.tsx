@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getAllCourses } from '@/lib/learn'
+import { learnCanonical } from '@/lib/learn-domain'
 import { Reveal } from '@/app/(main)/_components/Reveal'
 import { CourseCard } from './_components/CourseCard'
 import styles from './_components/sections.module.css'
@@ -16,6 +17,9 @@ export const metadata: Metadata = {
   title: 'Learn to build with AI',
   description:
     'Free, hands-on courses for engineers who can already code but have not built with LLMs. Short lessons, real mechanics, a quiz at the end of each.',
+  // Points at learn.sushantgundla.com once the switch is on, so search
+  // engines settle on the subdomain. Adds nothing while it is off.
+  ...learnCanonical('/'),
 }
 
 export default function LearnIndexPage() {

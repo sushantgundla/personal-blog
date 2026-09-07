@@ -6,6 +6,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
 import { getAllCourses, getCourse, getLesson, getNeighbours } from '@/lib/learn'
+import { learnCanonical } from '@/lib/learn-domain'
 import { Deeper } from '../../_components/Deeper'
 import { PrevNext } from '../../_components/PrevNext'
 import { Quiz } from '../../_components/Quiz'
@@ -42,6 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description: lesson.subtitle,
     openGraph: { title, description: lesson.subtitle, type: 'article' },
+    ...learnCanonical(`/${course.slug}/${lesson.slug}`),
   }
 }
 

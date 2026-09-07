@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getAllCourses, getCourse, type Lesson, type Part } from '@/lib/learn'
+import { learnCanonical } from '@/lib/learn-domain'
 import { Reveal } from '@/app/(main)/_components/Reveal'
 import { CourseProgress } from '../_components/CourseProgress'
 import { LessonCard } from '../_components/LessonCard'
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${course.title} — Learn`,
     description: course.blurb,
+    ...learnCanonical(`/${course.slug}`),
   }
 }
 
