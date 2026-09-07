@@ -1,0 +1,135 @@
+---
+title: "Embeddings and search"
+subtitle: "Turning meaning into numbers, so the model can find the right paragraph before it answers."
+part: 2
+minutes: 7
+why: "Your users ask how do I reset my password, and your search returns nothing, because the page is called Credential recovery and shares not one word with the question. So you start writing synonym lists, and the list never ends. This lesson moves the fix upstream: instead of matching words, you match meaning, using numbers. Then it shows you the failure that catches everyone next — meaning-matching whiffs on the exact part code that keyword search would have nailed — and what to do about it."
+wins:
+  - "Use embeddings when the user's words differ from the document's words."
+  - "Keep keyword search for codes, names, and exact strings — embeddings are bad at those."
+  - "Choose chunk size deliberately; it decides your retrieval quality more than the model does."
+  - "Start with a numpy array and add a vector database only when scale demands it."
+  - "Run both searches and merge the results — hybrid is the default that just works."
+quiz:
+  - q: "An embedding is..."
+    options: ["A compressed copy of the text you can decode back", "A list of numbers positioned so that similar meanings sit near each other", "A hash of the document used as a cache key"]
+    answer: 1
+    explain: "It is a point in a high-dimensional space, and closeness in that space stands in for closeness of meaning."
+  - q: "Cosine similarity compares two vectors by..."
+    options: ["The angle between them, ignoring how long they are", "The straight-line distance between their endpoints", "How many numbers they have in common"]
+    answer: 0
+    explain: "It measures direction, so a short document and a long one about the same topic still score as similar."
+  - q: "A user searches for part number XJ-4471-B. The search most likely to find it is..."
+    options: ["Embedding search, because the code carries meaning", "Keyword search, because the code is an exact string with no meaning to generalise", "Neither — codes require a separate database lookup"]
+    answer: 1
+    explain: "Near-identical codes land in near-identical places in embedding space, so meaning-matching cannot tell XJ-4471-B from XJ-4471-C; exact matching can."
+  - q: "Chunks that are too large hurt retrieval because..."
+    options: ["The embedding API rejects long inputs", "One vector has to represent several topics at once, so it matches everything weakly", "Cosine similarity is only defined for short text"]
+    answer: 1
+    explain: "A single vector is an average of everything in the chunk, and an average of five topics is a good match for none of them."
+  - q: "For 5,000 document chunks, a reasonable first vector store is..."
+    options: ["A numpy array of the vectors, with a dot product to rank them", "A managed vector database cluster", "A fine-tuned model with the documents baked in"]
+    answer: 0
+    explain: "Brute-force scoring over a few thousand vectors takes milliseconds; a real vector database is an optimisation you add when the numbers say so."
+deeper:
+  - { label: "Anthropic — embeddings", href: "https://docs.anthropic.com/en/docs/build-with-claude/embeddings" }
+  - { label: "Anthropic — introducing contextual retrieval", href: "https://www.anthropic.com/news/contextual-retrieval" }
+  - { label: "OpenAI — embeddings guide", href: "https://platform.openai.com/docs/guides/embeddings" }
+  - { label: "Retrieval-Augmented Generation (the original RAG paper)", href: "https://arxiv.org/abs/2005.11401" }
+---
+
+Lesson 1 said the model never looks anything up. This is where you do the looking up for it. Find the right paragraph, put it in the context window, and the model answers from your documents instead of from its impression of the world. Everything hard about that is in the finding.
+
+## 1. Meaning as coordinates
+
+An **embedding** is text turned into a fixed-length list of numbers — a few hundred to a couple of thousand of them. An embedding model produces it, and it is trained so that texts meaning similar things end up with similar numbers.
+
+Think of every piece of text as a point in space. "Reset your password" and "recover your login credentials" land next to each other. "Reset your password" and "annual revenue by region" land far apart. The dimensions are not things you can name — no axis means "formality" — but the arrangement is real and it is what you search on.
+
+**Cosine similarity** is how you measure the nearness. Draw an arrow from the origin to each point and measure the angle between the two arrows: small angle, similar meaning. It ignores how long the arrows are, which is exactly what you want, because arrow length tracks things like document length rather than topic. A one-line answer and a three-page article about the same thing point in the same direction. The score comes out between -1 and 1 in principle, and in practice you will see roughly 0 for unrelated text up to near 1 for near-identical text. If your vectors are normalised to unit length — most embedding APIs return them that way — cosine similarity is just the dot product, which is one numpy call.
+
+Search then becomes: embed the question, score it against every stored chunk, take the top few.
+
+That fixes the failure you started with. "How do I reset my password" now finds the page titled "Credential recovery" without a single shared word, because you stopped comparing words.
+
+Then it introduces a new one.
+
+| The query | Keyword search | Embedding search |
+|---|---|---|
+| how do I reset my password (doc says Credential recovery) | Misses — no shared words | Finds it — same meaning |
+| part XJ-4471-B | Exact hit | Often wrong — XJ-4471-C sits right next to it |
+| error code E_TIMEOUT_503 | Exact hit | Blurs into every other timeout error |
+| what happens if I cancel early | Misses if the doc says terminate before term | Finds it |
+| Ana Whitfield (a person's name) | Exact hit | Matches other names, which all look alike |
+
+Read that table twice. Embeddings are good at concepts and bad at identifiers. Keyword search is the reverse. Neither is the winner, and section 3 is about not choosing.
+
+## 2. Chunking is the decision that decides everything
+
+You cannot embed a 40-page manual as one vector. It would be an average of forty pages of meaning, which is a good match for nothing. So you split documents into **chunks** and embed each one.
+
+How you split is the highest-leverage choice in the whole retrieval pipeline. Swapping your embedding model might move quality a few percent. Fixing bad chunking can take a system from useless to fine.
+
+| Chunk size | What goes wrong | What it suits |
+|---|---|---|
+| Too small (a sentence) | The answer gets cut in half; the chunk loses the context that made it meaningful | FAQ pairs, glossary entries |
+| About right (roughly a paragraph to a page, ~200–800 tokens) | Usually nothing | Docs, articles, support content, most things |
+| Too large (a whole chapter) | One vector averages many topics and matches everything weakly; you also burn context sending it | Rarely worth it |
+
+The rules that matter more than the exact number:
+
+- **Split on structure, not on a character count.** Break at headings, then paragraphs. A chunk that starts mid-sentence is a chunk that was embedded describing something it does not actually say.
+- **Overlap a little.** Repeating a sentence or two at each boundary — say 10 to 15 percent — stops answers that straddle a split from disappearing into the crack.
+- **Keep the heading in the chunk.** A paragraph reading "It expires after 30 days" is meaningless alone. Prefix it with its document title and section heading and it becomes findable. This one line of code is worth more than most tuning.
+- **Store metadata beside the vector.** Source URL, title, date, section. You need it to cite the answer, and you need it to filter before you search.
+
+Chunk sizes are worth measuring rather than debating. Build a set of 30 real questions with the chunk you know should be retrieved for each, then try two or three chunking strategies and count how often the right chunk lands in the top 5. That is an afternoon's work and it settles the argument permanently. Lesson 8 is about turning that habit into a real evaluation.
+
+> Retrieval quality is decided at chunking time. Everything downstream is just arithmetic on the choices you already made.
+
+## 3. The store is just an index, and hybrid is the right answer
+
+A vector database is an index that finds nearest neighbours quickly. It is a genuinely useful piece of infrastructure and you do not need it yet.
+
+At a few thousand chunks, hold the vectors in a numpy array and score all of them with one matrix multiply. It takes milliseconds, it has no service to run, and it is trivial to debug because you can print the scores. Reach for pgvector, or a hosted vector database, when you cross into hundreds of thousands of chunks, need filtered search at scale, or need updates without a rebuild. Adding one on day one buys you an outage, not a feature.
+
+Then make the search hybrid. Run the keyword search and the embedding search, and merge the two ranked lists — the standard merge is Reciprocal Rank Fusion, which scores each result by where it placed in each list rather than by raw scores that are not comparable. Postgres gives you both halves natively: full-text search and pgvector in the same database.
+
+Hybrid search is not clever. It is the boring answer that stops both failure modes in the table above from ever reaching a user, and almost every serious retrieval system ends up here.
+
+If you want one more upgrade after that, add a reranker: retrieve 30 candidates cheaply, then have a cross-encoder model score each candidate against the query properly and keep the best 5. It costs a little latency and it is usually the largest single quality jump available after hybrid search.
+
+```python
+# pip install anthropic voyageai numpy
+import numpy as np, voyageai
+from anthropic import Anthropic
+
+vo, client = voyageai.Client(), Anthropic()
+
+chunks = [
+    "Credential recovery: use Forgot password on the sign-in page. The link expires after 30 minutes.",
+    "Billing: invoices are issued on the first of each month and charged to the card on file.",
+    "Data export: admins can export a workspace to CSV from Settings, Data, Export.",
+]
+
+# Embed once, at build time. Voyage returns unit-length vectors.
+index = np.array(vo.embed(chunks, model="voyage-3", input_type="document").embeddings)
+
+def answer(question: str) -> str:
+    q = np.array(vo.embed([question], model="voyage-3", input_type="query").embeddings[0])
+    scores = index @ q                      # unit vectors, so dot product IS cosine similarity
+    top = [chunks[i] for i in np.argsort(scores)[::-1][:2]]
+
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=300,
+        temperature=0,
+        system="Answer only from the context provided. If it is not there, say you do not know.",
+        messages=[{"role": "user", "content": "\n\n".join(top) + f"\n\nQuestion: {question}"}],
+    )
+    return resp.content[0].text
+
+print(answer("how do I reset my password"))
+```
+
+Three chunks and a numpy array is a real retrieval system. It has the same three moving parts as one serving ten million documents: chunk, embed, rank. Get those right at this size and the scaling later is an infrastructure problem, which is a kind of problem you already know how to solve.

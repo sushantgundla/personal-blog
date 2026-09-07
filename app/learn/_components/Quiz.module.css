@@ -1,0 +1,196 @@
+/* Quiz — retrieval practice at the foot of a lesson.
+
+   The right/wrong colours are declared as custom properties on .quiz and
+   overridden under :global(.light), which is the class next-themes puts
+   on <html>. That way one set of class names covers both themes and no
+   green or red is hardcoded into a rule that only reads well in the dark.
+   Everything else is a site token from app/globals.css. */
+
+.quiz {
+  --quiz-right: #35b37e;
+  --quiz-right-bg: rgba(53, 179, 126, 0.14);
+  --quiz-wrong: #f2604c;
+  --quiz-wrong-bg: rgba(242, 96, 76, 0.14);
+
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  padding-top: clamp(1.5rem, 3vw, 2rem);
+  border-top: 1px solid var(--outline-variant);
+}
+
+/* Darker, denser versions on the light theme, where the dark-mode greens
+   and reds wash out against a near-white page. */
+:global(.light) .quiz {
+  --quiz-right: #1c7a51;
+  --quiz-right-bg: rgba(28, 122, 81, 0.1);
+  --quiz-wrong: #b8382b;
+  --quiz-wrong-bg: rgba(184, 56, 43, 0.09);
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.qLabel {
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  margin-bottom: 0.5rem;
+}
+
+.qText {
+  font-size: clamp(1rem, 1.3vw, 1.125rem);
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--on-surface);
+  margin-bottom: 0.9rem;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ---- One option -------------------------------------------------- */
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.6rem;
+  background: var(--surface-container-low);
+  font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.option:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--surface-container);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Answered questions lock. The cursor says so, and the browser's default
+   50% fade is turned off — these options still have to be readable. */
+.option:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+/* The a/b/c/d key in front of each option. */
+.key {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.7;
+  color: var(--on-surface-variant);
+}
+
+/* ---- After the click --------------------------------------------- */
+
+.right {
+  border-color: var(--quiz-right);
+  background: var(--quiz-right-bg);
+  color: var(--on-surface);
+}
+
+.right .key {
+  color: var(--quiz-right);
+}
+
+.wrong {
+  border-color: var(--quiz-wrong);
+  background: var(--quiz-wrong-bg);
+  color: var(--on-surface);
+}
+
+.wrong .key {
+  color: var(--quiz-wrong);
+}
+
+/* The options that were neither picked nor correct: still legible, but
+   pushed back so the two marked rows carry the answer. */
+.muted {
+  color: var(--on-surface-variant);
+  background: transparent;
+}
+
+/* The tick or cross at the end of a marked row. */
+.mark {
+  margin-left: auto;
+  padding-left: 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.right .mark {
+  color: var(--quiz-right);
+}
+
+.wrong .mark {
+  color: var(--quiz-wrong);
+}
+
+/* ---- The explanation --------------------------------------------- */
+
+.explain {
+  margin-top: 0.75rem;
+  padding-left: 0.95rem;
+  border-left: 2px solid var(--outline-variant);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--on-surface-variant);
+}
+
+.explain:empty {
+  display: none;
+}
+
+/* ---- The score line ---------------------------------------------- */
+
+.score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: clamp(1.75rem, 4vw, 2.25rem);
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--outline-variant);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+
+.scoreValue {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}

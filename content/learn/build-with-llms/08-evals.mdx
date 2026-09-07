@@ -1,0 +1,145 @@
+---
+title: "Evals: proving it works"
+subtitle: "Replace vibes with a number that tells you whether your last prompt edit helped."
+part: 4
+minutes: 8
+why: "You tweak the prompt, try three examples in the playground, and it looks better. You ship. A week later someone reports a case that used to work. You have no idea when it broke, or whether the fix you are about to make will break something else. That is not a testing problem you can solve with more care - the same input gives different output, so your usual assertions do not hold. This lesson gives you the smallest thing that actually works: twenty real cases, three ways to grade them, and a number in CI that has to move the right way before you merge."
+wins:
+  - "Collect 20 real failing cases before you write any grader."
+  - "Grade with the cheapest method that fits: exact, code, then LLM judge."
+  - "Track a score you compare against last week, not a pass or fail."
+  - "Run evals in CI so a prompt edit shows up as a reviewable diff."
+  - "Move every production bug into the eval set the day you find it."
+quiz:
+  - q: "Why does the playground not count as evidence?"
+    options: ["Playground prompts use a different model", "It caches results between runs", "You tried a handful of cases you chose, once, and the output is not deterministic"]
+    answer: 2
+    explain: "A few self-selected cases run once tell you nothing about the cases you did not think of."
+  - q: "You have a day to start evals. What do you build?"
+    options: ["500 synthetic cases covering every scenario", "20 real cases from actual usage, with expected outcomes", "An LLM judge with a detailed rubric"]
+    answer: 1
+    explain: "Twenty real cases catch real failures immediately; synthetic volume mostly tests what you already imagined."
+  - q: "The task is extracting an invoice total as a number. Which grader?"
+    options: ["A deterministic check that the number equals the expected value", "An LLM judge scoring accuracy out of 10", "A human reviewing a sample each week"]
+    answer: 0
+    explain: "When there is one correct answer, compare it directly - it is free, fast and never wrong."
+  - q: "What is the main risk with LLM-as-judge?"
+    options: ["It is too slow to run in CI", "It has biases - it favours longer answers and its own style, so it needs calibrating against human labels", "It cannot read long outputs"]
+    answer: 1
+    explain: "A judge is a model with its own preferences, so you check it agrees with human judgement before trusting the score."
+  - q: "Your eval score goes from 71 to 78 percent after a prompt change. What does that mean?"
+    options: ["The prompt is now correct", "78 percent of users will be satisfied", "This change improved things on this set - ship it and keep watching"]
+    answer: 2
+    explain: "The absolute number is not meaningful on its own; the direction of change between runs is what you act on."
+deeper:
+  - { label: "Anthropic — test and evaluate", href: "https://docs.anthropic.com/en/docs/test-and-evaluate" }
+  - { label: "OpenAI — evals guide", href: "https://platform.openai.com/docs/guides/evals" }
+  - { label: "Zheng et al. — judging LLM-as-a-judge", href: "https://arxiv.org/abs/2306.05685" }
+---
+
+## 1. Why your testing instincts do not transfer
+
+You already know how to test software. That knowledge is half useful here and half actively misleading.
+
+The habits that break:
+
+- **Same input, same output.** Not true. Sampling means the same prompt can give different words each run — that was lesson 01. `assertEqual` on the whole response fails on a correct answer phrased differently.
+- **A test passes or fails.** Also not true. An answer can be right but too long, or right with one detail wrong. The useful signal is a score across many cases, not a boolean on one.
+- **Green means ship.** With a hundred percent on twenty cases, all you know is that those twenty work.
+- **Failures reproduce.** A case that fails one run in five is common. Judging a change off a single run will fool you.
+
+And the playground is worse than any of these. You try the cases you thought of, once, and you are the one deciding whether the output looks good — right after writing the prompt that produced it. That is not evidence. It is the feeling of evidence.
+
+What replaces it: a fixed set of inputs, a stored expected outcome for each, an automatic grader, and a score you compare against the last run.
+
+> You are not proving the system is correct. You are proving today's version is not worse than yesterday's. That is a lower bar, and it is the one that actually keeps you safe.
+
+## 2. Twenty real cases beat five hundred fake ones
+
+Start here, and resist the urge to build the framework first.
+
+Open your logs. Find real inputs — especially the ones that went wrong. For each, write down the input and what a good output would contain. Twenty is enough to start. Ten is enough to start.
+
+Why real beats synthetic: synthetic cases come out of your head, and your head already wrote the prompt. You generate the cases you designed for. Real traffic contains the empty field, the input in another language, the customer who pasted their whole email thread. Those are the ones that break you, and you will not invent them.
+
+Where to get cases:
+
+- Bug reports and support tickets. Every one is a case with a known-wrong answer.
+- Production logs, sampled — including the boring successes, so you notice when they stop.
+- Edge inputs you have already hit: empty, enormous, wrong language, wrong format, hostile.
+- One or two per feature you care about, so a change cannot silently kill one.
+
+A case is just a row: input, expected outcome, and how to grade it. JSON or YAML on disk is fine. Do not build a platform.
+
+Then keep it alive. **Every production bug becomes a case the day you find it.** That single habit is what makes the set get better instead of getting stale, and it is the whole reason the number stays meaningful six months from now.
+
+## 3. Three ways to grade, cheapest first
+
+Pick the cheapest grader that can tell right from wrong for that case. Most real eval sets use all three, per case.
+
+| Grader | How it works | Use for | Cost | Watch out |
+|---|---|---|---|---|
+| Exact / deterministic | Compare to the expected value | Classification, extraction, structured fields, ids | Free | Only works when one answer is correct |
+| Code assertion | Run a function over the output | Valid JSON, required fields present, cites a real chunk id, no PII, length limits | Free | Checks properties, not whether it is a good answer |
+| LLM judge | A second model scores against a rubric | Tone, summaries, helpfulness, open prose | Slow, paid | Biased; needs calibrating |
+
+**Exact.** If the task is "which category" or "what is the total", just compare. Make the model return structured output (lesson 03) and check the field. No cleverness needed, and the grader is never wrong.
+
+**Code assertions.** Most open-ended tasks still have properties you can check in code. Did it produce valid JSON. Are all required keys present. Is every cited chunk id one you actually sent — the grounding check from lesson 05. Is it under 200 words. Does it avoid the phrase you banned. These catch a surprising share of real regressions for zero cost.
+
+**LLM-as-judge.** For "is this summary good", you need a model. Give the judge the input, the output, a rubric, and ask for a score and a reason. It works, with caveats you must respect:
+
+- It prefers longer answers, and answers in its own style. Two outputs of equal quality can score differently on length alone.
+- Given two options in order, position affects the choice. Compare both orders if you are ranking.
+- A five-point scale drifts. Ask a specific question — "does this answer contain the refund window: yes or no" — and the judge gets much more reliable.
+- Calibrate it. Hand-label thirty outputs yourself, run the judge on the same thirty, and check it agrees. If it does not, the rubric is the problem, and until it agrees the score is decoration.
+
+```python
+import anthropic, json
+
+client = anthropic.Anthropic()
+cases = json.load(open("evals/cases.json"))   # [{"input": ..., "expect": ...}, ...]
+
+def judge(question, answer, expect):
+    # narrow yes/no question - far more stable than asking for a score out of 10
+    r = client.messages.create(
+        model="claude-sonnet-5", max_tokens=10,
+        system="Reply with exactly YES or NO. Nothing else.",
+        messages=[{"role": "user", "content":
+            f"Question: {question}\nAnswer: {answer}\n"
+            f"Does the answer contain this fact: {expect}"}],
+    )
+    return r.content[0].text.strip().upper() == "YES"
+
+passed = 0
+for c in cases:
+    out = my_app(c["input"])                       # the thing you are testing
+    ok = judge(c["input"], out, c["expect"])
+    if not ok:
+        print(f"FAIL {c['input'][:60]} -> {out[:120]}")
+    passed += ok
+
+score = passed / len(cases)
+print(f"score {score:.0%} ({passed}/{len(cases)})")
+```
+
+Print the failures, not just the score. The score tells you something moved; the failing outputs tell you what to fix.
+
+### Regression, not perfection
+
+Your score will not be 100 percent, and chasing that is a trap — the last few cases are usually ambiguous, and forcing them through warps the prompt for everything else.
+
+What matters is the direction between runs. 71 percent before a change, 78 after: ship it. 71 before, 64 after: revert, and read the four cases that broke. The absolute number is a baseline, not a grade.
+
+Two things make the comparison trustworthy. Set a low temperature for eval runs so noise drops. And when a change looks marginal, run it three times — a two-point move on twenty cases can easily be sampling.
+
+### Put it in CI
+
+An eval you run when you remember is an eval you stop running.
+
+- Trigger it on any pull request that touches a prompt, a tool schema, or the model id.
+- Post the score and the diff against `main` as a PR comment.
+- Fail the build on a drop past a threshold you choose — say three points.
+- Keep the failing outputs in the artifacts so a reviewer can read them.
+
+Now a prompt change is a normal code review. Someone can see that you rewrote a system prompt, that the score went from 74 to 79, and which two cases regressed. That is the whole point: prompts become code you can review, instead of text somebody edited and hoped about.

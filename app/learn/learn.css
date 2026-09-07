@@ -1,0 +1,563 @@
+/* ============================================================
+   LEARN — the course section
+   Short lessons, read top to bottom. The look is the main site's,
+   not the atlas's: every colour and font here resolves to a token
+   already defined in app/globals.css (--primary, the --surface-*
+   ramp, --on-surface, --outline-*, --font-body/display/mono), so
+   this section follows next-themes in both dark and light without
+   defining a palette of its own.
+
+   Everything is scoped under .learn-root, so nothing here can leak
+   into the rest of the site. This file is the only place the
+   section's visual language is written down — the page components
+   only ever reach for a class defined below.
+
+   Hard rule from the site owner: never a fixed pixel max-width.
+   The reading column is .measure, which is a min() of a character
+   measure and the viewport minus fluid gutters, so the layout
+   fills any window and never leaves grey bars at the sides.
+   ============================================================ */
+
+/* ============================================================
+   1. Root — surface, motion curve, and the ember glow at the top
+   ============================================================ */
+
+.learn-root {
+  /* One curve for the whole section, so every hover and lift feels
+     like one hand drew it. Same easing the main site uses for
+     .magnetic in globals.css. */
+  --learn-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* The fluid side gutter. Shared by .measure and the header/footer
+     rules so the chrome lines up with the text column at every
+     window size. */
+  --learn-gutter: clamp(1rem, 5vw, 6rem);
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+}
+
+/* A faint warm wash behind the top of the page — the site's ember,
+   turned right down. It sits behind everything (z-index: -1) and is
+   purely decorative, so it never touches contrast on the text. */
+.learn-root::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: min(60vh, 640px);
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 0%,
+    rgba(var(--primary-rgb), 0.09),
+    transparent 70%
+  );
+}
+
+/* ============================================================
+   2. The reading column
+   No max-width in px anywhere: min() picks the character measure
+   when there is room and the full viewport-minus-gutters when
+   there isn't.
+   ============================================================ */
+
+.learn-root .measure {
+  width: min(72ch, 100% - 2 * var(--learn-gutter));
+  margin-inline: auto;
+}
+
+/* A wider variant for grids of cards, which want more room than
+   running text does. Same rule, looser measure. */
+.learn-root .measure-wide {
+  width: min(104ch, 100% - 2 * var(--learn-gutter));
+  margin-inline: auto;
+}
+
+/* ============================================================
+   3. Chrome — the thin top bar and the footer line
+   ============================================================ */
+
+.learn-root .learn-top-bar {
+  flex: none;
+  border-bottom: 1px solid var(--outline-variant);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.learn-root .learn-top-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem var(--learn-gutter);
+}
+
+.learn-root .learn-top-link {
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.learn-root .learn-top-link:hover {
+  color: var(--primary);
+}
+
+.learn-root .learn-main {
+  flex: 1;
+  padding-block: clamp(2.5rem, 6vw, 5rem);
+}
+
+.learn-root .learn-footer {
+  flex: none;
+  border-top: 1px solid var(--outline-variant);
+  padding-block: 1.75rem;
+  margin-top: clamp(3rem, 8vw, 6rem);
+}
+
+.learn-root .learn-footer p {
+  font-size: 0.8125rem;
+  color: var(--on-surface-variant);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   4. Type — eyebrow, headline, lede
+   ============================================================ */
+
+/* The small uppercase label above a heading: a part name, a lesson
+   number, "404". Always the accent. */
+.learn-root .learn-eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+}
+
+.learn-root .learn-h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.9rem, 4.4vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--on-surface);
+  text-wrap: balance;
+}
+
+/* The italic line under the headline. Sized so it reads as a
+   subtitle, not a second heading. */
+.learn-root .learn-lede {
+  margin-top: 1rem;
+  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--on-surface-variant);
+  text-wrap: pretty;
+}
+
+/* An accent-coloured hairline, for separating a page header from
+   the list under it. Fades out to the right so it reads as a mark
+   rather than a full-width divider. */
+.learn-root .learn-rule {
+  border: none;
+  height: 1px;
+  margin-block: clamp(1.75rem, 4vw, 2.75rem);
+  background: linear-gradient(
+    to right,
+    rgba(var(--primary-rgb), 0.55),
+    var(--outline-variant) 30%,
+    transparent
+  );
+}
+
+/* Big, quiet section numbers — "01", "02" — beside a part heading. */
+.learn-root .learn-numeral {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  color: rgba(var(--primary-rgb), 0.65);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   5. The list row
+   One lesson, or one course, as a card. Resting state is nearly
+   flat; the accent only arrives on hover.
+   ============================================================ */
+
+.learn-root .learn-card {
+  display: block;
+  position: relative;
+  padding: clamp(1.1rem, 2.4vw, 1.6rem) clamp(1.1rem, 2.4vw, 1.75rem);
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.75rem;
+  background: var(--surface-container-low);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.25s var(--learn-ease), transform 0.25s var(--learn-ease),
+    background-color 0.25s var(--learn-ease), box-shadow 0.25s var(--learn-ease);
+}
+
+.learn-root .learn-card:hover {
+  border-color: var(--primary);
+  background: var(--surface-container);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 0 22px rgba(var(--primary-rgb), 0.1);
+}
+
+/* Keyboard users get the same treatment as the mouse, plus a real
+   focus ring — the border alone is too subtle to be a focus cue. */
+.learn-root .learn-card:focus-visible {
+  border-color: var(--primary);
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.learn-root .learn-card h2,
+.learn-root .learn-card h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.0625rem, 1.8vw, 1.25rem);
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  color: var(--on-surface);
+  transition: color 0.25s var(--learn-ease);
+}
+
+.learn-root .learn-card:hover h2,
+.learn-root .learn-card:hover h3 {
+  color: var(--primary);
+}
+
+.learn-root .learn-card p {
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--on-surface-variant);
+}
+
+/* ============================================================
+   6. The pill — "8 LESSONS", "7 MIN"
+   ============================================================ */
+
+.learn-root .learn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.25em 0.7em;
+  border: 1px solid var(--outline-variant);
+  border-radius: 9999px;
+  background: var(--surface-container);
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--on-surface-variant);
+}
+
+/* The accent variant, for the one fact worth highlighting on a row. */
+.learn-root .learn-pill-accent {
+  border-color: rgba(var(--primary-rgb), 0.4);
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+}
+
+/* ============================================================
+   7. The back link
+   ============================================================ */
+
+.learn-root .learn-back {
+  display: inline-block;
+  margin-top: 2rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.learn-root .learn-back:hover {
+  opacity: 0.75;
+}
+
+/* The 404 page's block. Roomy, so a wrong turn doesn't land
+   jammed against the header. */
+.learn-root .learn-missing {
+  padding-block: clamp(3rem, 12vh, 8rem);
+}
+
+/* ============================================================
+   8. .learn-prose — the lesson body
+   Typography for rendered MDX. Follows the same shape as the
+   article prose in app/(main)/articles/[slug]/prose.css, but on
+   the site tokens rather than the --prism-* ones. Note the list
+   rules restore markers and padding that the global
+   `* { margin: 0; padding: 0 }` reset in globals.css strips.
+   ============================================================ */
+
+.learn-root .learn-prose {
+  font-size: clamp(1rem, 1.1vw, 1.0625rem);
+  line-height: 1.85;
+  color: var(--on-surface-variant);
+}
+
+.learn-root .learn-prose > *:first-child {
+  margin-top: 0;
+}
+
+/* --- Headings ------------------------------------------------- */
+.learn-root .learn-prose h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--on-surface);
+  margin-top: 2.75rem;
+  margin-bottom: 1rem;
+  scroll-margin-top: 5rem;
+}
+
+.learn-root .learn-prose h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.125rem, 1.8vw, 1.3rem);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--on-surface);
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 5rem;
+}
+
+.learn-root .learn-prose h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  color: var(--on-surface);
+  margin-top: 1.9rem;
+  margin-bottom: 0.6rem;
+}
+
+/* --- Body copy -------------------------------------------------- */
+.learn-root .learn-prose p {
+  margin-bottom: 1.35rem;
+}
+
+.learn-root .learn-prose strong {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.learn-root .learn-prose em {
+  font-style: italic;
+}
+
+.learn-root .learn-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(var(--primary-rgb), 0.4);
+  transition: text-decoration-color 0.2s ease, opacity 0.2s ease;
+}
+
+.learn-root .learn-prose a:hover {
+  text-decoration-color: currentColor;
+  opacity: 0.85;
+}
+
+/* --- Lists -------------------------------------------------------- */
+.learn-root .learn-prose ul {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin-bottom: 1.35rem;
+}
+
+.learn-root .learn-prose ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+  margin-bottom: 1.35rem;
+}
+
+.learn-root .learn-prose li {
+  margin-bottom: 0.5rem;
+}
+
+.learn-root .learn-prose li::marker {
+  color: rgba(var(--primary-rgb), 0.7);
+}
+
+.learn-root .learn-prose li > ul,
+.learn-root .learn-prose li > ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+
+/* --- Blockquote ----------------------------------------------------- */
+.learn-root .learn-prose blockquote {
+  border-left: 2px solid var(--primary);
+  padding-left: 1.25rem;
+  margin: 1.75rem 0;
+  font-style: italic;
+  color: var(--on-surface-variant);
+}
+
+.learn-root .learn-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Rule ----------------------------------------------------------- */
+.learn-root .learn-prose hr {
+  border: none;
+  height: 1px;
+  background: var(--outline-variant);
+  margin: 2.5rem 0;
+}
+
+/* --- Images --------------------------------------------------------- */
+.learn-root .learn-prose img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.75rem;
+  margin: 1.75rem 0;
+}
+
+/* --- Tables ---------------------------------------------------------
+   The scrolling belongs to the .tableScroll wrapper in mdx.module.css,
+   not to the table itself: `display: block` here would stop the table
+   sizing its own columns and leave them all hugging their text. The
+   min-width is what makes a narrow phone scroll rather than crush three
+   columns into four characters each.
+
+   No boxes and no zebra stripes — just a rule under the head and one
+   between rows, so the table reads like the rest of the prose. */
+.learn-root .learn-prose table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  margin: 1.75rem 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.learn-root .learn-prose th,
+.learn-root .learn-prose td {
+  padding: 0.75em 1.1em;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* The header row is a label, not a sentence: same small uppercase
+   display type as .learn-eyebrow, just tracked a little tighter so a
+   two-word column heading stays readable. */
+.learn-root .learn-prose thead th {
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+  padding-bottom: 0.6em;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.learn-root .learn-prose tbody tr + tr td {
+  border-top: 1px solid var(--outline-variant);
+}
+
+.learn-root .learn-prose tbody td {
+  color: var(--on-surface-variant);
+}
+
+/* First column carries the thing being described, so it reads as the
+   row's own label. */
+.learn-root .learn-prose tbody td:first-child {
+  color: var(--on-surface);
+}
+
+/* The padding is inside the cells; the outer edges sit flush with the
+   text column above and below. */
+.learn-root .learn-prose th:first-child,
+.learn-root .learn-prose td:first-child {
+  padding-left: 0;
+}
+
+.learn-root .learn-prose th:last-child,
+.learn-root .learn-prose td:last-child {
+  padding-right: 0;
+}
+
+/* --- Inline code & code blocks --------------------------------------- */
+.learn-root .learn-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  padding: 0.12em 0.4em;
+  border-radius: 4px;
+  color: var(--on-surface);
+}
+
+.learn-root .learn-prose pre {
+  font-family: var(--font-mono);
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.75rem;
+  padding: clamp(1rem, 2.4vw, 1.4rem);
+  overflow-x: auto;
+  margin: 1.75rem 0;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.learn-root .learn-prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--on-surface);
+}
+
+/* ============================================================
+   9. Reduced motion — one block, kills every transition above
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-root *,
+  .learn-root *::before,
+  .learn-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The lift specifically: the card still changes border colour on
+     hover, it just doesn't move. */
+  .learn-root .learn-card:hover {
+    transform: none;
+  }
+}

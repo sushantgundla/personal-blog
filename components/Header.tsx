@@ -8,6 +8,7 @@ import { siteConfig } from '@/lib/config'
 
 const navLinks = [
   { href: '/articles', label: 'Articles' },
+  { href: '/learn', label: 'Learn' },
   { href: '/projects', label: 'Projects' },
   { href: '/radar', label: 'Radar' },
   { href: '/about', label: 'About' },
