@@ -1,0 +1,12 @@
+{
+  "title": "Prompt Engineering",
+  "subtitle": "Instructions that hold up in production.",
+  "blurb": "Past the tricks. How instructions actually land, which techniques survive contact with real traffic, how to validate what comes back, and how to stop a prompt edit from quietly breaking last week's behaviour.",
+  "order": 3,
+  "parts": [
+    { "n": 1, "name": "How instructions land" },
+    { "n": 2, "name": "Techniques that hold up" },
+    { "n": 3, "name": "Making it reliable" },
+    { "n": 4, "name": "Keeping it working" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "title": "RAG",
+  "subtitle": "Retrieval that actually retrieves.",
+  "blurb": "Your answer can never be better than what you retrieved. Embeddings, vector stores, chunking, hybrid search and reranking — the whole pipeline, and how to tell which part of it is letting you down.",
+  "order": 4,
+  "parts": [
+    { "n": 1, "name": "Embeddings" },
+    { "n": 2, "name": "Storing vectors" },
+    { "n": 3, "name": "Retrieval" },
+    { "n": 4, "name": "Proving it works" }
+  ]
+}

@@ -1,0 +1,127 @@
+---
+title: "The system prompt and the user turn"
+subtitle: "Which half of the request is the frame, and which half is the job."
+part: 1
+minutes: 7
+why: "You have one long user message doing everything — the rules, the examples, the pasted document and the actual question, all in one block. It works, roughly, until a user's own text argues with your rules and wins, or until you notice you are paying full price for the same 2,000 tokens of instructions on every single call. The split between the system prompt and the user turn is not cosmetic. This lesson shows what actually changes when you move a line across that boundary, and what it costs you to leave it on the wrong side."
+wins:
+  - "Put every rule that is true on every call in the system prompt."
+  - "Keep the system prompt byte-identical between calls so prompt caching can reuse it."
+  - "Treat the messages list as an array you own, not an append-only log."
+  - "Remember the model's own earlier replies are examples it will copy."
+  - "Never treat the system prompt as a security boundary."
+quiz:
+  - q: "The system prompt tends to be followed more reliably than the same text in a user turn because..."
+    options: ["A separate model processes it first", "Models are post-trained to treat it as standing operator instruction, and it always sits at the front of the context", "It skips the tokenizer and is passed in as structured data"]
+    answer: 1
+    explain: "It is a strong learned prior plus a fixed position at the head of every request — not a different code path."
+  - q: "Putting your fixed rules in the user turn, after the pasted data, costs you..."
+    options: ["Nothing measurable, it is equivalent", "Only readability", "The prompt cache — the reusable prefix changes on every call"]
+    answer: 2
+    explain: "Caching matches an exact prefix, so anything variable in front of your stable text makes it unreusable."
+  - q: "You told the model to stop using bullets at turn 6 and it is bulleting again by turn 9. The best fix is..."
+    options: ["Move the rule to the system prompt and clear the bulleted history", "Repeat the instruction in capitals every turn", "Lower the temperature to 0"]
+    answer: 0
+    explain: "Five earlier bulleted replies are a stronger demonstration than one sentence asking for something else."
+  - q: "Earlier turns keep influencing the answer because..."
+    options: ["The provider keeps a session keyed to your API key", "Your code resends the whole history, so every earlier turn competes again on every call", "The model updates its weights as the conversation goes on"]
+    answer: 1
+    explain: "The API is stateless — the conversation exists only in the messages array you send each time."
+  - q: "The safe way to think about system-prompt rules and untrusted user text is..."
+    options: ["The API enforces system rules over user content", "User-supplied text cannot contain instructions the model will act on", "The system prompt is a strong prior, not a guarantee — validate what comes back"]
+    answer: 2
+    explain: "Text that looks like an instruction can still steer the model, whichever slot it arrived in, so the check has to happen in your code."
+deeper:
+  - { label: "Anthropic — system prompts", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts" }
+  - { label: "Anthropic — prompt caching", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching" }
+  - { label: "Anthropic — Messages API reference", href: "https://docs.anthropic.com/en/api/messages" }
+  - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
+---
+
+The Messages API gives you a `system` parameter sitting beside the `messages` list, and it is easy to read that as tidiness — a place to put the boilerplate. It is more than that. Moving a line across that boundary changes how much weight it carries, whether it survives a long conversation, and what you pay for it.
+
+## 1. Two slots doing two different jobs
+
+Mechanically, everything ends up as one flat sequence of tokens. `build-with-llms` lesson 1 makes that point and it stays true here. But "it is all tokens in the end" does not mean the slots are interchangeable, for three reasons.
+
+**Position.** The system prompt is at the very front of the context, on every single call, ahead of the whole conversation. As a chat grows, a rule you typed into turn 2 slides further and further back behind newer text. A rule in the system prompt never moves.
+
+**Training.** Models are post-trained on data where the system prompt is the operator's standing instruction and the user turn is the request being served. That is a learned prior, and it is a strong one: when the two conflict, the system prompt usually wins.
+
+**Stability.** The system prompt is the same bytes on every call, which is exactly what prompt caching needs.
+
+Say the honest version of the second point out loud, because it gets oversold: *usually* wins is not *always* wins. There is no enforcement in the API. A user message containing convincing instructions can still steer the model. Treat the system prompt as a reliable default, never as a security boundary — if a wrong answer would be expensive, check the answer in your code.
+
+The practical split is about what changes:
+
+| Goes in the system prompt | Goes in the user turn |
+|---|---|
+| Who it is and what job it does | The specific request, this time |
+| Rules that are true on every call | The data for this one call |
+| The output format and the field names | The one variable question |
+| Few-shot examples | The user's own words, unedited |
+| Tone and register | Anything that changes per call |
+| What to do when the answer is not in the source | |
+
+There is a second reason to keep rules out of the user turn, separate from caching. A rule that arrives in a user message reads as *this request's preference*. The next user message can talk it out of that. A rule in the system prompt reads as policy, and policy is harder to argue with.
+
+> Anything you would be annoyed to see change between calls belongs in the system prompt.
+
+## 2. The stable half is the half you stop paying for
+
+Prompt caching lets the provider reuse the work it already did on a prefix of your request. The match is on an **exact prefix** — same tokens, same order, from the very start. That single detail decides your whole layout.
+
+Put 2,000 tokens of rules and examples at the front, unchanged on every call, and they are cacheable. Put the user's document in front of them and nothing is: the prefix is different every time, so the reusable part starts and ends nowhere.
+
+| Layout | Cacheable prefix | Result |
+|---|---|---|
+| System: rules + examples. User: document + question. | The whole system prompt | Reads from cache on later calls |
+| User: rules + document + question, all in one block | Nothing stable at the front | Full price, every call |
+| System: rules. User: question + rules repeated "for emphasis" | The system prompt only | The repeat is pure cost and adds nothing |
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+SYSTEM = """You write release notes for a developer tool.
+One line per user-visible change. Plain past tense. No bullets, no headings.
+If a change has no user-visible effect, omit it entirely."""
+
+resp = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=500,
+    temperature=0,
+    # A list of blocks, not a plain string, so the stable part can be cached.
+    system=[{
+        "type": "text",
+        "text": SYSTEM,
+        "cache_control": {"type": "ephemeral"},
+    }],
+    messages=[{"role": "user", "content": "fix(auth): correct token expiry check"}],
+)
+
+print(resp.content[0].text)
+print(resp.usage)  # cache_creation_input_tokens, then cache_read_input_tokens
+```
+
+Two things worth knowing before you rely on this. There is a minimum length below which a prefix will not be cached, and it differs by model — check the caching docs rather than trusting a number you read somewhere. And the cache entry expires, so a low-traffic endpoint may miss most of the time. Read `usage` on real traffic instead of assuming; the two counters above tell you exactly what happened.
+
+## 3. Multi-turn: the history argues back
+
+The API is stateless. Your code resends the entire conversation on every turn, so the model re-reads all of it, every time. That has a consequence people find genuinely surprising: **your latest instruction is competing with everything said earlier, including things the model itself said.**
+
+Its own past replies are the strongest signal in the box. They are few-shot examples, whether you meant them that way or not. Nine turns of bulleted answers teach it that this conversation produces bullets, and one sentence at turn 6 asking it to stop is outnumbered.
+
+| What you see | What is actually happening | What to do |
+|---|---|---|
+| A formatting rule you gave mid-chat decays after a few turns | Earlier assistant messages demonstrate the old format | Move the rule to the system prompt, and drop the old replies from the array |
+| It keeps citing a document the user replaced two turns ago | Both versions are in the history and both read as current | Remove the superseded turn before sending |
+| A correction works once, then reverts | One corrective sentence against many contrary examples | Edit the offending assistant message, or start a fresh conversation |
+| Long chats drift in tone | Register is being set by accumulated history, not by your prompt | Pin the register in the system prompt, where it cannot scroll away |
+
+The fix in every row is the same underlying move, and it is the one thing chat interfaces train you out of: **the `messages` list is an array you construct, not a log you append to.** You are free to delete a superseded turn, rewrite a bad assistant reply into the answer you wanted, collapse ten turns into one summary message, or throw the history away and send the current state as a single fresh turn. None of that is cheating. It is the only place the conversation exists.
+
+One caution: editing history invalidates the cache from the edit point onward, and it can confuse the user if the visible transcript and the sent transcript disagree. Keep the two in sync, or keep the differences deliberate and small.
+
+Next: what to do when describing the output still is not landing — showing it instead.

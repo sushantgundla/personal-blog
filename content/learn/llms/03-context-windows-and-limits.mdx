@@ -1,0 +1,121 @@
+---
+title: "Context windows and their limits"
+subtitle: "The window is a hard ceiling, and filling it is neither free nor harmless."
+part: 1
+minutes: 7
+why: "Your app worked, then a long conversation blew up with an error about tokens, so you moved to a model with a much bigger window and considered the matter closed. It was not. The bill went up, the answers got slower, and on long documents the model started missing facts that were definitely in the prompt. A bigger window raises the ceiling and nothing else. This lesson shows you what has to fit inside it, why the middle of a long prompt is the worst place to put anything, and the handful of moves that make a long context both cheap and reliable."
+wins:
+  - "Reserve room for the answer — output shares the window with everything you sent."
+  - "Put your instruction at the start or the end, never buried in the middle."
+  - "Retrieve the relevant passages instead of pasting the whole corpus."
+  - "Cache a long fixed prefix, and keep everything that changes after it."
+  - "Plant a fact at different positions and test recall before you trust a long prompt."
+quiz:
+  - q: "The context window is a ceiling on..."
+    options: ["The input tokens only", "The number of turns in a conversation", "Input and output together, measured in tokens"]
+    answer: 2
+    explain: "Everything you send plus everything the model generates has to fit, which is why max_tokens has to be reserved out of the same budget."
+  - q: "`Lost in the middle` describes the finding that..."
+    options: ["Facts in the middle of a long context are recalled less reliably than ones near the start or the end", "The provider truncates the middle of an oversized prompt", "Tokens in the middle of a request are billed at a higher rate"]
+    answer: 0
+    explain: "Position within the context measurably affects retrieval, and the middle is the weakest position."
+  - q: "Prompt caching pays off most when..."
+    options: ["Every request is completely different", "A long prefix is byte-identical across many requests", "The answers are unusually long"]
+    answer: 1
+    explain: "It is a prefix cache — the saving comes from re-reading work the provider already did, so identical repeated prefixes are the whole win."
+  - q: "You move from a large window to a much larger one and accuracy on your long-document task does not improve. The most likely reason is..."
+    options: ["The larger window needs a newer API version", "Caching was silently switched off", "More context is not better context — the passage that matters still competes with everything around it"]
+    answer: 2
+    explain: "Capacity was never the constraint; what the model attends to inside that capacity is."
+  - q: "You send more tokens than the window allows. What happens?"
+    options: ["The API returns an error — it does not quietly drop the oldest tokens", "The oldest messages are dropped for you", "The response is cut short at max_tokens"]
+    answer: 0
+    explain: "Deciding what to drop is your job, so the request is rejected rather than silently changed."
+deeper:
+  - { label: "Anthropic — context windows", href: "https://docs.anthropic.com/en/docs/build-with-claude/context-windows" }
+  - { label: "Anthropic — prompt caching", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching" }
+  - { label: "Lost in the Middle (Liu et al., 2023)", href: "https://arxiv.org/abs/2307.03172" }
+  - { label: "Anthropic — models overview", href: "https://docs.anthropic.com/en/docs/about-claude/models" }
+---
+
+The window is the one hard limit in the whole system. Everything else degrades gracefully; this one returns an error. It is also the number people most often treat as a quality setting, and it is not one. This lesson is about living inside it well. Tokens themselves are covered in lesson 1 of the *Build with LLMs* course, so this assumes you already count in them.
+
+## 1. What has to fit, and what happens when it does not
+
+The **context window** is a token budget for a single request. Not for a conversation, not for a day — for one call. And a lot of things you do not think of as "the prompt" are inside it.
+
+| What is in the window | Billed as | Worth knowing |
+|---|---|---|
+| System prompt | Input | Resent on every single turn |
+| Tool definitions | Input | Schemas get large faster than you expect |
+| Conversation history | Input | Grows every turn, and never shrinks on its own |
+| Retrieved documents | Input | Usually the biggest slice by far |
+| The new user message | Input | Rarely the problem |
+| Thinking tokens | Output | Only if extended thinking is on |
+| The answer | Output | You must reserve `max_tokens` for it |
+
+Frontier windows are in the hundreds of thousands of tokens, and some models offer around a million. Exact figures move with every release, so read them off the provider's model page rather than off anything written down — including this.
+
+When the total exceeds the window, the API returns an error. It does not quietly drop your oldest messages, because deciding what is safe to lose is a product decision and only you can make it. So you need a policy before a user finds the edge for you: drop old turns, summarise them into a single message, or retrieve only the parts that matter. Pick one deliberately.
+
+## 2. A bigger window is not a free upgrade
+
+Moving to a larger window costs you five things, and buys you one.
+
+**You pay for every token, every turn.** A 100,000-token prompt costs the same whether the answer needed all of it or 400 tokens of it. On a chat endpoint you pay that again on the next turn.
+
+**Latency goes up before generation even starts.** Time-to-first-token is mostly the model reading your input. A very long prompt shows the user a blank screen for a noticeably long time.
+
+**Attention work grows with the square of the length.** That is lesson 1 of this course. Serving tricks blunt it, but the direction holds.
+
+**Position matters, and the middle is the weakest position.** With a lot of context, models retrieve information placed near the beginning or the end more reliably than the same information placed halfway through. This was named *lost in the middle* by Liu and colleagues in 2023, and while newer models handle it far better, the effect has not gone away. A fact you buried in chunk 14 of 30 is the fact most likely to be missed.
+
+**Irrelevant text is not neutral.** It competes for attention and pulls the answer toward itself. Adding a document that does not help can make the answer worse, not merely more expensive.
+
+What you buy is headroom. That is genuinely valuable — it means a long PDF fits at all — but it is capacity, not accuracy.
+
+> A bigger window raises the ceiling. It does not raise the accuracy. What you put in the window still decides the answer.
+
+## 3. Working well inside it
+
+Five moves, in the order they pay.
+
+**Put the instruction where it will be seen.** Start or end, never the middle. The shape that holds up across models is: short instruction first, documents in the middle, then the specific question repeated at the end. Repeating it costs a few dozen tokens and is the cheapest reliability fix on this list.
+
+**Retrieve rather than paste.** Ten relevant paragraphs beat the whole handbook, on cost, on latency, and on accuracy at the same time. The *Build with LLMs* course covers how to build that retrieval step; the point here is that a big window is not a reason to stop doing it.
+
+**Order what you retrieve.** If you have a relevance score, put the strongest evidence first or last rather than in the order the database returned it. And use fewer chunks than feels safe — a `top_k` of 20 is usually 15 chunks of noise.
+
+**Reserve output space, deliberately.** Set `max_tokens` to what the answer actually needs, and remember it is subtracted from the same budget. Running out of room mid-answer produces a truncated response, not an error.
+
+**Cache the part that never changes.** If the first several thousand tokens of every request are identical — a system prompt, tool schemas, a fixed policy document — prompt caching lets the provider reuse the processing it already did. A cache read costs a fraction of a normal input token and returns faster. Four rules make it work:
+
+- It is a **prefix** cache. Everything before your cache breakpoint must be byte-identical, so a timestamp or a user name near the top destroys the whole saving.
+- Order matters: **stable content first, volatile content last.**
+- Cache entries expire in minutes, so it pays on traffic, not on an occasional call.
+- Writing the cache costs slightly *more* than a plain input token, so a prefix used once is a small loss.
+
+**Then measure, rather than assume.** Take a real long prompt, plant a fact you can check at the start, the middle and the end, and ask for it. Do it on the model you actually use. Ten minutes of that tells you more about your window than any published context length.
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+HANDBOOK = open("handbook.md").read()   # long, and identical on every request
+
+resp = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=500,
+    system=[
+        {"type": "text", "text": "Answer only from the handbook below."},
+        {"type": "text", "text": HANDBOOK, "cache_control": {"type": "ephemeral"}},
+    ],
+    messages=[{"role": "user", "content": "How much notice do I have to give?"}],
+)
+
+u = resp.usage
+print("written:", u.cache_creation_input_tokens, "read:", u.cache_read_input_tokens)
+```
+
+Run it twice. The first call writes the cache and the second reads it, and you will see `cache_read_input_tokens` jump while the cost of that slice collapses. Change one character above the breakpoint and it drops back to zero — which is the fastest way to learn what byte-identical means in practice.

@@ -1,0 +1,129 @@
+---
+title: "Base, instruct, and reasoning models"
+subtitle: "Three different products wearing one word on the label. Picking the wrong one costs money and quality."
+part: 1
+minutes: 7
+why: "You downloaded a model called something-7b, sent it a polite instruction, and got back a page of unrelated waffle — so you assumed the model was bad. Or you switched a ticket classifier onto the reasoning model because it was the smart one, watched the bill triple, and the labels did not improve. Both are the same mistake: three genuinely different products are sold under the single word model. This lesson tells them apart, so you stop paying for thinking you do not need and stop blaming a model for a job it was never built to do."
+wins:
+  - "Default to an instruct model — a base model does not follow instructions at all."
+  - "Turn thinking on for multi-step work, and off for extraction, labelling, and rewriting."
+  - "Budget thinking tokens explicitly — they are billed as output and they fill the window."
+  - "Measure the accuracy gain before you leave reasoning switched on; often there is none."
+  - "Try `think it through step by step` on a plain instruct model first — far cheaper."
+quiz:
+  - q: "You send `Summarise this article` to a base model. The most likely result is..."
+    options: ["A refusal, because base models are heavily safety-tuned", "More text in the same style — perhaps more instructions — rather than a summary", "A summary, but with the formatting broken"]
+    answer: 1
+    explain: "A base model continues the text it was given; a line that looks like an instruction is usually followed by more instructions, not by obedience."
+  - q: "Instruction following comes from..."
+    options: ["Post-training on demonstrations and ranked preferences", "A larger parameter count", "The system prompt on its own"]
+    answer: 0
+    explain: "Supervised fine-tuning plus preference tuning is what turns continue this into do this; nothing about size gives you that."
+  - q: "Reasoning tokens are..."
+    options: ["Free, since the provider usually hides them from you", "Billed at the cheaper input rate", "Billed as output tokens, and they count against the context window"]
+    answer: 2
+    explain: "The model generates them one at a time exactly like any other output, so you pay the output rate and they take up room."
+  - q: "The task where a reasoning model is most likely to be pure waste is..."
+    options: ["Scheduling around several conflicting constraints", "Labelling support tickets as billing, bug, or other", "Working out why a race condition happens from a stack trace"]
+    answer: 1
+    explain: "There are no intermediate steps to get right — the answer is essentially read off the input, so the extra tokens buy nothing."
+  - q: "Before switching to a reasoning model, the cheapest thing to try is..."
+    options: ["Raising temperature for more variety", "Doubling max_tokens", "Asking a plain instruct model to work through the problem step by step"]
+    answer: 2
+    explain: "Prompted step-by-step working captures a good share of the gain for a fraction of the tokens, and it costs one sentence to test."
+deeper:
+  - { label: "Anthropic — extended thinking", href: "https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking" }
+  - { label: "Training language models to follow instructions with human feedback (InstructGPT)", href: "https://arxiv.org/abs/2203.02155" }
+  - { label: "Direct Preference Optimization", href: "https://arxiv.org/abs/2305.18290" }
+  - { label: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models", href: "https://arxiv.org/abs/2201.11903" }
+---
+
+Open any model catalogue and everything in it is called a model. Three of the things in that list are not the same kind of product, and the gap between them is larger than the gap between two models from different labs. Telling them apart is a five-minute skill that saves you both money and a wasted afternoon blaming the wrong thing.
+
+## 1. A base model completes text — it does not take orders
+
+A base model is the raw output of pre-training. Its one skill is continuing whatever you hand it.
+
+Send it `Write a haiku about rain` and a very plausible continuation is `Write a sonnet about snow. Write a limerick about the sea.` — because on the open internet, a line that looks like a writing prompt is usually followed by more writing prompts. It is not refusing. It is not broken. You are not talking to it; you are giving it a prefix and asking what usually comes next.
+
+You steer a base model by shaping the prefix so that the thing you want *is* the natural continuation. To translate, you do not ask for a translation — you write `English: the cat is asleep` followed by `French: le chat dort`, then a second `English:` line with your real sentence and a bare `French:` at the end, and let it complete the pattern.
+
+That works. It is also the entire interface, and it is why nobody builds a product this way any more.
+
+Where you meet base models:
+
+- **Open-weight releases**, where the base and instruct variants ship side by side. Look for `-base`, `-pt`, or `pretrained` in the name, and read the model card rather than guessing from the name.
+- **As a starting point for your own fine-tune**, when you want to install your own behaviour rather than inherit someone else's.
+- **In research**, where instruction tuning would contaminate what is being measured.
+
+The frontier closed providers largely do not sell base models at all. If you are calling an API, you almost certainly have an instruct model — which is why running into a base model by accident is usually an open-weights experience, and usually confusing for about twenty minutes.
+
+## 2. An instruct model was taught to follow — and that teaching is post-training
+
+Take the base model and run it through post-training and you get the thing everyone actually calls a model.
+
+Two stages do the work. **Supervised fine-tuning** shows it thousands of written examples of a request and a good answer, so continuing the text and doing what was asked start to coincide. Then **preference tuning** shows it pairs of candidate answers with a judgement about which is better, and pushes the weights toward the preferred one. That second stage goes by several names — RLHF (reinforcement learning from human feedback) with human raters and a separate reward model, DPO (direct preference optimization) which reaches the same place without the reward model, or AI-feedback methods where a model applies a written set of rules instead of a human rating every pair.
+
+The mechanics differ. The result is the same shape:
+
+| What post-training adds | What it costs you |
+|---|---|
+| Follows an instruction instead of continuing it | Some raw variety and range in generation |
+| Holds a role and a format across a conversation | A pull toward agreeing with whatever you assert |
+| Stops when the answer is finished | Refusals on some legitimate work near a boundary |
+| Refuses some categories of request | A house style that is not always the one you want |
+| Uses tools and returns structured output | Behaviour that can shift between model versions |
+
+This is the default, and it is what a doc means when it says *the model* with no qualifier. It should also be your default. Everything else in this lesson is a deviation from it that you should have to justify.
+
+## 3. A reasoning model buys accuracy with tokens
+
+Same machinery again, post-trained to do something specific: generate a long run of intermediate working before it commits to an answer. Providers call this **extended thinking** or **reasoning tokens**. The working is often hidden from you or returned only as a summary, but it is generated one token at a time exactly like any other output — so you pay for it at the output rate, and it takes up room in the context window.
+
+What that buys, and only this: problems where getting step three wrong ruins the answer, and where checking your own work partway through helps. Multi-step maths. Competitive-programming-shaped code. Planning against several constraints that interact. Debugging from indirect evidence. Careful analysis where a document has rules that qualify each other.
+
+What it costs: often several times the output tokens, and seconds to minutes of extra latency. On a task with no steps, that is spent for nothing.
+
+| The task | Reach for | Because |
+|---|---|---|
+| Classify, label, route, tag | Instruct model, no thinking | There are no intermediate steps to get right |
+| Pull fields out of a document | Instruct model, no thinking | The answer is read off the input |
+| Rewrite, translate, change the tone | Instruct model, no thinking | Style work does not decompose into steps |
+| Summarise | Instruct model, no thinking | Length is the challenge, not depth |
+| Multi-step maths or logic | Reasoning, modest budget | An early slip changes the final answer |
+| Non-trivial code and debugging | Reasoning, modest budget | Working through cases genuinely helps |
+| Planning with conflicting constraints | Reasoning, larger budget | It has to hold several rules at once |
+| Continuing text in a fixed style | Base model, or an instruct model with examples | Instruction following is not what you need |
+
+> A base model continues your text. An instruct model does what you asked. A reasoning model thinks first, and bills you for the thinking.
+
+Two things have changed how this looks in practice. Thinking is increasingly a **toggle with a token budget on an ordinary model**, rather than a separate model you switch to — so the decision is per request, not per deployment, and you can turn it on for the hard ten percent of your traffic. And a large thinking budget on an easy task can actually be *worse*, not just wasteful, because the model talks itself out of a correct first instinct.
+
+So the working rule: start on the instruct model, temperature 0, no thinking. Find the requests that fail. Turn thinking on for those, with the smallest budget that fixes them, and confirm on a test set that it actually did.
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+question = "A shop sells pens only in packs of 7 and packs of 12. What is the largest number of pens you cannot buy exactly?"
+
+# Straight answer: no thinking tokens, cheap and fast.
+plain = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=500,
+    messages=[{"role": "user", "content": question}],
+)
+
+# Same model, told to work first. The budget caps what you pay for the working.
+thought = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=4000,                                          # must exceed the budget
+    thinking={"type": "enabled", "budget_tokens": 2000},
+    messages=[{"role": "user", "content": question}],
+)
+
+print(plain.usage.output_tokens, "vs", thought.usage.output_tokens)
+```
+
+Run that on one of your own tasks rather than on a puzzle. If the output-token count goes up several times and the answers do not get better, you have your decision, and it took one script to reach instead of one invoice.

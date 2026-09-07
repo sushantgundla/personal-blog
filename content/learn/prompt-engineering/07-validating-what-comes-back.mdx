@@ -1,0 +1,134 @@
+---
+title: "Validating what comes back"
+subtitle: "Treat every response as an untrusted body, and catch the wrong answer before it reaches your database."
+part: 3
+minutes: 7
+why: "You added an output contract in lesson 6 and the parsing errors stopped, so you moved on. Then a row appeared in your database with an urgency of 11 on a one-to-five scale, assigned to an engineer who left last year, quoting a sentence that is nowhere in the source document. Nothing threw. The JSON was perfect. This lesson closes that gap: the checks that a schema cannot do for you, sorted by the kind of wrongness they catch, and the one logging habit that stops you debugging blind."
+wins:
+  - "Validate every response at the boundary, the same way you validate an HTTP body."
+  - "Check what the schema cannot: enum membership, ranges, and ids that exist in your data."
+  - "Separate malformed, wrong, and fabricated output — each needs a different response."
+  - "When the answer must come from a document, verify the quoted span is really in it."
+  - "Log the raw output on every validation failure, or you will be guessing."
+quiz:
+  - q: "Your Pydantic model parses the response with no error. What has that proved?"
+    options: ["That the answer is correct", "That the output has the right fields and types — nothing about whether it is true", "That the model did not fabricate anything"]
+    answer: 1
+    explain: "A schema is a check on shape. It has no view on whether the content is right."
+  - q: "The model returns valid JSON with an owner of dave, and nobody called Dave works here. That failure is..."
+    options: ["Malformed output", "A bug in your schema", "Well-formed but fabricated — the schema has no way to check a name against your data"]
+    answer: 2
+    explain: "The value is the right type and the right shape; only a lookup against your own records can catch it."
+  - q: "A summary quotes a sentence that is not in the document you supplied. The cheapest check is..."
+    options: ["Asking a second model whether the quote is genuine", "Searching for the quoted span in the source text and rejecting the response if it is absent", "Lowering the temperature"]
+    answer: 1
+    explain: "A substring search costs nothing and catches an invented quote outright."
+  - q: "Validation fails in production and the one thing you did not log was..."
+    options: ["The token count", "The request id", "The raw model output — so you cannot see what it actually returned"]
+    answer: 2
+    explain: "Without the raw text you are debugging a failure you cannot see, and the input rarely reproduces it."
+  - q: "A value of 11 arrives in a field documented as one to five. The right place to catch it is..."
+    options: ["A range constraint in the validator at your boundary", "A sentence in the prompt asking for a number between one and five", "A try/except around the code that later uses the value"]
+    answer: 0
+    explain: "The prompt is a request and the try/except is too late; the boundary check is the only place that reliably rejects it."
+deeper:
+  - { label: "Pydantic — documentation", href: "https://docs.pydantic.dev/latest/" }
+  - { label: "Zod — documentation", href: "https://zod.dev/" }
+  - { label: "Anthropic — tool use", href: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use" }
+  - { label: "Anthropic — reduce hallucinations", href: "https://docs.anthropic.com/en/docs/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" }
+---
+
+Lesson 6 made the shape a contract. That was worth doing, and it fixed the class of bug where you were pulling JSON out of a fenced code block with a regex. It did not make the content true. This lesson is about everything that is still wrong after the parse succeeds.
+
+## 1. Three kinds of wrong, and why you must tell them apart
+
+Engineers tend to have one bucket labelled "the model failed". That is too coarse to act on, because the three things in the bucket want three different responses.
+
+| Failure | What you see | Where it comes from | What to do |
+|---|---|---|---|
+| **Malformed** | The response will not parse, or a required field is missing | Truncation, a stray sentence, the model wandering off the contract | Retry — this one is usually fixable, and lesson 8 is about how |
+| **Well-formed but wrong** | Valid object, wrong value. Sentiment `positive` on an angry email | The model misread the input, or your prompt is ambiguous | Do not retry. Fix the prompt or the examples; a retry gives you the same misreading |
+| **Well-formed but fabricated** | Valid object, plausible value, no basis in reality. An invented invoice number, a quote that does not exist | The model filled a gap with the most likely-looking text | Reject the response and check the source. Never trust it because it looked confident |
+
+The practical point: **only the first kind is worth retrying.** If you treat all three the same you will burn tokens re-asking a question the model already answered wrongly with total consistency.
+
+Truncation deserves a note, because it is the malformed case people misdiagnose most often. If `max_tokens` cuts the response mid-object, you get a parse error that looks like the model ignoring the contract. Check the stop reason before you blame the prompt.
+
+## 2. Validate at the boundary, exactly like an HTTP body
+
+You would never take a JSON body from the internet and write it to your database without validating it. A model response has the same standing. It arrived over the network, its content is influenced by input you do not control, and it is right most of the time — which is the dangerous kind of wrong.
+
+So put a real validator at the edge: Pydantic if you are in Python, Zod if you are in TypeScript. Both give you types, required fields and enums in one place, and both fail with an error message you can read — which turns out to matter a lot in the next lesson.
+
+Types are the floor. These are the checks that actually catch production bugs:
+
+- **Enum membership.** The field is a string; the allowed values are `billing`, `bug`, `feature_request`, `other`. `Billing` with a capital B is a different string and should be rejected or normalised, deliberately, by you.
+- **Required fields present, not just present-and-empty.** An empty string passes a `str` type check and means nothing. Decide whether empty is legal, and say so.
+- **Numbers in range.** Confidence between 0 and 1. Urgency between 1 and 5. A page number that is not larger than the document.
+- **Referenced ids that exist.** This is the big one. The model returns `owner: "dave"` or `product_id: "SKU-4471"`. Your schema cannot know whether either exists. A set lookup or a database query can, and it costs almost nothing.
+- **Cross-field consistency.** `end_date` after `start_date`. A `status` of `resolved` with a `resolution` that is null.
+
+The id check is where the abstraction leaks in a useful way. A schema describes a document in isolation. Your data has facts the document knows nothing about. Only your code sits in both worlds.
+
+> A schema proves the output has the right shape. Nothing in it can tell you the answer is true.
+
+## 3. Grounding, and what to keep when it fails
+
+When the answer is supposed to come from a document you supplied — a contract, a support thread, a retrieved chunk — you have a check available that is unusually strong: make the model quote, then verify the quote.
+
+Ask for the exact supporting span as a field. Then, in code, search for that span in the source text. If it is not there, the response is fabricated, no matter how good it reads. This is a substring search. It is free, and it catches the failure that is hardest to spot by eye.
+
+Two things make it work in practice:
+
+- **Normalise before comparing.** Collapse whitespace, and expect smart quotes and dashes to have been rewritten. Compare on a normalised copy, not the raw one, or you will reject honest quotes.
+- **Give it a legal way out.** If the source does not contain the answer, the model needs a permitted response — `not_found`, `null` — or it will invent a quote to satisfy the field. That is the escape hatch from lesson 2, doing real work here.
+
+The last habit is the cheapest and the one people skip. **On every validation failure, log the raw output.** Not the exception, not a summary — the actual text or object the model returned, next to the input that produced it. Model failures do not reproduce reliably. If you throw away the only copy of what it said, you are left staring at an input that works fine when you try it again.
+
+```python
+import logging
+from typing import Literal
+
+from anthropic import Anthropic
+from pydantic import BaseModel, Field, ValidationError
+
+client = Anthropic()
+log = logging.getLogger(__name__)
+OWNERS = {"alice", "bob", "priya"}          # facts the schema cannot know
+
+class Ticket(BaseModel):
+    category: Literal["billing", "bug", "feature_request", "other"]
+    urgency: int = Field(ge=1, le=5)        # range, not just int
+    owner: str
+    quote: str                              # must appear in the source text
+
+def extract(text: str) -> Ticket:
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=400,
+        tools=[{
+            "name": "save_ticket",
+            "description": "Record the parsed ticket.",
+            "input_schema": Ticket.model_json_schema(),   # one definition, both ends
+        }],
+        tool_choice={"type": "tool", "name": "save_ticket"},
+        messages=[{"role": "user", "content": text}],
+    )
+    raw = resp.content[0].input
+    try:
+        ticket = Ticket(**raw)                            # types, enum, range
+        if ticket.owner not in OWNERS:                    # id that must exist
+            raise ValueError(f"unknown owner {ticket.owner!r}")
+        if ticket.quote not in text:                      # grounding check
+            raise ValueError("quote does not appear in the source text")
+        return ticket
+    except (ValidationError, ValueError):
+        log.exception("ticket validation failed", extra={"raw_output": raw})
+        raise
+
+print(extract("Charged twice in March. Give this to priya, it is blocking payroll."))
+```
+
+Four checks, in order of cost: types, then range, then a set lookup, then a substring search. None of them needs another model call, and together they catch most of what a schema alone lets through.
+
+What they do not do is decide what happens next. Right now every failure raises. The next lesson turns that into something better than a five hundred.

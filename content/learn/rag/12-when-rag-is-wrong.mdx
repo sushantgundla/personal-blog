@@ -1,0 +1,146 @@
+---
+title: "When RAG is the wrong tool"
+subtitle: "Recognise the questions retrieval structurally cannot answer, and pick the tool that can."
+part: 4
+minutes: 7
+why: "You built the pipeline. Hybrid search, a reranker, citations, an eval set. Then someone asks how many contracts expire this quarter and your app returns a confident number that is simply invented, because it counted five passages out of four thousand contracts and had no way to know that. No amount of tuning fixes that question. Retrieval returns k passages, and some questions cannot be answered from k passages no matter which k you pick. This lesson is about spotting those before you build, and knowing what to reach for instead."
+wins:
+  - "Route counting and aggregation to SQL - retrieval cannot count."
+  - "Read a document whole when the question spans it, instead of retrieving fragments."
+  - "Use a graph or a join for questions about relationships, not vector similarity."
+  - "Fine-tune for style and format, never for fresh facts you need to cite."
+  - "Classify the question first, then choose the tool - it beats any tuning."
+quiz:
+  - q: "Why can RAG not answer 'how many of our contracts expire this quarter'?"
+    options: ["The embedding model cannot represent dates", "Retrieval returns k passages, so it can never see the whole corpus to count over it", "Chunk sizes are too small to hold a date range"]
+    answer: 1
+    explain: "Counting needs every row; similarity search returns a fixed handful and has no idea what it did not return."
+  - q: "A user asks you to summarise one 80-page report. What fits best?"
+    options: ["Retrieve the top 10 chunks of that report and summarise those", "Load the whole document into a long-context model, or summarise section by section and combine", "Fine-tune a model on the report"]
+    answer: 1
+    explain: "A summary needs the whole document; retrieving ten chunks summarises ten chunks and silently drops the rest."
+  - q: "What is fine-tuning genuinely good for?"
+    options: ["Teaching the model facts that change weekly", "Style, format and a narrow task shape", "Making answers citable"]
+    answer: 1
+    explain: "Fine-tuning shapes behaviour; it does not give you fresh, updatable, citable knowledge."
+  - q: "'Which suppliers are affected if vendor X fails?' Why does vector search struggle?"
+    options: ["The question is too long to embed", "It needs relationships traversed across records, which similarity between passages does not express", "Supplier names are too rare for embeddings"]
+    answer: 1
+    explain: "Multi-hop relationship questions want a graph or a set of joins, not the nearest passages."
+  - q: "What is agentic search good for that one-shot RAG is not?"
+    options: ["Questions needing several dependent lookups, where each search depends on the last result", "Reducing latency on simple lookups", "Removing the need for an eval set"]
+    answer: 0
+    explain: "A loop can search, read, and search again; a single retrieval pass has one shot at the query."
+deeper:
+  - { label: "Microsoft GraphRAG", href: "https://github.com/microsoft/graphrag" }
+  - { label: "Anthropic - context windows", href: "https://docs.anthropic.com/en/docs/build-with-claude/context-windows" }
+  - { label: "OpenAI - fine-tuning guide", href: "https://platform.openai.com/docs/guides/fine-tuning" }
+  - { label: "Spider - text-to-SQL benchmark", href: "https://github.com/taoyds/spider" }
+---
+
+## 1. What retrieval structurally cannot do
+
+Every lesson so far has been about making retrieval better. This one is about the ceiling that tuning cannot raise.
+
+Retrieval does exactly one thing: it takes a query and returns the `k` passages most similar to it. Everything follows from that sentence. It sees `k` passages. It has no idea how many passages it did not return, what was in them, or whether the ones it picked are representative. It cannot count, it cannot compare across everything, and it cannot notice an absence.
+
+Three families of question run straight into that.
+
+**Aggregation.** "How many contracts expire this quarter." "What is the average deal size." "Which region files the most complaints." These need every record, and a computation over them. Retrieval hands you five. The model then answers from those five, in a confident tone, and the number is wrong. Worse, it is wrong in a way that looks fine - "based on the contracts I found, three expire this quarter" is a true statement about your retrieval and a false answer to the question.
+
+This is a database query. If your data is in a database, write SQL. If it is in documents, extract the fields you need into a table at index time and query that - dates, amounts, parties, statuses. The metadata work from lesson 06 is exactly this, and it is the difference between counting and guessing.
+
+**The whole document.** "Summarise this report." "What changed between v2 and v3 of this contract." "Does this policy contradict itself anywhere." Chunking, from lesson 03, is precisely the operation that destroys these. You cut the document into pieces so you could search it; now the question needs it whole, and retrieval hands back the pieces that scored highest, which for a summary is close to arbitrary.
+
+**Structure and relationships.** "Which suppliers are affected if vendor X fails." "Who reports to the person who approved this." "Which services depend on this library." The answer is not in any single passage - it is in the links between records. Similarity between text does not encode those links. Even if every passage names one edge, retrieving five passages gives you five unconnected edges and no path.
+
+> Similarity search returns what looks like the question. It cannot tell you what it did not return - so it can never count, and it can never be sure it is complete.
+
+## 2. The alternatives
+
+| The question | Tool | Why |
+|---|---|---|
+| How many, what is the total, which is highest | SQL or an analytics query | Needs every row, and arithmetic |
+| Find the doc with this exact id or code | Full-text search, BM25 | Known-item lookup, no reasoning needed |
+| Summarise or compare this one document | Long context, or map-reduce over sections | Needs it whole, and it fits |
+| Who is connected to whom, multi-hop | Graph query, or joins | Relationships, not similarity |
+| Answer in our house format and tone | Fine-tuning | Behaviour, not knowledge |
+| What does our policy say about X | RAG | A passage holds the answer |
+| Needs several dependent lookups | Agentic search | The next query depends on the last result |
+
+**SQL.** The best move here is often a router: have a model classify the question and, for the aggregation ones, generate a query against a real schema rather than a prompt against passages. Text-to-SQL is a well-studied problem with its own benchmarks. It also gives you something RAG cannot - an exact answer, reproducible, with no similarity involved.
+
+**Full-text search.** If the user knows what they are looking for and can name it, you do not need embeddings at all. A search box over BM25 is faster, cheaper, and returns the document rather than a paraphrase of it. Not every text problem needs a model.
+
+**Long context.** Models now take very large inputs, so "just put the document in the prompt" is a real option for a single document that fits. It is simpler than a pipeline and has no retrieval step to get wrong. The trade is cost, latency and, at the far end of the window, some loss of attention to material buried in the middle. It works for one document. It does not work for a corpus - four thousand contracts do not fit in any window, and paying to read all of them per query would be absurd even if they did. Check the current context limits on the model's documentation rather than trusting a number written months ago.
+
+**Graphs.** Extract entities and relationships at index time, store them as nodes and edges, and traverse. Approaches like GraphRAG combine this with retrieval - use the graph for structure, the passages for wording. It is real work to build and maintain, so reach for it when relationship questions are the main thing your users ask, not as a default upgrade.
+
+**Agentic search.** Instead of one retrieval pass, let the model search, read what came back, and decide what to search for next. This is the loop from the build-with-llms lesson on the agent loop, with search as the tool. It fits questions where you cannot write the right query up front because you do not yet know what you are looking for - "find the incident that caused this regression, then tell me who reviewed the fix". The price is several model calls and several searches per question, so latency and cost multiply, and the loop needs a hard step limit.
+
+### Why fine-tuning is not a substitute
+
+This comes up constantly, so it is worth being exact. Fine-tuning continues training on your examples so the behaviour is baked into the weights. That makes it good at *how* to answer and bad at *what is true right now*.
+
+| | RAG | Fine-tuning |
+|---|---|---|
+| New fact is live | Once indexed, minutes | After the next training run |
+| Remove a fact | Delete the chunk | Retrain, and hope |
+| Cite a source | Yes, you hold the passage | No, the knowledge is diffuse |
+| Say "I do not know" | Natural - no passage retrieved | Hard - the weights always produce something |
+| Good at | Facts, policies, anything that changes | Tone, format, a narrow task shape |
+| Cost of a change | An embedding call | A training job plus evaluation |
+
+If the need is fresh, citable facts, fine-tuning gives you none of the three. It cannot be updated cheaply, it cannot point at a source, and it has no clean way to signal absence. Fine-tune to make outputs consistently shaped; retrieve to make them true. The two are not alternatives and doing both is fine.
+
+## 3. Route the question first
+
+The practical version of this lesson is a classifier in front of your pipeline. Decide what kind of question you have, then send it to the tool that can answer it.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+ROUTES = """
+sql        - counts, totals, filters over structured fields
+retrieval  - what a document says about a topic
+whole_doc  - needs one named document read end to end
+none       - not covered by our corpus
+"""
+
+def route(question):
+    message = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=10,
+        system=f"Pick one route for the question. Reply with the route name only.\n{ROUTES}",
+        messages=[{"role": "user", "content": question}],
+    )
+    return message.content[0].text.strip()
+
+for q in [
+    "how many contracts expire this quarter?",
+    "what does the MSA say about termination?",
+    "summarise the 2024 vendor agreement",
+]:
+    print(f"{route(q):10}  {q}")
+
+# -> sql        how many contracts expire this quarter?
+# -> retrieval  what does the MSA say about termination?
+# -> whole_doc  summarise the 2024 vendor agreement
+```
+
+A few notes on running this for real. `max_tokens` is tiny because the output is one word. The `none` route matters as much as the others - a question your corpus does not cover should be refused, not retrieved for. And routing is itself a model call that can be wrong, so log every decision and put the misroutes into your eval set from lesson 10.
+
+You do not have to build all the branches on day one. Even a router with two routes - "this is a counting question, say I cannot do that" and "everything else, run RAG" - removes your most embarrassing failure mode for an hour of work.
+
+### The judgement to keep
+
+Before building any retrieval pipeline, ask what shape the question is.
+
+- Does answering it need **every** record? Not RAG.
+- Does it need **one whole document**? Long context or map-reduce, not RAG.
+- Does it need **connections between records**? A graph or joins, not RAG.
+- Does the answer **sit in a passage somewhere**? RAG, and everything in lessons 01 to 11 applies.
+
+That choice, made early, matters more than any tuning you do afterwards. A perfectly tuned retriever pointed at a counting question is still going to be wrong, and it will be wrong confidently, with citations.

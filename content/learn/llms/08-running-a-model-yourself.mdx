@@ -1,0 +1,116 @@
+---
+title: "Running a model yourself"
+subtitle: "What self-hosting actually takes — memory, quantisation, serving, and the arithmetic that decides it."
+part: 3
+minutes: 8
+why: "You downloaded a model, ran it on your laptop, and it worked. Now someone wants to know whether you can serve it to real users and save the API bill. That question is not really about models. It is about how much memory a GPU has, how much of it a conversation eats, and how much an idle GPU costs at 3am. This lesson gives you the arithmetic, so you can answer with a number instead of an opinion, and know in advance which side you will land on."
+wins:
+  - "Size the GPU first — weights need roughly parameters times bytes-per-parameter, plus headroom."
+  - "Budget separately for the KV cache, which grows with context length and concurrent users."
+  - "Use quantisation to fit a bigger model on a smaller card, then re-run your eval to see the cost."
+  - "Use Ollama or LM Studio to try things, vLLM or TGI to serve traffic, a managed host in between."
+  - "Compare your monthly API bill against a full GPU month, not against the busy hours."
+quiz:
+  - q: "A 7-billion-parameter model at 16-bit precision needs roughly how much memory just for its weights?"
+    options: ["About 7 GB", "About 3 GB", "About 14 GB"]
+    answer: 2
+    explain: "Two bytes per parameter times 7 billion is about 14 GB, before any room for the KV cache or activations."
+  - q: "What does the KV cache grow with?"
+    options: ["Context length and the number of concurrent requests", "The number of tools you defined", "The size of the weights file on disk"]
+    answer: 0
+    explain: "Every token in every in-flight request holds cached attention state, so long contexts and many users both eat VRAM."
+  - q: "Quantisation makes a model fit a smaller card by..."
+    options: ["Dropping the least-used layers from the network", "Storing each weight with fewer bits, for example 4 instead of 16", "Streaming weights from disk as they are needed"]
+    answer: 1
+    explain: "It is a precision reduction — same shape, fewer bits per number, so a smaller memory footprint."
+  - q: "You want to serve a self-hosted model to real production traffic. Reach for..."
+    options: ["Ollama, because it is the simplest to install", "vLLM or TGI, built for batched, concurrent serving", "A shell script that loads the model per request"]
+    answer: 1
+    explain: "Ollama is excellent for trying things on one machine; a serving engine handles continuous batching and concurrency."
+  - q: "The reason self-hosting only beats an API above a traffic floor is that..."
+    options: ["APIs charge a fixed monthly minimum", "Small models are not accurate enough below high volume", "A GPU costs the same whether it is busy or idle, so low traffic pays for empty hours"]
+    answer: 2
+    explain: "Per-token pricing goes to zero when nobody calls it; a reserved GPU bills all month regardless."
+deeper:
+  - { label: "Ollama", href: "https://ollama.com" }
+  - { label: "vLLM documentation", href: "https://docs.vllm.ai" }
+  - { label: "Hugging Face — Text Generation Inference", href: "https://huggingface.co/docs/text-generation-inference" }
+  - { label: "LM Studio", href: "https://lmstudio.ai" }
+---
+
+Lesson 07 said open weights buy you residency, stability and the freedom to fine-tune. This lesson is the bill for those things. None of it is hard, but it is all arithmetic, and the arithmetic is unforgiving in a way that per-token API pricing is not.
+
+## 1. VRAM is the wall you hit first
+
+A GPU has a fixed amount of fast memory, its **VRAM**. The whole model has to sit in it. If it does not fit, it does not run — there is no graceful degradation, just an out-of-memory error.
+
+The weights are the first claim on that memory, and their size is straightforward:
+
+**memory for weights ≈ number of parameters × bytes per parameter**
+
+| Precision | Bytes per parameter | 7B model | 70B model |
+|---|---|---|---|
+| fp16 or bf16 (16-bit) | 2 | ~14 GB | ~140 GB |
+| int8 (8-bit) | 1 | ~7 GB | ~70 GB |
+| 4-bit | 0.5 | ~3.5 GB | ~35 GB |
+
+Round those up. Do not plan to the last gigabyte.
+
+Then there is the part people forget. Every request in flight holds a **KV cache** — the attention state for every token it has seen so far, kept so the model does not recompute the whole prompt for each new output token. It is not optional, and it grows with two things at once:
+
+**KV cache ≈ tokens in context × number of concurrent requests × a per-model constant**
+
+So a card that comfortably holds the weights can still fall over when twenty users each have a 50,000-token conversation open. Long context and high concurrency are the same problem wearing different clothes, and they are why "it worked on my laptop with one chat window" tells you almost nothing about production.
+
+A workable planning rule: weights, plus 20 to 40 percent for activations and overhead, plus a KV budget you size from your real context length times your real concurrency. Measure the last one with a load test rather than guessing — your serving engine will report it.
+
+## 2. Quantisation is the lever, and it charges a fee
+
+**Quantisation** stores each weight with fewer bits. The model keeps its shape and its parameter count; each number just gets less precise. It is the single biggest lever you have, because it moves memory by 2x or 4x for a quality cost that is usually small.
+
+| Level | Roughly what happens to quality | Typical use |
+|---|---|---|
+| 16-bit | The reference. This is what the numbers were trained at | Benchmarks, and serving when memory is not tight |
+| 8-bit | Usually very close to the reference | A safe default for serving |
+| 4-bit | Noticeably degraded on hard tasks, often fine on easy ones | Laptops, and squeezing a bigger model onto one card |
+| Below 4-bit | Degrades quickly | Experiments, not production |
+
+Formats you will see named: **GGUF** (the format llama.cpp and Ollama use, built for CPU and mixed CPU/GPU), and **AWQ** and **GPTQ** (GPU-side formats a serving engine can load directly). You mostly do not choose the algorithm — you choose a prebuilt quantised copy of the model that matches your runtime.
+
+> A quantised large model usually beats a full-precision small model at the same memory budget. Usually. That word is why you re-run your eval after quantising, not before.
+
+The failure mode to watch for is that quantisation damage is uneven. Casual chat holds up well. Long chains of reasoning, exact arithmetic, strict JSON, and precise instruction-following degrade first — the very things you probably built a checker around. So quantise, then run the twenty cases from lesson 09, then decide.
+
+```bash
+# Try a model on your own machine. No account, no key, no network after the pull.
+# Check ollama.com/library for tags that currently exist before running this.
+ollama pull gemma3:4b
+ollama run gemma3:4b "In two sentences, why does VRAM cap which model I can run?"
+
+# The same process serves an OpenAI-compatible API on port 11434.
+curl -s http://localhost:11434/v1/models
+```
+
+That last line matters more than it looks. Because the endpoint speaks the OpenAI shape, the client code you already wrote points at it by changing one URL. Lesson 10 builds on exactly that.
+
+## 3. The tool ladder, and the arithmetic that decides
+
+There are three rungs, and picking the wrong one is the most common self-hosting mistake.
+
+| Rung | Tools | Good at | Bad at |
+|---|---|---|---|
+| Try it | Ollama, LM Studio, llama.cpp | One machine, one user, zero setup. Perfect for evaluating models | Concurrency. It will not survive real traffic |
+| Serve it | vLLM, TGI, SGLang | Continuous batching, many concurrent requests, high throughput per GPU | You now own GPUs, drivers, deploys and a pager |
+| Rent it | Managed inference hosts — Together, Fireworks, Baseten, Bedrock and similar | Open-weight models behind an API. Per-token or per-hour, no ops | Costs more per token than your own GPU at high steady load |
+
+The middle rung deserves more attention than it gets. It gives you most of what people actually want from open weights — model choice, no deprecation surprises, an escape from one vendor — without a single GPU on your account. For most teams it is the right answer, and they skip past it because self-hosting sounds more like engineering.
+
+**Throughput and latency pull against each other.** A serving engine gets its efficiency from **batching**: running many requests through the GPU together. More batching means more total tokens per second across all users, and a slightly slower answer for any single one, because your request waits for a batch slot. Continuous batching, which vLLM popularised, keeps this cost small by letting requests join and leave a running batch instead of waiting for a whole batch to finish. You still choose: tune for total throughput, or for the latency one user feels. You cannot maximise both.
+
+**And now the uncomfortable part.** An idle GPU costs exactly what a busy one costs. API pricing goes to zero overnight; your reserved card does not. So the comparison is not your peak-hour cost against the API. It is a full month of GPU, times the number of GPUs you need for redundancy — which is at least two, because one is not a production system — against a full month of API bill.
+
+Run it as a division: monthly API bill ÷ monthly cost of the smallest GPU box that fits your model, at current rates from your cloud's own pricing page. If the answer is under about 2 or 3, stop. The remaining margin will be eaten by the engineer-days spent on drivers, upgrades, capacity and the 3am page. Above that, the sums start working, and they get better the higher and steadier your volume is.
+
+**Clearly right:** data legally cannot leave your network. Steady, high, predictable volume. A fine-tuned model that is your actual product. A requirement that the model never changes. Air-gapped or on-prem deployment.
+
+**Probably a hobby:** spiky traffic. Modest volume. A small team with no one to carry the pager. And any case where you want the frontier, because as lesson 07 said, the frontier is not downloadable.

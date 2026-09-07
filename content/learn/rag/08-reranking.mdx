@@ -1,0 +1,135 @@
+---
+title: "Reranking"
+subtitle: "Retrieve fifty candidates cheaply, then have a slower model read query and passage together and pick the best five."
+part: 3
+minutes: 7
+why: "You printed the chunks your search returned, the way lesson 05 told you to, and the answer was in there - at position eleven. You only sent five to the model. So retrieval technically worked and your app still got it wrong. This is the single most common shape of RAG failure, and it has a fix that takes an afternoon: retrieve wide, then rerank narrow. This lesson explains why a reranker sees something your embeddings structurally cannot, what it costs in latency and money, and how to pick the candidate count."
+wins:
+  - "Split retrieval into a wide cheap stage and a narrow accurate stage."
+  - "Explain a cross-encoder as one that reads query and passage together, so they can interact."
+  - "Budget a reranker as one model pass per candidate, not per query."
+  - "Rerank around 25 to 100 candidates - measure, do not guess."
+  - "Reach for reranking first when your corpus is full of near-duplicates."
+quiz:
+  - q: "What does a cross-encoder do that a bi-encoder cannot?"
+    options: ["It compresses the passage so more fit in context", "It reads the query and the passage in the same forward pass, so words in each can attend to the other", "It stores one vector per document instead of one per chunk"]
+    answer: 1
+    explain: "A bi-encoder embeds each side separately and the two never meet; a cross-encoder sees both at once and can judge the actual match."
+  - q: "Why can you not just use the cross-encoder as your search index?"
+    options: ["It only accepts queries under ten words", "It scores a pair, so ranking a million chunks means a million model passes per query", "Its scores are not comparable between documents"]
+    answer: 1
+    explain: "There is nothing to precompute - the score depends on the query - so cost grows with corpus size on every single query."
+  - q: "You currently retrieve 5 chunks and send them straight to the model. What is the cheapest first change?"
+    options: ["Retrieve 50, rerank, keep the best 5", "Switch to a larger embedding model", "Increase the chunk size so each chunk holds more"]
+    answer: 0
+    explain: "The reranker needs candidates to work with; giving it the same 5 you already had leaves it nothing to fix."
+  - q: "Where does reranking pay off most?"
+    options: ["Small corpora of short, clearly distinct documents", "Corpora full of near-duplicate passages where first-stage scores are all close together", "Queries that are single exact identifiers"]
+    answer: 1
+    explain: "When the top candidates score within a hair of each other, the ordering is nearly arbitrary, and that is exactly what a reranker fixes."
+  - q: "What is the honest cost of reranking 50 candidates?"
+    options: ["One extra embedding call", "Nothing measurable, rerankers run on the vector index", "Fifty scoring passes, which is real latency and real money on every query"]
+    answer: 2
+    explain: "The work scales with the candidate count, which is why you rerank fifty and not five thousand."
+deeper:
+  - { label: "Cohere - Rerank", href: "https://docs.cohere.com/docs/rerank-overview" }
+  - { label: "Nogueira & Cho - Passage Re-ranking with BERT", href: "https://arxiv.org/abs/1901.04085" }
+  - { label: "Sentence-Transformers - cross-encoders", href: "https://www.sbert.net/" }
+  - { label: "BEIR - retrieval benchmark suite", href: "https://github.com/beir-cellar/beir" }
+---
+
+## 1. Two stages, on purpose
+
+Every serious search system is built in two stages, and they have opposite jobs.
+
+| | Stage one: retrieve | Stage two: rerank |
+|---|---|---|
+| Job | Do not miss the right chunk | Put the right chunk first |
+| Searches over | The whole corpus | 25 to 100 candidates |
+| Speed per query | Milliseconds | Tens to hundreds of milliseconds |
+| Optimised for | Recall | Precision at the top |
+| Method | Vector search, BM25, hybrid | Cross-encoder or an LLM |
+| Failure you accept | Bad ordering | Cannot recover what stage one missed |
+
+Read the last row twice. The reranker can only reorder what it is given. If the answer chunk was not in the fifty candidates, reranking does nothing at all. Stage one is still the one that decides your ceiling - which is why lesson 07's hybrid search comes before this lesson, not after.
+
+> Retrieval decides what is possible. Reranking decides what is on top. You need both, in that order.
+
+## 2. Why the second pass sees more
+
+This is the mechanism, and once you see it the rest of the lesson is obvious.
+
+**A bi-encoder** - what your vector index uses - embeds the query and embeds the document, separately, at different times. The document was embedded weeks ago at index time; the query gets embedded now. Two vectors go into a similarity function and a number comes out. At no point does any word of the query see any word of the document. The whole match has to be squeezed through a single fixed-size vector per side.
+
+That constraint is what makes vector search fast. You precompute every document vector once, and at query time you compare numbers. It is also what makes it imprecise: a passage that discusses the right topic in the right register produces a vector near the query's whether or not it answers the question.
+
+**A cross-encoder** takes the query and one passage, glues them into a single input, and runs them through the model together. Now attention runs across both. The word "fourteen" in the passage can look at the word "how long" in the query. The model can notice that the passage mentions the topic but answers a different question, or that it states the opposite, or that it is a table of contents entry that merely names the topic. That is the class of mistake a bi-encoder is structurally blind to.
+
+| | Bi-encoder | Cross-encoder |
+|---|---|---|
+| Input | Query alone, document alone | Query and document together |
+| Output | Two vectors, compared later | One relevance score for that pair |
+| Precomputable | Yes, all documents at index time | No, the score depends on the query |
+| Cost per query | One embed, then a fast index lookup | One model pass per candidate |
+| Scales to | Millions of chunks | Tens of chunks |
+| Catches "looks relevant but is not" | Rarely | Often |
+
+Which explains the shape. You cannot run a cross-encoder over a million chunks per query - that is a million model passes. You can run it over fifty. So you use the cheap method to get fifty plausible candidates and the expensive method to order them.
+
+```python
+from sentence_transformers import CrossEncoder
+
+# Reads the query and each passage together, one pass per pair.
+model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+query = "how long do I have to return a laptop"
+candidates = [
+    "Our returns desk is open on weekdays from 9am until 5pm.",
+    "Electronics may be returned within 30 days of delivery.",
+    "Laptop batteries are covered by a two year warranty.",
+]
+
+scores = model.predict([(query, text) for text in candidates])
+
+for score, text in sorted(zip(scores, candidates), reverse=True):
+    print(f"{score:6.2f}  {text}")
+```
+
+All three candidates are about laptops and returns, so their embeddings sit close together and vector search could order them any way at all. The cross-encoder reads "how long" against each one and only the middle passage answers it.
+
+## 3. What it costs, and how much to send it
+
+Reranking is not free and the marketing rarely says so. The cost is one scoring pass per candidate, on every query. Fifty candidates is fifty passes. Double the candidates and you double both the latency and the bill for that stage.
+
+| Option | Where it runs | Rough latency for 50 | Notes |
+|---|---|---|---|
+| Hosted reranker API | Their servers | One network call, batched internally | Simplest. Per-search or per-token pricing - check the current page |
+| Open cross-encoder, CPU | Your box | Slow, often seconds | Fine for small candidate sets and offline work |
+| Open cross-encoder, GPU | Your box | Fast, tens of ms | Cheapest at volume, but you now run a GPU |
+| LLM-as-reranker | A general model | Slowest and dearest | Flexible, good for odd criteria, hard to justify at scale |
+
+The hosted rerankers - Cohere's Rerank, Voyage's, Jina's - are the usual starting point because they are one API call and no infrastructure. Prices and model names move, so look them up rather than trusting a number in any tutorial, including this one.
+
+**LLM-as-reranker** means prompting a general model to score or order the candidates. It is worth knowing about because it handles criteria a trained reranker never saw - "prefer passages from the current policy version", "prefer ones that give a number". It is also the most expensive option per query by a wide margin, and it adds a generation call to a latency budget that already has one. Use it for offline work, for evaluation, or when the criterion genuinely cannot be expressed any other way.
+
+### Choosing the candidate count
+
+Call it `n` for candidates in, `k` for chunks out. `k` is set by your prompt budget, usually 3 to 10. `n` is the dial.
+
+| `n` | Effect |
+|---|---|
+| Same as `k` | Pointless - nothing to reorder |
+| 25 to 50 | The usual sweet spot, modest latency |
+| 100 to 200 | Diminishing returns for most corpora, noticeably slower |
+| 1000+ | Almost never worth it outside offline batch work |
+
+The right way to pick it is measurement, not a rule. Compute recall@n for your first stage across your eval set from lesson 10. The point where recall@n stops climbing is the point where extra candidates only add cost - if recall@50 is 0.94 and recall@200 is 0.95, you are paying four times as much for one extra question in a hundred.
+
+### Where it pays most
+
+- **Long or verbose documents.** Chunk embeddings average away detail, so many chunks look alike. The reranker reads the actual text.
+- **Ambiguous queries.** Short questions produce weak, undifferentiated similarity signals.
+- **Near-duplicate corpora.** Twelve versions of the same policy, or the same answer restated across many support articles. First-stage scores land within a hair of each other, so the ordering is close to arbitrary. This is where reranking helps most.
+- **After hybrid search.** Fusion from lesson 07 gives you a merged candidate list with good recall and rough ordering. The reranker is exactly the tool for fixing rough ordering.
+
+Where it helps least: small corpora of short, clearly distinct documents, and single-identifier lookups where BM25 already put the right answer first.

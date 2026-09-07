@@ -1,0 +1,124 @@
+---
+title: "The big three, and what actually differs"
+subtitle: "Anthropic, OpenAI, Google, and the layers you can buy them through — where the real differences live."
+part: 2
+minutes: 7
+why: "You picked a provider because it was the one you had heard of, wired its SDK into forty files, and now a compliance question or a pricing change means you should evaluate another one — and you cannot, cheaply. Meanwhile the arguments you read about which lab is best are about benchmark scores that will be stale next quarter, and silent about the things that will actually decide it for you. This lesson separates what genuinely differs between providers from what only looks like it does, and shows you the small piece of code that keeps the door open."
+wins:
+  - "Buy direct for the newest features; go via Bedrock or Vertex when procurement or data residency demands it."
+  - "Expect to rewrite plumbing, not prompts, when you move between providers."
+  - "Test refusal behaviour on your own inputs — safety boundaries differ more than capability does."
+  - "Keep every provider SDK import inside one adapter module, from day one."
+  - "Do not design around today's leaderboard; the frontier models trade places constantly."
+quiz:
+  - q: "Anthropic's Messages API takes the system prompt as..."
+    options: ["The first entry in the messages array", "A separate top-level `system` parameter", "An HTTP header on the request"]
+    answer: 1
+    explain: "It is its own field rather than a message, which is one of the small shape differences you have to translate when you support more than one provider."
+  - q: "The main practical reason to call a model through AWS Bedrock or Google Vertex AI instead of the provider directly is..."
+    options: ["The models are cheaper there", "The models are tuned better there", "One bill, your existing cloud identity and permissions, and region and data-residency controls"]
+    answer: 2
+    explain: "It is a procurement and governance route, not a quality one — the weights are the same."
+  - q: "Provider lock-in mostly comes from..."
+    options: ["Provider SDK types and conventions spread through your codebase", "The model weights being proprietary", "Prompts that will not transfer at all"]
+    answer: 0
+    explain: "Prompts need some retuning and weights were never yours; what actually pins you down is how many files import one vendor's client."
+  - q: "Something that genuinely differs between the three frontier providers is..."
+    options: ["Whether you are billed per token", "Whether the model remembers anything between calls", "Where the system prompt goes and how tool results are fed back in"]
+    answer: 2
+    explain: "The core model of billing and statelessness is shared; the request and response shapes are not."
+  - q: "An aggregator like OpenRouter mainly buys you..."
+    options: ["Prices lower than any provider charges directly", "One API shape in front of many models, with easy comparison and failover", "Earlier access to new frontier features"]
+    answer: 1
+    explain: "Uniformity and switchability are the product; new features generally land on the provider's own API first."
+deeper:
+  - { label: "Anthropic — Messages API reference", href: "https://docs.anthropic.com/en/api/messages" }
+  - { label: "OpenAI — API reference", href: "https://platform.openai.com/docs/api-reference" }
+  - { label: "Google — Gemini API docs", href: "https://ai.google.dev/gemini-api/docs" }
+  - { label: "Amazon Bedrock — documentation", href: "https://docs.aws.amazon.com/bedrock/" }
+---
+
+Three companies currently sell frontier closed models: Anthropic, OpenAI, and Google. This lesson will not tell you which is best, because that ordering changes with every release and because it is almost never the thing that should decide your choice. What it will do is tell you what actually differs when you sit down to write the code, and what only appears to.
+
+## 1. Who sells it, and how you can buy it
+
+Each of the three offers the same three things: a consumer product you have probably used, a direct developer API, and a presence inside at least one major cloud. There is also a fourth layer that sits in front of everyone.
+
+| Route | What it is | Why you would take it |
+|---|---|---|
+| The provider's own API | A direct account and key with the lab | New models and features arrive here first, the full feature set is available, and it is the simplest thing to debug |
+| A cloud marketplace — AWS Bedrock, Google Vertex AI, Azure | The same weights served inside your cloud account | One bill you already have, your existing identity and permissions, region choice, data-residency and procurement boxes ticked |
+| An aggregator — OpenRouter and similar | One key and one API shape in front of many providers and many models | Compare models in an afternoon, fail over between them, and reach open-weight models on the same interface |
+| Self-hosted open weights | You run the model | Covered in part 3 of this course |
+
+The middle two are convenience layers and they cost something. New models and new features usually land on the provider's own API first and reach the cloud marketplaces later. Regions, quotas and feature parity can differ from the direct product. An aggregator adds a network hop and a third party into the path your prompts travel, which is a question your security review will ask about even if you do not.
+
+In a company, the deciding factor is often none of the above. It is which vendor is already through legal.
+
+## 2. What genuinely differs when you write the code
+
+Here is the honest split.
+
+**Differences that will cost you real work:**
+
+- **Request and response shape.** All three take a list of messages and return content, but the field names, the structure of content blocks, how images and files are attached, and the streaming event format are all different. None of it is hard. All of it is fiddly, and it is where the days go.
+- **System prompt handling.** Anthropic takes a top-level `system` parameter. OpenAI puts a system or developer message inside the messages array. Google uses a system-instruction field. Same idea, three homes.
+- **Tool-calling ergonomics.** Everyone accepts JSON-Schema-shaped tool definitions and returns structured calls. They differ in whether you can force a specific tool, how several parallel calls come back, how you feed results in on the next turn, and how strictly the schema is enforced.
+- **Structured output.** Some offer a strict schema mode; some route you through forced tool use. The guarantee you get is not identical.
+- **Safety behaviour.** Refusal boundaries and the tone of a refusal differ noticeably. If your domain sits near a line — security, medical, legal, moderation, anything adversarial — this can matter more than capability. Test it on your real inputs, not on hypotheticals.
+- **Data handling and compliance.** Retention periods, whether your data can be used for training, zero-retention options, available regions, certifications. This is contractual rather than technical, and in regulated work it decides the whole question.
+- **Rate limits and how you raise them.** Different tier systems, different ceilings, different escalation paths. See lesson 6.
+- **The extras.** Prompt caching, batch jobs, fine-tuning, hosted tools like web search or code execution, long-context tiers. Most exist in some form everywhere, under different names, with different limits and prices.
+
+**What mostly does not differ:**
+
+- The core loop. Messages in, tokens out, stateless, billed per token, with temperature and a maximum output length.
+- The engineering problems. Hallucination, prompt injection, evaluation, cost control, latency. You solve all of them the same way regardless of the logo.
+- The top of the capability range. The frontier models trade places release to release, and the gap between the best and third-best on a general task is usually smaller than the gap between your first prompt and your fifth.
+
+That last point is worth being blunt about: **any architecture that only works because one specific model is currently ahead has a shelf life measured in months.**
+
+## 3. Lock-in, and the thin layer that removes it
+
+The lock-in is never the weights. It is the shape of your own code.
+
+It accumulates quietly: the provider's client imported in forty files, its response objects passed around as your internal type, prompts written against one system-prompt convention, tool schemas in one dialect, streaming handled the provider's way inside your UI code. Nobody decides to do this. It just happens, and then switching becomes a quarter of work instead of a day.
+
+The fix is small and boring. One module. One function. Your own type coming out.
+
+- **What the adapter owns:** building the request, placing the system prompt, translating tool schemas, normalising the streaming events, retries and fallback, and logging usage and cost.
+- **What comes out:** your own small result object — text, token counts, stop reason, tool calls. Never the provider's response object.
+- **What the adapter must not become:** a universal abstraction over every feature of every provider. Support the features you use. When you need something that exists on only one provider, expose it deliberately and name it for what it is, rather than pretending it is generic.
+
+> The lock-in is never the model. It is the two hundred places your code imports one provider's SDK.
+
+Two shortcuts are worth knowing. Several providers ship an OpenAI-compatible endpoint, and aggregators present one shape across many models, so you can get most of this for free. The catch is the same in both cases: a compatibility layer usually gives you the lowest common denominator, and the provider-specific features you most want — caching controls, thinking budgets, particular tool-choice modes — are exactly the ones that leak through badly or not at all.
+
+```python
+from dataclasses import dataclass
+from anthropic import Anthropic
+
+@dataclass
+class Answer:
+    text: str
+    input_tokens: int
+    output_tokens: int
+
+_client = Anthropic()
+
+def complete(system: str, messages: list[dict], model: str = "claude-sonnet-5") -> Answer:
+    """The only function in the app that knows which provider is being called."""
+    resp = _client.messages.create(
+        model=model,
+        max_tokens=1000,
+        system=system,              # a top-level field here, a message elsewhere
+        messages=messages,
+    )
+    return Answer(
+        text=resp.content[0].text,
+        input_tokens=resp.usage.input_tokens,
+        output_tokens=resp.usage.output_tokens,
+    )
+```
+
+Twenty lines. Adding a second provider means one more branch in this file and a change nowhere else, and evaluating a competitor stops being a project and becomes an afternoon. Write it on day one, when it is ten minutes of work, rather than in month six when it is a migration.

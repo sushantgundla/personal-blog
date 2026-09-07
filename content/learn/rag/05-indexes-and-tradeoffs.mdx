@@ -1,0 +1,133 @@
+---
+title: "Indexes and the trade you are making"
+subtitle: "Approximate search, the knobs that control it, and how to prove you tuned it well enough."
+part: 2
+minutes: 8
+why: "You created an HNSW index because the docs said to, kept every default, and now search is fast. You have no idea what it is missing. Approximate search buys speed by not looking everywhere, and the amount it skips is a dial someone set for you — probably not for your data. This lesson explains what HNSW and IVF actually do, names every knob and what it costs, and gives you the measurement that turns tuning from folklore into a number you can defend."
+wins:
+  - "Use exact search until measured latency says otherwise."
+  - "Read approximate search as a recall-for-speed dial you control."
+  - "Tune HNSW with ef_search at query time, no rebuild needed."
+  - "Tune IVF with nprobe, and remember it needs training data to build."
+  - "Measure recall against exact search on a sample before you trust any default."
+quiz:
+  - q: "Exact nearest-neighbour search over a million vectors is..."
+    options: ["Impossible without an index", "Correct by construction, but its cost grows linearly with the corpus", "Less accurate than HNSW because it does not use a graph"]
+    answer: 1
+    explain: "It compares against every vector, so it never misses a true neighbour, and it costs one comparison per vector."
+  - q: "In HNSW, ef_search controls..."
+    options: ["How many neighbours each node keeps when the graph is built", "How wide the search keeps its candidate list at query time — higher means better recall and slower queries", "How many partitions the vectors are split into"]
+    answer: 1
+    explain: "It is the query-time dial, so you can raise or lower it without rebuilding anything."
+  - q: "In an IVF index, nprobe is..."
+    options: ["How many of the clusters get searched for each query", "How many clusters the corpus is divided into", "The number of bits kept per dimension after quantisation"]
+    answer: 0
+    explain: "nlist sets how many buckets exist at build time; nprobe sets how many of them each query actually looks in."
+  - q: "Quantising vectors from 32-bit floats to 8-bit integers mainly..."
+    options: ["Speeds up embedding generation", "Shrinks memory roughly fourfold, at some cost in recall", "Improves recall by removing noise from the vectors"]
+    answer: 1
+    explain: "You store fewer bits per dimension, so the index fits in less RAM, and the coarser distances cost you a little accuracy."
+  - q: "The right way to know your index settings are good enough is..."
+    options: ["Use the defaults, which are tuned by the library authors", "Raise ef_search until queries feel slow, then back off", "Run a sample of real queries through both exact and approximate search and compare the overlap of the top k"]
+    answer: 2
+    explain: "Exact search is the ground truth, so measuring recall against it turns tuning into a number rather than a feeling."
+deeper:
+  - { label: "HNSW — the original paper", href: "https://arxiv.org/abs/1603.09320" }
+  - { label: "FAISS — wiki and index guide", href: "https://github.com/facebookresearch/faiss/wiki" }
+  - { label: "pgvector — index types and tuning", href: "https://github.com/pgvector/pgvector" }
+  - { label: "ANN-Benchmarks", href: "https://ann-benchmarks.com/" }
+---
+
+There are two ways to find the nearest vectors to a query. Compare against all of them, which is always right and gets slower as you grow. Or compare against a clever subset, which is fast and sometimes wrong.
+
+Everyone ends up on the second one eventually. What separates a system that works from one that mysteriously misses things is whether you know, in numbers, how often the second one is wrong.
+
+## 1. Exact search, and why you keep it around
+
+Exact search — sometimes called flat or brute-force — scores the query against every stored vector and sorts. It is one matrix multiply. It is not an approximation of anything; it is the definition of the correct answer.
+
+Its cost is linear in corpus size and in dimensions. That linear cost is more forgiving than people expect, because a modern CPU does this kind of arithmetic extremely well:
+
+| Corpus | Exact search feels | What to do |
+|---|---|---|
+| Thousands | Instant | Never build an index |
+| Tens of thousands | Comfortable, a few milliseconds | Still probably no index |
+| Hundreds of thousands | Noticeable, tens of milliseconds | Measure against your latency budget |
+| Millions and up | Too slow for interactive use | Index |
+
+Even after you index, keep exact search available on a sample. It is your ground truth, and section 3 is built on it.
+
+## 2. HNSW and IVF, and their knobs
+
+**HNSW** — hierarchical navigable small world — builds a graph. Each vector becomes a node connected to some of its near neighbours, in layers: a sparse top layer for long jumps across the space, denser layers below for local refinement. A search enters at the top, greedily walks towards the query, drops a layer, walks again, and finishes with a careful local search at the bottom. Think of it as travelling by motorway, then A-road, then street.
+
+It is the default in most vector stores because it is fast and its recall is high. Its costs are memory — the graph edges are stored alongside the vectors — and build time.
+
+| Knob | When | What it does | Raise it and you get |
+|---|---|---|---|
+| `M` | Build | Edges kept per node | Better recall, more memory, slower build |
+| `ef_construction` | Build | How hard the builder searches for good neighbours | Better graph quality, slower build, no query cost |
+| `ef_search` | Query | How wide the candidate list stays while searching | Better recall, slower queries |
+
+`ef_search` is the one to know. It is per query, so you can tune it live, expose it per endpoint, and raise it for a slow accurate path while keeping it low for a fast one. `ef_search` must be at least your `k`, and raising it well above `k` is the standard fix for disappointing recall. Note that `M` and `ef_construction` are baked in at build time — changing them means rebuilding the index.
+
+**IVF** — inverted file — partitions instead. Cluster all the vectors into `nlist` buckets, remember each bucket's centre, and at query time compare the query to the centres, pick the closest `nprobe` buckets and search only inside those.
+
+| Knob | When | What it does |
+|---|---|---|
+| `nlist` | Build | How many buckets the corpus is divided into. More buckets means smaller buckets and faster scans, but the query has to pick correctly from more options. |
+| `nprobe` | Query | How many buckets to actually search. This is IVF's `ef_search`. |
+
+IVF's characteristic failure is a query that lands near a bucket boundary: its true nearest neighbour sits in the bucket next door, which you did not search. Raising `nprobe` fixes it at the cost of speed. IVF also has to be **trained** — the clusters are learned from a sample of your vectors, so an index built on an empty or unrepresentative table will have bad buckets, and heavy inserts after training degrade it until you rebuild.
+
+| | HNSW | IVF |
+|---|---|---|
+| Structure | Neighbour graph | Clusters plus centroids |
+| Build cost | High | Lower, but needs training data |
+| Memory | Higher — edges plus vectors | Lower |
+| Recall at speed | Generally better | Good, more tuning-sensitive |
+| Query knob | `ef_search` | `nprobe` |
+| Incremental inserts | Handles them well | Degrades until retrained |
+
+Default to HNSW. Reach for IVF when memory is the binding constraint, usually combined with quantisation.
+
+**Quantisation** shrinks the vectors themselves. Scalar quantisation stores each dimension as an 8-bit integer instead of a 32-bit float — roughly a quarter of the memory, a small recall cost, and it is usually a good trade. Binary quantisation goes to one bit per dimension, which is a huge saving and a large accuracy cost on its own; it is used as a first pass, retrieving a wide candidate set cheaply and rescoring those candidates with the full-precision vectors. Product quantisation splits the vector into sub-vectors and codes each against a learned codebook, achieving strong compression at more accuracy cost and more tuning.
+
+> Approximate search is not a worse kind of search. It is the same search with a dial on it, and the dial is only dangerous when you do not know where it is set.
+
+## 3. Measure recall, then tune
+
+Here is the measurement that makes the rest of this lesson actionable. Take a sample of real queries. Run each one through exact search to get the true top k. Run it through your index. Compare the overlap. That fraction is your **recall@k**, and it is the number you tune against.
+
+```python
+# pip install numpy
+import time
+import numpy as np
+
+def true_top_k(index: np.ndarray, q: np.ndarray, k=10):
+    """Ground truth: score against every vector. Unit-length vectors assumed."""
+    return set(np.argsort(index @ q)[::-1][:k].tolist())
+
+def measure(index, queries, ann_search, k=10):
+    """ann_search(q, k) -> list of row ids from your real store."""
+    recalls, t0 = [], time.perf_counter()
+    for q in queries:
+        got = set(ann_search(q, k))
+        recalls.append(len(got & true_top_k(index, q, k)) / k)
+    ms = (time.perf_counter() - t0) * 1000 / len(queries)
+    return float(np.mean(recalls)), ms
+
+for ef in (10, 40, 100, 200, 400):
+    r, ms = measure(index, sample_queries, lambda q, k: search(q, k, ef_search=ef))
+    print(f"ef_search={ef:<4} recall@10={r:.3f}  {ms:.1f} ms/query")
+```
+
+Run that once and the shape of the curve tells you everything. Recall climbs steeply at first, then flattens; latency climbs steadily and does not flatten. You want the elbow — the point past which you are paying real milliseconds for a fraction of a percent.
+
+A few things the numbers will teach you:
+
+- Defaults are frequently too low for `ef_search` or `nprobe` when `k` is large. If you retrieve 50 candidates for a reranker, `ef_search` of 40 cannot serve you well.
+- Recall against exact search is not the same as your system being good. It only measures whether the index found what brute force would have found. If exact search itself misses the right chunk, the problem is upstream in embeddings or chunking, and no index setting will help.
+- Rebuild-time knobs and query-time knobs are different kinds of decision. Get `M` and `ef_construction` roughly right once, then live on `ef_search`.
+
+And re-measure after your corpus changes substantially. Index quality is a function of the data in it, so the settings that gave you 0.98 recall at 100,000 vectors are a claim about a corpus you no longer have.

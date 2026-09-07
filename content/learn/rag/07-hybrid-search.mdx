@@ -1,0 +1,139 @@
+---
+title: "Hybrid search"
+subtitle: "Run keyword search next to vector search and fuse the two ranked lists, so exact strings stop falling through the cracks."
+part: 3
+minutes: 7
+why: "Someone searched your docs for the error code ERR_CONN_RESET and got back three cheerful passages about network reliability, none of which mentioned the code. The chunk that names it exists. Your index has it. Vector search just did not put it first, because embeddings are built to blur the difference between similar things and that error code has no similar things. This lesson gives you the fix that almost every serious retrieval system already uses: keep the vector index, add a keyword index, and merge the two result lists with a formula you can write in eight lines."
+wins:
+  - "Reach for keyword search whenever the query contains an identifier, a code or a rare name."
+  - "Explain BM25 as rare terms count more and long documents are penalised."
+  - "Merge two ranked lists with Reciprocal Rank Fusion instead of adding raw scores."
+  - "Never compare a cosine similarity to a BM25 score - they are not on the same scale."
+  - "Budget for two indexes, two queries and one cheap merge."
+quiz:
+  - q: "A user searches for the part number RTX-4090-FE. Why does pure vector search often miss the chunk that contains it?"
+    options: ["Embedding models cannot process digits at all", "The embedding blurs a rare token into general meaning, so the exact chunk is not clearly closer than related ones", "Vector indexes drop chunks that are shorter than the query"]
+    answer: 1
+    explain: "An embedding encodes meaning, and a rare identifier has almost no meaning to spread out, so the exact match wins by very little or not at all."
+  - q: "Roughly what does BM25 reward?"
+    options: ["Documents that match rare query terms, with long documents penalised", "Documents whose average word length is closest to the query's", "Documents that appear most often in other documents' links"]
+    answer: 0
+    explain: "BM25 weights rare terms more heavily, lets repeated terms saturate, and normalises for document length."
+  - q: "Why is Reciprocal Rank Fusion a safe default for combining vector and keyword results?"
+    options: ["It always keeps the keyword result first", "It uses only the position in each list, so the two systems' scores never need to be normalised", "It retrains itself on every query"]
+    answer: 1
+    explain: "RRF throws away the scores and adds up 1/(k + rank) from each list, which sidesteps the whole comparability problem."
+  - q: "What is the main practical cost of hybrid search?"
+    options: ["The fusion step is quadratic in corpus size", "You maintain and query two indexes instead of one", "You must re-embed the corpus on every query"]
+    answer: 1
+    explain: "The merge itself is trivial; the real cost is a second index to build, keep in sync and query."
+  - q: "Which query is hybrid search least likely to help?"
+    options: ["Find the passage mentioning ticket INC-88213", "How do I ask for a refund on something I bought online?", "Which page covers the SOC2 control CC6.1?"]
+    answer: 1
+    explain: "That question is pure paraphrase with no rare tokens, which is exactly what dense vectors already handle well."
+deeper:
+  - { label: "Cormack et al. - Reciprocal Rank Fusion", href: "https://dl.acm.org/doi/10.1145/1571941.1572114" }
+  - { label: "Okapi BM25 - the scoring function", href: "https://en.wikipedia.org/wiki/Okapi_BM25" }
+  - { label: "OpenSearch - hybrid search", href: "https://opensearch.org/docs/latest/search-plugins/hybrid-search/" }
+  - { label: "pgvector - vectors in Postgres", href: "https://github.com/pgvector/pgvector" }
+---
+
+## 1. What embeddings are built to lose
+
+Lesson 01 said an embedding is a point in space where nearby means similar in meaning. That is the whole value and it is also the whole problem.
+
+To place "the refund window is fourteen days" near "how long do I have to get my money back", the model has to throw away the exact words. It keeps the gist. That is a feature when the user paraphrases, and a bug when the user types something whose gist is nothing.
+
+Consider what a rare token actually is. `ERR_CONN_RESET` gets split by the tokeniser into fragments, those fragments get averaged into the meaning of the sentence around them, and what comes out is a vector sitting somewhere near "connection problem". So does every other chunk about connections. The chunk that literally names the error is in the neighbourhood, but it is not obviously the closest point in it.
+
+| Query | What the user wants | Dense vectors | Keyword search |
+|---|---|---|---|
+| `ERR_CONN_RESET` | The one page naming that error | Blurry - lands near "network errors" | Exact - the term is rare, so it dominates |
+| `RTX-4090-FE` | That specific part | Weak - a code carries little meaning | Exact |
+| `INC-88213` | One ticket | Near random | Exact |
+| "how do I get my money back" | Refund policy | Strong - pure paraphrase | Weak - shares no words with "refund" |
+| "what does SOC2 CC6.1 require" | One named control | Half - gets SOC2, loses CC6.1 | Half - gets CC6.1, loses the intent |
+| "Kubernetes CrashLoopBackOff" | Debugging guide | Good | Good |
+
+Look at the last two rows. Real queries are usually a mix: some meaning, some exact strings. Neither system alone covers a mix.
+
+> Embeddings find text that means the same thing. Keyword search finds text that says the same thing. Most real questions need both.
+
+## 2. BM25, without the formula
+
+The keyword half of hybrid search is almost always **BM25**, a scoring function that has been the default in Lucene, Elasticsearch, OpenSearch and Solr for years. You do not need the algebra. Three ideas carry it.
+
+**Rare terms count for more.** If a query word appears in nine out of ten documents, matching it tells you nothing. If it appears in three documents out of a million, matching it tells you almost everything. BM25 weights each query term by how rare it is across the corpus. This is why it nails identifiers - an error code is about as rare as a term gets.
+
+**Repeats saturate.** A document that says "refund" ten times is more about refunds than one that says it once. But not ten times more. BM25 lets term frequency flatten out quickly, so keyword stuffing stops paying after the first few occurrences.
+
+**Long documents are penalised.** A ten-thousand-word page matches your query words by accident. BM25 divides by a length term, so matching in a short focused chunk is worth more than matching somewhere in a sprawling one.
+
+That is it. No learning, no training, no embeddings. It is corpus statistics and it is a genuinely hard baseline to beat.
+
+| | Dense vectors | BM25 |
+|---|---|---|
+| Matches on | Meaning | Exact terms, stemmed |
+| Handles paraphrase | Yes | No |
+| Handles rare identifiers | Poorly | Very well |
+| Needs a model at query time | Yes, to embed the query | No |
+| Needs training on your corpus | No | No |
+| Cost to add a document | An embedding call | An index write |
+| Fails quietly when | The query has no meaning to speak of | The user's words differ from the document's |
+
+Note the last row. The two systems fail on opposite inputs, which is exactly why combining them works. If they failed on the same queries there would be no point.
+
+## 3. Merging two ranked lists
+
+You run both searches. You get two lists back. Now what?
+
+The obvious idea - add the scores - does not work, and it is worth being precise about why. A cosine similarity is bounded, and in practice most of your chunks cluster in a narrow band like 0.6 to 0.85. A BM25 score is unbounded and depends on corpus statistics; 14.2 is meaningful only relative to the other scores for that same query. There is no exchange rate between them. Min-max normalising each list per query looks like a fix but is unstable, because the range shifts query to query - one outlier drags the whole scale.
+
+**Reciprocal Rank Fusion** dodges the problem by ignoring the scores entirely. For each system, a document at position `r` contributes `1 / (k + r)`, with `k` conventionally 60. Add up the contributions across systems and sort. That is the whole method.
+
+The behaviour it gives you is exactly what you want. Being ranked highly by both systems beats being ranked first by one and missed by the other. Position 1 in one list scores `1/61 = 0.0164`; position 5 in both lists scores `2/65 = 0.0308`, nearly double. Agreement wins.
+
+```python
+# Merge ranked lists with Reciprocal Rank Fusion.
+# Only positions are used, so nothing needs normalising.
+
+def rrf(rankings, k=60):
+    scores = {}
+    for ranking in rankings:
+        for position, doc_id in enumerate(ranking, start=1):
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + position)
+    return sorted(scores.items(), key=lambda pair: -pair[1])
+
+vector_hits = ["doc-9", "doc-2", "doc-7", "doc-4"]   # nearest neighbours
+keyword_hits = ["doc-4", "doc-9", "doc-1", "doc-3"]  # BM25 on the same query
+
+for doc_id, score in rrf([vector_hits, keyword_hits])[:3]:
+    print(f"{doc_id}  {score:.4f}")
+
+# doc-9  0.0325   ranked 1st and 2nd - both systems agree
+# doc-4  0.0320   ranked 4th and 1st - close behind
+# doc-2  0.0161   only one system found it
+```
+
+What `k` does: a larger `k` flattens the curve, so the gap between rank 1 and rank 10 shrinks and agreement across lists matters more. 60 is the value from the original paper and it is a fine place to start. Tune it only after you have the measurement from lesson 10.
+
+**Weighted score blending** is the alternative: normalise both score sets and compute `w * dense + (1 - w) * sparse`. It can beat RRF when you have an eval set to tune `w` on and your score distributions are stable. It also breaks quietly when the corpus grows and the distributions shift. Start with RRF; move to weights only if measurement says you gained something.
+
+### What it costs
+
+| Piece | Cost |
+|---|---|
+| Second index | Real - build it, keep it in sync on every write |
+| Second query | One extra round trip, usually in parallel with the first |
+| Fusion | Nothing, it is a dictionary and a sort |
+| Tuning | RRF: none. Weighted: an eval set and ongoing attention |
+
+You may not need two systems. Postgres with `pgvector` alongside a `tsvector` column does both in one database. Elasticsearch and OpenSearch both index dense vectors next to their BM25 fields. Most hosted vector databases now expose a sparse or hybrid mode. Check what you already run before adding infrastructure.
+
+### Where it clearly pays
+
+Hybrid is a clear win when your corpus is full of names that only appear in it: error codes, SKUs, ticket ids, internal service names, API method names, control numbers, acronyms your company invented. That describes most engineering documentation, most support corpora and most legal or compliance sets.
+
+It helps less when the corpus is prose about general topics and users ask in general language - marketing pages, essays, a book. There, the vocabulary overlaps between users and documents anyway, and dense retrieval already handles it.
+
+There is one honest caveat. Hybrid usually improves recall, and lesson 10 is where you check whether it improved yours. Do not take the improvement on faith because a blog post reported a number on a benchmark that is not your corpus.

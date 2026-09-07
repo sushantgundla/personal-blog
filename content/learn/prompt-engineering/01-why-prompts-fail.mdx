@@ -1,0 +1,132 @@
+---
+title: "Why prompts fail"
+subtitle: "Three causes, one debugging order, and why telling it to try harder does nothing."
+part: 1
+minutes: 7
+why: "Your prompt mostly works. Then it does something odd, you add a sentence, it gets better, and three days later it does something else odd. You are patching by feel, and you cannot say why any version is better than the last. There are only three reasons a prompt fails, they need completely different fixes, and most people reach for the expensive one first. This lesson gives you the order to check them in, and a one-call test that tells you which one you have."
+wins:
+  - "Sort every failure into ambiguous, buried, or beyond the model before you edit anything."
+  - "Ask the model to restate the task before doing it — one cheap call names the ambiguity."
+  - "Re-run on a tiny clean input to tell buried apart from genuinely too hard."
+  - "Delete intensifiers — replace be accurate with a checkable artefact like a quote or a null."
+  - "Use role prompts for tone and vocabulary, not for accuracy."
+quiz:
+  - q: "The same prompt gives a differently shaped answer on every run. The most likely cause is..."
+    options: ["The task is beyond the model", "Your instruction is buried under pasted context", "The instruction is ambiguous — it never described the output"]
+    answer: 2
+    explain: "When nothing pins the shape, each run is free to pick a different one, and it will."
+  - q: "The cheapest way to tell an ambiguous prompt from a genuinely hard task is..."
+    options: ["Ask the model to restate the task and name anything unclear, before it answers", "Raise max_tokens and run it again", "Switch to a bigger model and compare"]
+    answer: 0
+    explain: "One short call shows you the reading it took, and every ambiguity it lists is a decision you left open."
+  - q: "A prompt works on a short input and fails on a 30-page one. That points at..."
+    options: ["The task being beyond the model", "The instruction being buried and out-competed by the pasted text", "Temperature being set too high"]
+    answer: 1
+    explain: "Nothing about the task changed — only how much text your instruction is competing with."
+  - q: "Adding this is extremely important to a prompt mostly fails because..."
+    options: ["It uses up too much of the context window", "Emphasis is stripped out before the model sees it", "It does not describe anything different for the model to produce"]
+    answer: 2
+    explain: "An instruction only helps if it changes the target; emphasis leaves the target exactly where it was."
+  - q: "You give the model the role you are a senior tax accountant. The honest expectation is..."
+    options: ["It shifts vocabulary and register; do not assume it raises accuracy", "It unlocks tax knowledge the model otherwise withholds", "It reliably improves factual correctness on tax questions"]
+    answer: 0
+    explain: "Role prompting changes how the answer sounds; evidence that it changes how often the answer is right is thin and task-dependent."
+deeper:
+  - { label: "Anthropic — be clear and direct", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct" }
+  - { label: "Anthropic — prompt engineering overview", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+  - { label: "Lost in the Middle — how models use long contexts", href: "https://arxiv.org/abs/2307.03172" }
+  - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
+---
+
+`build-with-llms` lesson 2 made the case that an instruction can lose to everything else in the box. This lesson is what to do when yours has. Debugging a prompt feels like guesswork because most people change three things at once and keep whichever version looked better on one example. It does not have to be guesswork. There are three failure causes, they look different, and you can tell them apart in about two minutes.
+
+## 1. Three causes, and they need different fixes
+
+Every prompt failure is one of these.
+
+| Cause | What it looks like | The fix |
+|---|---|---|
+| **Ambiguous** — you and the model read the instruction differently | The output is confident and well-formed, and answers a slightly different question. The shape changes between runs. | Describe the output, not the intent. |
+| **Buried** — your instruction is competing with a wall of context | Works on a short input, falls apart on a long one. The model mirrors the pasted text's own formatting. | Move it, delimit it, or cut the context. |
+| **Beyond the model** — the task is genuinely too hard as posed | Fails the same way every time, even at temperature 0, even on a tiny clean input. | Split it, give it a tool, or do that part in code. |
+
+Most people reach straight for the third. "The model can't do this" is a comfortable conclusion — it ends the debugging. It is also wrong most of the time, because the first cause is enormously more common and looks exactly like incompetence from the outside.
+
+Ambiguity hides in ordinary words. Every one of these is a decision you did not make, so the model made it for you:
+
+- **Summarise this.** One sentence or one page? For whom? Keeping the numbers or not?
+- **Extract the date.** Which date — invoiced, due, paid? In what format? What if there are three?
+- **Recent tickets.** Recent as in seven days, thirty, or since the last release?
+- **Fix the tone.** Fix it towards what? Warmer, shorter, more formal, less apologetic?
+- **List the key points.** How many is key? Ranked or in document order?
+
+You know what you meant. The prompt does not contain what you meant. That gap is where almost all of this lives.
+
+## 2. Debug in that order
+
+Check ambiguity first because it is the cheapest to test and the most likely to be the answer.
+
+**Step one: make it restate the task.** Before asking for the work, ask what it thinks the work is.
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+TASK = "Summarise the support ticket below for the on-call engineer."
+
+resp = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=300,
+    temperature=0,
+    messages=[{
+        "role": "user",
+        "content": (
+            f"{TASK}\n\n"
+            "Do not do the task yet. Answer three things first:\n"
+            "1. What am I asking you to produce?\n"
+            "2. What will the output look like - fields, length, format?\n"
+            "3. What in my instruction could be read more than one way?"
+        ),
+    }],
+)
+print(resp.content[0].text)
+```
+
+Answer 3 is the one you want. Every item it lists is a decision you left to a coin flip, and answer 2 tells you which side the coin landed on this time. If the restatement is wrong, stop debugging — you have found it. Write the missing decisions into the prompt and try again.
+
+**Step two: shrink the input.** If the restatement is right but the answer is still wrong, cut the context down to one small, clean example and re-run. If it now works, the problem was never capability. Your instruction was buried, and the fix is placement: document first and task last, clear delimiters around the data, and less pasted context rather than more.
+
+**Step three: only now, believe it is hard.** A task that fails on a tiny clean input, at temperature 0, with an accurate restatement, is a task the model cannot do as posed. That is a real category — exact arithmetic on long numbers, anything needing information the model does not have, anything with five interacting sub-tasks. The fix is not a better sentence. It is decomposition (lesson 4), a tool, or code.
+
+| You observed | Test | If the test passes |
+|---|---|---|
+| Inconsistent shape across runs | Ask it to restate the task | Ambiguity — specify the output |
+| Fine on short input, bad on long | Re-run on a small clean input | Buried — fix placement and delimiters |
+| Same wrong answer every time, small input | Nothing left to test | Genuinely hard — split it or use a tool |
+
+> Prove the first two before you believe the third. "The model can't do this" is usually "I did not say what I wanted".
+
+## 3. Why "be careful" does nothing
+
+Now the sentences everyone adds and nobody measures. *This is very important. Be thorough. Take your time. Please be accurate. Double-check your work.*
+
+They read as pressure. The model does not experience pressure. It predicts the next token given everything in the box, and "this is very important" does not change what output is being described — so there is nothing for it to do differently. Compare that with "quote the sentence you took each value from", which changes the output concretely, on every run.
+
+The rule: **if an instruction does not change what the output contains, it does not change the output.**
+
+| Weak prompt | Rewrite that does something | What changed |
+|---|---|---|
+| Please be very careful and accurate. | Quote the exact sentence each value came from. If you cannot quote it, return null for that field. | Care became a visible artefact you can check. |
+| This is really important, get the format right. | Return one JSON object with keys `id`, `date`, `total`, in that order. No text before or after. | Named the shape instead of asking for effort. |
+| Take your time and think it through. | Before answering, list the constraints one per line, then give the answer. | Turned "thinking" into tokens that actually get produced. |
+| Be thorough — do not miss anything. | Cover all five sections, in document order, one paragraph each. | A countable target replaced a feeling. |
+| You are an expert contract lawyer. | Cite the clause number for every claim. If no clause supports it, write `not in the document`. | Replaced a costume with a rule you can verify. |
+
+Two honest notes, because this area is thick with folklore.
+
+**Role prompting is a habit, not a proven accuracy lever.** "You are an expert X" reliably changes vocabulary, register and how technical the answer gets, and that is genuinely useful when you care how it sounds. Claims that it makes the model *right* more often are weak and depend heavily on the task. Use it for tone. Do not use it instead of specifying the output.
+
+**"Take your time" is not the same as chain-of-thought.** Asking for step-by-step reasoning does work, for a mechanical reason covered in lesson 5 — the model gets more tokens to compute in. "Take your time" produces no extra tokens, so it produces no extra computation. The phrasing is similar; the effect is not.
+
+The next lesson goes at placement — which half of the request your instruction should live in, and why that changes how much weight it carries.

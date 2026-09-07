@@ -1,0 +1,12 @@
+{
+  "title": "LLMs",
+  "subtitle": "The model layer, and how to choose in it.",
+  "blurb": "What these models actually are, who sells them, what open weights really buy you, and how to pick one without guessing. The layer under everything else you build.",
+  "order": 2,
+  "parts": [
+    { "n": 1, "name": "The machine" },
+    { "n": 2, "name": "The providers" },
+    { "n": 3, "name": "Open weights" },
+    { "n": 4, "name": "Choosing" }
+  ]
+}

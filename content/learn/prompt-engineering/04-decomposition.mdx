@@ -1,0 +1,130 @@
+---
+title: "Decomposition"
+subtitle: "Split one hard prompt into a few checkable ones — and know when not to."
+part: 2
+minutes: 7
+why: "You have one prompt that reads the email, works out which plan the customer is on, decides whether they are owed a refund, drafts the reply and returns JSON. It is right about eighty percent of the time and you have no idea which of those four jobs the twenty percent is. So you tweak a sentence, the number moves, and you cannot say why. This lesson is about cutting that prompt into pieces you can actually test — and about the real costs of doing it, so you do not split things that were fine."
+wins:
+  - "Split when you want to inspect the middle — that is the whole payoff."
+  - "Give every step a checkable output: a schema, an enum, or a number."
+  - "After splitting, ask which steps need a model at all."
+  - "Route with one cheap classification call instead of five branches inside one prompt."
+  - "Keep it as one prompt when latency is tight or the later step needs the original wording."
+quiz:
+  - q: "The main reason to split a prompt into a chain is..."
+    options: ["It always costs less than one big call", "Each step gets its own checkable output, so you can see which one failed", "Shorter prompts are more accurate as a general rule"]
+    answer: 1
+    explain: "A single prompt doing five jobs gives you one pass-or-fail signal for five different pieces of work."
+  - q: "The hidden cost of chaining that people miss most often is..."
+    options: ["Later steps only see what earlier steps passed on, so nuance in the original wording is lost", "The provider charges a premium for multiple calls in sequence", "Chained calls cannot use temperature 0"]
+    answer: 0
+    explain: "Every seam is a lossy handoff — the tone, the hedging and the odd detail do not survive a JSON summary."
+  - q: "A good place to put a seam is..."
+    options: ["Roughly every 200 tokens of prompt", "Wherever the prompt has a natural paragraph break", "At a point where you would genuinely want to inspect or store the intermediate result"]
+    answer: 2
+    explain: "Inspectability is what you are buying; a seam you would never look at costs latency and buys nothing."
+  - q: "Routing means..."
+    options: ["Sending the same prompt to several models and taking the majority answer", "Classifying the input first, then sending it to a prompt specialised for that class", "Retrying a failed call against a different endpoint"]
+    answer: 1
+    explain: "One cheap classification picks which focused prompt runs, instead of one giant prompt branching internally."
+  - q: "Five chained steps that are each right 95 percent of the time..."
+    options: ["Land near 77 percent end to end if the errors are independent — and they usually are not, so measure it", "Stay at 95 percent, because each step corrects the last", "Land at 19 percent"]
+    answer: 0
+    explain: "0.95 to the fifth power is about 0.77, which is a direction to worry about rather than a number to quote."
+deeper:
+  - { label: "Anthropic — chain complex prompts", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts" }
+  - { label: "Anthropic — building effective agents", href: "https://www.anthropic.com/engineering/building-effective-agents" }
+  - { label: "Anthropic — prompt engineering overview", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+  - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
+---
+
+Lesson 1 ended with a category you can only reach after ruling out the other two: the task really is too hard as posed. This is the main tool for that case, and it is unglamorous. You stop trying to write a better prompt and start writing fewer things per prompt.
+
+## 1. One prompt, five jobs, one number
+
+A prompt doing five things fails at the hardest one and hands you a single output. That output is your only signal, and it is the wrong shape for debugging. With five jobs fused into one call, you cannot:
+
+- tell which step was wrong when the answer is wrong,
+- change one step without risking the other four,
+- test a step against its own examples,
+- put the easy steps on a cheaper model, or in plain code,
+- log an intermediate that anyone could review.
+
+There is an arithmetic version of the same problem. Five steps at 95% each is about 77% end to end, if the errors are independent. Be careful with that number — real errors are correlated, so it is a direction, not a measurement. What is reliable is the shape of it: accuracy multiplies down, and a fused prompt hides which factor is dragging.
+
+There is an attention version too. Your instructions for step 5 sit a long way from the data step 1 needs, and every sub-task competes with the others for the model's limited willingness to follow instructions. The hardest job loses that competition, every time.
+
+## 2. The chain: extract, then classify, then write
+
+The shape that works most often is boring: pull out facts, decide something, produce prose. Each step has a narrower job and an output you can check.
+
+| Step | Input | Output | Checkable by |
+|---|---|---|---|
+| 1. Extract | The raw email | JSON: `order_id`, `purchase_date`, `product`, `problem` | Schema validation, plus does `order_id` exist in the database |
+| 2. Decide | The extracted fields | One of `refund`, `replace`, `decline`, `needs_human` | An enum, plus a fixed set of policy test cases |
+| 3. Write | The decision plus the customer's own words | The reply text | Length, tone, and no facts absent from step 1 |
+
+Look at step 2 for a second. Once it is on its own, with a JSON input and a four-value output, an obvious question appears: does this need a model at all? Refund policy is usually a handful of rules about dates and amounts, and rules are cheaper, faster and exactly repeatable in code. You could not see that while it was buried in the middle of a paragraph. **Splitting shows you which parts were never LLM work.**
+
+```python
+import json
+from anthropic import Anthropic
+
+client = Anthropic()
+
+def ask(system: str, user: str, max_tokens: int) -> str:
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=max_tokens,
+        temperature=0,
+        system=system,
+        messages=[{"role": "user", "content": user}],
+    )
+    return resp.content[0].text.strip()
+
+EXTRACT = """Extract from the email. Return one JSON object and nothing else.
+Keys in this order: order_id, purchase_date (YYYY-MM-DD), product, problem.
+Use null for anything not stated. Never guess a value."""
+
+DECIDE = """You apply refund policy. The input is a JSON object.
+Reply with exactly one word: refund, replace, decline, needs_human.
+Use needs_human whenever order_id or purchase_date is null."""
+
+email = "Hi - the lamp I bought in March arrived cracked. Order 8812."
+
+facts = json.loads(ask(EXTRACT, email, 300))
+print(facts)                                  # this line is the entire point of splitting
+decision = ask(DECIDE, json.dumps(facts), 5)
+print(decision)
+```
+
+That `print(facts)` is not debugging clutter. It is the thing you bought. You can log it, assert on it, alert when `order_id` is null more than usual, and hand it to someone who does not read Python. None of that was possible when it lived inside one model's head.
+
+> Put the seams where you would want to look at the intermediate result. A seam you would never inspect costs latency and buys nothing.
+
+## 3. What it costs, and when one prompt wins
+
+| What you pay | Detail |
+|---|---|
+| Latency | Each step is a round trip, and they are sequential by definition |
+| Tokens | Every step re-sends its own instructions; the input is paid for again |
+| Code | Orchestration, retries, and a distinct failure mode per step |
+| Lost context | Step 3 knows only what step 2 passed on |
+
+The last one is the one people underestimate. The customer wrote "third time this month" and your extractor did not have a field for it, so the reply is polite and clueless. Every seam is a lossy handoff. When you design the intermediate shape, you are deciding what the rest of the pipeline is allowed to know.
+
+| Split it | Keep it as one prompt |
+|---|---|
+| The steps have different failure modes you want to measure apart | It is genuinely one job |
+| You want to store, inspect or audit the middle | You would never look at the intermediate |
+| A step could run on a cheaper model, or on no model | Latency is tight and a human is waiting |
+| A step is deterministic and belongs in code | The later step needs the original wording and tone |
+| Different steps need different examples or rules | It already works and you can measure that it works |
+
+The last cell is not a joke. Decomposition is a debugging tool, not a virtue. A single prompt that passes its tests does not need splitting because it looks monolithic.
+
+**Routing** is decomposition's cousin, and often the better first cut. Instead of one prompt with five conditional branches inside it, make one cheap classification call, then dispatch to whichever specialised prompt matches. A tiny `max_tokens=5` classifier costs almost nothing, and every downstream prompt stays short, focused and independently testable. Adding a sixth category means writing a sixth prompt, not editing the one prompt that all five other categories depend on.
+
+Two things to get right when routing: give the classifier an explicit fallback category — `other`, going to a generic handler or a human — so it never has to force a bad fit; and log the routing decision, because "which branch did this take" is the first question you will ask when something goes wrong.
+
+Next: the technique that makes a single hard step work better, and the two-thirds of tasks where it is pure waste.
