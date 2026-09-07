@@ -1,0 +1,144 @@
+---
+title: "Prompts that get followed"
+subtitle: "Instructions the model actually obeys — and why yours get ignored."
+part: 1
+minutes: 7
+why: "You wrote what felt like clear instructions. The model ignored half of them, added a friendly paragraph you explicitly said not to add, and formatted the answer three different ways across three runs. Your instinct is to add another sentence telling it to stop. That almost never works. This lesson moves the fix upstream — from asking harder to describing the output precisely, putting the instruction where the model is still paying attention, and showing an example instead of describing one."
+wins:
+  - "Describe the output shape exactly — fields, order, length, what to do when the answer is unknown."
+  - "Write instructions as do-this, not don't-do-that."
+  - "For long inputs, put the document first and the task last."
+  - "Show two good examples instead of a paragraph describing the style you want."
+  - "Put the durable role and rules in the system prompt, the specific request in the user turn."
+quiz:
+  - q: "Your prompt says do not add any commentary, and the model adds commentary anyway. The stronger rewrite is..."
+    options: ["Repeating the instruction twice, in capitals", "Stating the required output positively — return only the JSON object, nothing before or after", "Lowering temperature to 0.2"]
+    answer: 1
+    explain: "Positive instructions describe a target the model can aim at; a negative one still puts the forbidden thing in its head with nothing to replace it."
+  - q: "You are sending a 40-page contract plus the question, what is the notice period. The better layout is..."
+    options: ["Question first, then the contract, so the model knows what to look for while reading", "A summary of the contract instead of the contract", "The contract first, then the question at the very end"]
+    answer: 2
+    explain: "With long inputs, an instruction sitting at the end is followed far more reliably than one buried above thousands of tokens of document."
+  - q: "Few-shot prompting means..."
+    options: ["Including a couple of worked input-and-output examples in the prompt", "Retrying the call a few times and taking the majority answer", "Training the model on a few of your records"]
+    answer: 0
+    explain: "You demonstrate the mapping you want with real examples; no training or extra calls are involved."
+  - q: "The best use of the system prompt is..."
+    options: ["The user's actual question, so it carries more weight", "The role, the rules, and the output format that stay the same on every call", "Nothing — it is a legacy field"]
+    answer: 1
+    explain: "Durable behaviour goes in the system prompt; the changing specifics go in the user turn, which also makes the stable part cacheable."
+  - q: "Return your best guess about the tone is a weak instruction mostly because..."
+    options: ["Tone analysis needs a fine-tuned model", "Tone words are filtered out by the tokenizer", "It never says what the output should look like, so every run picks a different shape"]
+    answer: 2
+    explain: "Specify the exact allowed values and the exact format, and the variation between runs mostly disappears."
+deeper:
+  - { label: "Anthropic — prompt engineering overview", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+  - { label: "Anthropic — multishot (few-shot) prompting", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/multishot-prompting" }
+  - { label: "Anthropic — long context tips", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/long-context-tips" }
+  - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
+---
+
+Prompting has a bad reputation among engineers, and it earned it — most advice about it is superstition. Strip that away and what is left is small, mechanical, and works. This lesson is that part.
+
+## 1. Your instruction is competing with everything else in the box
+
+From lesson 1: the model reads one flat pile of tokens and predicts what comes next. Your instruction is not privileged. It sits in the same pile as the user's message, the document you pasted, and the last twelve turns of chat, and it has to out-weigh all of that.
+
+That reframes every prompting failure. The model did not disobey you. Your instruction lost.
+
+So the question stops being "how do I say it more firmly" and becomes three concrete ones:
+
+- **Is it specific enough to aim at?** "Be concise" is a direction. "At most 40 words" is a target.
+- **Is it in a place the model is still weighting heavily?** The start and the end of the prompt beat the middle.
+- **Is it competing with a stronger signal?** If you paste an email full of headings and ask for plain text, the email's own formatting is arguing against you.
+
+The single biggest gain in prompting is being specific about the **output**, not the vibe. Vibe instructions — professional, thorough, high-quality, thoughtful — do close to nothing, because they do not describe anything the model can produce differently. Output instructions do everything: which fields, in what order, how long, what to emit when the answer is not in the source.
+
+| Weak prompt | Rewrite that gets followed | What changed |
+|---|---|---|
+| Summarise this article well. | Summarise this article in exactly 3 bullets, at most 20 words each. No preamble. | Countable target instead of a quality adjective. |
+| Don't be verbose and don't use markdown. | Reply with a single paragraph of plain text. | Positive instruction: says what to produce, not what to avoid. |
+| Extract the important details. | Extract these fields in this order: invoice_number, issue_date (YYYY-MM-DD), total_amount, currency. Use null for any field not present. | Names the fields, the format, and the missing-value rule. |
+| Tell me the sentiment. | Classify the sentiment as exactly one of: positive, negative, neutral. Output the single word only. | Closed set of allowed values, plus the exact output shape. |
+| Read this 40-page contract. What is the notice period? | [full contract] ... then: Using only the contract above, state the notice period. Quote the clause. If it is not stated, reply not specified. | Task moved after the data, and given an escape hatch other than inventing one. |
+
+Two of those changes deserve their own explanation.
+
+**Positive beats negative.** "Do not use prose" leaves the model holding the idea of prose with nothing to put in its place. "Respond with a JSON object and nothing else" gives it a thing to do. Every time you catch yourself writing "don't", ask what you want instead, and write that.
+
+**An escape hatch prevents invention.** A model asked for a notice period that is not in the document will produce a plausible one, because that is what predicting text does. Give it a legitimate answer for the missing case — `not specified`, `null`, `I could not find this` — and it will usually take it.
+
+## 2. Where you put it matters as much as what it says
+
+For a short prompt, order barely matters. For a long one it matters a lot.
+
+When you are sending a large document — thousands of tokens or more — put the document **first** and the task **last**. An instruction sitting on top of 20,000 tokens of contract has a lot of text between it and the answer. The same instruction at the end is the freshest thing the model read.
+
+A layout that holds up in practice:
+
+1. System prompt: who it is, the rules, the output format.
+2. The documents or data, clearly delimited (XML-ish tags like `<contract>` work well because the boundaries are unambiguous).
+3. Any examples.
+4. The actual task, last.
+
+The delimiters are not decoration. Without them the model has to guess where your data stops and your instruction starts, and sometimes it guesses wrong — which is also how a document containing the words "ignore the above and..." ends up steering your app.
+
+> Stop writing instructions the model has to interpret. Write the shape of the answer you want back.
+
+## 3. Show it, do not describe it
+
+If you have a style, a format, or an edge case you keep re-explaining in prose, replace the prose with two examples. This is **few-shot prompting** — you include a small number of worked input-and-output pairs, and the model infers the mapping.
+
+Two good examples beat a paragraph of description, for a plain reason: the paragraph has to be interpreted, the examples do not. The examples *are* the output format, already in the shape you want.
+
+What makes examples work:
+
+- **Two to five is the sweet spot.** One is a coincidence, ten is mostly wasted tokens.
+- **Include a hard case.** The empty input, the ambiguous one, the one where the right answer is "unknown". That is where the rules you never wrote down actually live.
+- **Be consistent.** If your examples differ in format from each other, you have taught it that the format is optional.
+- **Match the real distribution.** Examples of tidy input will not prepare it for the messy input your users send.
+
+The last piece is where things go. Anthropic's API has a separate `system` parameter alongside the `messages` list, and the split is worth respecting:
+
+| Goes in the system prompt | Goes in the user turn |
+|---|---|
+| The role and the rules | This specific request |
+| The output format | The data for this call |
+| The examples | The one variable question |
+| Anything identical on every call | Anything that changes per call |
+
+Keeping the stable part stable is not only tidy. It is the part prompt caching can reuse, so it is cheaper too.
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+SYSTEM = """You classify support tickets.
+Reply with exactly one of: billing, bug, feature_request, other.
+Output the single word only. No punctuation, no explanation."""
+
+# Two worked examples, including one that is deliberately ambiguous.
+EXAMPLES = [
+    {"role": "user", "content": "I was charged twice this month."},
+    {"role": "assistant", "content": "billing"},
+    {"role": "user", "content": "It would be great if the export button also did CSV."},
+    {"role": "assistant", "content": "feature_request"},
+]
+
+def classify(ticket: str) -> str:
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=5,        # the answer is one word; do not pay for more
+        temperature=0,       # classification wants the most likely token, every time
+        system=SYSTEM,       # stable rules live here, not in the user turn
+        messages=EXAMPLES + [{"role": "user", "content": ticket}],
+    )
+    return resp.content[0].text.strip()
+
+print(classify("The app crashes when I open settings on Android."))
+```
+
+That prompt is short, boring, and reliable. It names the allowed values, fixes the output shape, shows two examples, and caps the answer at five tokens. Almost every prompt that works looks like this, and almost none of them look like an incantation.
+
+Its one remaining weakness: nothing actually *stops* the model returning a fourth word. That is what lesson 3 is for.

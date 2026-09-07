@@ -1,0 +1,53 @@
+/* Wins — "what you can do now that you couldn't before".
+   Sits after the body, slightly larger than running text, because it is
+   the part worth remembering. */
+
+.wins {
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  padding-top: clamp(1.5rem, 3vw, 2rem);
+  border-top: 1px solid var(--outline-variant);
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.0625rem, 1.8vw, 1.25rem);
+  letter-spacing: -0.01em;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+/* The arrow is decorative — the words after it already say what this is,
+   so it is hidden from screen readers. */
+.arrow {
+  margin-right: 0.45em;
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Each bullet gets its own accent marker via ::before, positioned in a
+   fixed-width indent so wrapped lines line up under the first word. */
+.item {
+  position: relative;
+  padding-left: 1.5em;
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
+  line-height: 1.7;
+  color: var(--on-surface);
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  left: 0.15em;
+  top: 0.7em;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 2px;
+  background: var(--primary);
+  transform: rotate(45deg);
+}

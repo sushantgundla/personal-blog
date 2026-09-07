@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Fixed top bar: wordmark on the left, four section links on the right.
+ * Fixed top bar: wordmark on the left, five section links on the right.
  *
  * Built entirely from the docs/architecture/design-system.md §3 class vocabulary (.prism-mono,
  * .prism-btn-quiet, .prism-link) so every one of the 36 theme files repaints it
@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const NAV_LINKS: { href: string; label: string }[] = [
   { href: '/articles', label: 'Writing' },
+  { href: '/learn', label: 'Learn' },
   { href: '/projects', label: 'Projects' },
   { href: '/radar', label: 'Radar' },
   { href: '/about', label: 'About' },

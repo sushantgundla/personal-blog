@@ -1,0 +1,123 @@
+---
+title: "What the model actually is"
+subtitle: "A next-token guesser with a fixed-size scratchpad. Everything else follows from that."
+part: 1
+minutes: 7
+why: "You have called the API, got a good answer, run the same prompt again and got a different one. Then it invented a function that does not exist and said so with total confidence. None of that is a bug you can patch at the call site. It falls out of what the thing is, so this lesson goes upstream and shows you the machine, and after it the weird behaviour stops being weird and starts being budgetable."
+wins:
+  - "Count tokens, not characters, and budget in tokens for both cost and speed."
+  - "Assume the model remembers nothing — your code resends the whole conversation every turn."
+  - "Set temperature to 0 for anything you extract, classify, or diff in a test."
+  - "Treat a hallucination as normal operation, not a malfunction, and design a check for it."
+  - "Never expect a token-blind model to count letters or do exact arithmetic."
+quiz:
+  - q: "Between two turns of a chat, where does the model store what you said earlier?"
+    options: ["In a session on the provider's server, keyed by your API key", "In the model weights, which update as you talk", "Nowhere — your code resends the whole history in the next request"]
+    answer: 2
+    explain: "The API is stateless; the conversation exists only in the messages array you send each time."
+  - q: "You want the same input to give the same output every run. The dial to reach for is..."
+    options: ["temperature set to 0", "max_tokens set low", "top_p set to 1.0"]
+    answer: 0
+    explain: "Temperature 0 makes sampling pick the highest-probability token every step, which is as close to repeatable as you get."
+  - q: "Asking a model how many times the letter r appears in strawberry is unreliable mainly because..."
+    options: ["The answer is longer than max_tokens allows", "The model sees tokens, which are chunks of characters, not individual letters", "Counting tasks are filtered by the safety layer"]
+    answer: 1
+    explain: "Letters are not the unit the model reads, so it is guessing at a spelling it never sees."
+  - q: "The honest description of a hallucination is..."
+    options: ["A lookup that returned the wrong row", "A cache that went stale between requests", "The same next-token prediction it always does, landing on something untrue"]
+    answer: 2
+    explain: "There is no lookup step to go wrong — the model is predicting plausible text every single time, and plausible is not the same as true."
+  - q: "Response latency grows most directly with..."
+    options: ["The number of output tokens, because they are produced one at a time", "The number of tools you defined", "The size of the context window the model supports"]
+    answer: 0
+    explain: "Input is processed in one pass, but every output token is a separate step, so long answers are slow answers."
+deeper:
+  - { label: "Anthropic — context windows", href: "https://docs.anthropic.com/en/docs/build-with-claude/context-windows" }
+  - { label: "Anthropic — Messages API reference", href: "https://docs.anthropic.com/en/api/messages" }
+  - { label: "OpenAI — tokenizer playground", href: "https://platform.openai.com/tokenizer" }
+  - { label: "Attention Is All You Need (the original transformer paper)", href: "https://arxiv.org/abs/1706.03762" }
+---
+
+You know how a database works, roughly, even if you have never written one. That mental model is what stops you writing a query that scans a billion rows by accident. This lesson gives you the same thing for a language model. It is a smaller machine than the marketing suggests, and once you can see it, most of its strange behaviour becomes predictable.
+
+## 1. It reads tokens, and tokens are not words
+
+A **token** is a chunk of text — usually a few characters, often a word fragment. Before the model sees your prompt, a tokenizer chops it into these chunks and turns each one into a number. The model only ever deals in those numbers. It never sees your string.
+
+The split is not where you would put it:
+
+| What you wrote | Roughly what happens |
+|---|---|
+| `hello` | one token |
+| `unbelievable` | broken into several fragments |
+| `the` and ` the` (leading space) | two different tokens |
+| `8675309` | split into pieces, often in odd places |
+| Non-English text | many more tokens than the character count suggests |
+
+For ordinary English, the rule of thumb is about 4 characters per token, or roughly 3 tokens for every 4 words. For Japanese, Hindi or Arabic the same sentence can cost two to four times more tokens. If you are billing per user, users writing in those languages cost you more for identical work.
+
+Two practical consequences fall straight out of this.
+
+**The model is blind to letters.** It cannot reliably count the r's in `strawberry`, reverse a string, or tell you the third character of a word, because letters are not the unit it reads. Push that work into code, where it belongs.
+
+**Tokens are your unit of budget.** Price is per token, split into input and output rates, and output is usually the more expensive of the two. Speed follows the same unit: input is processed in roughly one pass, but each output token is produced one at a time, so a 2,000-token answer takes about ten times longer to come back than a 200-token one. When you want a faster endpoint, shorten the answer before you shorten anything else.
+
+## 2. The context window is the only memory there is
+
+The API is stateless. It stores nothing about you between calls. The model has no memory of your last request, and no memory of the last ten thousand.
+
+What looks like a conversation is a trick your code performs. Every turn, you send the entire history — system prompt, all previous user messages, all previous assistant replies, plus the new message — and the model reads the whole pile fresh, answers, and forgets it all again.
+
+The **context window** is the hard ceiling on that pile, measured in tokens. Input and output both have to fit inside it. When a long chat starts failing, this is almost always why.
+
+> The model has no memory. Your code has the memory, and it re-reads the whole thing out loud on every single turn.
+
+Three things follow that will save you real money:
+
+- **Long chats get expensive in a curve, not a line.** Turn 30 resends turns 1 through 29. Cost per turn climbs the whole way.
+- **You need a plan for the ceiling.** Drop old turns, summarise them into one message, or retrieve only the relevant parts. Pick one deliberately before a user hits it for you.
+- **Repeated prefixes can be cached.** If the first 10,000 tokens of every request are the same system prompt and documents, prompt caching lets the provider skip re-reading them and charges much less for that part. It is the single easiest cost win in most apps.
+
+## 3. Every answer is a guess, and there is a dial on it
+
+Given everything so far, the model produces a probability distribution over the next token. Then something picks one. Then the whole thing runs again with that token appended. That loop is the entire show.
+
+The picking step is sampling, and you control it:
+
+| Setting | What it does | Use it when |
+|---|---|---|
+| `temperature` (0 to 1) | Flattens or sharpens the probabilities. 0 means always take the most likely token. | 0 for extraction, classification, code, anything you assert on in a test. Higher for drafting and brainstorming. |
+| `top_p` | Only samples from the most likely tokens whose probabilities add up to `p`. | An alternative knob for the same job — set one or the other, not both. |
+| `max_tokens` | Hard stop on the length of the answer. | Always. It is your cost and latency seatbelt. |
+
+This is why the same prompt gives different answers. Nothing is broken. At any temperature above 0 you are drawing a sample, and different draws give different text. Even at temperature 0, floating-point and infrastructure details mean you can get small differences between runs, so treat 0 as *much* more stable rather than *guaranteed identical*.
+
+And this is what a hallucination really is. There is no lookup step. The model is not consulting a store of facts and occasionally reading the wrong row — there is no store and no reading. It is predicting text that fits the pattern, and text that fits the pattern is often true, because true things are common in what it learned. When it is not true, the machine did exactly what it always does. That is why "be accurate" in a prompt does so little, and why giving it the actual document (lesson 4) does so much.
+
+```python
+# pip install anthropic
+from anthropic import Anthropic
+
+client = Anthropic()
+
+prompt = "List three causes of a slow SQL query. One line each."
+
+# Ask before you pay: count the input tokens for the exact request you are about to send.
+count = client.messages.count_tokens(
+    model="claude-sonnet-5",
+    messages=[{"role": "user", "content": prompt}],
+)
+print("input tokens:", count.input_tokens)
+
+resp = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=200,      # seatbelt: caps cost and latency
+    temperature=0,       # repeatable-ish: take the most likely token every step
+    messages=[{"role": "user", "content": prompt}],
+)
+
+print(resp.content[0].text)
+print(resp.usage)        # what you were actually billed for, input and output
+```
+
+Run it twice at `temperature=0` and then twice at `temperature=1`, and watch the difference. That two-minute experiment is worth more than any explanation of sampling, including this one.

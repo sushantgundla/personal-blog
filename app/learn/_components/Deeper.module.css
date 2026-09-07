@@ -1,0 +1,49 @@
+/* Deeper — the reading list at the very bottom of a lesson.
+   Deliberately plain: a label, then one link per line. It is an exit
+   from the page, so it should not compete with the quiz above it. */
+
+.deeper {
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  padding-top: clamp(1.5rem, 3vw, 2rem);
+  border-top: 1px solid var(--outline-variant);
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--on-surface);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--outline-variant);
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.link:hover,
+.link:focus-visible {
+  color: var(--primary);
+  text-decoration-color: currentColor;
+}
+
+/* The "leaves the site" mark. Decorative — the link already carries
+   target="_blank", and the label says where it goes. */
+.out {
+  font-family: var(--font-display);
+  font-size: 0.7em;
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link {
+    transition: none;
+  }
+}

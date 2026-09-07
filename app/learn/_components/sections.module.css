@@ -1,0 +1,123 @@
+/* Page-level arrangement for /learn and /learn/[course].
+   Colour, type and the card surface all come from app/learn/learn.css;
+   this file only sets spacing, and the scroll-reveal states. */
+
+/* ------------------------------------------------------------------
+   Scroll reveal
+
+   app/(main)/_components/Reveal.tsx toggles the global classes
+   `prism-reveal` / `prism-in`, but the rules for those live in
+   app/(main)/prism.css, which is imported by the (main) layout and so
+   is not loaded on /learn. The states are re-declared here, on a local
+   class Reveal takes via its `className` prop.
+   ------------------------------------------------------------------ */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s var(--learn-ease), transform 0.7s var(--learn-ease);
+}
+
+.reveal:global(.prism-in) {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   The page header block
+   ------------------------------------------------------------------ */
+.intro p {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--on-surface-variant);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------
+   Lists of cards — courses on the index, lessons under a part
+   ------------------------------------------------------------------ */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* ------------------------------------------------------------------
+   A part heading on the syllabus: "PART 1 · THE MODEL"
+   ------------------------------------------------------------------ */
+.part {
+  margin-top: clamp(2.25rem, 5vw, 3.25rem);
+}
+
+.part:first-of-type {
+  margin-top: 0;
+}
+
+.partHeading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+
+.partName {
+  color: var(--on-surface);
+}
+
+/* ------------------------------------------------------------------
+   The quiet line at the foot of a page
+   ------------------------------------------------------------------ */
+.note {
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--outline-variant);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--on-surface-variant);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------
+   The empty state — no courses on disk yet
+   ------------------------------------------------------------------ */
+.empty {
+  margin-top: 2rem;
+  font-size: 1rem;
+  color: var(--on-surface-variant);
+}
+
+/* ------------------------------------------------------------------
+   The back link at the top of a course page
+
+   Not `.learn-back` from learn.css: that one carries `margin-top: 2rem`
+   because it is written for the foot of a lesson, and at the top of a
+   page it just adds a gap under the header.
+   ------------------------------------------------------------------ */
+.back {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--on-surface-variant);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.back:hover {
+  color: var(--primary);
+}

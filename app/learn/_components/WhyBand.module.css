@@ -1,0 +1,27 @@
+/* WhyBand — the "why this matters to you" band under the lesson title.
+   A left accent bar and a tinted panel, so the reader's eye lands on the
+   reason before it lands on the body. Every colour is a site token, so
+   the band follows next-themes in both dark and light. */
+
+.band {
+  position: relative;
+  margin-top: clamp(1.75rem, 4vw, 2.5rem);
+  padding: clamp(1rem, 2.4vw, 1.4rem) clamp(1.1rem, 2.4vw, 1.6rem);
+  padding-left: clamp(1.35rem, 2.8vw, 1.9rem);
+  border: 1px solid var(--outline-variant);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 0.75rem 0.75rem 0;
+  background: var(--surface-container-low);
+  font-size: clamp(0.9375rem, 1.05vw, 1rem);
+  line-height: 1.75;
+  color: var(--on-surface-variant);
+}
+
+/* "Why this, for you:" — the lead-in, set in the accent so the band has
+   one bright point and the rest stays quiet. */
+.lead {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--primary);
+  margin-right: 0.4em;
+}

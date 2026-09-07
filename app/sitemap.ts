@@ -5,6 +5,7 @@ import { getAllArticles } from '@/lib/articles'
 import { siteConfig } from '@/lib/config'
 import { ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
 import { ALL_INDICATOR_CODES } from '@/lib/atlas/indicators'
+import { getAllCourses } from '@/lib/learn'
 
 // Same snapshot directory and read pattern as lib/atlas/dossier.ts's
 // readSnapshot — but only ever pulls `capturedAt` out of each file, and
@@ -68,6 +69,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
+  // The /learn courses section — unrelated to LEARN_GAMES above, which is the
+  // Atlas's games under /atlas/learn. Generated from the MDX on disk rather
+  // than hand-listed, and an empty content/learn/ just yields the index page.
+  const courses = getAllCourses()
+
+  const courseEntries: MetadataRoute.Sitemap = courses.flatMap((course) => [
+    {
+      url: `${siteConfig.url}/learn/${course.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    },
+    ...course.lessons.map((lesson) => ({
+      url: `${siteConfig.url}/learn/${course.slug}/${lesson.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+  ])
+
   return [
     {
       url: siteConfig.url,
@@ -117,7 +138,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${siteConfig.url}/learn`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
     ...learnEntries,
+    ...courseEntries,
     ...articleEntries,
     ...countryEntries,
     ...rankingEntries,

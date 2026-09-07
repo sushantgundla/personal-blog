@@ -1,0 +1,150 @@
+---
+title: "Structured output"
+subtitle: "Stop parsing prose. Make the shape a contract the model has to fill."
+part: 1
+minutes: 8
+why: "You asked for JSON. You got JSON — wrapped in a fenced code block, with a cheerful sentence in front of it, and on the fourth run a trailing comment inside the object. So you wrote a regex to pull it out, then another for the case where it used single quotes, and now you have a parser you are afraid of. This lesson replaces all of it. There is a mechanism that makes the shape guaranteed instead of requested, and once you use it, the parsing code goes away."
+wins:
+  - "Never regex free text — define a schema and let the API enforce it."
+  - "Use a tool schema with forced tool choice when you need a guaranteed object back."
+  - "Replace free strings with enums wherever the set of valid answers is finite."
+  - "Validate the output with Pydantic or Zod even when the API promises the shape."
+  - "On a validation failure, retry once with the error message attached — never retry blind."
+quiz:
+  - q: "You ask for JSON in the prompt and the model still adds a sentence before it. The root cause is..."
+    options: ["The temperature is too high", "You requested a format; nothing constrained the tokens it was allowed to produce", "The response was truncated by max_tokens"]
+    answer: 1
+    explain: "A prompt is a request, and a very likely next token after a question is still a friendly opening line — only a schema-constrained decode removes that option."
+  - q: "Forcing tool choice means..."
+    options: ["The model runs your function for you on the provider's servers", "Every response is validated against your database", "The response must be a call to the tool you named, with arguments matching its schema"]
+    answer: 2
+    explain: "You are borrowing the tool-calling machinery purely for its guaranteed argument shape; nothing gets executed unless you execute it."
+  - q: "The cheapest single change that improves extraction accuracy is usually..."
+    options: ["Replacing a free-text string field with an enum of the allowed values", "Raising max_tokens", "Adding three more examples"]
+    answer: 0
+    explain: "An enum removes every near-miss spelling and synonym at once, and it costs one line of schema."
+  - q: "Your Pydantic validation fails on the model's output. The right next move is..."
+    options: ["Retry the identical request and hope for a better sample", "Send the validation error back to the model and ask it to fix the object", "Coerce the bad field to a default and carry on silently"]
+    answer: 1
+    explain: "The error text says exactly what was wrong, which is the one piece of information a blind retry throws away."
+  - q: "Even with a schema-constrained API, validating on the way out still matters because..."
+    options: ["The schema is only a hint to the model", "It converts the JSON into tokens", "The shape can be guaranteed while the values are still wrong, missing, or out of range"]
+    answer: 2
+    explain: "A schema guarantees that a date field is a string, not that the string is a real date from the document."
+deeper:
+  - { label: "Anthropic — tool use overview", href: "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview" }
+  - { label: "OpenAI — structured outputs", href: "https://platform.openai.com/docs/guides/structured-outputs" }
+  - { label: "Understanding JSON Schema", href: "https://json-schema.org/understanding-json-schema" }
+  - { label: "Pydantic documentation", href: "https://docs.pydantic.dev/latest/" }
+---
+
+This is the lesson that turns a demo into software. A model that returns a paragraph is a toy you read. A model that returns a validated object is a function you can call from the rest of your system.
+
+## 1. You cannot regex your way out of free text
+
+The first attempt always looks the same. Ask for JSON in the prompt, then clean up whatever comes back.
+
+It works, then it does not:
+
+- Sometimes the object arrives naked. Sometimes wrapped in a fenced code block. Sometimes with `Here is the JSON you requested:` in front.
+- A long value contains a `}` and your brace-matching falls over.
+- One run emits `"total": "1,299.00"`, the next emits `"total": 1299.0`.
+- The model decides a field is worth explaining and adds a key you never asked for.
+- On a truncated response you get half an object, which parses as nothing.
+
+Each fix is one line. Ten fixes later you own a parser with no test suite, failing in production on inputs you cannot reproduce.
+
+The reason this is unwinnable goes back to lesson 1. The model is picking likely next tokens. After a request for structured data, a friendly preamble is still a very likely continuation, because that is how helpful text usually reads. Your prompt asked. Nothing *stopped* it. Politeness is not a constraint.
+
+> A prompt asks for a shape. A schema makes the shape the only thing the model is allowed to produce.
+
+## 2. Borrow the tool-calling machinery for its guarantee
+
+Tool use exists so a model can call your functions — that is lesson 5. But it comes with a property you want right now: when the model calls a tool, the arguments must match the **JSON Schema** you declared for that tool. That constraint is enforced during decoding, not requested in prose.
+
+So define a tool that does not do anything. It exists only to have a shape.
+
+Then force it. Anthropic's API takes `tool_choice={"type": "tool", "name": "..."}`, which means the reply *must* be a call to that tool. No prose path is available. You read `tool_use.input` and you have a dict.
+
+| Approach | What you get | When it breaks |
+|---|---|---|
+| Ask for JSON in the prompt | Usually valid JSON, wrapped in something | Preambles, code fences, extra keys, drift between runs |
+| Ask for JSON and strip the fences | Slightly better odds | The first response that words it differently |
+| Forced tool choice with a schema | An object matching your schema, every time | Values can still be wrong — the shape cannot |
+
+Writing the schema well is where the accuracy lives, and most of it is unglamorous:
+
+- **Enums, everywhere the answer is a finite set.** `"status": {"type": "string", "enum": ["paid", "unpaid", "partial"]}` removes `Paid`, `PAID`, `paid in full` and `unpaid (overdue)` in one line. This is the cheapest accuracy win in the whole course.
+- **`required` for the fields you truly need**, and a nullable type for the ones that may genuinely be absent. Forcing a field to exist when it might not is how you invite an invented value.
+- **A `description` on every field.** The model reads them. `"issue_date"` with the description `The date on the invoice itself, not the date it was received. ISO 8601, YYYY-MM-DD.` fixes a whole class of confusion that no amount of prompt text will.
+- **Types that mean something.** Numbers as `number`, not string. Dates as a string with the format spelled out in the description. Booleans as `boolean`.
+- **Flat beats nested.** Deep object trees are harder for the model and harder for you to validate. Flatten unless the nesting is real.
+
+## 3. Validate anyway, and retry with the error
+
+The schema guarantees the shape. It does not guarantee the truth. `issue_date` will be a string; it may still be a date that appears nowhere in the document. So the object crosses one more gate before it enters your system.
+
+Define the same shape a second time in your own language — Pydantic in Python, Zod in TypeScript — and parse the model's output through it. That gives you three things the schema alone does not: real types on your side of the wire, range and format checks the JSON Schema cannot express, and a precise error message when something is off.
+
+That error message is the point. When validation fails, do not retry the identical request — you will draw another sample from the same distribution, and the odds of the same failure are high. Instead send the failed object and the validation error back as another turn, and ask for a corrected object. The model is good at this, because now it is fixing a specific named problem rather than guessing again.
+
+A retry policy that holds up:
+
+- **Attempt 1** fails validation → send back the error text, ask for a fix.
+- **Attempt 2** fails again → stop. Two failures usually means the input is not what you think it is, not that the model is having a bad day.
+- **On giving up**, log the raw response and the input, and fail loudly. A silent default written into a required field is a bug that surfaces three weeks later in a report.
+
+Cap the retries. An unbounded fix-it loop is an unbounded bill.
+
+```python
+from anthropic import Anthropic
+from pydantic import BaseModel, ValidationError
+from typing import Literal
+
+client = Anthropic()
+
+class Invoice(BaseModel):                    # your side of the contract
+    invoice_number: str
+    total_amount: float
+    currency: Literal["USD", "EUR", "GBP"]
+    status: Literal["paid", "unpaid", "partial"]
+
+# A tool that is never executed. It exists purely to pin the output shape.
+EXTRACT_TOOL = {
+    "name": "record_invoice",
+    "description": "Record the fields extracted from an invoice.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string", "description": "The invoice's own reference number."},
+            "total_amount": {"type": "number", "description": "Grand total including tax."},
+            "currency": {"type": "string", "enum": ["USD", "EUR", "GBP"]},
+            "status": {"type": "string", "enum": ["paid", "unpaid", "partial"]},
+        },
+        "required": ["invoice_number", "total_amount", "currency", "status"],
+    },
+}
+
+def extract(document: str) -> Invoice:
+    messages = [{"role": "user", "content": document}]
+    for attempt in range(2):                 # one try, one repair, then stop
+        resp = client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=1000,
+            temperature=0,
+            tools=[EXTRACT_TOOL],
+            tool_choice={"type": "tool", "name": "record_invoice"},  # prose is not an option
+            messages=messages,
+        )
+        block = next(b for b in resp.content if b.type == "tool_use")
+        try:
+            return Invoice(**block.input)    # shape guaranteed, values still checked
+        except ValidationError as e:
+            messages += [
+                {"role": "assistant", "content": resp.content},
+                {"role": "user", "content": f"That failed validation:\n{e}\nCall the tool again, corrected."},
+            ]
+    raise RuntimeError("invoice extraction failed twice")
+```
+
+Notice what is missing from that file: no regex, no `json.loads` in a `try`, no stripping of code fences. The parsing problem did not get solved. It got deleted.
