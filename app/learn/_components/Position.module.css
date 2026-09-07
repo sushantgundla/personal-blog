@@ -1,0 +1,124 @@
+/* Position — the platform sign above a lesson title.
+
+   The band runs edge to edge so its hairline crosses the whole window;
+   the content inside is .measure, so its left edge is the h1's left edge
+   exactly at every width. .bleed is deliberately not used: it carries a
+   gutter of its own, and a .measure nested inside it comes out inset
+   twice.
+
+   No fill and no container. The only colour here is the line's own ink,
+   confined to the track: the text stays on --ln-ink / --ln-ink-quiet so
+   every label clears 4.5:1 in both themes, and the line is named in words
+   as well as drawn. */
+
+.strip {
+  width: 100%;
+  padding-block: clamp(1.25rem, 3.5vw, 2rem);
+  border-bottom: 1px solid var(--ln-rule);
+  /* The you-are-here ring is centred on its tick, so at the first and
+     last stop it hangs past the column. Clip rather than hide: this must
+     never put a horizontal scrollbar on the page. */
+  overflow-x: clip;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.7rem, 1.6vw, 1rem);
+}
+
+/* Line name, then zone name. They wrap onto two rows on a phone rather
+   than shrinking — a sign is read at a glance or not at all. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.1rem;
+}
+
+.line.line {
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+.line.line:hover {
+  color: var(--ln-mark);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.line.line:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
+}
+
+/* The segment spans the reading column, so the pitch opens up with the
+   window instead of sitting in a fifth of it. Fixed height, because the
+   track's viewBox maps y 1:1 to these pixels. */
+.rail {
+  position: relative;
+  height: 64px;
+  margin-block: 0.15rem;
+}
+
+.track {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.trackLine {
+  stroke: var(--ln-line);
+  stroke-width: var(--ln-w);
+}
+
+/* Stops behind the reader. */
+.tickRead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+}
+
+/* Stops still ahead — same stroke, drawn back. */
+.tickAhead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+  opacity: 0.3;
+}
+
+/* You-are-here, centred on its tick. Scaling the box scales the stroke
+   with it, so the ring stays in proportion on a phone. */
+.ringBox {
+  position: absolute;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.ring {
+  stroke: var(--ln-mark);
+  stroke-width: 3;
+}
+
+.meta.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  color: var(--ln-ink-quiet);
+}
+
+/* The stops either side, as plain text. Not links — PrevNext at the foot
+   of the page is where the reader goes somewhere. */
+.ends {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.5rem;
+}
+
+@media (max-width: 52rem) {
+  .ringBox {
+    width: 36px;
+    height: 36px;
+  }
+}

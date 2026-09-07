@@ -1,0 +1,11 @@
+/* ============================================================
+   Network — the three lines, stacked.
+
+   The width is `.bleed`'s job: it already runs edge to edge with
+   --ln-gutter as padding, so there is nothing to set here but the
+   air between one line and the next.
+   ============================================================ */
+
+.network > * + * {
+  margin-top: clamp(2.5rem, 6vw, 5rem);
+}

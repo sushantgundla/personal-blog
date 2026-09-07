@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { MDXRemote } from 'next-mdx-remote/rsc'
@@ -8,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import { getAllCourses, getCourse, getLesson, getNeighbours } from '@/lib/learn'
 import { learnCanonical } from '@/lib/learn-domain'
 import { Deeper } from '../../_components/Deeper'
+import { Position } from '../../_components/Position'
 import { PrevNext } from '../../_components/PrevNext'
 import { Quiz } from '../../_components/Quiz'
 import { WhyBand } from '../../_components/WhyBand'
@@ -19,11 +19,14 @@ interface Props {
 }
 
 /**
- * One lesson. Read top to bottom: why it matters, the body, what you can
- * now do, a quiz you can't skip past, and where to go next.
+ * One lesson — the page most readers land on first, straight from a search
+ * result. It opens with the platform sign, which places them on the line
+ * before they read a word of the body, and then it is one column: title,
+ * the rule in the course ink, why this matters, the prose, what they take
+ * away, the recall quiz, further reading, and the line continuing.
  *
- * Everything on the page comes from the filesystem at build time, so every
- * lesson is a static page — same shape as the articles route.
+ * Everything comes from the filesystem at build time, so every lesson is a
+ * static page — same shape as the articles route.
  */
 
 export function generateStaticParams() {
@@ -55,68 +58,47 @@ export default function LessonPage({ params }: Props) {
     notFound()
   }
 
-  // The part this lesson belongs to, for the badge at the top. A lesson
-  // whose `part` doesn't match anything in course.json simply gets no
-  // badge rather than an empty one.
-  const part = course.parts.find((candidate) => candidate.n === lesson.part)
   const { prev, next } = getNeighbours(params.course, params.lesson)
 
   return (
-    <article className="measure">
-      <header>
-        {part && (
-          <p
-            className="learn-pill"
-            style={{
-              borderColor: 'var(--primary)',
-              background: 'var(--primary)',
-              color: 'var(--on-primary)',
-              marginBottom: '1rem',
-            }}
-          >
-            Part {part.n} &middot; {part.name}
-          </p>
-        )}
+    // data-line is what resolves --ln-line for everything below, so the
+    // whole page — sign, rule, diagram — is drawn in this course's ink.
+    <article data-line={params.course}>
+      <Position course={course} lesson={lesson} prev={prev} next={next} />
 
-        <p className="learn-eyebrow">
-          <Link
-            href={`/learn/${course.slug}`}
-            style={{ color: 'inherit', textDecoration: 'none' }}
-          >
-            {course.title}
-          </Link>
-          {lesson.minutes > 0 && <> &middot; ~{lesson.minutes} min</>}
-        </p>
-
+      <div className="measure">
         <h1 className="learn-h1">{lesson.title}</h1>
         {lesson.subtitle && <p className="learn-lede">{lesson.subtitle}</p>}
-      </header>
 
-      <WhyBand text={lesson.why} />
+        {/* The one place the line's colour touches the reading column. */}
+        <div className="rule-line" aria-hidden="true" />
 
-      <div className="learn-prose" style={{ marginTop: 'clamp(2rem, 5vw, 3rem)' }}>
-        <MDXRemote
-          source={lesson.content}
-          components={mdxComponents}
-          options={{
-            mdxOptions: {
-              // Every lesson body uses GitHub-flavoured markdown tables, which
-              // plain MDX does not parse — without this they render as raw
-              // pipe characters in a paragraph.
-              remarkPlugins: [remarkGfm],
-              rehypePlugins: [rehypeSlug, rehypeHighlight],
-            },
-          }}
-        />
+        <WhyBand text={lesson.why} />
+
+        <div className="prose" style={{ marginTop: 'clamp(2rem, 5vw, 3rem)' }}>
+          <MDXRemote
+            source={lesson.content}
+            components={mdxComponents}
+            options={{
+              mdxOptions: {
+                // Every lesson body uses GitHub-flavoured markdown tables,
+                // which plain MDX does not parse — without this they render
+                // as raw pipe characters in a paragraph.
+                remarkPlugins: [remarkGfm],
+                rehypePlugins: [rehypeSlug, rehypeHighlight],
+              },
+            }}
+          />
+        </div>
+
+        <Wins items={lesson.wins} />
+
+        <Quiz courseSlug={course.slug} lessonSlug={lesson.slug} questions={lesson.quiz} />
+
+        <Deeper links={lesson.deeper} />
+
+        <PrevNext courseSlug={course.slug} prev={prev} next={next} />
       </div>
-
-      <Wins items={lesson.wins} />
-
-      <Quiz courseSlug={course.slug} lessonSlug={lesson.slug} questions={lesson.quiz} />
-
-      <Deeper links={lesson.deeper} />
-
-      <PrevNext courseSlug={course.slug} prev={prev} next={next} />
     </article>
   )
 }

@@ -1,0 +1,19 @@
+/* The course page is a header and a line, both hanging off the same
+   left gutter that `.bleed` sets. Nothing here centres anything; the
+   paragraphs just stop at a readable length. */
+
+.back {
+  margin-bottom: clamp(1.25rem, 4vw, 2.25rem);
+}
+
+.blurb {
+  margin-top: 1.25rem;
+}
+
+.head {
+  margin-bottom: clamp(2.25rem, 6vw, 4.5rem);
+}
+
+.head p {
+  max-inline-size: 60ch;
+}

@@ -1,28 +1,33 @@
 import styles from './Wins.module.css'
 
 /**
- * The pay-off list at the foot of a lesson — the concrete things the
- * reader can do now. Server component. Renders nothing when the lesson
- * lists no wins.
+ * What the reader takes away — the concrete things they can do now that
+ * they couldn't before. A numbered list, numerals in their own narrow
+ * column so wrapped lines stay flush. Server component.
+ *
+ * Renders nothing when the lesson lists no wins.
  */
 export function Wins({ items }: { items: string[] }) {
   if (items.length === 0) return null
 
   return (
     <section className={styles.wins} aria-labelledby="lesson-wins">
-      <h2 id="lesson-wins" className={styles.heading}>
-        <span className={styles.arrow} aria-hidden="true">
-          &#8618;
-        </span>
-        Your win
+      <h2 id="lesson-wins" className="sign">
+        WHAT YOU TAKE AWAY
       </h2>
-      <ul className={styles.list}>
-        {items.map((item) => (
+
+      <ol className={styles.list}>
+        {items.map((item, index) => (
           <li key={item} className={styles.item}>
-            {item}
+            {/* The list is already numbered for a screen reader, so the
+                visible numeral is presentational. */}
+            <span className={`num ${styles.n}`} aria-hidden="true">
+              {String(index + 1).padStart(2, '0')}
+            </span>
+            <span>{item}</span>
           </li>
         ))}
-      </ul>
+      </ol>
     </section>
   )
 }

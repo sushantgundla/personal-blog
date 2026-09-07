@@ -1,49 +1,52 @@
-/* Deeper — the reading list at the very bottom of a lesson.
-   Deliberately plain: a label, then one link per line. It is an exit
-   from the page, so it should not compete with the quiz above it. */
+/* Deeper — the reading list at the foot of a lesson.
+
+   Deliberately plain: a label, then one link per line with a hairline
+   between. It is an exit from the page, so it must not compete with the
+   quiz above it. */
 
 .deeper {
   margin-top: clamp(2.5rem, 6vw, 3.5rem);
   padding-top: clamp(1.5rem, 3vw, 2rem);
-  border-top: 1px solid var(--outline-variant);
+  border-top: 1px solid var(--ln-rule);
 }
 
 .list {
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+  margin-top: clamp(0.75rem, 2vw, 1rem);
+}
+
+.row + .row {
+  border-top: 1px solid var(--ln-rule);
 }
 
 .link {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
-  gap: 0.5em;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.7rem;
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: var(--on-surface);
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--ln-mark);
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: var(--outline-variant);
-  transition: color 0.2s ease, text-decoration-color 0.2s ease;
 }
 
-.link:hover,
 .link:focus-visible {
-  color: var(--primary);
-  text-decoration-color: currentColor;
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 2px;
 }
 
-/* The "leaves the site" mark. Decorative — the link already carries
-   target="_blank", and the label says where it goes. */
 .out {
-  font-family: var(--font-display);
-  font-size: 0.7em;
-  color: var(--primary);
+  flex: none;
+  color: var(--ln-ink-quiet);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .link {
-    transition: none;
-  }
+.link:hover .out {
+  color: var(--ln-mark);
 }

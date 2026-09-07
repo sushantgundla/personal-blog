@@ -1,45 +1,57 @@
 /* Quiz — retrieval practice at the foot of a lesson.
 
+   Options are full-width rows separated by hairlines, not cards. Nothing
+   is filled, nothing is rounded; the letter, the glyph and the colour
+   together carry the result, so no one of them is the only signal.
+
    The right/wrong colours are declared as custom properties on .quiz and
-   overridden under :global(.light), which is the class next-themes puts
-   on <html>. That way one set of class names covers both themes and no
-   green or red is hardcoded into a rule that only reads well in the dark.
-   Everything else is a site token from app/globals.css. */
+   overridden under :global(.light), which is the class next-themes puts on
+   <html>. Both pairs clear 4.5:1 on their own ground. Everything else is
+   an --ln-* token from app/learn/learn.css. */
 
 .quiz {
   --quiz-right: #35b37e;
-  --quiz-right-bg: rgba(53, 179, 126, 0.14);
   --quiz-wrong: #f2604c;
-  --quiz-wrong-bg: rgba(242, 96, 76, 0.14);
 
   margin-top: clamp(2.5rem, 6vw, 3.5rem);
   padding-top: clamp(1.5rem, 3vw, 2rem);
-  border-top: 1px solid var(--outline-variant);
+  border-top: 1px solid var(--ln-rule);
 }
 
-/* Darker, denser versions on the light theme, where the dark-mode greens
-   and reds wash out against a near-white page. */
+/* Darker on the light theme, where the dark-mode green and red wash out
+   against a near-white page. */
 :global(.light) .quiz {
   --quiz-right: #1c7a51;
-  --quiz-right-bg: rgba(28, 122, 81, 0.1);
   --quiz-wrong: #b8382b;
-  --quiz-wrong-bg: rgba(184, 56, 43, 0.09);
+}
+
+/* The heading. RECALL carries it at heading scale; NO SCROLLING BACK sits
+   under it as what it is — the instruction the reader has to follow for
+   the quiz to do anything. */
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+/* Doubled, so this beats .learn-root .sign on size without depending on
+   which stylesheet the bundler puts last. */
+.headingLead.headingLead {
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-weight: 700;
+  color: var(--ln-ink);
 }
 
 .list {
   list-style: none;
+  margin-top: clamp(1.25rem, 3vw, 1.75rem);
   display: flex;
   flex-direction: column;
   gap: clamp(1.75rem, 4vw, 2.5rem);
 }
 
 .qLabel {
-  font-family: var(--font-display);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--on-surface-variant);
   margin-bottom: 0.5rem;
 }
 
@@ -47,44 +59,40 @@
   font-size: clamp(1rem, 1.3vw, 1.125rem);
   font-weight: 600;
   line-height: 1.55;
-  color: var(--on-surface);
+  color: var(--ln-ink);
   margin-bottom: 0.9rem;
 }
 
-.options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+/* ---- The options ------------------------------------------------- */
 
-/* ---- One option -------------------------------------------------- */
+.options {
+  border-top: 1px solid var(--ln-rule);
+}
 
 .option {
   display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
+  align-items: baseline;
+  gap: 0.9rem;
   width: 100%;
-  padding: 0.75rem 0.95rem;
-  border: 1px solid var(--outline-variant);
-  border-radius: 0.6rem;
-  background: var(--surface-container-low);
+  padding: 0.7rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--ln-rule);
+  background: none;
   font: inherit;
   font-size: 0.9375rem;
   line-height: 1.55;
-  color: var(--on-surface);
+  color: var(--ln-ink);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .option:hover:not(:disabled) {
-  border-color: var(--primary);
-  background: var(--surface-container);
+  color: var(--ln-mark);
 }
 
 .option:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  outline: 2px solid var(--ln-mark);
+  outline-offset: -2px;
 }
 
 /* Answered questions lock. The cursor says so, and the browser's default
@@ -94,70 +102,59 @@
   opacity: 1;
 }
 
-/* The a/b/c/d key in front of each option. */
-.key {
+/* The a/b/c/d key in front of each option, in its own column so the
+   option text stays flush down the list. */
+.key.key {
   flex: none;
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.7;
-  color: var(--on-surface-variant);
+  width: 1.5ch;
+  color: var(--ln-ink-quiet);
+}
+
+.label {
+  flex: 1;
 }
 
 /* ---- After the click --------------------------------------------- */
 
 .right {
-  border-color: var(--quiz-right);
-  background: var(--quiz-right-bg);
-  color: var(--on-surface);
+  color: var(--ln-ink);
 }
 
-.right .key {
+.right .key.key,
+.right .mark.mark {
   color: var(--quiz-right);
 }
 
 .wrong {
-  border-color: var(--quiz-wrong);
-  background: var(--quiz-wrong-bg);
-  color: var(--on-surface);
+  color: var(--ln-ink);
 }
 
-.wrong .key {
+.wrong .key.key,
+.wrong .mark.mark {
   color: var(--quiz-wrong);
 }
 
 /* The options that were neither picked nor correct: still legible, but
    pushed back so the two marked rows carry the answer. */
 .muted {
-  color: var(--on-surface-variant);
-  background: transparent;
+  color: var(--ln-ink-quiet);
 }
 
 /* The tick or cross at the end of a marked row. */
 .mark {
-  margin-left: auto;
+  flex: none;
   padding-left: 0.6rem;
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-
-.right .mark {
-  color: var(--quiz-right);
-}
-
-.wrong .mark {
-  color: var(--quiz-wrong);
 }
 
 /* ---- The explanation --------------------------------------------- */
 
 .explain {
-  margin-top: 0.75rem;
-  padding-left: 0.95rem;
-  border-left: 2px solid var(--outline-variant);
+  margin-top: 0.9rem;
+  padding-left: 0.9rem;
+  border-left: 1px solid var(--ln-rule);
   font-size: 0.875rem;
   line-height: 1.7;
-  color: var(--on-surface-variant);
+  color: var(--ln-ink-quiet);
 }
 
 .explain:empty {
@@ -166,31 +163,19 @@
 
 /* ---- The score line ---------------------------------------------- */
 
-.score {
+.score.score {
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
   margin-top: clamp(1.75rem, 4vw, 2.25rem);
   padding-top: 1.25rem;
-  border-top: 1px solid var(--outline-variant);
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  letter-spacing: 0.14em;
+  border-top: 1px solid var(--ln-rule);
   text-transform: uppercase;
-  color: var(--on-surface-variant);
+  color: var(--ln-ink-quiet);
 }
 
 .scoreValue {
   font-size: 1.125rem;
   font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--primary);
-  font-variant-numeric: tabular-nums;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .option {
-    transition: none;
-  }
+  color: var(--ln-mark);
 }

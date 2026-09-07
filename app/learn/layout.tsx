@@ -7,10 +7,16 @@ import './learn.css'
  * renders every non-/old route bare, so this section owns its full
  * chrome — no site Header, no Footer.
  *
- * Unlike /atlas, this section does not invent its own palette: learn.css
- * drives everything from the main site's tokens in app/globals.css, so it
- * follows the theme and looks right in both dark and light. Every rule
- * there is scoped under .learn-root and never leaks out.
+ * The chrome here is a platform sign, not a nav bar: a thin printed rail
+ * with a hairline under it, the publication's name on the left and the way
+ * back out on the right. It is opaque — nothing in this section blurs or
+ * tints what is behind it.
+ *
+ * Unlike the rest of the site, this section defines its own palette. Every
+ * colour resolves to an --ln-* token in learn.css, with a .light override,
+ * so next-themes still drives both modes without --primary or the
+ * --surface-* ramp reaching in. Every rule there is scoped under
+ * .learn-root and never leaks out.
  */
 
 export const metadata: Metadata = {
@@ -22,33 +28,29 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  // Matches --surface in the dark theme, so the mobile browser chrome
+  // Matches --ln-ground in the dark theme, so the mobile browser chrome
   // blends into the page instead of banding against it.
-  themeColor: '#121212',
+  themeColor: '#12100E',
 }
 
 export default function LearnLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="learn-root">
-      {/* Thin and quiet on purpose — this is a reading site, and the
-          header should never compete with the lesson under it. */}
-      <header className="learn-top-bar">
-        <div className="learn-top-bar-inner">
-          <Link href="/learn" className="learn-top-link">
-            SUSHANT GUNDLA · LEARN
+      <header className="learn-rail">
+        <div className="learn-rail-inner">
+          <Link href="/" className="sign">
+            Sushant Gundla / Learn
           </Link>
-          <a href="https://sushantgundla.com" className="learn-top-link">
-            ← the site
+          <a href="https://sushantgundla.com" className="sign-quiet">
+            The site ↗
           </a>
         </div>
       </header>
 
       <main className="learn-main">{children}</main>
 
-      <footer className="learn-footer">
-        <div className="measure">
-          <p>Written by Sushant Gundla. Read it in any order — the lessons stand alone.</p>
-        </div>
+      <footer className="learn-foot">
+        <p className="sign-quiet">Written by Sushant Gundla — the lessons stand alone</p>
       </footer>
     </div>
   )

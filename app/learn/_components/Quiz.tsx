@@ -59,8 +59,13 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
 
   return (
     <section className={styles.quiz} aria-labelledby="lesson-quiz">
-      <h2 id="lesson-quiz" className="learn-eyebrow">
-        Retrieval practice &mdash; recall, don&rsquo;t peek
+      {/* Two halves, because the second one is an instruction rather than
+          part of the label. Retrieval practice only works if the reader
+          answers from memory first, and nothing else on the page says so —
+          set flat in one line it reads as decoration and gets skipped. */}
+      <h2 id="lesson-quiz" className={styles.heading}>
+        <span className={`sign ${styles.headingLead}`}>RECALL</span>{' '}
+        <span className="sign-quiet">NO SCROLLING BACK</span>
       </h2>
 
       <ol className={styles.list}>
@@ -72,8 +77,8 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
 
           return (
             <li key={question.q}>
-              <p className={styles.qLabel} id={labelId}>
-                Question {questionIndex + 1}
+              <p className={`sign-quiet ${styles.qLabel}`} id={labelId}>
+                QUESTION {String(questionIndex + 1).padStart(2, '0')}
               </p>
               <p className={styles.qText} id={textId}>
                 {question.q}
@@ -108,12 +113,14 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
                       aria-pressed={isPicked}
                       onClick={() => choose(questionIndex, optionIndex)}
                     >
-                      <span className={styles.key} aria-hidden="true">
+                      <span className={`num ${styles.key}`} aria-hidden="true">
                         {KEYS[optionIndex] ?? '•'}
                       </span>
-                      <span>{option}</span>
+                      <span className={styles.label}>{option}</span>
+                      {/* Right and wrong carry a glyph as well as a colour,
+                          so neither signal stands on its own. */}
                       {answered && (isAnswer || isPicked) && (
-                        <span className={styles.mark} aria-hidden="true">
+                        <span className={`num ${styles.mark}`} aria-hidden="true">
                           {isAnswer ? '✓' : '✗'}
                         </span>
                       )}
@@ -135,7 +142,7 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
       </ol>
 
       {finished && (
-        <p className={styles.score} aria-live="polite">
+        <p className={`num ${styles.score}`} aria-live="polite">
           <span className={styles.scoreValue}>
             {correct} of {total}
           </span>
