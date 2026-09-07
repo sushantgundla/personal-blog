@@ -82,7 +82,7 @@ Run it on every prompt change, before the review, and put the number in the pull
 
 The bar is **regression, not perfection**. You are not trying to get to twenty out of twenty; some of those cases may be genuinely hard, and a couple may be ambiguous enough that reasonable people disagree. What you need is that the number does not go down and that any case whose output changed gets looked at deliberately. Committing the run output is what makes that cheap: the reviewer sees exactly which three answers moved, instead of a score dropping from 17 to 16 with no idea where.
 
-The evals lesson in **Build with LLMs** (lesson 8) goes further — grading strategies, using a model as a judge, running it in CI. Everything here is the minimum version of that, sized so you have no excuse not to build it this week.
+Everything here is the minimum version of an eval harness, sized so you have no excuse not to build it this week. A fuller one goes further — richer grading strategies, using a model as a judge, running the whole set in CI. Get the minimum running first; the rest is far easier to add than to start with.
 
 One last thing that catches people out. **Pin the model version and store it beside the prompt.** A prompt is tuned against a specific model; the same words against a different version can behave differently, and provider defaults move over time. The artefact you are versioning is the pair. When you do upgrade the model, that is a change to test with the harness, exactly like a prompt edit — because it is one.
 

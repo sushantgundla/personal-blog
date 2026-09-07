@@ -42,7 +42,7 @@ The Messages API gives you a `system` parameter sitting beside the `messages` li
 
 ## 1. Two slots doing two different jobs
 
-Mechanically, everything ends up as one flat sequence of tokens. `build-with-llms` lesson 1 makes that point and it stays true here. But "it is all tokens in the end" does not mean the slots are interchangeable, for three reasons.
+Mechanically, everything ends up as one flat sequence of tokens — the system prompt, the history and the new message are joined into one string before the model sees any of it. But "it is all tokens in the end" does not mean the slots are interchangeable, for three reasons.
 
 **Position.** The system prompt is at the very front of the context, on every single call, ahead of the whole conversation. As a chat grows, a rule you typed into turn 2 slides further and further back behind newer text. A rule in the system prompt never moves.
 

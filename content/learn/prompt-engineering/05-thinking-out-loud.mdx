@@ -70,9 +70,9 @@ One honest caveat before you build on this. The written reasoning is not a relia
 
 A quick test that gets it right most of the time: **if you could do the task yourself without writing anything down, the model probably can too.**
 
-Now the cost, plainly. Reasoning tokens are output tokens. Output tokens are the expensive ones, and they are produced one at a time, so they dominate latency (`build-with-llms` lesson 1). A 300-token derivation in front of a five-token answer means roughly sixty times the output of the answer alone, in both money and wall-clock time. In a nightly batch job that is irrelevant. In something a user is watching, it is the whole experience.
+Now the cost, plainly. Reasoning tokens are output tokens. Output tokens are the expensive ones, and they are produced one at a time, so they dominate latency — the LLMs course explains why in *What you actually pay for*. A 300-token derivation in front of a five-token answer means roughly sixty times the output of the answer alone, in both money and wall-clock time. In a nightly batch job that is irrelevant. In something a user is watching, it is the whole experience.
 
-And the honest note this area badly needs: **"chain-of-thought helps" is a statement about populations of tasks, not about yours.** The published gains are on reasoning benchmarks. On your classification, with your prompt and your data, it may do nothing at all, or it may help on one input class and hurt on another. Run it against a fixed test set both ways before you ship it — `build-with-llms` lesson 8 covers how to build that set. This is one of the few prompting decisions that is cheap to measure and expensive to guess at.
+And the honest note this area badly needs: **"chain-of-thought helps" is a statement about populations of tasks, not about yours.** The published gains are on reasoning benchmarks. On your classification, with your prompt and your data, it may do nothing at all, or it may help on one input class and hurt on another. Run it against a fixed test set both ways before you ship it — *Versioning and testing prompts*, at the end of this course, covers how to build that set. This is one of the few prompting decisions that is cheap to measure and expensive to guess at.
 
 ## 3. The practical shape: a scratchpad you strip
 

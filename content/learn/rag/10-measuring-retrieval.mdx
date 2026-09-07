@@ -129,7 +129,7 @@ A RAG pipeline has two failure modes, and end-to-end answer quality mixes them i
 | Retrieval | Query | Ranked chunk ids | recall@k, MRR, nDCG | No |
 | Generation | Query plus the correct chunks | An answer | Faithfulness, correctness | Yes |
 
-For the generation half, hand the model the chunks you *know* are correct - the gold ids from your eval set, not what retrieval returned. Now you are measuring the answering step in isolation. If it is wrong with the right passages in front of it, the prompt is the problem. If it is right there but wrong in production, retrieval is the problem. The build-with-llms lesson on evals covers scoring the generated text itself.
+For the generation half, hand the model the chunks you *know* are correct - the gold ids from your eval set, not what retrieval returned. Now you are measuring the answering step in isolation. If it is wrong with the right passages in front of it, the prompt is the problem. If it is right there but wrong in production, retrieval is the problem. The prompt-engineering course covers scoring generated text in *Versioning and testing prompts*.
 
 A worked diagnosis:
 
