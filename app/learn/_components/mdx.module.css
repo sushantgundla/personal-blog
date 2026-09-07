@@ -1,37 +1,35 @@
 /* The MDX component map's own styles.
    Everything else about the lesson body — paragraphs, lists, code, links,
-   tables — is typography, and lives in .learn-prose in app/learn/learn.css.
+   tables — is typography, and lives in .prose in app/learn/learn.css.
    Only the two things that need extra markup are styled here. */
 
 /* A numbered section heading: "## 1. What the model actually is" renders
-   as a round accent badge with the 1 in it, then the title. Font size,
-   colour and margins still come from .learn-prose h2; this rule only adds
-   the layout, so the two never fight. */
+   as a section marker — the numeral, a hairline running out to the right
+   edge of the measure, and the title on the line below. Font size, colour
+   and margins still come from .prose h2; this rule only adds the layout,
+   so the two never fight. */
 .section {
-  display: flex;
-  align-items: baseline;
-  gap: 0.65em;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 0.8em;
+  row-gap: 0.3em;
 }
 
-.badge {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.6em;
-  height: 1.6em;
-  border-radius: 9999px;
-  border: 1px solid rgba(var(--primary-rgb), 0.4);
-  background: rgba(var(--primary-rgb), 0.12);
-  font-family: var(--font-display);
-  font-size: 0.6em;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--primary);
-  font-variant-numeric: tabular-nums;
-  /* Baseline-aligning a flex badge drops it too low next to a large
-     heading, so nudge it back up to sit with the cap height. */
-  transform: translateY(-0.1em);
+.n.n {
+  grid-column: 1;
+  font-size: 0.55em;
+  color: var(--ln-ink-quiet);
+}
+
+.rule {
+  grid-column: 2;
+  height: 1px;
+  background: var(--ln-rule);
+}
+
+.text {
+  grid-column: 1 / -1;
 }
 
 /* A wide table scrolls sideways inside the reading column instead of

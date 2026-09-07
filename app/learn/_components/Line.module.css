@@ -1,0 +1,410 @@
+/* ============================================================
+   Line — one course as a signalling line.
+
+   Vertical is the default here, and the whole file is written that
+   way round on purpose: the line runs down the page, labels to its
+   right, the way a platform sign does. One block at the bottom turns
+   the *index* line horizontal on a wide screen, and that block is the
+   only place the horizontal case exists.
+
+   Which variant turns:
+
+     network (the index)  horizontal at 52rem and up, vertical below
+     full (a course page) vertical at every width
+
+   A syllabus is a list and its labels carry whole sentences; laid
+   across the page they had to be truncated to stay level, and a
+   subtitle cut to a third is worse than no subtitle. Down the page
+   every stop owns a row and every sentence is shown in full.
+
+   Labels never rotate. Only the diagram does.
+
+   No shadows, no gradients, no rounded containers. The single rounded
+   shape in here is the terminus capsule, and it is an SVG `rx`, not a
+   border-radius.
+   ============================================================ */
+
+.line {
+  /* Thickness of the strip the stroke runs down. The rail sits at
+     its centre and every tick is centred in it, which is what keeps
+     the SVG layer and the HTML layer registered with each other. */
+  --lane: 2.25rem;
+  --tick: 1.5rem;
+
+  /* The tick is a square SVG, so one rotation turns it perpendicular
+     in either orientation. `--tick-fat` is the hover weight: it
+     scales along the tick's own thickness axis because it is applied
+     after the rotation. */
+  --tick-rot: 90deg;
+  --tick-fat: 1;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.9rem;
+}
+
+/* The course page's line has no head beside it, so it simply stacks:
+   the diagram, then the count, both on the page's left edge. */
+.full {
+  display: block;
+}
+
+/* ---- The terminus label: the line's name ------------------------ */
+
+.head {
+  padding-top: 0;
+}
+
+.headTitle {
+  font-family: var(--ln-sign);
+  font-weight: 700;
+  /* Sized so the longest word of the longest name — ENGINEERING —
+     fits the head column on one line at every width the horizontal
+     layout is used at. The three names are fixed and known. */
+  font-size: clamp(1.05rem, 2.4vw, 2.375rem);
+  line-height: 1.02;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  /* A two-word name breaks at the space and nowhere else. Never
+     inside a word, and never hyphenated. */
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.headLink {
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+.headLink:hover {
+  color: var(--ln-line);
+}
+
+.headLink:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 4px;
+}
+
+.headMeta {
+  margin-top: 0.55rem;
+  color: var(--ln-ink-quiet);
+}
+
+/* ---- The diagram ------------------------------------------------ */
+
+.diagram {
+  position: relative;
+  min-width: 0;
+}
+
+/* Strokes only, and never in the way of a click. Sized outright
+   rather than by offsets: an <svg> is a replaced element, and an auto
+   width there is not reliably solved from left/right. Everything
+   inside is positioned in percentages of this box, so the box has to
+   be certain. */
+.track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--lane);
+  height: 100%;
+  pointer-events: none;
+}
+
+.axisH {
+  display: none;
+}
+
+.rail {
+  stroke: var(--ln-line);
+  stroke-width: var(--ln-w);
+}
+
+.division {
+  stroke: var(--ln-rule);
+  stroke-width: 1;
+}
+
+.terminus {
+  fill: var(--ln-line);
+}
+
+/* ---- Zone signs -------------------------------------------------- */
+
+/* The sign sits on the boundary itself, in the gap between two stops,
+   on the page's own ground so it reads as an interruption. */
+.zone {
+  position: absolute;
+  top: var(--at);
+  left: var(--lane);
+  padding-left: 0.85rem;
+  padding-right: 0.5rem;
+  transform: translateY(-50%);
+  background: var(--ln-ground);
+  pointer-events: none;
+}
+
+/* ---- The stops --------------------------------------------------- */
+
+/* Equal `1fr` rows are what keep the tick pitch uniform all the way
+   down, whatever any one label does. */
+.stops {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(var(--n), minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stop {
+  min-width: 0;
+}
+
+.stopLink {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  text-align: left;
+  height: 100%;
+  padding: 0.5rem 0;
+  /* A grid track of minmax(0, 1fr) stops the *column* growing, but not
+     the item inside it — without these a long single word widened the
+     label past its cell and sat on top of its neighbours. */
+  max-width: 100%;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Stretching the mark to the full row height is what centres the tick
+   in its cell. */
+.mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--lane);
+  align-self: stretch;
+  width: var(--lane);
+}
+
+.tick {
+  display: block;
+  width: var(--tick);
+  height: var(--tick);
+  transform-origin: center;
+  transform: rotate(var(--tick-rot)) scale(var(--tick-fat), 1);
+}
+
+/* Read: a solid bar. Unread: the same bar hollow, ground-filled and
+   outlined — a difference in fill, not in hue. */
+.tickBar {
+  fill: var(--ln-line);
+}
+
+.stop[data-read='false'] .tickBar {
+  fill: var(--ln-ground);
+  stroke: var(--ln-line);
+  stroke-width: 2;
+}
+
+/* Capped so a subtitle keeps a readable line length on a wide screen
+   instead of running the width of the window. */
+.label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 0.2rem;
+  min-width: 0;
+  max-width: 100%;
+  max-inline-size: 60ch;
+  padding-left: 0.85rem;
+}
+
+/* The label's children are flex items on a centred cross axis, so
+   each sizes to its own content and would otherwise reach past the
+   label box a long word at a time. */
+.label > * {
+  max-width: 100%;
+}
+
+/* .num sizes itself in em, so the wrapper is what sets the scale. */
+.stopNum {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--ln-ink-quiet);
+}
+
+.stopTitle {
+  font-family: var(--ln-sign);
+  font-weight: 600;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  /* Sentence case, and this is the source world rather than a
+     concession to it: on a Beck-lineage diagram the line name is caps
+     and the station name is not — Oxford Circus, never OXFORD CIRCUS.
+     It also happens to be the fix for a long name, twice over: it is
+     narrower than caps at the same size, and Chrome will hyphenate it,
+     which it flatly refuses to do to uppercased text. */
+  text-transform: none;
+  /* Hyphenate only where it earns its keep: a word of ten letters or
+     more, and never leaving a stub of fewer than four either side.
+     Without the limit Chrome breaks "actually" and "windows" too, and
+     a column of small hyphens reads as noise. */
+  hyphens: auto;
+  hyphenate-limit-chars: 10 4 4;
+  overflow-wrap: normal;
+  word-break: normal;
+  color: var(--ln-ink-quiet);
+}
+
+.stopSub,
+.stopMeta {
+  display: none;
+}
+
+/* The whole cell — tick and label together — is one link, so hover
+   and focus change both at once. Instant: no transition anywhere. */
+.stopLink:hover,
+.stopLink:focus-visible {
+  --tick-fat: 1.35;
+}
+
+.stopLink:hover .stopTitle,
+.stopLink:focus-visible .stopTitle {
+  color: var(--ln-ink);
+}
+
+.stopLink:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 2px;
+}
+
+/* Said to a screen reader, shown to nobody. */
+.state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- The full variant: the course's own page --------------------- */
+
+.full .stopTitle {
+  font-size: clamp(0.8125rem, 1vw, 0.9375rem);
+}
+
+/* Shown whole. No clamp, no ellipsis — the row is as tall as the
+   sentence needs. */
+.full .stopSub {
+  display: block;
+  font-family: var(--ln-read);
+  font-size: clamp(0.75rem, 0.9vw, 0.8125rem);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ln-ink-quiet);
+}
+
+.full .stopMeta {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--ln-ink-quiet);
+}
+
+/* Below the line, on the page's left edge, and never wrapped. */
+.count {
+  margin-top: 1.5rem;
+  white-space: nowrap;
+  color: var(--ln-ink-quiet);
+}
+
+/* ============================================================
+   52rem and up: the index line turns and runs across the page.
+   Only the network variant — a course page stays vertical at every
+   width, because its labels carry sentences.
+   ============================================================ */
+
+@media (min-width: 52rem) {
+  .network {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: clamp(1rem, 3vw, 2.5rem);
+    --lane: 2.75rem;
+    --tick-rot: 0deg;
+  }
+
+  .network .head {
+    flex: 0 0 26%;
+    min-width: 7rem;
+    padding-top: 0.15rem;
+  }
+
+  .network .diagram {
+    flex: 1 1 auto;
+  }
+
+  .network .track {
+    width: 100%;
+    height: var(--lane);
+  }
+
+  .network .axisH {
+    display: block;
+  }
+
+  .network .axisV {
+    display: none;
+  }
+
+  .network .stops {
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+
+  /* `stretch`, not `center`: a shrink-to-fit label sizes itself to its
+     widest word, and then no cap on it can bite. Stretched to the cell,
+     the title wraps inside its own column. */
+  .network .stopLink {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    height: auto;
+    padding: 0 0.3rem 0.6rem;
+  }
+
+  .network .mark {
+    flex: none;
+    align-self: stretch;
+    width: auto;
+    height: var(--lane);
+  }
+
+  .network .label {
+    align-items: stretch;
+    text-align: center;
+    max-inline-size: none;
+    margin-top: 0.45rem;
+    padding-left: 0;
+  }
+
+  /* Ten to twelve columns of title, so every one reserves the same
+     four lines and the row below them stays level. */
+  /* Ten to twelve columns of title, so every one reserves the same
+     number of lines and the row below them stays level. */
+  .network .stopTitle {
+    font-size: clamp(0.5625rem, 0.85vw, 0.75rem);
+    min-height: 5em;
+  }
+}

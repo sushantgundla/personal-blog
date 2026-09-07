@@ -1,0 +1,21 @@
+/* The index is mostly diagram. These rules are the air around it, and
+   the one thing a full-bleed page still owes the reader: a paragraph
+   that stops at a readable length instead of running the whole window.
+   The block stays on the left edge; only the line length is capped. */
+
+.top {
+  margin-bottom: clamp(1.75rem, 5vw, 3.5rem);
+}
+
+.foot {
+  margin-top: clamp(2.5rem, 7vw, 5rem);
+}
+
+.foot p {
+  max-inline-size: 60ch;
+}
+
+.note {
+  margin-top: 1rem;
+  color: var(--ln-ink-quiet);
+}

@@ -1,87 +1,68 @@
-/* PrevNext — the two lesson arrows at the foot of the page.
-   One row on a wide screen, stacked on a phone. Both sides are always
-   filled (the page falls back to "All lessons"), so the row never
-   looks lopsided. */
+/* PrevNext — the line continuing.
+
+   Two halves split by a single hairline: vertical on a wide screen,
+   horizontal once they stack. No panels, no fills, nothing rounded — the
+   rule is the whole structure. */
 
 .nav {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: clamp(0.75rem, 2vw, 1.25rem);
   margin-top: clamp(2.5rem, 6vw, 3.5rem);
-  padding-top: clamp(1.5rem, 3vw, 2rem);
-  border-top: 1px solid var(--outline-variant);
+  border-top: 1px solid var(--ln-rule);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: clamp(1.1rem, 2.6vw, 1.6rem) clamp(0.9rem, 2vw, 1.2rem);
+  color: inherit;
+  text-decoration: none;
+}
+
+.side:first-child {
+  padding-left: 0;
+}
+
+/* The split. On the second half only, so it sits between the two and
+   never on an outside edge. */
+.side + .side {
+  border-left: 1px solid var(--ln-rule);
+  padding-right: 0;
+}
+
+.side:hover span {
+  color: var(--ln-mark);
+}
+
+.side:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: -2px;
+}
+
+/* The next side is right-aligned, so the two arrows point outward and the
+   row reads as a spread rather than a list. */
+.next {
+  align-items: flex-end;
+  text-align: right;
 }
 
 @media (max-width: 34rem) {
   .nav {
     grid-template-columns: 1fr;
   }
-}
 
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: clamp(0.85rem, 2vw, 1.1rem) clamp(0.9rem, 2vw, 1.2rem);
-  border: 1px solid var(--outline-variant);
-  border-radius: 0.75rem;
-  background: var(--surface-container-low);
-  color: inherit;
-  text-decoration: none;
-  transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.25s ease;
-}
-
-.side:hover {
-  border-color: var(--primary);
-  background: var(--surface-container);
-  transform: translateY(-2px);
-}
-
-.side:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-}
-
-/* The "next" side is right-aligned, so the two arrows point outward and
-   the row reads as a spread rather than a list. */
-.next {
-  align-items: flex-end;
-  text-align: right;
-}
-
-.label {
-  font-family: var(--font-display);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--on-surface-variant);
-}
-
-.title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(0.9375rem, 1.4vw, 1.0625rem);
-  line-height: 1.35;
-  color: var(--on-surface);
-  transition: color 0.25s ease;
-}
-
-.side:hover .title {
-  color: var(--primary);
-}
-
-.arrow {
-  color: var(--primary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .side,
-  .title {
-    transition: none;
+  .side {
+    padding-inline: 0;
   }
 
-  .side:hover {
-    transform: none;
+  .side + .side {
+    border-left: none;
+    border-top: 1px solid var(--ln-rule);
+  }
+
+  .next {
+    align-items: flex-start;
+    text-align: left;
   }
 }

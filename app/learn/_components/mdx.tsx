@@ -9,7 +9,7 @@ import styles from './mdx.module.css'
  * adds new elements to the content. It only reshapes the two standard
  * ones that need real markup: a numbered h2, and a table that has to
  * scroll on a narrow screen. Everything else (p, ul, ol, blockquote,
- * pre, code) is left bare for .learn-prose to style.
+ * pre, code) is left bare for .prose to style.
  *
  * Server components throughout — none of this needs the browser.
  */
@@ -55,12 +55,13 @@ function Heading2({ children, ...props }: ComponentProps<'h2'>) {
   return (
     <h2 {...props} className={styles.section}>
       {/* The number is already in the heading text for a screen reader —
-          it reads "3. Context windows" either way — so the badge is
+          it reads "3. Context windows" either way — so the marker is
           presentational and the visible text carries the meaning. */}
-      <span className={styles.badge} aria-hidden="true">
+      <span className={`num ${styles.n}`} aria-hidden="true">
         {number}
       </span>
-      <span>{rest}</span>
+      <span className={styles.rule} aria-hidden="true" />
+      <span className={styles.text}>{rest}</span>
     </h2>
   )
 }

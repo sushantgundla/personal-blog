@@ -1,119 +1,286 @@
 /* ============================================================
-   LEARN — the course section
-   Short lessons, read top to bottom. The look is the main site's,
-   not the atlas's: every colour and font here resolves to a token
-   already defined in app/globals.css (--primary, the --surface-*
-   ramp, --on-surface, --outline-*, --font-body/display/mono), so
-   this section follows next-themes in both dark and light without
-   defining a palette of its own.
+   LEARN — a printed signalling diagram
+   A course is a line; a lesson is a stop.
 
-   Everything is scoped under .learn-root, so nothing here can leak
-   into the rest of the site. This file is the only place the
-   section's visual language is written down — the page components
-   only ever reach for a class defined below.
+   This section is its own publication. It does NOT inherit
+   --primary or the --surface-* ramp from app/globals.css: every
+   colour below resolves to an --ln-* token defined here, with a
+   .light override, so next-themes still drives both modes but the
+   palette is the section's own. See app/learn/DESIGN.md — that
+   file is the contract this one implements.
+
+   Everything is scoped under .learn-root, so nothing here leaks
+   into the rest of the site, and nothing from the site's own
+   .prose rules survives inside it (a .learn-root .prose selector
+   outranks a bare .prose one).
+
+   The bans, in one place, so they are easy to check: no shadows,
+   no gradients, no blur behind anything, no corner radius above
+   2px, no rounded card containers, no icon tiles, no accent bar
+   thicker than 1px, no scroll-reveal. Grepping this file for the
+   property names should find nothing, which is why they are not
+   spelled out here.
 
    Hard rule from the site owner: never a fixed pixel max-width.
-   The reading column is .measure, which is a min() of a character
-   measure and the viewport minus fluid gutters, so the layout
-   fills any window and never leaves grey bars at the sides.
+   The reading column is .measure — a min() of a character measure
+   and the viewport minus fluid gutters — so the layout fills any
+   window and never leaves grey bars at the sides. The diagram
+   uses .bleed and runs edge to edge.
    ============================================================ */
 
 /* ============================================================
-   1. Root — surface, motion curve, and the ember glow at the top
+   1. Tokens — printed transit inks on near-black
+   Eight colour roles, and nothing else. Line colour is
+   structural: it appears in the diagram, in a lesson's position
+   strip and in the one rule under a lesson title. It never
+   colours body text and never fills a background.
    ============================================================ */
 
 .learn-root {
-  /* One curve for the whole section, so every hover and lift feels
-     like one hand drew it. Same easing the main site uses for
-     .magnetic in globals.css. */
-  --learn-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* --- The three transit inks, one per course --------------- */
+  --ln-llms: #c4372f;
+  --ln-prompt: #4a72c4;
+  --ln-rag: #3e8c5e;
 
-  /* The fluid side gutter. Shared by .measure and the header/footer
-     rules so the chrome lines up with the text column at every
-     window size. */
-  --learn-gutter: clamp(1rem, 5vw, 6rem);
+  /* --- Marks, ground and ink -------------------------------- */
+  --ln-mark: #f2efe9; /* you-are-here ring, terminus fill */
+  --ln-ground: #12100e; /* page ground */
+  --ln-ink: #ede9e2; /* body text */
+  --ln-ink-quiet: #9a948b; /* labels, meta, secondary */
+  --ln-rule: #2a2725; /* hairlines, zone divisions */
 
-  position: relative;
-  isolation: isolate;
+  /* --- The current line -------------------------------------
+     A subtree sets its course colour once, via data-line on a
+     wrapper (see section 2), and everything under it just reads
+     var(--ln-line). Defaults to quiet ink so anything outside a
+     course still renders in the world's voice rather than
+     unstyled. */
+  --ln-line: var(--ln-ink-quiet);
+
+  /* --- Faces ------------------------------------------------
+     Archivo is the display and signage face — it replaces the
+     mono-as-display costume this redesign exists to remove.
+     Inter is for the reading column alone. JetBrains Mono is
+     confined to code and tabular numerals. All three are loaded
+     in app/layout.tsx. */
+  --ln-sign: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --ln-read: 'Inter', system-ui, -apple-system, sans-serif;
+  --ln-num: 'JetBrains Mono', ui-monospace, 'Fira Code', monospace;
+
+  /* --- Geometry and motion ----------------------------------
+     --ln-gutter is the fluid side gutter, shared by .measure,
+     .bleed and the chrome, so the top rail lines up with the
+     page under it at every window size.
+     --ln-w is the line stroke; it thins on narrow screens, where
+     the whole network turns vertical.
+     --ln-ease is the one curve in the section. */
+  --ln-gutter: clamp(1rem, 5vw, 6rem);
+  --ln-w: 6px;
+  --ln-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  color: var(--on-surface);
-  font-family: var(--font-body);
+  background: var(--ln-ground);
+  color: var(--ln-ink);
+  font-family: var(--ln-read);
 }
 
-/* A faint warm wash behind the top of the page — the site's ember,
-   turned right down. It sits behind everything (z-index: -1) and is
-   purely decorative, so it never touches contrast on the text. */
-.learn-root::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: min(60vh, 640px);
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 80% 60% at 50% 0%,
-    rgba(var(--primary-rgb), 0.09),
-    transparent 70%
-  );
+/* Light is a real, tested mode, not a fallback. next-themes puts
+   .light on <html> (attribute="class", defaultTheme="dark"), so
+   the override sits on the ancestor and swaps values only —
+   every token name above stays identical, and no rule below ever
+   needs to know which mode it is in. */
+.light .learn-root {
+  --ln-llms: #a82e27;
+  --ln-prompt: #2b4c8c;
+  --ln-rag: #2e6b47;
+  --ln-mark: #12100e;
+  --ln-ground: #f7f5f1;
+  --ln-ink: #191714;
+  --ln-ink-quiet: #6b655c;
+  --ln-rule: #ddd8d0;
+}
+
+/* The diagram rotates rather than shrinks: below 52rem the whole
+   network turns vertical, and the stroke thins with it. */
+@media (max-width: 52rem) {
+  .learn-root {
+    --ln-w: 4px;
+  }
 }
 
 /* ============================================================
-   2. The reading column
-   No max-width in px anywhere: min() picks the character measure
-   when there is room and the full viewport-minus-gutters when
-   there isn't.
+   2. The current line
+   Set data-line on any wrapper — the diagram, a lesson header, a
+   position strip — and the whole subtree resolves var(--ln-line)
+   to that course's ink. Both the wrapper itself and .learn-root
+   carrying the attribute are handled, and the prompt course
+   answers to either its slug or its short name.
    ============================================================ */
 
+.learn-root[data-line='llms'],
+.learn-root [data-line='llms'] {
+  --ln-line: var(--ln-llms);
+}
+
+.learn-root[data-line='prompt-engineering'],
+.learn-root [data-line='prompt-engineering'],
+.learn-root[data-line='prompt'],
+.learn-root [data-line='prompt'] {
+  --ln-line: var(--ln-prompt);
+}
+
+.learn-root[data-line='rag'],
+.learn-root [data-line='rag'] {
+  --ln-line: var(--ln-rag);
+}
+
+/* ============================================================
+   3. Containers
+   Two, and only two: the reading column and the full-bleed band
+   the diagram lives in.
+   ============================================================ */
+
+/* The reading column. No max-width in px anywhere: min() picks
+   the character measure when there is room and the full
+   viewport-minus-gutters when there isn't. */
 .learn-root .measure {
-  width: min(72ch, 100% - 2 * var(--learn-gutter));
+  width: min(70ch, 100% - 2 * var(--ln-gutter));
   margin-inline: auto;
 }
 
-/* A wider variant for grids of cards, which want more room than
-   running text does. Same rule, looser measure. */
-.learn-root .measure-wide {
-  width: min(104ch, 100% - 2 * var(--learn-gutter));
-  margin-inline: auto;
+/* The diagram band. Runs edge to edge — the gutter is padding
+   here, not a width limit, so the network keeps growing with the
+   window instead of stopping at a column. */
+.learn-root .bleed {
+  width: 100%;
+  padding-inline: var(--ln-gutter);
 }
 
 /* ============================================================
-   3. Chrome — the thin top bar and the footer line
+   4. Type
+   Signage caps for every label; Inter for reading; mono for
+   numerals. Three classes carry almost the whole section.
    ============================================================ */
 
-.learn-root .learn-top-bar {
+/* The universal label: a line name, a station name, a section
+   marker, the chrome. */
+.learn-root .sign {
+  font-family: var(--ln-sign);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ln-ink);
+}
+
+/* The same label, stepped back: meta, zone names, the footer. */
+.learn-root .sign-quiet {
+  font-family: var(--ln-sign);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ln-ink-quiet);
+}
+
+/* A label that is also a link stays a label — no underline, and
+   hover is an instant step to full ink, never a movement. */
+.learn-root a.sign,
+.learn-root a.sign-quiet {
+  text-decoration: none;
+}
+
+.learn-root a.sign:hover,
+.learn-root a.sign-quiet:hover {
+  color: var(--ln-ink);
+}
+
+/* Stop numbers, minutes, quiz counts. Sized in em so it sits
+   correctly wherever it is dropped, and tabular so a column of
+   them lines up. Never used as texture. */
+.learn-root .num {
+  font-family: var(--ln-num);
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--ln-ink-quiet);
+}
+
+/* The page title. Sentence case, not caps: at this size the
+   negative tracking is what makes Archivo read as display type,
+   and caps at 3.6rem would shout over the diagram. */
+.learn-root .learn-h1 {
+  font-family: var(--ln-sign);
+  font-weight: 700;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ln-ink);
+  text-wrap: balance;
+}
+
+/* The subtitle under a title. Inter, because it is a sentence
+   rather than a label. */
+.learn-root .learn-lede {
+  margin-top: 1rem;
+  font-family: var(--ln-read);
+  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--ln-ink-quiet);
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   5. Rules
+   A hairline divides; a 3px bar in the course ink identifies.
+   ============================================================ */
+
+.learn-root .rule {
+  border: none;
+  width: 100%;
+  height: 1px;
+  background: var(--ln-rule);
+  margin-block: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+/* The one rule under a lesson title, in that lesson's line
+   colour. This and the diagram are the only places the line ink
+   appears at all. */
+.learn-root .rule-line {
+  border: none;
+  width: 100%;
+  height: 3px;
+  background: var(--ln-line);
+  margin-block: 1.25rem;
+}
+
+/* ============================================================
+   6. Chrome — the platform sign
+   A thin printed rail, not a nav bar. Opaque: a sign does not
+   blur what is behind it, and there is no translucency or
+   backdrop filter anywhere in this section.
+   ============================================================ */
+
+.learn-root .learn-rail {
   flex: none;
-  border-bottom: 1px solid var(--outline-variant);
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
   z-index: 10;
+  background: var(--ln-ground);
+  border-bottom: 1px solid var(--ln-rule);
 }
 
-.learn-root .learn-top-bar-inner {
+.learn-root .learn-rail-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.9rem var(--learn-gutter);
-}
-
-.learn-root .learn-top-link {
-  font-family: var(--font-display);
-  font-size: 0.625rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--on-surface-variant);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.learn-root .learn-top-link:hover {
-  color: var(--primary);
+  padding: 0.85rem var(--ln-gutter);
 }
 
 .learn-root .learn-main {
@@ -121,339 +288,213 @@
   padding-block: clamp(2.5rem, 6vw, 5rem);
 }
 
-.learn-root .learn-footer {
+.learn-root .learn-foot {
   flex: none;
-  border-top: 1px solid var(--outline-variant);
-  padding-block: 1.75rem;
   margin-top: clamp(3rem, 8vw, 6rem);
+  padding: 1.5rem var(--ln-gutter);
+  border-top: 1px solid var(--ln-rule);
 }
 
-.learn-root .learn-footer p {
-  font-size: 0.8125rem;
-  color: var(--on-surface-variant);
-  line-height: 1.6;
-}
-
-/* ============================================================
-   4. Type — eyebrow, headline, lede
-   ============================================================ */
-
-/* The small uppercase label above a heading: a part name, a lesson
-   number, "404". Always the accent. */
-.learn-root .learn-eyebrow {
-  font-family: var(--font-display);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--primary);
-  margin-bottom: 0.75rem;
-}
-
-.learn-root .learn-h1 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(1.9rem, 4.4vw, 3rem);
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  color: var(--on-surface);
-  text-wrap: balance;
-}
-
-/* The italic line under the headline. Sized so it reads as a
-   subtitle, not a second heading. */
-.learn-root .learn-lede {
-  margin-top: 1rem;
-  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
-  font-style: italic;
-  line-height: 1.6;
-  color: var(--on-surface-variant);
-  text-wrap: pretty;
-}
-
-/* An accent-coloured hairline, for separating a page header from
-   the list under it. Fades out to the right so it reads as a mark
-   rather than a full-width divider. */
-.learn-root .learn-rule {
-  border: none;
-  height: 1px;
-  margin-block: clamp(1.75rem, 4vw, 2.75rem);
-  background: linear-gradient(
-    to right,
-    rgba(var(--primary-rgb), 0.55),
-    var(--outline-variant) 30%,
-    transparent
-  );
-}
-
-/* Big, quiet section numbers — "01", "02" — beside a part heading. */
-.learn-root .learn-numeral {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.875rem;
-  letter-spacing: 0.08em;
-  color: rgba(var(--primary-rgb), 0.65);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ============================================================
-   5. The list row
-   One lesson, or one course, as a card. Resting state is nearly
-   flat; the accent only arrives on hover.
-   ============================================================ */
-
-.learn-root .learn-card {
-  display: block;
-  position: relative;
-  padding: clamp(1.1rem, 2.4vw, 1.6rem) clamp(1.1rem, 2.4vw, 1.75rem);
-  border: 1px solid var(--outline-variant);
-  border-radius: 0.75rem;
-  background: var(--surface-container-low);
-  color: inherit;
-  text-decoration: none;
-  transition: border-color 0.25s var(--learn-ease), transform 0.25s var(--learn-ease),
-    background-color 0.25s var(--learn-ease), box-shadow 0.25s var(--learn-ease);
-}
-
-.learn-root .learn-card:hover {
-  border-color: var(--primary);
-  background: var(--surface-container);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 0 22px rgba(var(--primary-rgb), 0.1);
-}
-
-/* Keyboard users get the same treatment as the mouse, plus a real
-   focus ring — the border alone is too subtle to be a focus cue. */
-.learn-root .learn-card:focus-visible {
-  border-color: var(--primary);
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-}
-
-.learn-root .learn-card h2,
-.learn-root .learn-card h3 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(1.0625rem, 1.8vw, 1.25rem);
-  line-height: 1.35;
-  letter-spacing: -0.015em;
-  color: var(--on-surface);
-  transition: color 0.25s var(--learn-ease);
-}
-
-.learn-root .learn-card:hover h2,
-.learn-root .learn-card:hover h3 {
-  color: var(--primary);
-}
-
-.learn-root .learn-card p {
-  margin-top: 0.4rem;
-  font-size: 0.9375rem;
-  line-height: 1.65;
-  color: var(--on-surface-variant);
-}
-
-/* ============================================================
-   6. The pill — "8 LESSONS", "7 MIN"
-   ============================================================ */
-
-.learn-root .learn-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  padding: 0.25em 0.7em;
-  border: 1px solid var(--outline-variant);
-  border-radius: 9999px;
-  background: var(--surface-container);
-  font-family: var(--font-display);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--on-surface-variant);
-}
-
-/* The accent variant, for the one fact worth highlighting on a row. */
-.learn-root .learn-pill-accent {
-  border-color: rgba(var(--primary-rgb), 0.4);
-  background: rgba(var(--primary-rgb), 0.1);
-  color: var(--primary);
-}
-
-/* ============================================================
-   7. The back link
-   ============================================================ */
-
-.learn-root .learn-back {
-  display: inline-block;
-  margin-top: 2rem;
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  color: var(--primary);
-  text-decoration: none;
-  transition: opacity 0.2s ease;
-}
-
-.learn-root .learn-back:hover {
-  opacity: 0.75;
-}
-
-/* The 404 page's block. Roomy, so a wrong turn doesn't land
-   jammed against the header. */
+/* The 404's block. Roomy, so a wrong turn does not land jammed
+   against the rail. */
 .learn-root .learn-missing {
   padding-block: clamp(3rem, 12vh, 8rem);
 }
 
-/* ============================================================
-   8. .learn-prose — the lesson body
-   Typography for rendered MDX. Follows the same shape as the
-   article prose in app/(main)/articles/[slug]/prose.css, but on
-   the site tokens rather than the --prism-* ones. Note the list
-   rules restore markers and padding that the global
-   `* { margin: 0; padding: 0 }` reset in globals.css strips.
-   ============================================================ */
-
-.learn-root .learn-prose {
-  font-size: clamp(1rem, 1.1vw, 1.0625rem);
-  line-height: 1.85;
-  color: var(--on-surface-variant);
+/* One focus treatment for the whole section, so a keyboard user
+   is never left guessing. --ln-mark is the brightest thing in
+   either theme, which is exactly what a focus ring should be. */
+.learn-root a:focus-visible,
+.learn-root button:focus-visible,
+.learn-root [tabindex]:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
 }
 
-.learn-root .learn-prose > *:first-child {
+.learn-root ::selection {
+  background: var(--ln-ink);
+  color: var(--ln-ground);
+}
+
+/* ============================================================
+   7. .prose — the reading column
+   Typography for rendered MDX. Inter throughout the body, with
+   Archivo signage for the section headings, because a numbered
+   section in a lesson is a station marker.
+
+   Note the list rules restore markers and padding that the
+   global `* { margin: 0; padding: 0 }` reset in globals.css and
+   Tailwind's preflight strip.
+   ============================================================ */
+
+.learn-root .prose {
+  font-family: var(--ln-read);
+  font-size: clamp(1rem, 1.05vw, 1.0625rem);
+  line-height: 1.75;
+  color: var(--ln-ink);
+}
+
+.learn-root .prose > *:first-child {
   margin-top: 0;
 }
 
-/* --- Headings ------------------------------------------------- */
-.learn-root .learn-prose h2 {
-  font-family: var(--font-display);
+/* --- Headings ------------------------------------------------ */
+
+/* Sentence case, not signage caps. The rule in DESIGN.md is caps
+   for every label, and a label is short — a course name, a zone
+   name, "STOP 07 / 12". A section heading here is a full sentence
+   ("2. Tokens in, attention inside, and why length costs more"),
+   and caps would slow the reading this column exists for. Archivo
+   at 700 with tight tracking carries the world instead. */
+.learn-root .prose h2 {
+  font-family: var(--ln-sign);
   font-weight: 700;
   font-size: clamp(1.35rem, 2.4vw, 1.75rem);
   line-height: 1.25;
   letter-spacing: -0.02em;
-  color: var(--on-surface);
+  text-transform: none;
+  color: var(--ln-ink);
   margin-top: 2.75rem;
   margin-bottom: 1rem;
   scroll-margin-top: 5rem;
 }
 
-.learn-root .learn-prose h3 {
-  font-family: var(--font-display);
+/* A step down from the section heading, same voice. */
+.learn-root .prose h3 {
+  font-family: var(--ln-sign);
   font-weight: 600;
-  font-size: clamp(1.125rem, 1.8vw, 1.3rem);
+  font-size: clamp(1.125rem, 1.7vw, 1.3rem);
   line-height: 1.35;
   letter-spacing: -0.01em;
-  color: var(--on-surface);
+  color: var(--ln-ink);
   margin-top: 2.25rem;
   margin-bottom: 0.75rem;
   scroll-margin-top: 5rem;
 }
 
-.learn-root .learn-prose h4 {
-  font-family: var(--font-display);
+.learn-root .prose h4 {
+  font-family: var(--ln-sign);
   font-weight: 600;
   font-size: 1.05rem;
   line-height: 1.4;
-  color: var(--on-surface);
+  letter-spacing: -0.005em;
+  color: var(--ln-ink);
   margin-top: 1.9rem;
   margin-bottom: 0.6rem;
 }
 
-/* --- Body copy -------------------------------------------------- */
-.learn-root .learn-prose p {
+/* --- Body copy ----------------------------------------------- */
+
+.learn-root .prose p {
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--ln-ink);
   margin-bottom: 1.35rem;
 }
 
-.learn-root .learn-prose strong {
-  color: var(--on-surface);
+.learn-root .prose strong {
   font-weight: 600;
+  color: var(--ln-ink);
 }
 
-.learn-root .learn-prose em {
+.learn-root .prose em {
   font-style: italic;
 }
 
-.learn-root .learn-prose a {
-  color: var(--primary);
+/* Links carry an underline, not a colour: line ink never enters
+   the reading column, and an underline is a signal that survives
+   both themes and colour blindness. */
+.learn-root .prose a {
+  color: var(--ln-ink);
   text-decoration: underline;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(var(--primary-rgb), 0.4);
-  transition: text-decoration-color 0.2s ease, opacity 0.2s ease;
+  text-decoration-color: var(--ln-ink-quiet);
 }
 
-.learn-root .learn-prose a:hover {
+.learn-root .prose a:hover {
   text-decoration-color: currentColor;
-  opacity: 0.85;
 }
 
-/* --- Lists -------------------------------------------------------- */
-.learn-root .learn-prose ul {
+/* --- Lists ---------------------------------------------------- */
+
+.learn-root .prose ul {
   list-style: disc;
-  padding-left: 1.4em;
+  padding-left: 1.35em;
   margin-bottom: 1.35rem;
 }
 
-.learn-root .learn-prose ol {
+.learn-root .prose ol {
   list-style: decimal;
-  padding-left: 1.4em;
+  padding-left: 1.35em;
   margin-bottom: 1.35rem;
 }
 
-.learn-root .learn-prose li {
+.learn-root .prose li {
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--ln-ink);
   margin-bottom: 0.5rem;
 }
 
-.learn-root .learn-prose li::marker {
-  color: rgba(var(--primary-rgb), 0.7);
+.learn-root .prose li::marker {
+  color: var(--ln-ink-quiet);
 }
 
-.learn-root .learn-prose li > ul,
-.learn-root .learn-prose li > ol {
+.learn-root .prose li > ul,
+.learn-root .prose li > ol {
   margin-top: 0.5rem;
   margin-bottom: 0;
 }
 
-/* --- Blockquote ----------------------------------------------------- */
-.learn-root .learn-prose blockquote {
-  border-left: 2px solid var(--primary);
+/* --- Blockquote ----------------------------------------------- */
+
+/* A hairline, not an accent bar: nothing in this world carries a
+   coloured edge thicker than the rules do. */
+.learn-root .prose blockquote {
+  border-left: 1px solid var(--ln-rule);
   padding-left: 1.25rem;
   margin: 1.75rem 0;
-  font-style: italic;
-  color: var(--on-surface-variant);
+  color: var(--ln-ink-quiet);
+  font-style: normal;
 }
 
-.learn-root .learn-prose blockquote p:last-child {
+.learn-root .prose blockquote p:last-child {
   margin-bottom: 0;
 }
 
-/* --- Rule ----------------------------------------------------------- */
-.learn-root .learn-prose hr {
+/* --- Rule and images ------------------------------------------ */
+
+.learn-root .prose hr {
   border: none;
   height: 1px;
-  background: var(--outline-variant);
+  background: var(--ln-rule);
   margin: 2.5rem 0;
 }
 
-/* --- Images --------------------------------------------------------- */
-.learn-root .learn-prose img {
+.learn-root .prose img {
   width: 100%;
   height: auto;
-  border: 1px solid var(--outline-variant);
-  border-radius: 0.75rem;
+  border: 1px solid var(--ln-rule);
+  border-radius: 0;
   margin: 1.75rem 0;
 }
 
-/* --- Tables ---------------------------------------------------------
-   The scrolling belongs to the .tableScroll wrapper in mdx.module.css,
-   not to the table itself: `display: block` here would stop the table
-   sizing its own columns and leave them all hugging their text. The
-   min-width is what makes a narrow phone scroll rather than crush three
-   columns into four characters each.
+/* --- Tables ---------------------------------------------------
+   These rules were tuned on the real lessons and are kept as
+   they were, on the new tokens. Comparison tables are the
+   workhorse of the writing, so they matter more than most.
 
-   No boxes and no zebra stripes — just a rule under the head and one
+   The scrolling belongs to the wrapper around the table, not to
+   the table itself: `display: block` here would stop the table
+   sizing its own columns and leave them all hugging their text.
+   The min-width is what makes a narrow phone scroll rather than
+   crush three columns into four characters each.
+
+   No boxes and no zebra stripes — a rule under the head and one
    between rows, so the table reads like the rest of the prose. */
-.learn-root .learn-prose table {
+
+.learn-root .prose table {
   width: 100%;
   min-width: 34rem;
   border-collapse: collapse;
@@ -462,87 +503,120 @@
   line-height: 1.6;
 }
 
-.learn-root .learn-prose th,
-.learn-root .learn-prose td {
+.learn-root .prose th,
+.learn-root .prose td {
   padding: 0.75em 1.1em;
   text-align: left;
   vertical-align: top;
 }
 
-/* The header row is a label, not a sentence: same small uppercase
-   display type as .learn-eyebrow, just tracked a little tighter so a
-   two-word column heading stays readable. */
-.learn-root .learn-prose thead th {
-  font-family: var(--font-display);
+/* The header row is a label, not a sentence — the same signage
+   caps as .sign-quiet, tracked a little tighter so a two-word
+   column heading stays readable. */
+.learn-root .prose thead th {
+  font-family: var(--ln-sign);
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--on-surface-variant);
+  color: var(--ln-ink-quiet);
   white-space: nowrap;
   padding-bottom: 0.6em;
-  border-bottom: 1px solid var(--outline-variant);
+  border-bottom: 1px solid var(--ln-rule);
 }
 
-.learn-root .learn-prose tbody tr + tr td {
-  border-top: 1px solid var(--outline-variant);
+.learn-root .prose tbody tr + tr td {
+  border-top: 1px solid var(--ln-rule);
 }
 
-.learn-root .learn-prose tbody td {
-  color: var(--on-surface-variant);
+.learn-root .prose tbody td {
+  color: var(--ln-ink-quiet);
 }
 
-/* First column carries the thing being described, so it reads as the
-   row's own label. */
-.learn-root .learn-prose tbody td:first-child {
-  color: var(--on-surface);
+/* First column carries the thing being described, so it reads as
+   the row's own label. */
+.learn-root .prose tbody td:first-child {
+  color: var(--ln-ink);
 }
 
-/* The padding is inside the cells; the outer edges sit flush with the
-   text column above and below. */
-.learn-root .learn-prose th:first-child,
-.learn-root .learn-prose td:first-child {
+/* The padding is inside the cells; the outer edges sit flush
+   with the text column above and below. */
+.learn-root .prose th:first-child,
+.learn-root .prose td:first-child {
   padding-left: 0;
 }
 
-.learn-root .learn-prose th:last-child,
-.learn-root .learn-prose td:last-child {
+.learn-root .prose th:last-child,
+.learn-root .prose td:last-child {
   padding-right: 0;
 }
 
-/* --- Inline code & code blocks --------------------------------------- */
-.learn-root .learn-prose code {
-  font-family: var(--font-mono);
+/* --- Inline code and code blocks ------------------------------
+   Mono earns its place here and nowhere else. A hairline box at
+   2px — the one radius the bans allow outside diagram geometry —
+   instead of a filled chip, because nothing in this world has a
+   background region of its own. */
+
+.learn-root .prose code {
+  font-family: var(--ln-num);
   font-size: 0.875em;
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
   padding: 0.12em 0.4em;
-  border-radius: 4px;
-  color: var(--on-surface);
+  border: 1px solid var(--ln-rule);
+  border-radius: 2px;
+  background: none;
+  color: var(--ln-ink);
 }
 
-.learn-root .learn-prose pre {
-  font-family: var(--font-mono);
-  background: var(--surface-container-lowest);
-  border: 1px solid var(--outline-variant);
-  border-radius: 0.75rem;
+.learn-root .prose pre {
+  font-family: var(--ln-num);
+  border: 1px solid var(--ln-rule);
+  border-radius: 0;
+  background: none;
   padding: clamp(1rem, 2.4vw, 1.4rem);
   overflow-x: auto;
   margin: 1.75rem 0;
   font-size: 0.875rem;
   line-height: 1.7;
+  color: var(--ln-ink);
 }
 
-.learn-root .learn-prose pre code {
-  background: none;
+.learn-root .prose pre code {
   border: none;
+  border-radius: 0;
   padding: 0;
   font-size: inherit;
-  color: var(--on-surface);
+  color: inherit;
 }
 
 /* ============================================================
-   9. Reduced motion — one block, kills every transition above
+   8. Motion — one authored moment
+   The you-are-here ring draws itself once on load. Nothing else
+   in the section animates: no entrances, no scroll reveals, and
+   hover is an instant colour change rather than a transition.
+
+   A component sets --ln-draw-len to the path's own length and
+   adds .ln-draw. The `both` fill keeps the final state.
+   ============================================================ */
+
+@keyframes ln-draw {
+  from {
+    stroke-dashoffset: var(--ln-draw-len, 100);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.learn-root .ln-draw {
+  stroke-dasharray: var(--ln-draw-len, 100);
+  stroke-dashoffset: 0;
+  animation: ln-draw 600ms var(--ln-ease) both;
+}
+
+/* ============================================================
+   9. Reduced motion
+   One block. The ring renders in its final state rather than
+   drawing, and any transition a component adds is disabled.
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
@@ -555,9 +629,11 @@
     scroll-behavior: auto !important;
   }
 
-  /* The lift specifically: the card still changes border colour on
-     hover, it just doesn't move. */
-  .learn-root .learn-card:hover {
-    transform: none;
+  /* The ring is simply there, fully drawn, from the first
+     paint — no dash to animate at all. */
+  .learn-root .ln-draw {
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
   }
 }
