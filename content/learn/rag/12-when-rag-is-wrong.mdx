@@ -76,7 +76,7 @@ This is a database query. If your data is in a database, write SQL. If it is in 
 
 **Graphs.** Extract entities and relationships at index time, store them as nodes and edges, and traverse. Approaches like GraphRAG combine this with retrieval - use the graph for structure, the passages for wording. It is real work to build and maintain, so reach for it when relationship questions are the main thing your users ask, not as a default upgrade.
 
-**Agentic search.** Instead of one retrieval pass, let the model search, read what came back, and decide what to search for next. This is the loop from the build-with-llms lesson on the agent loop, with search as the tool. It fits questions where you cannot write the right query up front because you do not yet know what you are looking for - "find the incident that caused this regression, then tell me who reviewed the fix". The price is several model calls and several searches per question, so latency and cost multiply, and the loop needs a hard step limit.
+**Agentic search.** Instead of one retrieval pass, let the model search, read what came back, and decide what to search for next. This is an agent loop - the model calls a tool, reads what came back, then decides on the next call - with search as the tool. It fits questions where you cannot write the right query up front because you do not yet know what you are looking for - "find the incident that caused this regression, then tell me who reviewed the fix". The price is several model calls and several searches per question, so latency and cost multiply, and the loop needs a hard step limit.
 
 ### Why fine-tuning is not a substitute
 

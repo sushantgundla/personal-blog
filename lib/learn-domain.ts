@@ -55,7 +55,7 @@ export function stripLearnPrefix(pathname: string): string {
  * The `alternates` slice of a `/learn` page's metadata, ready to spread.
  *
  * `path` is the page's path on the subdomain: `/` for the index,
- * `/build-with-llms` for a course, `/build-with-llms/what-a-model-is` for a
+ * `/rag` for a course, `/rag/chunking` for a
  * lesson.
  *
  * Returns an empty object when the switch is off, so spreading it leaves the

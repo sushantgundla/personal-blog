@@ -2,12 +2,12 @@
 title: "What a model is made of"
 subtitle: "Frozen numbers, one repeated attention step, and two training stages. That is the whole product."
 part: 1
-minutes: 7
+minutes: 8
 why: "You picked the bigger model because bigger sounded safer, and it came back slower, dearer, and no better at your actual job. Then someone asked whether it learns from the prompts you send it, and you were not certain either way. Both questions live one level below the API, in what the thing is made of. This lesson opens the box just far enough — the frozen weights, the step that makes long prompts expensive, and the training stage that really decides how a model behaves — so your next model choice is reasoned instead of guessed."
 wins:
   - "Pin the exact model version string — new weights are a new model, not an update."
   - "Read parameter count as a cost and memory signal, never as a quality score."
-  - "Expect long prompts to cost more than the extra words suggest, and measure it."
+  - "Budget in tokens, not words — a token is a word fragment, and long prompts cost more than the extra words suggest."
   - "Blame training data and post-training, not architecture, when two same-size models differ."
   - "Choose a model by testing it on your own task, because no spec sheet predicts that."
 quiz:
@@ -15,10 +15,10 @@ quiz:
     options: ["Slowly, as it learns from the requests it handles", "Never — they are frozen when training finishes", "Only once the context window fills up"]
     answer: 1
     explain: "Serving is read-only arithmetic over a fixed file; nothing you send is written back into the weights."
-  - q: "A larger parameter count reliably tells you..."
-    options: ["Roughly what it costs to serve, and how much it could have memorised", "That it will score better on your particular task", "How large its context window is"]
+  - q: "A model is bad at counting the letters in a word because..."
+    options: ["The word usually arrives as one token, and the model never sees the letters inside it", "Counting is switched off by the API", "The word is too rare to have appeared in training"]
     answer: 0
-    explain: "Size sets the cost floor and the capacity to store facts, but a smaller model with better data and post-training routinely beats a larger one."
+    explain: "The tokenizer hands the model numbers, not characters, so letter-level work belongs in your code rather than in the prompt."
   - q: "You double the length of your prompt. The attention work roughly..."
     options: ["Stays the same", "Doubles", "Quadruples"]
     answer: 2
@@ -35,7 +35,7 @@ deeper:
   - { label: "Attention Is All You Need (the transformer paper)", href: "https://arxiv.org/abs/1706.03762" }
   - { label: "Training Compute-Optimal Large Language Models (Chinchilla)", href: "https://arxiv.org/abs/2203.15556" }
   - { label: "Training language models to follow instructions with human feedback", href: "https://arxiv.org/abs/2203.02155" }
-  - { label: "Anthropic — models overview", href: "https://docs.anthropic.com/en/docs/about-claude/models" }
+  - { label: "Tiktokenizer — paste text and watch it split into tokens", href: "https://tiktokenizer.vercel.app/" }
 ---
 
 You can rent one of these for a fraction of a cent and never think about what it is. That works right up until you have to choose between two of them, or explain to someone why the small one is worse at your task, or work out why adding a few thousand words to a prompt cost more than a few thousand words should. This lesson opens the box far enough to answer those.
@@ -61,9 +61,29 @@ Everything you notice about a model follows from that:
 
 Two things make this less useful than it looks. First, closed providers mostly do not publish parameter counts at all, so for frontier models the number is not available to compare with. Second, even where it is published, training data and post-training move quality more than size does. A well-trained smaller model beating a larger, older one is not an upset. It is the normal case.
 
-## 2. Inside: attention, and why length costs more than it looks
+## 2. Tokens in, attention inside, and why length costs more
 
-The architecture is a **transformer**: a stack of identical blocks, each doing two things in turn — an attention step, then a small network applied to each token on its own.
+Before any arithmetic can happen, your text has to become numbers. A **tokenizer** cuts the string into chunks called **tokens** and looks each chunk up in a fixed vocabulary to get an integer. That list of integers is what the model receives. It never sees your string. The answer comes back the same way in reverse: the model picks a number, the tokenizer turns it back into a chunk of text.
+
+A token is usually a few characters. Sometimes it is a whole common word, more often it is a fragment of a longer one. The cuts are not where a reader would put them:
+
+| What you write | How it tends to split |
+|---|---|
+| `the`, `and`, `is` | One token each — common words sit in the vocabulary whole |
+| `unfathomable` | Several tokens, broken into fragments you would not have chosen |
+| `token` and ` token` (with a leading space) | Two different tokens — the space belongs to the word after it |
+| `1234567` | Digit groups that ignore place value, so arithmetic starts out mangled |
+| Japanese, Arabic, Hindi | Far more tokens than the character count suggests, so the same meaning costs more |
+
+For ordinary English the rule of thumb is roughly four characters per token, or about three tokens per four words. Treat it as a rule of thumb and nothing firmer: every model family ships its own tokenizer with its own vocabulary, so the same sentence counts differently on each. Paste your own text into a tokenizer such as [Tiktokenizer](https://tiktokenizer.vercel.app/) and watch the cuts appear. Ten seconds of that does more than any description.
+
+Two consequences matter, and both show up in production.
+
+**The model is blind to letters.** A word usually arrives as a single number, not as a row of characters, so counting the letters in a word, reversing a string, checking a spelling or adding two long numbers exactly are all things it has no clean way to do. It will answer anyway, and it will sometimes be wrong in a way that looks careless. Push that work into code — a tool call, a few lines of Python, a calculator — instead of asking the model to look at something it cannot see.
+
+**Tokens are the unit you are billed in, and the unit latency scales with.** Input and output are priced per token, rate limits are counted in tokens, and the wait before the first word appears is mostly the model reading your input tokens. So tokens, not words and not characters, are the thing you budget. Everything below is about why that budget stretches faster than you expect.
+
+The architecture that consumes those tokens is a **transformer**: a stack of identical blocks, each doing two things in turn — an attention step, then a small network applied to each token on its own.
 
 Attention is the part worth understanding. In one line: **every token looks at every other token and pulls in whatever is relevant to it.**
 

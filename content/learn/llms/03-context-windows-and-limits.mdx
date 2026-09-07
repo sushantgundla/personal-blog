@@ -38,7 +38,7 @@ deeper:
   - { label: "Anthropic — models overview", href: "https://docs.anthropic.com/en/docs/about-claude/models" }
 ---
 
-The window is the one hard limit in the whole system. Everything else degrades gracefully; this one returns an error. It is also the number people most often treat as a quality setting, and it is not one. This lesson is about living inside it well. Tokens themselves are covered in lesson 1 of the *Build with LLMs* course, so this assumes you already count in them.
+The window is the one hard limit in the whole system. Everything else degrades gracefully; this one returns an error. It is also the number people most often treat as a quality setting, and it is not one. This lesson is about living inside it well. It assumes you have read *What a model is made of*, which is where tokens are explained, so you are already counting in tokens rather than words.
 
 ## 1. What has to fit, and what happens when it does not
 
@@ -82,7 +82,7 @@ Five moves, in the order they pay.
 
 **Put the instruction where it will be seen.** Start or end, never the middle. The shape that holds up across models is: short instruction first, documents in the middle, then the specific question repeated at the end. Repeating it costs a few dozen tokens and is the cheapest reliability fix on this list.
 
-**Retrieve rather than paste.** Ten relevant paragraphs beat the whole handbook, on cost, on latency, and on accuracy at the same time. The *Build with LLMs* course covers how to build that retrieval step; the point here is that a big window is not a reason to stop doing it.
+**Retrieve rather than paste.** Ten relevant paragraphs beat the whole handbook, on cost, on latency, and on accuracy at the same time. The RAG course covers how to build that retrieval step; the point here is that a big window is not a reason to stop doing it.
 
 **Order what you retrieve.** If you have a relevance score, put the strongest evidence first or last rather than in the order the database returned it. And use fewer chunks than feels safe — a `top_k` of 20 is usually 15 chunks of noise.
 
