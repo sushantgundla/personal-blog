@@ -1,0 +1,134 @@
+---
+title: "Examples beat explanations"
+subtitle: "Two worked pairs settle more than a paragraph, and settle it without argument."
+part: 1
+minutes: 7
+why: "You have written four sentences describing the output you want and the model still gets the edge cases wrong, so you write a fifth sentence. Prose about a format has to be interpreted, and every interpretation is a chance to be wrong. An example does not get interpreted — it is the format, already in the shape you want. This lesson is about choosing the two or three examples that carry the most weight, and knowing when to stop using them."
+wins:
+  - "Choose examples like test cases — the boring middle, each edge, one near-miss."
+  - "Pull examples from real traffic; invented inputs are too tidy to teach anything."
+  - "Keep every example in the identical format — one odd example makes the format optional."
+  - "Drop few-shot when a schema can guarantee the shape instead of demonstrating it."
+  - "Watch for the model copying example content, not just example form."
+quiz:
+  - q: "Two worked examples usually beat a paragraph describing the same output because..."
+    options: ["The example fixes format, length, tone and edge-case handling at once, with nothing left to interpret", "Examples are weighted more heavily than instructions by the attention mechanism", "Long prose instructions get truncated before short ones"]
+    answer: 0
+    explain: "The paragraph has to be read and turned into a shape; the example already is the shape."
+  - q: "The weakest set of five examples is..."
+    options: ["Five real inputs, one of them empty", "Four ordinary cases plus one where the correct answer is unknown", "Five easy cases that all look much the same"]
+    answer: 2
+    explain: "Five variations of the same easy case teach the model that the easy case is the whole job."
+  - q: "One of your four examples uses a slightly different date format. The effect is..."
+    options: ["No effect — the majority format wins", "That format becomes a legal option, and it will turn up in production", "The request is rejected as inconsistent"]
+    answer: 1
+    explain: "Examples are the rule; disagreeing examples teach that the rule is optional."
+  - q: "Few-shot is the wrong tool when..."
+    options: ["The output format is hard to put into words", "The classification boundary is genuinely fuzzy", "A tool schema can guarantee the shape rather than demonstrate it"]
+    answer: 2
+    explain: "A guarantee beats a demonstration, and it costs fewer tokens on every call."
+  - q: "A name from one of your examples shows up in a real production output. The likely cause is..."
+    options: ["The model is copying example content, not just example form", "A cache collision between two requests", "temperature is set too low"]
+    answer: 0
+    explain: "Examples are context like any other, so their content can be reused as readily as their shape."
+deeper:
+  - { label: "Anthropic — multishot (few-shot) prompting", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/multishot-prompting" }
+  - { label: "Language Models are Few-Shot Learners (GPT-3)", href: "https://arxiv.org/abs/2005.14165" }
+  - { label: "Rethinking the Role of Demonstrations (Min et al., 2022)", href: "https://arxiv.org/abs/2202.12837" }
+  - { label: "Anthropic — prompt engineering overview", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+---
+
+`build-with-llms` lesson 2 covers the basics of few-shot prompting: two to five examples, include a hard one, keep them consistent. That is the right advice and it is where most people stop. This lesson is about the part that actually decides whether it works — *which* examples, and when to stop using them at all.
+
+## 1. One example settles four things at once
+
+Prose describing an output leaves gaps. You cannot see them, because you know what you meant. The model fills each gap with whatever is most likely, and "most likely" varies run to run.
+
+| You wrote in prose | What is still undecided | An example settles it by |
+|---|---|---|
+| Write a short, friendly reply. | How short. How friendly. Greeting? Sign-off? Name used? | Showing one, at the exact length and register. |
+| Return the date in a standard format. | ISO or US? With a time? Which timezone? | Showing `2024-03-08`. |
+| Handle missing values sensibly. | Empty string, `null`, omit the key, or the word unknown? | Showing the missing case once, resolved. |
+| Keep the customer's own wording. | Verbatim including typos, or lightly cleaned? | Showing an input with a typo and the output that keeps it. |
+| Keep it neutral. | Neutral as in no adjectives, or as in no opinion? | Showing a sentence that hits the line you mean. |
+
+That is the whole argument. A paragraph is a description of the target. An example is the target. Format, length, tone and edge-case handling get pinned simultaneously, and none of them are up for interpretation.
+
+It is also why examples are the cheapest way to transfer taste. You can spend six sentences failing to describe your house style for release notes, or show three lines of it.
+
+## 2. Choosing them like test cases
+
+The common mistake is picking examples the way you would pick a demo: five clean cases that show the thing working. That teaches the model the clean case is the whole job, and it will be confidently wrong on everything else.
+
+Pick for coverage instead:
+
+- **One boring middle.** The modal input, the one you see a hundred times a day. This anchors the default behaviour.
+- **One example per rule you actually care about.** The empty input. The one where the honest answer is unknown. The one where the right move is to refuse. If a rule matters and no example demonstrates it, it is a suggestion.
+- **One near-miss.** An input that looks like class A and is really class B. This is where the boundary lives, and it is the single highest-value example in the set. Nothing else teaches a boundary as fast.
+
+Two more things that matter more than the count:
+
+**Use real inputs.** Examples you invent are too tidy — correct punctuation, one topic, no missing fields, no rambling preamble. Real traffic is not like that, and a model shown only clean inputs has no idea what to do with the messy ones. Pull your examples from your logs.
+
+**Keep them identical in format.** Every example is a vote. Five in the same shape is a rule. Four in one shape and one in another teaches that the shape is negotiable, and the odd one out will show up in production sooner than you expect.
+
+> Every example is a vote. Five in one format is a rule; four plus one is a suggestion.
+
+Which brings up wrong examples. The model copies the pattern faithfully, so a typo in an example output becomes a typo in production, and a mislabelled example makes that label reachable.
+
+Worth being precise here, because the research is more interesting than the folklore. Min et al. (2022) found that on classification tasks, replacing correct labels in the demonstrations with random ones hurt performance far less than expected — the examples were mostly teaching the *label space* and the *format*, not the input-to-label mapping. Do not read that as "labels do not matter". Read it as: format and the set of allowed answers are doing most of the work, so those are the parts you must get exactly right, and a wrongly *shaped* example is the expensive kind of mistake.
+
+## 3. Where few-shot stops paying
+
+| Situation | Use examples? | Why |
+|---|---|---|
+| Output format that is awkward to describe | Yes | One example beats five sentences |
+| A house style, tone, or level of formality | Yes | The only cheap way to transfer taste |
+| A classification with a fuzzy boundary | Yes, with near-misses | Boundaries are learned from cases, not definitions |
+| Simple, fully specifiable task ("return the ISO date") | No | A one-line rule is shorter and clearer |
+| A shape a schema can enforce | Usually no | A guarantee beats a demonstration — see lesson 6 |
+| Long documents, tight token budget | Careful | Examples cost input tokens on every single call |
+| Highly varied inputs | Careful | Three examples cannot represent a wide distribution, and may narrow it |
+
+That last row names a real failure. If your inputs vary a lot and your examples cover one corner, the examples can make things *worse* — the model treats them as the distribution and forces odd inputs into the shape it was shown.
+
+The other failure is **copying content instead of form**. Examples are context like everything else, so the model can lift a name, a number or a fact straight out of one. The tell is an entity from your example appearing in a real output. Three fixes, in order of how well they work: keep examples short and obviously synthetic, vary them so no single detail dominates, and state the rule explicitly — "the examples show the format only; never reuse their content".
+
+On cost: examples are input tokens on every call, which sounds worse than it is. Put them in the stable system prefix (lesson 2) and prompt caching absorbs most of it. Examples pasted into the variable user turn get charged in full, every time — another reason the split matters.
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+SYSTEM = """Rewrite a raw commit message as one release-note line.
+Plain past tense. No ticket ids. No trailing full stop.
+If the commit has no user-visible effect, output exactly: SKIP"""
+
+# Chosen for coverage, not variety: the boring middle, the SKIP edge,
+# and a near-miss that reads as internal but is user-visible.
+EXAMPLES = [
+    {"role": "user", "content": "fix(auth): correct token expiry check (PROJ-412)"},
+    {"role": "assistant", "content": "Fixed expired sessions not logging users out"},
+    {"role": "user", "content": "chore: bump eslint to 9.2.0"},
+    {"role": "assistant", "content": "SKIP"},
+    {"role": "user", "content": "refactor(api): move rate limiter, raise limit to 200/min"},
+    {"role": "assistant", "content": "Raised the API rate limit to 200 requests a minute"},
+]
+
+def note(commit: str) -> str:
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=60,
+        temperature=0,
+        system=SYSTEM,                 # stable, cacheable, holds the examples' rules
+        messages=EXAMPLES + [{"role": "user", "content": commit}],
+    )
+    return resp.content[0].text.strip()
+
+print(note("feat(export): add CSV option to the export dialog"))
+```
+
+Three examples, three jobs. Delete the middle one and `SKIP` stops being a real option — it becomes a sentence in a system prompt that the examples never back up.
+
+That is Part 1. Everything so far assumes one prompt doing one job. Part 2 starts with what happens when it is doing five.

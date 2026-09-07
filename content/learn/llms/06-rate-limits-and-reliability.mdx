@@ -1,0 +1,123 @@
+---
+title: "Rate limits and reliability"
+subtitle: "Three separate ceilings, one status code, and a retry loop that does not make things worse."
+part: 2
+minutes: 7
+why: "It worked on your machine, and then you pointed it at a real queue and everything went red. You added a retry, which helped until the day the provider was actually struggling and your retries turned a two-minute wobble into forty minutes of hammering a service that was already down. Meanwhile a long request hangs with no output and users reload the page, doubling the load again. None of this is about the model. It is ordinary distributed-systems work with one unusual property — the calls are slow and expensive — and this lesson gives you the handful of patterns that make it boring."
+wins:
+  - "Treat requests per minute, tokens per minute, and concurrency as three separate ceilings."
+  - "Back off exponentially with random jitter, and cap both the attempts and the total wait."
+  - "Never retry a 400 — it will fail identically every time."
+  - "Set an explicit timeout, and stream long answers so a slow call does not look like a hang."
+  - "Decide per feature what degrading looks like, before the day you need it."
+quiz:
+  - q: "A 429 response means..."
+    options: ["The provider is down", "Your request was malformed", "You asked faster than your rate limit allows"]
+    answer: 2
+    explain: "It is a throttle, not an outage and not a bug in your payload — the same request will succeed a moment later."
+  - q: "Random jitter is added to exponential backoff in order to..."
+    options: ["Stop every failed client retrying at the same instant and rebuilding the spike", "Make the average wait shorter", "Work around clock drift between servers"]
+    answer: 0
+    explain: "Clients that failed together would otherwise retry together, which recreates exactly the burst that caused the failure."
+  - q: "A pipeline sending a handful of very long documents each minute will most likely hit..."
+    options: ["The requests-per-minute ceiling", "The tokens-per-minute ceiling", "The concurrency ceiling"]
+    answer: 1
+    explain: "Few requests, enormous prompts — the token budget runs out long before the request count does."
+  - q: "Streaming a long answer mainly improves..."
+    options: ["Total generation time", "The cost of the request", "How quickly the user sees something, and it avoids HTTP timeouts on long answers"]
+    answer: 2
+    explain: "The same tokens take the same time to generate; what changes is that they arrive as they are produced instead of all at the end."
+  - q: "The right response to a 400 Bad Request is..."
+    options: ["Fix the request — retrying it will fail in exactly the same way", "Retry it with a longer backoff", "Fail over to a second provider"]
+    answer: 0
+    explain: "Nothing about waiting or switching changes a malformed payload, so a retry is pure waste and hides the real error."
+deeper:
+  - { label: "Anthropic — rate limits", href: "https://docs.anthropic.com/en/api/rate-limits" }
+  - { label: "Anthropic — errors and error handling", href: "https://docs.anthropic.com/en/api/errors" }
+  - { label: "AWS — exponential backoff and jitter", href: "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/" }
+  - { label: "Google SRE Book — handling overload", href: "https://sre.google/sre-book/handling-overload/" }
+---
+
+Everything up to here has been about the model. This lesson is about the network between you and it, which is where working systems actually break. The good news is that none of it is new — it is the same reliability engineering you would apply to any remote call. The difference is that these calls take seconds, cost money, and are metered on two axes at once, so the usual sloppiness gets expensive fast.
+
+## 1. Three ceilings, not one
+
+Providers meter you on several axes at the same time, and you can hit any one of them while sitting comfortably under the others.
+
+| Ceiling | You hit it when | What fixes it |
+|---|---|---|
+| Requests per minute | Many small, fast calls | Fewer, larger calls; a queue with a paced worker |
+| Tokens per minute | Few calls with enormous prompts | Shorter context, caching, spreading work over time |
+| Concurrent requests | A wide fan-out across a list | A semaphore capping in-flight calls |
+
+Some providers split the token budget further into input tokens per minute and output tokens per minute. Limits are usually per organisation and per model — so a noisy batch job on the same key starves your live traffic, which is a good argument for separate keys per workload — and they rise as your account moves up usage tiers.
+
+The move that saves you most of this pain is **proactive throttling**. Providers return your remaining budget and reset time in response headers (Anthropic uses `anthropic-ratelimit-*`; others have their own names). Read them, and slow down when you are getting close, instead of sprinting into a wall and reacting. Being refused and retrying is strictly worse than not being refused.
+
+## 2. The 429, and backing off without making it worse
+
+`429 Too Many Requests` means you went faster than your limit allows. It is not an outage and it is not a bug in your request. Distinguishing it from its neighbours matters, because the correct response is different for each.
+
+| Status | Means | Retry? |
+|---|---|---|
+| 400 Bad request | Your payload is wrong | Never — fix it |
+| 401 / 403 | Bad or unauthorised key | Never |
+| 429 Too many requests | You exceeded your rate limit | Yes, after a backoff |
+| 500 Internal error | Something went wrong their side | Once or twice |
+| 503 / 529 Overloaded | The provider is saturated | Yes, with a longer backoff |
+| Timeout / connection reset | Unknown — it may have succeeded | Yes, if the call is safe to repeat |
+
+The backoff itself is **exponential with full jitter**. Wait roughly `base * 2**attempt`, and then pick a random duration between zero and that. The exponential part is what everyone implements. The jitter is the part people leave out, and it is the part that matters: without it, every client that failed at the same moment retries at the same moment, and you have faithfully rebuilt the spike you were recovering from. That is a thundering herd, and it is how a short blip becomes a long incident.
+
+Four rules around it:
+
+- **Honour `retry-after` when the response carries it.** The provider knows more than your formula does.
+- **Cap the attempts and cap the total wait.** An unbounded retry loop turns a thirty-second wobble into an hour of burned quota and a pile of hung requests holding connections.
+- **Keep a retry budget.** If retries are more than a small percentage of your traffic, stop retrying and shed load. Retrying hard against a failing service is indistinguishable from attacking it.
+- **Know what your SDK already does.** The official clients retry with backoff by default — `Anthropic(max_retries=N)` — so a hand-rolled loop on top silently multiplies into far more attempts than you intended.
+
+> A retry loop with no jitter and no cap is not resilience. It is a load test you run against a service that is already struggling.
+
+## 3. Timeouts, streaming, idempotency, and what happens when you give up
+
+**Set an explicit timeout.** Default client timeouts can be generous. A long prompt with a long answer and extended thinking can legitimately take minutes, so one global ten-second timeout will break real work — but a request that hangs forever is worse than one that fails fast, because it holds a connection and a user. Set a per-request timeout that matches the work that request is doing.
+
+**Stream long answers.** Streaming does not make generation faster; the same tokens take the same time. What it changes is that the user sees words after a second instead of a blank screen for forty, which is the entire difference between "thinking" and "broken". It also lets you abort early when the user navigates away, and it avoids the HTTP-level timeouts that long non-streaming requests run into — which is why some providers require streaming above a certain expected output length.
+
+**Make repeats safe.** A connection that drops after the model answered is a real and regular event, and you cannot tell it apart from a request that never arrived. If the call has a side effect — sending an email, charging a card, writing a row — the safety has to live on your side: an idempotency key on the operation, and a write that is safe to repeat. Some APIs accept an idempotency key too, which helps, but your database is where the guarantee actually holds.
+
+**Have somewhere to fall back to.** Behind the adapter from lesson 4, a fallback chain costs very little:
+
+1. The same model through a different route or region.
+2. The smaller model in the same family — worse, but answering.
+3. A different provider entirely.
+
+**And decide what degrading looks like.** The useful question is not *how do we never fail*, it is *what does the user see when we do*. Pick per feature, in advance: a cached previous answer, a smaller model's answer with a note attached, a queued job and an email when it is ready, or the plain non-AI path that existed before. Failing loudly and clearly beats a spinner, and beats a silently worse answer that nobody flagged.
+
+```python
+import random, time
+from anthropic import Anthropic, APIStatusError, APITimeoutError
+
+client = Anthropic(max_retries=0, timeout=60.0)   # this example owns its own retries
+
+RETRYABLE = {408, 409, 429, 500, 502, 503, 529}
+
+def ask(prompt: str, model: str = "claude-sonnet-5", attempts: int = 5) -> str:
+    for attempt in range(attempts):
+        try:
+            resp = client.messages.create(
+                model=model,
+                max_tokens=500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return resp.content[0].text
+        except (APIStatusError, APITimeoutError) as err:
+            status = getattr(err, "status_code", 408)
+            if status not in RETRYABLE or attempt == attempts - 1:
+                raise                                  # a 400 dies here, correctly
+            ceiling = min(60.0, 2.0 ** attempt)        # exponential
+            time.sleep(random.uniform(0, ceiling))     # full jitter: the part people skip
+    raise RuntimeError("unreachable")
+```
+
+`max_retries=0` is set only so the loop above is the one doing the work. In most applications the better answer is the opposite: let the SDK do the backoff it already implements correctly, and spend your own code on the fallback and the degraded path instead, because those are the parts nobody has written for you.

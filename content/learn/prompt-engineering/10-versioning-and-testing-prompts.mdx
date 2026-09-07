@@ -1,0 +1,121 @@
+---
+title: "Versioning and testing prompts"
+subtitle: "Put the prompt in git, and get a number that tells you whether your last edit helped."
+part: 4
+minutes: 7
+why: "The prompt that runs in production is in a dashboard, or in a triple-quoted string somebody edited on a Friday. Someone changed a word, three examples looked fine, and it shipped. Two weeks later a case that used to work does not, and nobody can say which change did it, because there is no diff and no record of what the old one produced. This lesson turns the prompt into a normal engineering artefact: in the repo, reviewed like code, and checked against twenty real cases every time you touch it."
+wins:
+  - "Keep the prompt in the repo and in git — never edit the live one in a dashboard."
+  - "Review prompt changes as a diff, because one word can move behaviour everywhere."
+  - "Build a harness of twenty real cases with expected outcomes, and run it on every change."
+  - "Commit the run output so the next change shows up as a reviewable diff."
+  - "Pin the model version next to the prompt — the pair is the artefact, not the prompt alone."
+quiz:
+  - q: "The production prompt should live..."
+    options: ["In the vendor dashboard, so it can be hot-fixed without a deploy", "In the repo and in git, changed through a reviewed diff like any other code", "In an environment variable, so it stays out of the codebase"]
+    answer: 1
+    explain: "A prompt ships behaviour, so it needs the same review, history and rollback as the code around it."
+  - q: "Eyeballing one example after a prompt edit is a weak test mainly because..."
+    options: ["A one-word change shifts behaviour across the whole input distribution, and one example samples almost none of it", "Examples are cached, so you see a stale result", "The playground runs a different model from production"]
+    answer: 0
+    explain: "The change you made is global; the check you ran was a single point."
+  - q: "The smallest harness worth building is roughly..."
+    options: ["A thousand generated cases, for statistical power", "Three cases you remember from last week", "Twenty real cases with expected outcomes, run on every prompt change"]
+    answer: 2
+    explain: "Twenty real cases, including the ones that broke in production, catch most regressions and can be built in an afternoon."
+  - q: "The bar an eval run has to clear before you merge is..."
+    options: ["Every case passing, with no exceptions", "At least as good as the last run, with the differences reviewed", "Better than the vendor's published benchmark"]
+    answer: 1
+    explain: "You are guarding against regression, not chasing perfection — the number only has to move the right way."
+  - q: "You pin the model version alongside the prompt because..."
+    options: ["The prompt and the model version are one artefact — change either and the behaviour can move", "Pinned model versions are billed at a lower rate", "Older versions apply fewer restrictions"]
+    answer: 0
+    explain: "A prompt tuned against one model version is not the same product against another, so they have to be versioned together."
+deeper:
+  - { label: "Anthropic — create strong empirical evaluations", href: "https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests" }
+  - { label: "Anthropic — models overview and versions", href: "https://docs.anthropic.com/en/docs/about-claude/models/overview" }
+  - { label: "promptfoo — testing and evaluating prompts", href: "https://www.promptfoo.dev/docs/intro" }
+  - { label: "OpenAI — Evals framework", href: "https://github.com/openai/evals" }
+---
+
+Everything so far has been about making one call behave. This part is about keeping it that way once other people are editing it and the model underneath you changes. It is short, and it is mostly one idea applied properly.
+
+## 1. A prompt is code, so keep it where code lives
+
+A prompt determines what your system does. That is the definition of code, whatever language it happens to be written in. So it gets the same treatment as the rest of your code:
+
+- **In the repository**, in a real file — `prompts/classify_ticket.py`, `prompts/summarise.txt` — not inline in a function three levels down, and not in a database row.
+- **In git**, so you have history, blame and a way back.
+- **Reviewed as a diff.** A prompt change is a behaviour change. It belongs in a pull request where someone else can read the before and after.
+- **Deployed the way your code deploys**, so the version running is the version you can see.
+
+The habit to break is editing the live prompt in a vendor dashboard. It feels faster and it is a genuine trap: there is no diff, no review, no history, no rollback, and no connection between the change and the incident three days later. If your team needs to change behaviour without a deploy, that is a config and feature-flag problem, and the flag should still point at a prompt that lives in the repo.
+
+While you are moving it, take the chance to keep the stable part stable. From lesson 2, the durable rules live in the system prompt; that is the part worth naming, versioning and caching. The per-call specifics stay in the user turn and never need a version at all.
+
+> A prompt edit is a deploy. Review it in a diff, not in a dashboard.
+
+## 2. Why one example proves nothing
+
+Here is the part that makes prompts different from ordinary code, and it is worth being precise about.
+
+Change a word in a prompt and you have not changed one branch. You have changed a small amount of the influence on **every** input the system will ever see. Add "be concise" and you may also have made it drop the caveat that mattered on the long documents. Reorder two rules and the tie-break on ambiguous cases moves. Add an example to fix one edge case and you may have taught it that the edge case is the norm.
+
+So the usual verification move — try it, looks better, ship — is measuring one point on a distribution you just shifted everywhere. It is not a small sample. It is close to no sample.
+
+That is also why you cannot test a prompt with an assertion on a single output the way you test a function. What you can do is measure the same set of cases before and after, and compare. The scale of that measurement can be tiny and still be enormously more useful than the one example.
+
+## 3. The smallest harness that is worth having
+
+Twenty cases. That is the whole recommendation.
+
+| Piece | What it is | Notes |
+|---|---|---|
+| The cases | ~20 real inputs with the outcome you expect | Real ones, from your logs. Invented cases are too tidy |
+| The hard ones | The empty input, the ambiguous one, the very long one | This is where prompt edits actually break things |
+| The regressions | Every production bug, added the day it is found | This is how the set stays valuable instead of stale |
+| The runner | A loop that calls the model at temperature 0 and records the output | Fifty lines. Do not buy a framework first |
+| The grader | Exact match where you can, a substring or rule check where you cannot | Match the cheapest method that fits the task |
+| The record | The run output, committed to the repo | So the next change is a diff you can read |
+
+Run it on every prompt change, before the review, and put the number in the pull request.
+
+The bar is **regression, not perfection**. You are not trying to get to twenty out of twenty; some of those cases may be genuinely hard, and a couple may be ambiguous enough that reasonable people disagree. What you need is that the number does not go down and that any case whose output changed gets looked at deliberately. Committing the run output is what makes that cheap: the reviewer sees exactly which three answers moved, instead of a score dropping from 17 to 16 with no idea where.
+
+The evals lesson in **Build with LLMs** (lesson 8) goes further — grading strategies, using a model as a judge, running it in CI. Everything here is the minimum version of that, sized so you have no excuse not to build it this week.
+
+One last thing that catches people out. **Pin the model version and store it beside the prompt.** A prompt is tuned against a specific model; the same words against a different version can behave differently, and provider defaults move over time. The artefact you are versioning is the pair. When you do upgrade the model, that is a change to test with the harness, exactly like a prompt edit — because it is one.
+
+```python
+import json
+
+from anthropic import Anthropic
+
+from prompts.classify_ticket import MODEL, SYSTEM   # prompt and model, versioned together
+
+client = Anthropic()
+
+def run_case(case: dict) -> str:
+    resp = client.messages.create(
+        model=MODEL,                    # "claude-sonnet-5", pinned next to the prompt
+        max_tokens=10,
+        temperature=0,                  # remove the sampling noise from the measurement
+        system=SYSTEM,
+        messages=[{"role": "user", "content": case["input"]}],
+    )
+    return resp.content[0].text.strip()
+
+with open("evals/tickets.json") as f:
+    cases = json.load(f)                # ~20 real cases with an expected value
+
+results = {c["id"]: run_case(c) for c in cases}
+passed = sum(results[c["id"]] == c["expected"] for c in cases)
+print(f"{passed}/{len(cases)} passed")
+
+with open("evals/last_run.json", "w") as f:
+    json.dump(results, f, indent=2, sort_keys=True)   # commit this file
+```
+
+Sorted keys and indented JSON are not tidiness. They are what makes the next run produce a small, readable diff instead of one reformatted blob.
+
+That is the course. The prompt is specific about its output, the shape is a contract, the response is validated, the failures retry with the error attached, the dangerous actions sit behind code the model cannot reach, and every change is measured against twenty cases you care about. None of it is clever. All of it is the difference between a demo and something you are willing to leave running.

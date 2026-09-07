@@ -1,0 +1,131 @@
+---
+title: "Chunking"
+subtitle: "Cutting documents into the units you actually retrieve, and the header line that fixes most bad retrieval."
+part: 1
+minutes: 8
+why: "You split your documents every 1000 characters because that was the example in the tutorial, and now retrieval returns paragraphs that start mid-sentence and answers that stop halfway through a list. You have been tuning the embedding model to fix it. The model is not the problem. This lesson shows you how to split on the structure that is already in your documents, why prepending the document title to every chunk is the cheapest quality win available to you, and how to settle the size question by measuring instead of arguing."
+wins:
+  - "Split on headings and paragraphs before you reach for a character count."
+  - "Prepend the document title and section heading to every chunk."
+  - "Overlap ten to fifteen percent so answers do not fall into the seams."
+  - "Embed the small chunk and return its larger parent when context matters."
+  - "Try three sizes, measure recall, then stop having the argument."
+quiz:
+  - q: "The main reason a 5000-token chunk retrieves badly is..."
+    options: ["Embedding APIs cannot handle inputs that long", "One vector has to average many topics, so it matches many queries weakly and none strongly", "Long chunks are penalised by cosine similarity"]
+    answer: 1
+    explain: "A chunk gets exactly one vector, and the average of five topics is a mediocre match for all five."
+  - q: "Overlap between neighbouring chunks exists to..."
+    options: ["Reduce total storage by sharing text", "Improve embedding quality by repeating important sentences", "Stop an answer that straddles a boundary from being cut in half in both chunks"]
+    answer: 2
+    explain: "Without overlap, a fact split across a boundary appears complete in neither chunk, so neither chunk scores well for it."
+  - q: "Prepending the document title and section heading to each chunk helps because..."
+    options: ["A chunk reading it expires after 30 days is meaningless alone, and the header restores what the vector is about", "It makes chunks longer, and longer chunks embed better", "It gives the reranker something to sort on"]
+    answer: 0
+    explain: "The vector can only encode what is in the chunk, so context that lives in the heading has to be physically present in the text."
+  - q: "Small-to-big retrieval means..."
+    options: ["Start with a small corpus and grow it", "Search small chunks for precision, then hand the model the larger parent passage", "Embed small models first and escalate to large ones"]
+    answer: 1
+    explain: "The small chunk makes a sharp, single-topic vector to match on; the parent gives the model enough surrounding text to answer from."
+  - q: "The right way to choose a chunk size is..."
+    options: ["512 tokens — it is the accepted default", "Whatever your embedding model's max input length is", "Try two or three on your labelled query set and keep the one with the best recall"]
+    answer: 2
+    explain: "The best size depends on your documents and your questions, and it takes an afternoon to measure rather than a week to debate."
+deeper:
+  - { label: "Anthropic — contextual retrieval", href: "https://www.anthropic.com/news/contextual-retrieval" }
+  - { label: "LangChain — documentation", href: "https://python.langchain.com/docs/" }
+  - { label: "LlamaIndex — documentation", href: "https://docs.llamaindex.ai/" }
+  - { label: "Unstructured — document parsing docs", href: "https://docs.unstructured.io/" }
+---
+
+You do not retrieve documents. You retrieve chunks. Whatever your chunker produces is the complete set of things your system can ever return, so a fact that got cut in half is a fact your system cannot answer about, no matter how good the model downstream is.
+
+That is why this is the lesson to spend time on. Everything after it operates on the units this step creates.
+
+## 1. Two forces, pulling opposite ways
+
+A chunk has to satisfy two requirements that fight each other.
+
+**Small enough to be about one thing.** A chunk gets one vector. That vector is, loosely, an average of everything in the chunk. Average five topics together and you get something that scores middling against all five queries and wins none of them. Precision comes from chunks that are about one thing.
+
+**Large enough to stand alone.** The chunk is what gets shown to the model, and often what gets shown to the user as a citation. "It expires after 30 days" is a perfect single-topic chunk and it is worthless — what expires, and 30 days from when?
+
+| Chunk size | Retrieval behaviour | Answer behaviour | Suits |
+|---|---|---|---|
+| A sentence (~30 tokens) | Sharp matches, but the answer is often split across several | Model gets fragments and guesses at the joins | FAQ pairs, glossary terms, product attributes |
+| A paragraph (~150–400 tokens) | Good precision, usually self-contained | Usually enough to answer from | Most documentation and support content |
+| A section (~400–1000 tokens) | Slightly blurrier vectors, high chance the answer is complete | Strong answers, more context spent | Long-form prose, policies, contracts |
+| A page or more (>1500 tokens) | Matches everything weakly | Model must find the needle itself, and often does not | Rarely the right call |
+
+Those token ranges are starting points, not law. The right answer depends on how your documents are written and how your users ask.
+
+## 2. How to actually split
+
+**Fixed size with overlap** is the honest baseline. Cut every N tokens, repeat the last 10 to 15 percent of each chunk at the start of the next. It works on anything, it takes ten lines, and it will get you a working system. Its weakness is that it is blind — it will happily cut through the middle of a sentence, a table, or a function body, and a chunk that begins mid-sentence was embedded describing something it does not actually say.
+
+**Structure-aware splitting** uses the boundaries the author already put in. Split on headings first, then paragraphs, then sentences, and only fall back to a character count when a single paragraph is somehow enormous. This almost always beats fixed size, and the reason is not subtle: a section heading is the author telling you where one topic stops and the next starts. You paid nothing for that signal, so use it.
+
+The same rule holds for other formats. Split code on function and class boundaries, not on line counts. Split markdown on headings. Split HTML on semantic blocks. Keep tables whole, because half a table is worse than no table.
+
+**Overlap** is insurance against boundary cuts, and it is not free. Fifteen percent overlap means roughly fifteen percent more vectors, fifteen percent more storage, and a tendency to return two chunks that are mostly the same text — which wastes slots in your top-k and wastes context. If you split on structure well, you need less overlap, sometimes none. Measure it like everything else.
+
+**The header line.** This is the highest return per line of code in the entire pipeline. A chunk pulled out of a document loses everything the document told you about it — its title, its section, its product, its version. Put that back, physically, at the top of the chunk text before you embed it:
+
+So instead of embedding the bare sentence `Requests submitted within 30 days of purchase are honoured in full.`, you embed `Acme Cloud — Billing — Refunds` on its own line, followed by that sentence.
+
+The vector now knows this is about Acme Cloud refunds, and a query about "Acme refund window" will find it. Without the first line, that chunk is a sentence about an unnamed thing.
+
+> A chunk must carry its own context. The embedding can only encode what is in the text, so anything the reader needs from elsewhere in the document has to be copied in.
+
+The richer version of this idea is **contextual retrieval**: use a cheap LLM call at index time to write one or two sentences explaining where each chunk sits in its document, and prepend that instead of a bare heading. It costs a one-off generation per chunk and it measurably helps. Start with the heading — it is free — and reach for the generated version if your measurements say you need it.
+
+```python
+# pip install tiktoken
+import re, tiktoken
+
+enc = tiktoken.get_encoding("cl100k_base")
+n_tokens = lambda s: len(enc.encode(s))
+
+def chunk_markdown(doc_title: str, text: str, target=400, overlap=60):
+    """Split on headings, then paragraphs. Every chunk carries its header line."""
+    sections, heading = [], ""
+    for block in re.split(r"\n(?=#{1,6}\s)", text):        # cut at markdown headings
+        first = block.splitlines()[0] if block.strip() else ""
+        heading = first.lstrip("# ").strip() if first.startswith("#") else heading
+        sections.append((heading, block))
+
+    chunks = []
+    for heading, block in sections:
+        header = f"{doc_title} — {heading}\n" if heading else f"{doc_title}\n"
+        buf = []
+        for para in [p for p in block.split("\n\n") if p.strip()]:
+            buf.append(para)
+            if n_tokens("\n\n".join(buf)) >= target:
+                chunks.append(header + "\n\n".join(buf))
+                tail = buf[-1]                              # overlap: repeat last para
+                buf = [tail] if n_tokens(tail) <= overlap else []
+        if buf:
+            chunks.append(header + "\n\n".join(buf))
+    return chunks
+```
+
+It is not clever code and it does not need to be. The two things it does that a character-count splitter does not — respect headings, and stamp every chunk with its source — are most of the available win.
+
+## 3. Small-to-big, and choosing the size by measuring
+
+The two forces in section 1 do not actually have to be resolved in one number. **Small-to-big** retrieval separates them: embed and search over small, sharp chunks, but when one wins, return its larger parent — the full section, or the chunk plus its neighbours on each side. You match with precision and you answer with context.
+
+| Strategy | What you embed | What the model reads | Cost |
+|---|---|---|---|
+| Plain chunks | The chunk | The same chunk | Simplest |
+| Small-to-big | Small chunk | Its parent section | One extra id per chunk, one extra lookup |
+| Sentence windows | One sentence | That sentence plus a few either side | More vectors to store |
+| Contextual chunks | Chunk with a generated summary line | The chunk | One LLM call per chunk at index time |
+
+Small-to-big costs you one `parent_id` column and one fetch. It is worth trying early.
+
+Now the size question, which you should stop debating and start measuring. You already have the labelled set from lesson 2 — 30 real queries, each with the chunk that should come back. Chunk your corpus three ways, index each, and score recall@5 for each. An afternoon of work, and it settles the question for your corpus permanently.
+
+One caveat about that measurement: when you re-chunk, your chunk ids change, so label by **document and passage** rather than by chunk id. "Query 7 should retrieve something from `refunds.md` covering the 30-day window" survives a re-chunk; "query 7 should retrieve `doc-14#2`" does not.
+
+If recall is poor across all three sizes, size is not your problem. Look at whether your parser is producing garbage — PDFs in particular love to emit column-shuffled text, page headers in the middle of sentences, and tables flattened into unreadable runs. Retrieval cannot recover from text that was already wrong when it arrived, and it is worth reading fifty of your chunks with your own eyes before blaming anything downstream.

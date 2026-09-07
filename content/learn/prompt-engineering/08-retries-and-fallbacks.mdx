@@ -1,0 +1,146 @@
+---
+title: "Retries and fallbacks"
+subtitle: "Turn a validation failure into a second attempt the model can actually get right."
+part: 3
+minutes: 7
+why: "Your validator now rejects bad responses, which is progress, except that a rejection is still a five hundred to whoever called you. So you wrapped the call in a retry loop, and it mostly did not help — the same prompt came back with the same missing field, three times, and cost you three times as much. The fix is small and slightly surprising: show the model the error. This lesson covers what to retry, what never to retry, how many times, and what to do when the retries run out."
+wins:
+  - "On a validation failure, retry with the error message included — never blindly."
+  - "Cap retries at two; a third failure means the prompt is wrong, not unlucky."
+  - "Retry malformed output, 429s and timeouts; never retry a wrong answer or a 400."
+  - "Nudge the temperature up on a retry to break a deterministic loop."
+  - "Put a hard budget cap on the loop, and fail loudly rather than silently."
+quiz:
+  - q: "Validation fails. The retry most likely to succeed is the one that..."
+    options: ["Sends the same prompt again, unchanged", "Sends the prompt again with the validation error appended to the conversation", "Switches straight to a larger model"]
+    answer: 1
+    explain: "The model can usually fix a problem it can see; a blind retry hides the only useful information you have."
+  - q: "How many retries before you should suspect the prompt rather than bad luck?"
+    options: ["Two — a third failure is usually a prompt problem", "Ten, because models are noisy", "None, always fail on the first error"]
+    answer: 0
+    explain: "Two repair attempts catch nearly all recoverable failures; beyond that you are paying to repeat a design flaw."
+  - q: "Which of these is not worth retrying?"
+    options: ["A 429 rate limit response", "A request that timed out", "A 400 saying your image is over the size limit"]
+    answer: 2
+    explain: "A 400 describes something wrong with the request itself, so an identical retry fails identically."
+  - q: "Nudging the temperature up on a retry helps because..."
+    options: ["A higher temperature makes the model more capable", "At temperature 0 the same input tends to give the same output, so a blind retry reproduces the failure", "It lowers the cost per token"]
+    answer: 1
+    explain: "A little randomness is what lets the second attempt take a different path."
+  - q: "The last rung of a fallback ladder should be..."
+    options: ["Retrying forever with backoff", "Silently returning an empty result", "Failing loudly so a human finds out"]
+    answer: 2
+    explain: "A silent failure becomes a data quality problem you discover weeks later; a loud one gets fixed."
+deeper:
+  - { label: "Anthropic — rate limits", href: "https://docs.anthropic.com/en/api/rate-limits" }
+  - { label: "Anthropic — errors and error codes", href: "https://docs.anthropic.com/en/api/errors" }
+  - { label: "AWS — exponential backoff and jitter", href: "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/" }
+  - { label: "Google SRE Book — handling overload", href: "https://sre.google/sre-book/handling-overload/" }
+---
+
+Everything in lesson 7 ends in an exception. That is the right place to be — the bad value never reached your database. It is not a good place to stop, because your user still got nothing. This lesson is about the space between "we rejected it" and "we failed".
+
+## 1. Retry with the error attached, not blindly
+
+This is the single biggest win in the lesson, and it is one line of code.
+
+When your validator rejects a response, you are holding an error message that says precisely what was wrong: `urgency: input should be less than or equal to 5`. Append the failed response and that error to the conversation and ask again. The model can nearly always fix a problem it can see.
+
+The conversation ends up looking like this:
+
+1. Your original prompt.
+2. The assistant's bad response, as an assistant turn.
+3. A user turn: this failed validation, here is the error, return the corrected object only.
+
+That third turn is doing something a blind retry never does. A blind retry asks the identical question and hopes for different sampling. The repair turn asks a narrower, easier question — fix this specific thing — with the answer mostly written already.
+
+Two details make it work:
+
+- **Pass the validator's own error text.** Do not summarise it into "that was wrong". Pydantic and Zod produce messages that name the field and the constraint, which is exactly what the model needs.
+- **Do not re-send the whole instruction set.** The rules are already in the conversation. Repeating them at higher volume just adds tokens.
+
+> A blind retry asks the same question again. A retry with the error attached asks a different, easier one.
+
+## 2. What to retry, and how many times
+
+Retrying the wrong failure is worse than not retrying, because you pay for it and you still fail.
+
+| Failure | Retry? | Why |
+|---|---|---|
+| Malformed or invalid output | Yes, with the error attached | The model can see and fix it |
+| Truncated response | Yes, after raising `max_tokens` | The retry is pointless without the change |
+| 429 rate limited | Yes, with backoff | It is a timing problem, not a request problem |
+| 500 / 503 / connection reset | Yes, with backoff | Transient on the provider side |
+| Request timeout | Yes, with backoff | Same, but watch your own deadline |
+| Well-formed but wrong answer | No | The model was consistent, not unlucky. Fix the prompt |
+| 400 bad request | No | Something about the request is invalid; an identical retry fails identically |
+| 401 / 403 | No | Credentials or permissions. Retrying is noise |
+| Content refused by the model | No | Retrying a refusal is how you build a tool that begs |
+
+**Cap the attempts at three total — the first try plus two repairs.** Two repairs catch nearly everything recoverable. A third failure on the same input is not bad luck; it means the prompt is asking for something the model is not reliably able to give, and no number of attempts fixes a design problem. Let it fail and go and look at the prompt.
+
+For the rate-limit and overload cases, the retry needs a delay, and the delay needs jitter — exponential backoff with a random component, so that a thousand clients that failed together do not retry together. The rate-limit lesson in the **LLMs** course covers the headers to read and the token-bucket behaviour behind them; the point here is only that a 429 belongs in a different branch from a validation failure, with a sleep in it.
+
+One more knob: **temperature**. If your first call runs at temperature 0 — which most extraction calls should — the sampling is close to deterministic, so a blind retry with identical input tends to reproduce the identical failure. Nudging the retry to 0.3 or 0.4 introduces enough variation to take a different path. It is not a fix for a bad prompt, and it should never be your first move. It is a way out of a loop that is otherwise stuck.
+
+## 3. The fallback ladder, and the bill
+
+When the retries run out, you need somewhere to go. Decide the order in advance, per feature, because the right answer differs:
+
+1. **Repair retry.** Same model, error attached. Cheapest, fixes most things.
+2. **A stronger model.** Worth a rung when the task is genuinely at the edge of what the smaller model can do. Slower and more expensive, which is why it is not rung one.
+3. **A deterministic default.** A regex, a lookup table, a rule, or simply the safe value — `category: other`, `confidence: 0`, an empty list. Not clever, always available.
+4. **Fail loudly.** Raise, alert, put the case somewhere a human will see it.
+
+Never make rung four a silent success. Returning an empty result and a 200 turns a visible outage into a quiet data quality problem you discover a month later, in a report.
+
+Two guard rails around the whole thing:
+
+- **A budget cap.** Count attempts and tokens per request, and stop at a ceiling you chose. A retry loop that fires on every item of a large batch is how a small bug becomes a large invoice.
+- **Idempotency.** If the operation has an effect — sending a message, charging a card, writing a row — a retry must not do it twice. Give each logical request a key, and check the key before you act. The model call is safe to repeat. What you do with its answer usually is not.
+
+```python
+import logging
+import random
+import time
+
+from anthropic import Anthropic, APIStatusError
+from pydantic import ValidationError
+
+client = Anthropic()
+log = logging.getLogger(__name__)
+MAX_ATTEMPTS = 3          # first try, plus two repairs
+
+def call_with_repair(messages, validate):
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            resp = client.messages.create(
+                model="claude-sonnet-5",
+                max_tokens=400,
+                temperature=0 if attempt == 0 else 0.4,   # break a stuck loop
+                messages=messages,
+            )
+        except APIStatusError as err:
+            if err.status_code in (429, 500, 503) and attempt < MAX_ATTEMPTS - 1:
+                time.sleep(2 ** attempt + random.random())   # backoff with jitter
+                continue
+            raise                                            # 400, 401 - do not retry
+
+        text = resp.content[0].text
+        try:
+            return validate(text)
+        except ValidationError as err:
+            log.warning("validation failed on attempt %s", attempt, extra={"raw": text})
+            messages = messages + [
+                {"role": "assistant", "content": text},
+                {"role": "user", "content":
+                    f"That response failed validation:\n{err}\n"
+                    "Return only the corrected object."},
+            ]
+
+    raise RuntimeError("could not get a valid response in 3 attempts")
+```
+
+Note what the loop does not contain: no retry on a wrong answer, no unbounded attempts, no swallowed exception at the end. It either returns something your validator accepted, or it raises where somebody will notice.
+
+That covers failures your own system caused. The next lesson is about failures that arrive on purpose.

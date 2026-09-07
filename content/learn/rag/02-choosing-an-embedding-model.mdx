@@ -1,0 +1,116 @@
+---
+title: "Choosing an embedding model"
+subtitle: "The five axes that decide it, and why the leaderboard is a filter rather than an answer."
+part: 1
+minutes: 7
+why: "You opened the MTEB leaderboard, sorted by the average score, took the model at the top, and moved on. Then retrieval on your own documents was mediocre, and you had no way to tell whether the model was wrong, your chunking was wrong, or the whole idea was wrong. This lesson replaces that guess with a measurement you can do in an afternoon, and it names the constraint nobody warns you about — swapping models later means re-embedding every document you own."
+wins:
+  - "Filter with the leaderboard, then decide with thirty of your own labelled queries."
+  - "Cost your dimensions — they set storage and search cost forever."
+  - "Check max input length against your real chunk size before you commit."
+  - "Truncate Matryoshka embeddings when storage hurts more than a point of recall."
+  - "Send the query prefix on queries and the document prefix on documents."
+quiz:
+  - q: "A model tops the retrieval average on a public leaderboard. For your legal document corpus that means..."
+    options: ["It will be the best model for your corpus, because the benchmark covers retrieval broadly", "It is a reasonable shortlist candidate; your own labelled queries decide it", "Nothing at all — public benchmarks are meaningless"]
+    answer: 1
+    explain: "Benchmarks are averages over other people's data; they narrow the field to a few plausible models, and your own measurement picks the winner."
+  - q: "Going from 1536 to 768 dimensions roughly..."
+    options: ["Halves the vector storage and cuts scoring work in about half", "Halves storage but leaves search cost unchanged", "Has no effect on cost, only on quality"]
+    answer: 0
+    explain: "Every vector is half the floats, so both the bytes you store and the arithmetic per comparison drop by about half."
+  - q: "Matryoshka embeddings let you..."
+    options: ["Store the same vector in several models' spaces at once", "Cut the vector down to a shorter prefix and still have a usable embedding", "Compress vectors losslessly at rest"]
+    answer: 1
+    explain: "They are trained so the leading dimensions carry most of the signal, so truncating to a prefix degrades quality gently instead of destroying it."
+  - q: "You want to move from model A to model B in production. The work is..."
+    options: ["A config change plus a cache clear", "Re-embedding the entire corpus and rebuilding the index — a migration", "Nothing; vectors from A and B are comparable if the dimensions match"]
+    answer: 1
+    explain: "Different models produce different spaces, so every stored vector is stale the moment you switch and must be regenerated."
+  - q: "Your model asks for a query prefix and a document prefix. You prepend the document prefix to everything, including queries. What happens?"
+    options: ["An API error on the query call", "Nothing — prefixes are cosmetic", "Search keeps working but recall drops, with no error anywhere"]
+    answer: 2
+    explain: "The prefix steers the model into the wrong mode, which degrades scores silently — the worst kind of bug because everything still returns results."
+deeper:
+  - { label: "MTEB leaderboard", href: "https://huggingface.co/spaces/mteb/leaderboard" }
+  - { label: "MTEB — the benchmark paper", href: "https://arxiv.org/abs/2210.07316" }
+  - { label: "Matryoshka Representation Learning", href: "https://arxiv.org/abs/2205.13147" }
+  - { label: "Cohere — embeddings docs", href: "https://docs.cohere.com/docs/embeddings" }
+---
+
+There are a lot of embedding models and the good ones are close together. That is the honest starting position. The gap between the tenth-best model for your use case and the best one is usually smaller than the gap between good chunking and bad chunking. So spend your effort proportionally — pick sensibly, measure once, and go and fix your chunks.
+
+Names and numbers in this space go stale in months. What follows is the shape of the decision, which does not.
+
+## 1. Five axes, in the order they bite
+
+**Quality on your domain.** Not quality in general. A model trained mostly on web prose can be noticeably worse on dense contract language, medical notes, or code. This is the axis you have to measure yourself, and section 2 is how.
+
+**Dimensions.** How many floats per vector. This is the one that follows you around, because it sets storage and search cost for the life of the system. Ten million chunks at 1536 dimensions in 4-byte floats is about 60 GB of raw vectors before any index overhead; the same corpus at 384 dimensions is about 15 GB. That is the difference between fitting in memory and not.
+
+**Max input length.** The token ceiling per call. If your chunks are 800 tokens you have room almost everywhere. If you want to embed whole documents, this becomes the binding constraint, and a model that silently truncates instead of erroring will lose the back half of every long chunk without telling you.
+
+**Cost per million tokens.** Hosted embedding pricing sits in the low cents to low tens of cents per million tokens, which is one to two orders of magnitude cheaper than generation. Look it up on the vendor's pricing page before you commit — do not trust a number from a blog post, including this one. The number that surprises people is not the indexing cost, which is a one-off, but the query cost at high traffic, which is not.
+
+**Can it run on your hardware.** Open models via `sentence-transformers` run on a CPU for small corpora and on a modest GPU for large ones. That matters when your data cannot leave the building, when you want no per-query network hop, or when you need to re-embed 50 million chunks and would rather not pay an API for it.
+
+| Axis | Where to look it up | What it constrains |
+|---|---|---|
+| Domain quality | Your own labelled queries | Whether the system works at all |
+| Dimensions | Model card | Storage, memory, search latency, index size |
+| Max input tokens | Model card | How you are allowed to chunk |
+| Price per million tokens | The vendor's pricing page, today | Ongoing query cost, one-off indexing cost |
+| Self-hostable | Model licence and weights availability | Data residency, latency floor, re-index cost |
+
+The usual sensible shortlist: a hosted model from Voyage, OpenAI, Cohere or Google when you want quality without operating anything, and an open model from the `sentence-transformers` ecosystem when you want control or cannot send data out. Both ends of that are fine choices. Which specific model leads is a question with a three-month shelf life, so check the leaderboard rather than a tutorial.
+
+## 2. Measure it on your own queries
+
+The **MTEB leaderboard** is a genuinely useful filter. It tells you which models are in the running and which are not. It cannot tell you which one is best for you, because it is an average over dozens of tasks that are not your task, and the top models are separated by fractions of a point.
+
+Here is the whole method, and it is smaller than you think.
+
+Write down 30 real questions — from your support inbox, your logs, your own head if that is all you have. For each one, find the chunk that should come back and note its id. That labelled set is an hour of work and it is the most valuable artefact in your retrieval project. Then measure **recall@k**: the fraction of queries where the right chunk appears in the top k results. Run it once per candidate model.
+
+```python
+# pip install numpy
+import numpy as np
+
+# Your corpus, and thirty real queries with the chunk that should win.
+chunk_ids   = ["doc-14#2", "doc-14#3", "doc-31#0", ...]
+chunk_texts = ["Use Forgot password on the sign-in page...", ...]
+labelled    = [("how do I reset my password", "doc-14#2"), ...]   # 30 of these
+
+def recall_at_k(embed, k=5):
+    """embed(texts, kind) -> list of unit-length vectors. One per candidate model."""
+    index = np.array(embed(chunk_texts, kind="document"))
+    hits = 0
+    for question, want in labelled:
+        q = np.array(embed([question], kind="query")[0])
+        top = np.argsort(index @ q)[::-1][:k]
+        hits += want in {chunk_ids[i] for i in top}
+    return hits / len(labelled)
+
+for name, embed in candidates.items():        # candidates: {"model-a": fn, "model-b": fn}
+    print(f"{name:24} recall@5 = {recall_at_k(embed):.2f}")
+```
+
+Read the result like an engineer. If two models are within a couple of points on 30 queries, that is noise — pick the cheaper or faster one and stop thinking about it. If everything scores below about 0.6, your problem is not the model. It is your chunking, and lesson 3 is where you should be.
+
+> Model choice is a shortlist from the leaderboard and a decision from your own data. Anyone who picked purely from a leaderboard has not measured their system.
+
+## 3. The costs you are signing up for
+
+**Dimensions are a lever, not a fixed cost.** Some models are trained with **Matryoshka representation learning**, which pushes most of the signal into the leading dimensions. That means you can keep the first 512 of a 1536-dimension vector, renormalise it, and still have a usable embedding — a third of the storage for a small, measurable quality drop. Measure the drop on your labelled set with the same `recall_at_k` above. If losing a point of recall saves you two thirds of a large index, that is often the right trade. Truncating a model **not** trained this way just breaks it, so check the model card first.
+
+**Changing the model is a migration.** This is the constraint that catches teams six months in. Vectors from different models are not comparable, so switching means re-embedding every chunk and rebuilding every index. On a large corpus that is hours of compute, a real bill, and a window where old and new vectors must not mix. Plan for it the way you plan a schema change: version the model name in your chunk records, build the new index alongside the old one, cut over reads atomically, then drop the old one. If you cannot name which model produced a given vector in your database, you cannot do that safely — so store it.
+
+**Prefixes and modes.** Many retrieval models want to know whether the text is a query or a document, either through an `input_type` parameter or a literal prefix string you prepend. The rules are per-model and they are in the model card.
+
+| Mistake | Symptom |
+|---|---|
+| Document mode on queries | Recall drops, no error, everything looks fine |
+| Query mode at index time | Same, and only fixable by re-embedding the corpus |
+| Prefix in the index but not in the query path | Same again, and it survives every unit test that only checks shapes |
+
+All three fail silently. There is a cheap defence: put the embedding call behind one function that takes `kind="query"` or `kind="document"` and refuses to run without it, exactly as in the snippet above. Nobody in your codebase should ever call the raw client directly.

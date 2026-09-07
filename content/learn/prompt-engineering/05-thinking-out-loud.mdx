@@ -1,0 +1,118 @@
+---
+title: "Thinking out loud"
+subtitle: "When reasoning before the answer earns its tokens, and when it just burns them."
+part: 2
+minutes: 7
+why: "You have read that adding think step by step makes models smarter, so you added it everywhere, and now your extraction endpoint takes four seconds and produces a paragraph of preamble before the JSON. Chain-of-thought is real and the mechanism behind it is simple, but it only pays on a specific kind of task. This lesson gives you that mechanism, the line between tasks where it helps and tasks where it is pure cost, and the shape that keeps the reasoning out of your product."
+wins:
+  - "Ask for the reasoning before the answer — after the answer it is only a justification."
+  - "Skip step-by-step reasoning on extraction, formatting and anything mechanical."
+  - "Put the working in tags, strip it before display, and keep it in your logs."
+  - "Prefer a reasoning model's own budget over bolting think step by step on top of it."
+  - "Price it — reasoning tokens are output tokens, so they set your latency."
+quiz:
+  - q: "Chain-of-thought helps mainly because..."
+    options: ["The model is more truthful when it has to explain itself", "It switches the request to a larger internal model", "The written steps give the model more tokens to compute in, and each step conditions the next"]
+    answer: 2
+    explain: "One token holds a fixed amount of computation, so a multi-step derivation needs multiple tokens to happen in."
+  - q: "Asking for the answer first and the explanation afterwards gets you..."
+    options: ["The same benefit in a more convenient order", "A justification for an answer it already committed to", "An error, because the format is contradictory"]
+    answer: 1
+    explain: "Once the answer token is generated it is in the context, and everything after it is written to fit it."
+  - q: "The worst use of step-by-step reasoning is..."
+    options: ["Copying five known fields out of an invoice", "Checking an application against five eligibility rules", "Working out a multi-step unit conversion"]
+    answer: 0
+    explain: "Nothing is being derived — the values are already there, so the reasoning is latency you paid for nothing."
+  - q: "The written reasoning should be treated as..."
+    options: ["A defensible audit trail of how the decision was made", "A faithful record of the model's internal process", "Extra computation and a useful debugging artefact, not a true account of how the answer was reached"]
+    answer: 2
+    explain: "Research has shown stated reasoning can be plausible and still not reflect what actually drove the answer."
+  - q: "On a model that already reasons internally, adding think step by step is..."
+    options: ["Required, or the internal reasoning is skipped", "Usually redundant — it is far more useful to say what to consider than to say to think", "Free, since reasoning tokens are not billed"]
+    answer: 1
+    explain: "The model is already doing the pass; what it still cannot guess is which constraints and edge cases you care about."
+deeper:
+  - { label: "Anthropic — let Claude think (chain of thought)", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-of-thought" }
+  - { label: "Anthropic — extended thinking", href: "https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking" }
+  - { label: "Chain-of-Thought Prompting Elicits Reasoning (Wei et al., 2022)", href: "https://arxiv.org/abs/2201.11903" }
+  - { label: "Language Models Don't Always Say What They Think (Turpin et al., 2023)", href: "https://arxiv.org/abs/2305.04388" }
+---
+
+This is the most over-applied idea in prompting. "Think step by step" gets pasted into prompts that have nothing to think about, and the result is slower, more expensive, and no more correct. The underlying effect is real. The mechanism behind it tells you exactly where it applies.
+
+## 1. The mechanism, not the magic
+
+The model does a fixed amount of computation per token. One forward pass, one token out. That single fact explains chain-of-thought completely.
+
+A task needing four separate derivations cannot be done in the one forward pass that produces the answer token. There is not enough computation there. Make the model write the four steps first and it gets four passes' worth of room — and, just as importantly, each written step lands in the context, so the next step is conditioned on a partial result rather than on nothing. It is a scratchpad, not an inner voice.
+
+Two consequences fall out immediately, and both are practical.
+
+**The reasoning has to come before the answer.** Ask for the answer and then the explanation, and the answer token is generated with no working available, exactly as if you had never asked. Worse, everything after it is written to fit a conclusion already in the context. You get a justification, not reasoning. This ordering bug is common and it silently removes the whole benefit.
+
+**More tokens is the point.** "Take your time" and "be careful" produce no additional tokens, so they produce no additional computation — which is why lesson 1 puts them in the do-nothing pile. "List the constraints one per line, then answer" produces tokens. That is the difference between the two phrasings, and it is the only difference that matters.
+
+One honest caveat before you build on this. The written reasoning is not a reliable account of how the answer was produced. Turpin et al. (2023) showed models giving fluent step-by-step explanations that did not mention the feature actually driving the answer. So the working is genuinely extra computation, and genuinely useful for debugging, but it is not evidence.
+
+> The written reasoning is extra computation, not a confession. Do not use it as an audit trail.
+
+## 2. Where it pays, and where it is waste
+
+| Task | Worth it? | Why |
+|---|---|---|
+| Multi-step arithmetic, unit or currency conversion | Yes | Each step is a separate calculation that cannot fit in one token |
+| Logic and constraint checking — does this meet all five rules | Yes | Rules get checked one at a time instead of all at once |
+| Careful classification with a fuzzy boundary | Often | Naming the deciding feature before the label makes the label consistent |
+| Finding one fact in a long document | Sometimes | Quoting the source line first is a cheap grounding step |
+| Extraction into known fields | No | Nothing is derived — the values are already in the text |
+| Formatting, rewriting, translation | No | Mechanical work; the answer is a transformation, not a conclusion |
+| Anything with a one-word answer and no ambiguity | No | Pure latency, paid on every call |
+
+A quick test that gets it right most of the time: **if you could do the task yourself without writing anything down, the model probably can too.**
+
+Now the cost, plainly. Reasoning tokens are output tokens. Output tokens are the expensive ones, and they are produced one at a time, so they dominate latency (`build-with-llms` lesson 1). A 300-token derivation in front of a five-token answer means roughly sixty times the output of the answer alone, in both money and wall-clock time. In a nightly batch job that is irrelevant. In something a user is watching, it is the whole experience.
+
+And the honest note this area badly needs: **"chain-of-thought helps" is a statement about populations of tasks, not about yours.** The published gains are on reasoning benchmarks. On your classification, with your prompt and your data, it may do nothing at all, or it may help on one input class and hurt on another. Run it against a fixed test set both ways before you ship it — `build-with-llms` lesson 8 covers how to build that set. This is one of the few prompting decisions that is cheap to measure and expensive to guess at.
+
+## 3. The practical shape: a scratchpad you strip
+
+Put the reasoning in a tagged block and remove it before anything reaches the user. Two reasons: it never leaks into the product, and a tag is trivial to split on in code.
+
+```python
+import re
+from anthropic import Anthropic
+
+client = Anthropic()
+
+SYSTEM = """Decide whether an expense is reimbursable.
+Work inside <scratch> tags first: name the policy rule, then the fact that
+triggers it, then the conclusion.
+After </scratch>, output exactly one word: approve, reject, or escalate."""
+
+def decide(expense: str) -> tuple[str, str]:
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=400,          # room for the working, not just the word
+        temperature=0,
+        system=SYSTEM,
+        messages=[{"role": "user", "content": expense}],
+    )
+    text = resp.content[0].text
+    found = re.search(r"<scratch>(.*?)</scratch>", text, re.S)
+    answer = re.sub(r"<scratch>.*?</scratch>", "", text, flags=re.S).strip()
+    return answer, (found.group(1).strip() if found else "")
+
+answer, working = decide("Dinner for 4 with a client, 180 EUR, Tuesday.")
+print(answer)     # goes to the user
+print(working)    # goes to your logs
+```
+
+Note what the system prompt asks for: rule, then fact, then conclusion. Not "think about it". Naming the steps is the difference between reasoning that helps and three sentences of throat-clearing that cost the same.
+
+Keep the working in your logs. It is the best debugging artefact this whole course offers — even though it is not a faithful trace, it shows which rule the model latched onto, and that is usually enough to find the ambiguity in your policy.
+
+**Reasoning models.** Some models do this internally: you set a thinking budget, they reason, and the API returns the thinking separately from the answer. Where that is available, use it instead of hand-rolling tags. You get the separation for free, the model was trained to use that budget well, and you are not spending your own prompt on scaffolding.
+
+On those models, adding "think step by step" is usually redundant, and sometimes actively worse — you get a second, shallower pass layered on top of the real one, and a longer answer for no gain. What still helps is telling it *what* to consider: the constraints, the edge cases, the rule that trips people up, the thing you always find yourself checking by hand. That is information the model does not have. "Think" is information it already had.
+
+The reasoning is sorted. The next lesson deals with what comes out the other end, and how to stop it being a surprise.

@@ -1,0 +1,123 @@
+---
+title: "Switching models safely"
+subtitle: "Why a prompt does not transport, and the recipe for changing model without a bad week."
+part: 4
+minutes: 7
+why: "A cheaper model appears, or a deprecation email lands, and you swap one string in the config. Then the JSON stops parsing, a tool gets called twice, and something that never used to refuse starts refusing. Nothing about your code changed, so nothing about your code will explain it. The reason is that your prompt was never model-independent — it was quietly shaped around one model's habits. This lesson shows what actually differs, and gives you a migration you can run in a day instead of discovering across a bad week."
+wins:
+  - "Treat a model swap as a re-test, never as a config change."
+  - "Run your eval set against both models and diff the failures before you touch anything."
+  - "Fix the prompt for the new model rather than post-processing its output into the old shape."
+  - "Pin exact dated model ids and keep the id behind one config value."
+  - "Shadow a slice of real traffic to the candidate before any user sees it."
+quiz:
+  - q: "You move a working prompt to a different provider's model and the output format degrades. The likeliest cause is..."
+    options: ["Your prompt encoded habits of the old model, such as how literally it takes formatting instructions", "The new provider truncated your system prompt", "Temperature defaults to a higher value on the new API"]
+    answer: 0
+    explain: "Prompts get tuned against one model's quirks over time, so part of what you wrote only ever worked because of that model."
+  - q: "The new model returns correct answers wrapped in a chatty preamble your parser chokes on. Best fix?"
+    options: ["Strip the preamble with a regex after the call", "Change the prompt so the new model stops producing a preamble, then re-run the eval", "Lower max_tokens so there is no room for it"]
+    answer: 1
+    explain: "Post-processing means you now maintain both models' quirks forever; fixing the prompt keeps one source of truth."
+  - q: "Why pin a dated model id rather than a moving alias like the latest pointer?"
+    options: ["Dated ids are cheaper per token", "Aliases have smaller context windows", "An alias silently moves to a new model, changing your behaviour with no deploy on your side"]
+    answer: 2
+    explain: "A pinned id means changes to your behaviour only ever happen when you choose to change them."
+  - q: "Shadow traffic means..."
+    options: ["Sending a copy of real requests to the candidate model without returning its answers to users", "Running the candidate only for internal staff", "Splitting live users 50-50 between models"]
+    answer: 0
+    explain: "You get comparisons on genuine production inputs with zero user risk — you only pay for the sampled copies."
+  - q: "The safest thing to keep ready for the day a provider has an outage or a deprecation you cannot meet is..."
+    options: ["A cached set of previous responses", "A second provider already wired up and smoke-tested in CI", "A larger rate limit on your current provider"]
+    answer: 1
+    explain: "An untested fallback is not a fallback; the switch has to be something you have already exercised."
+deeper:
+  - { label: "Anthropic — model deprecations", href: "https://docs.anthropic.com/en/docs/about-claude/model-deprecations" }
+  - { label: "OpenAI — deprecations", href: "https://platform.openai.com/docs/deprecations" }
+  - { label: "LiteLLM — one interface across providers", href: "https://docs.litellm.ai/" }
+  - { label: "Anthropic — test and evaluate", href: "https://docs.anthropic.com/en/docs/test-and-evaluate" }
+---
+
+Lesson 09 was about choosing a model. This one is about the fact that you will choose again. Prices fall, better models ship, and providers retire the one you built on. The teams that handle this well are not the ones with the best model — they are the ones for whom changing model is boring.
+
+## 1. Your prompt is partly tuned to one model's quirks
+
+You did not intend this. It happened the same way it always happens: something did not work, you added a line to the prompt, it worked, you moved on. Half of those lines are general instruction. The other half are corrections for one specific model's habits, and they mean nothing to a different one — or mean something worse.
+
+Here is what actually differs between models, all of which your prompt has absorbed:
+
+| What differs | What you see when it changes |
+|---|---|
+| How literally it follows instructions | A rule that was obeyed is now treated as a suggestion, or the reverse — an offhand aside gets followed rigidly |
+| Formatting habits | Markdown where you wanted plain text, a preamble before the JSON, bullet points you never asked for |
+| Verbosity by default | Answers get longer or terser, so your cost and latency move even at the same price per token |
+| Refusal threshold | Content that always passed now gets declined, or the safety behaviour you relied on stops happening |
+| Tool-calling shape | Different argument-schema handling, different eagerness to call at all, parallel calls where you expected one |
+| Structured output support | Strict schema modes, JSON modes and plain prompting all behave differently, and only some are guaranteed |
+| System prompt weight | One model treats the system prompt as near-law, another treats it as background |
+| Reasoning models | Some prompt techniques help ordinary models and do nothing, or actively hurt, on a reasoning model (lesson 02) |
+
+None of these is a bug in either model. They are personalities, and you fitted your prompt to one of them.
+
+The conclusion is short and worth taping to the wall: **a model swap is a re-test, not a config change.** The config change is how you deploy it. It is not how you decide it.
+
+## 2. The migration recipe
+
+This takes an afternoon if you already have the twenty cases from lesson 09, and a week if you do not — which is itself the argument for having them.
+
+1. **Freeze the eval set.** Do not edit cases while comparing; you need one fixed ruler.
+2. **Run both models on it.** Same inputs, same temperature, same everything except the model id.
+3. **Diff the failures, and sort them into three piles.** Cases both models fail — pre-existing, not your problem today. Cases only the old one fails — free wins. Cases only the new one fails — this is the entire migration.
+4. **Fix the prompt against the new model.** Read those failures, find the instruction the new model reads differently, rewrite it. Then re-run everything, because a fix for one case often breaks another.
+5. **Never patch the output instead.** If the new model adds a preamble, do not strip it with a regex. That regex is permanent, it hides the real difference, and you now maintain two models' habits at once.
+6. **Check cost and p95 latency too.** A model with a lower price per token can still cost more if it is chattier, and can still miss your latency budget. Measure the bill, not the rate card.
+7. **Then ship it, gradually.** Section 3.
+
+> Fix the prompt for the new model. Post-processing its output back into the old model's shape means you are now maintaining the quirks of a model you no longer use.
+
+One more thing that survives every migration: keep a small set of cases that check the boring plumbing, not the intelligence. Does it return valid JSON. Does it call the tool with the right argument names. Does it stay under the length limit. Those are the failures that reach users fastest, and they are the cheapest to catch.
+
+## 3. Keep the switch one config value away
+
+The engineering half of this is small, and doing it before you need it is the whole trick.
+
+**One adapter module.** Every call goes through one function. Model id, base URL and default parameters come from config. No provider SDK type escapes into the rest of your app. When most providers speak the OpenAI request shape, the adapter is genuinely a few lines — and as lesson 08 showed, a locally served open-weight model answers on the same shape too.
+
+```python
+# pip install openai
+import os
+from openai import OpenAI
+
+# One place. The rest of the app calls ask() and never names a provider.
+client = OpenAI(
+    base_url=os.environ["LLM_BASE_URL"],  # https://api.openai.com/v1, or http://localhost:11434/v1
+    api_key=os.environ["LLM_API_KEY"],    # a local server accepts any placeholder here
+)
+MODEL = os.environ["LLM_MODEL"]           # pin an exact dated id, never a moving alias
+
+def ask(system: str, user: str) -> tuple[str, str]:
+    r = client.chat.completions.create(
+        model=MODEL,
+        temperature=0,
+        max_tokens=500,
+        messages=[{"role": "system", "content": system},
+                  {"role": "user", "content": user}],
+    )
+    # Return the id the provider actually served, and store it with the output.
+    return r.choices[0].message.content, r.model
+
+text, served_by = ask("Answer in one sentence.", "What is a KV cache?")
+print(served_by, "->", text)
+```
+
+That second return value earns its keep the first time someone reports a bad answer from three weeks ago. Without it you cannot tell which model produced the row.
+
+**Pin versions.** Use exact dated model ids, not aliases that point at the latest. An alias moves without a deploy on your side, which means your behaviour changed and your git history shows nothing. Pinning turns a surprise into a scheduled task.
+
+**Watch the deprecation pages.** Every major provider publishes one, and they are the only reliable warning you get. Subscribe, put the retirement dates in the same calendar you use for certificate expiry, and treat them the same way — because they are the same kind of problem.
+
+**Keep a second provider warm.** Credentials that work, an adapter path that works, and a smoke test in CI that actually calls it. A fallback you have never exercised is not a fallback; it is a plan to debug authentication during an outage.
+
+**Cut over with shadow traffic.** Send a copy of real requests to the candidate model without returning its answers to anyone. Compare offline against what the live model produced, on genuinely representative inputs — the ones your eval set never thought of. Sample a small slice, 1 to 5 percent, since you pay for the copies. Then ramp: a small percentage of live traffic, watch your quality signal and error rate, increase, and keep a kill switch that puts the old model back in one config change.
+
+That last sentence is the point of the whole lesson. If reverting takes a deploy and an argument, you will hesitate at exactly the wrong moment.

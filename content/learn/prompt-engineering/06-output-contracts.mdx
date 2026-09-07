@@ -1,0 +1,142 @@
+---
+title: "Output contracts"
+subtitle: "Stop asking for a format. Specify one, then make it impossible to miss."
+part: 2
+minutes: 8
+why: "You asked for JSON with a status field and you got it, four different ways — paid, Paid, payment received, and once a null where a value should have been. So there is a normalising function in your code now, and it grows a branch every time production surprises you. The problem is upstream: you described a shape and hoped. This lesson is about designing a contract instead — naming the fields, closing the sets, deciding what unknown looks like, and making the shape guaranteed rather than requested."
+wins:
+  - "Climb the ladder — prose, then one exact example, then a schema, then a forced tool call."
+  - "Replace every free-text field whose answers are finite with an enum."
+  - "Name fields precisely; a good name replaces a paragraph of instructions."
+  - "Put evidence fields before the fields they support, since generation runs left to right."
+  - "Define what unknown looks like, or the model will invent a value instead."
+quiz:
+  - q: "The difference between asking for JSON in the prompt and forcing a tool call is..."
+    options: ["Forced tool calls are billed at a lower rate", "The provider runs your function for you", "One requests a shape; the other constrains the output to match a schema"]
+    answer: 2
+    explain: "A prompt is a request the model can drift from; a forced tool call makes the argument shape the only thing it can produce."
+  - q: "The cheapest accuracy win in an extraction schema is usually..."
+    options: ["Turning a free-text field into an enum of the allowed values", "Adding a confidence score field", "Raising max_tokens so nothing gets truncated"]
+    answer: 0
+    explain: "One line of schema removes every synonym, casing variant and near-miss spelling at once."
+  - q: "Putting an evidence_quote field before the classification field can help because..."
+    options: ["It keeps the JSON payload smaller", "The model generates left to right, so the quote is in context when the label is produced", "Required fields are validated in the order they are declared"]
+    answer: 1
+    explain: "Earlier fields condition later ones, which is the same mechanism that makes chain-of-thought work."
+  - q: "You never say what to return when a value is missing from the source. The likely result is..."
+    options: ["A validation error on every call", "The key is simply left out", "A plausible invented value, because predicting plausible text is what the model does"]
+    answer: 2
+    explain: "With no legal way to say nothing, the most likely continuation is a value that looks right."
+  - q: "A schema-guaranteed response still needs value validation because..."
+    options: ["The schema is only ever a hint to the model", "A correct type is not a correct value — a valid date string can still be the wrong date", "JSON has no native date type"]
+    answer: 1
+    explain: "Structure and truth are different guarantees, and only one of them comes from the schema."
+deeper:
+  - { label: "Anthropic — tool use overview", href: "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview" }
+  - { label: "OpenAI — structured outputs", href: "https://platform.openai.com/docs/guides/structured-outputs" }
+  - { label: "Understanding JSON Schema", href: "https://json-schema.org/understanding-json-schema" }
+  - { label: "Pydantic documentation", href: "https://docs.pydantic.dev/latest/" }
+---
+
+`build-with-llms` lesson 3 covers the machinery for getting a guaranteed object back: define a tool schema, force the tool choice, validate what arrives. That is the how. This lesson is the design question that comes first — what shape should the contract actually be? Most of the reliability people chase with prompt wording is available for free in the schema instead.
+
+## 1. The ladder from asking to guaranteeing
+
+There are four rungs between "I would like JSON" and "this response cannot be the wrong shape".
+
+| Rung | What you do | What you get | Cost |
+|---|---|---|---|
+| **1. Prose** | "Return JSON with the invoice number and total." | A request. Usually honoured, sometimes wrapped in a sentence or a code fence. | Free |
+| **2. One exact example** | Show the literal object you want back, values and all. | Keys, order, types and the empty case stop being ambiguous. Still a request. | A few tokens |
+| **3. Schema in the prompt** | Paste the JSON Schema and say conform to it. | Names and types are unmistakable; generation is still free-running. | More tokens |
+| **4. Forced tool call** | Define a tool whose input schema is your shape, and require the model to call it. | Arguments come back matching the schema. Guaranteed, not requested. | A little setup |
+
+Most people stop at rung 1, get burned, and write a parser. Rung 2 is worth knowing about because it costs almost nothing and fixes most of the drift on a small task. Rung 4 is the one that deletes the parser.
+
+The caveat that matters more than any of this: **a guaranteed shape is not a guaranteed answer.** The schema says `invoice_total` is an integer. It does not say it is *the* integer on the invoice. Structure and truth are separate problems, and the schema only solves the first.
+
+## 2. Closed sets are the cheapest accuracy you can buy
+
+Every free-text field is an invitation to a synonym. Declare `status` as a string and you will collect `paid`, `Paid`, `PAID`, `settled`, `payment received` and `Payment Received` — six spellings of one fact, and your `if status == "paid"` is wrong five times out of six.
+
+An enum of five values collapses all of that into one line. It also does something less obvious and more valuable: it forces you to decide what the categories actually are. That is usually where the real ambiguity was hiding, and the model was absorbing it silently.
+
+| Weak field | The contract | What changed |
+|---|---|---|
+| `sentiment: string` | `sentiment: enum [positive, negative, neutral, mixed]` | Closed set — no synonyms, no casing drift |
+| `date: string` | `issue_date: string, format YYYY-MM-DD, or null` | Named, formatted, and given a legal empty value |
+| `amount: string` | `total_minor_units: integer` plus `currency: enum [USD, EUR, GBP]` | No `$1,204.00` to parse, and money never in floats |
+| `notes: string` | Dropped, or `notes: string, max 200 chars, verbatim quote only` | A field with no rules is a field with no meaning |
+| `confidence: number` | `evidence_quote: string or null` | A quote you can check beats a number you cannot |
+| `items: array` | `items: array of {sku: string, qty: integer}, max 50` | Element shape declared, and a bound on the size |
+| `summary: string` | `summary: string, 1 sentence, max 25 words` | A countable target instead of a length the model picks |
+
+The `confidence` row deserves its own note, because that field is on almost every first draft. Asking a model to score its own confidence feels rigorous and mostly is not — the number is generated the same way every other token is, and it is not calibrated against anything. A quote you can search the source document for is worth far more, because your code can verify it and a self-reported 0.87 can only be believed.
+
+## 3. Name the fields, fix the order, define unknown
+
+Three details carry most of the remaining weight.
+
+**Name them precisely.** `issue_date` and `due_date`, not `date`. The field name *is* an instruction, and it sits right where the model needs it. A rule of thumb that works: if you find yourself writing a sentence of prose explaining what a field means, the field has the wrong name. Rename it and delete the sentence.
+
+**Fix the order, and put evidence first.** Two payoffs. The dull one is that a stable key order makes diffing two runs trivial. The useful one is that the model generates left to right, so a field produced early is in the context when the later fields are produced. Put `evidence_quote` before `classification` and the label is generated with the quote already on the page — the same mechanism as lesson 5, wearing a different hat. Be honest about the size of the effect: the direction is a straightforward consequence of how generation works, but how much it helps is task-dependent. It costs you nothing to order the fields well, so do it, then measure whether it mattered.
+
+**Define what unknown looks like.** This is the field that stops invention. A model asked for a notice period that is not in the contract will produce a plausible one, because plausible text is the only thing it makes. Give it a legitimate way to say nothing, and say when to use it:
+
+- Pick one representation and enforce it. `null` for absent — not an empty string, not `"N/A"` alongside `"n/a"` alongside `"unknown"`.
+- Write the rule explicitly: "Use null when the value is not stated in the document. Never infer it from context."
+- If unknown is a *category*, put it in the enum: `[approve, reject, unknown]`. A four-value decision with no escape hatch is a three-value decision plus a guess.
+
+> A schema without a defined unknown is a schema that asks the model to make something up.
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+RECORD_INVOICE = {
+    "name": "record_invoice",
+    "description": "Record the fields of exactly one invoice.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            # Evidence first: it is generated before the values it supports.
+            "source_quote": {
+                "type": ["string", "null"],
+                "description": "The line the total was read from, verbatim. Null if not found.",
+            },
+            "invoice_number": {"type": ["string", "null"]},
+            "issue_date": {
+                "type": ["string", "null"],
+                "description": "YYYY-MM-DD. Null if the invoice does not state it.",
+            },
+            "total_minor_units": {
+                "type": ["integer", "null"],
+                "description": "Cents. 1204.00 USD is 120400. Never a float.",
+            },
+            "currency": {"type": ["string", "null"], "enum": ["USD", "EUR", "GBP", None]},
+        },
+        "required": [
+            "source_quote", "invoice_number", "issue_date",
+            "total_minor_units", "currency",
+        ],
+    },
+}
+
+resp = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=500,
+    temperature=0,
+    system="Read the invoice. Use null for anything not stated. Never infer a value.",
+    tools=[RECORD_INVOICE],
+    tool_choice={"type": "tool", "name": "record_invoice"},   # not optional
+    messages=[{"role": "user", "content": "<invoice>...</invoice>"}],
+)
+
+block = next(b for b in resp.content if b.type == "tool_use")
+print(block.input)      # already a dict - no fence to strip, no regex
+```
+
+Nothing in that prompt asks nicely for anything. Every rule that could have been a sentence is a field name, a type, an enum or a `null`. The system prompt is down to one line, and it only exists to say what to do about missing values — which is the one rule a JSON Schema cannot express on its own.
+
+The shape is now guaranteed. Whether the values are *right* is a different question, and it is what Part 3 is about.

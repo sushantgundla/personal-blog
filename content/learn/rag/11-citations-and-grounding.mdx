@@ -1,0 +1,153 @@
+---
+title: "Citations and grounding"
+subtitle: "Give every chunk an id, require the answer to cite it, then check the quoted span really appears where the model said it did."
+part: 4
+minutes: 7
+why: "The answer looks right. The tone is confident, the details are specific, and you have no idea whether any of it came from your documents. Reading every response yourself does not scale past a demo. The fix is small and it turns a judgement call into an automatic check: make each chunk carry a stable id, make the model cite the id it used, then verify in code that the quoted words are genuinely in that chunk. This lesson covers the prompt, the verification, and the one thing a citation still cannot prove."
+wins:
+  - "Put a stable id on every chunk in the prompt, and require it in the answer."
+  - "Verify in code that the quoted span appears in the chunk that was cited."
+  - "Make 'the documents do not answer this' an explicit, allowed output."
+  - "Log the cited ids so a bad answer can be traced to a passage."
+  - "Remember a citation proves the passage exists, not that the reasoning was right."
+quiz:
+  - q: "Why give each chunk an id in the prompt?"
+    options: ["It reduces the token count of the passages", "It makes the model reason more carefully about each one", "It gives the answer something checkable to point at, so verification becomes code"]
+    answer: 2
+    explain: "An id turns 'did it make this up?' into a lookup you can automate on every response."
+  - q: "What does verifying a citation actually check?"
+    options: ["That the quoted span appears in the chunk that was cited", "That the answer is factually true", "That the chunk was ranked first by retrieval"]
+    answer: 0
+    explain: "It is a string check against the source text - useful, cheap, and narrower than truth."
+  - q: "Why specify 'say the documents do not answer this' as an allowed output?"
+    options: ["It shortens the response and saves tokens", "Without a permitted way to fail, the model fills the gap from training data", "It is required by the citations feature of most APIs"]
+    answer: 1
+    explain: "An explicit escape hatch is what turns confident invention into a useful 'I do not know'."
+  - q: "The model cites [policy-14] and policy-14 does contain the quoted sentence. What have you proved?"
+    options: ["That the answer is correct", "That the passage exists and contains those words - not that the model used it correctly", "That retrieval ranked policy-14 highly"]
+    answer: 1
+    explain: "A valid citation can still be attached to a claim it does not support, or to the wrong half of a conditional."
+  - q: "What makes a good chunk id?"
+    options: ["A random UUID generated at query time", "The chunk's position in the current prompt, like [3]", "Something stable and traceable back to a source document and location"]
+    answer: 2
+    explain: "Position-based ids change every query and are useless in logs; a stable id lets you find the passage again months later."
+deeper:
+  - { label: "Anthropic - citations", href: "https://docs.anthropic.com/en/docs/build-with-claude/citations" }
+  - { label: "Liu et al. - evaluating verifiability in generative search engines", href: "https://arxiv.org/abs/2304.09848" }
+  - { label: "Bohnet et al. - attributed question answering", href: "https://arxiv.org/abs/2212.08037" }
+  - { label: "Anthropic - prompt engineering", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+---
+
+## 1. An id is a handle
+
+Lesson 05 showed the shape: put an id next to each passage, ask the model to cite it. This lesson is about making that hold up in production.
+
+Start with the ids themselves, because a bad id makes everything downstream useless.
+
+| Id style | Example | Verdict |
+|---|---|---|
+| Position in this prompt | `[3]` | Bad - means nothing once the prompt is gone |
+| Random per query | `[a4f9]` | Bad - untraceable in logs |
+| Document plus chunk index | `[msa-2024#7]` | Good - stable, finds the passage again |
+| Content hash | `[c8f21a]` | Good for dedupe, unreadable in an answer |
+| Human-readable slug | `[refund-policy-digital]` | Good - and users can read it |
+
+The test is simple: six months from now, someone pastes a cited id into a search box. Does it find the exact passage? If not, the citation is decoration.
+
+Store the id with the chunk at index time, alongside the metadata from lesson 06, and carry it through retrieval and reranking untouched. It should be the same string in your index, your prompt, your logs and your UI.
+
+The format in the prompt only needs to be unambiguous and easy to parse:
+
+```
+[refund-policy-digital] Refunds on digital goods are available within 14 days of purchase.
+
+[refund-policy-physical] Physical goods may be returned within 30 days if unopened.
+```
+
+Square brackets, one blank line between chunks. Nothing clever. Whatever you choose, keep it consistent, because your verifier is going to parse it.
+
+> A citation is not a promise from the model. It is a handle you can pull on in code.
+
+## 2. The prompt, including permission to fail
+
+Three instructions do most of the work, and the third is the one people leave out.
+
+**Answer only from the passages below.** Sets the boundary.
+
+**After each claim, cite the id it came from, and quote the words you used.** The quote is what makes verification possible. Without it you can check that the id exists; with it you can check that the id supports the claim.
+
+**If the passages do not answer the question, say exactly that and stop.** This is the important one. A model with no permitted way to fail will not fail - it will produce something. Naming the failure output, and giving it exact words to use, converts confident invention into a signal you can count and alert on.
+
+Be specific about the failure case rather than gesturing at it:
+
+| Vague | Specific |
+|---|---|
+| "Do not make things up" | "If the passages do not contain the answer, reply exactly: The documents provided do not answer this." |
+| "Cite your sources" | "After each claim, put the chunk id in square brackets, and quote the supporting words in double quotes." |
+| "Be accurate" | "Do not combine facts from different passages into a single claim." |
+
+That last row matters more than it looks. Cross-passage synthesis is where citations get slippery - the model takes half a fact from one chunk and half from another and cites both, and each citation is individually valid while the combined claim is not in either passage.
+
+Some APIs now handle part of this for you. Anthropic's citations feature has the model return structured references to the document spans it used, rather than you parsing brackets out of prose. If you are on a platform that offers it, prefer it - structured output is easier to verify than text you have to regex. The reasoning in this lesson does not change either way.
+
+## 3. Verifying, and what it cannot tell you
+
+Here is the check. It parses each quoted span with the id cited next to it, and confirms the words are really in that chunk.
+
+```python
+import re
+
+chunks = {
+    "policy-14": "Refunds on digital goods are available within 14 days of purchase.",
+    "policy-15": "Physical goods may be returned within 30 days if unopened.",
+}
+
+answer = 'No. Digital goods are "available within 14 days of purchase" [policy-14].'
+
+def normalise(text):
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+# every quoted span must appear in the chunk cited right after it
+for quote, chunk_id in re.findall(r'"([^"]+)"\s*\[([^\]]+)\]', answer):
+    chunk = chunks.get(chunk_id)
+    if chunk is None:
+        print(f"FAIL  cited {chunk_id}, which was not in the prompt")
+    elif normalise(quote) not in normalise(chunk):
+        print(f"FAIL  {chunk_id} does not contain: {quote}")
+    else:
+        print(f"OK    {chunk_id}")
+
+# -> OK    policy-14
+```
+
+Normalising whitespace and case before comparing matters, because models reflow text. If your corpus has heavy formatting you may want to strip punctuation too, or fall back to a fuzzy ratio - but keep the threshold high, or you are back to guessing.
+
+What to do when it fails is a product decision, not a technical one:
+
+| Failure | Reasonable response |
+|---|---|
+| Cited id was never in the prompt | Block the answer. This is invention |
+| Quote not found in the cited chunk | Block, or retry once with the failure named |
+| A claim with no citation at all | Flag it in the UI, or strip the sentence |
+| Everything verified | Ship it, and log the ids |
+
+Run this on every response in production and count the failures. That rate is a real signal: it moves when you change the prompt, the model or the chunk size, and a jump in it is an alert worth having.
+
+### Citations are also a feature
+
+Do not treat this as purely internal machinery. Rendering the cited passage next to the answer - as a link, a hover, a side panel - changes what your product is. A confident paragraph asks the reader to trust you. A confident paragraph with the source one click away lets them check you, which is a different and much better offer.
+
+It also changes behaviour in a way worth noticing. Users who can see the sources spot bad answers themselves, and they report them with the passage attached. Your bug reports arrive pre-diagnosed.
+
+### The honest limit
+
+Verification proves a narrow thing: the quoted words exist in the chunk that was cited. It does not prove the answer is right.
+
+All of these pass the check:
+
+- The passage says refunds are available within fourteen days **for members**. The answer drops "for members" and cites the passage. Every quoted word is present.
+- Two passages each supply half a fact. Both citations verify. The combined claim appears in neither.
+- The passage is a heading or a table of contents entry that names the topic without stating anything. The quote is real; the support is not.
+- The passage is out of date. It says what the model claims. It has simply been superseded, which is a metadata problem from lesson 06, not a citation one.
+
+So what have you actually bought? You have eliminated the crudest and most common failure - text with no source at all - and you have made every remaining answer traceable to a passage a human can read in seconds. That is a large gain and it is not the same as correctness. Correctness still needs the evaluation from lesson 10, and for anything consequential it still needs a person.

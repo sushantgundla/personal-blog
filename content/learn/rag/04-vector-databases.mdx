@@ -1,0 +1,119 @@
+---
+title: "Vector databases"
+subtitle: "What one actually is, and the ladder of options you should climb only as far as you need to."
+part: 2
+minutes: 6
+why: "Every RAG tutorial opens by making you sign up for a vector database, so you did, and now you are running a service, paying for it, and debugging its client library — for eight thousand chunks that a numpy array would have handled in three milliseconds. This lesson tells you what a vector database really adds over an array, when that addition starts to matter, and how to pick the rung of the ladder that fits the system you actually have."
+wins:
+  - "Start with a numpy array and a dot product; it is correct, not a toy."
+  - "Reach for pgvector when your data already lives in Postgres."
+  - "Move to a dedicated store for scale, filtering or ops you cannot fake."
+  - "Compare stores on where they run, filtering, ops burden and cost shape."
+  - "Keep the retrieval interface behind one function so the store is swappable."
+quiz:
+  - q: "Beyond fast nearest-neighbour search, the thing a vector database mainly adds is..."
+    options: ["Better embeddings than you would get from an API", "Metadata filtering, updates and deletes, persistence and the ordinary database chores", "A different similarity measure that is more accurate"]
+    answer: 1
+    explain: "The maths is the same everywhere; what you are buying is the index plus filtering plus the boring operational machinery."
+  - q: "For 20,000 chunks, brute-force scoring with numpy takes roughly..."
+    options: ["Milliseconds — one matrix multiply", "A few seconds, so you need an index", "Minutes, which is why vector databases exist"]
+    answer: 0
+    explain: "Twenty thousand dot products over a thousand dimensions is a small matrix multiply; exact search stays comfortable well past this size."
+  - q: "Your application data is already in Postgres. The lowest-friction step up from an array is..."
+    options: ["A managed vector database, because Postgres cannot index vectors", "pgvector, which puts vectors and your existing rows in the same database and the same transaction", "Rewriting the app around a dedicated vector store"]
+    answer: 1
+    explain: "pgvector adds a vector column type and index types to the database you already run, so filters and joins against your own tables just work."
+  - q: "The strongest argument for a dedicated vector store is usually..."
+    options: ["The similarity search is more accurate than Postgres can manage", "It is the only option that supports cosine similarity", "Scale, high write throughput, or filtering and sharding features you would otherwise build yourself"]
+    answer: 2
+    explain: "You move when the workload outgrows what a general-purpose database does comfortably, not because the maths differs."
+  - q: "Committing to a specific vector store on day one is risky mainly because..."
+    options: ["You take on a service, a client library and a bill before you know your access patterns, and swapping later touches everything", "Vectors become locked in a proprietary format that cannot be exported", "Vector stores cannot be run locally for development"]
+    answer: 0
+    explain: "The cost is operational and architectural; a thin retrieval interface keeps the choice cheap to revisit."
+deeper:
+  - { label: "pgvector", href: "https://github.com/pgvector/pgvector" }
+  - { label: "Qdrant — documentation", href: "https://qdrant.tech/documentation/" }
+  - { label: "Milvus — documentation", href: "https://milvus.io/docs" }
+  - { label: "Pinecone — documentation", href: "https://docs.pinecone.io/" }
+---
+
+Part 1 gave you vectors. Now you need somewhere to keep them, and the industry has a strong opinion about what that should be. The opinion is often premature.
+
+Here is the reframe that makes the decision easy: a vector database is not a new kind of maths. The similarity scoring is the same dot product everywhere. What differs is the index that avoids doing it a million times, the filtering that runs alongside it, and how much of your week it takes to operate.
+
+## 1. What you are actually buying
+
+Strip the marketing off and a vector store is four things stacked together.
+
+| Layer | What it does | Could you build it? |
+|---|---|---|
+| Similarity scoring | Dot product or cosine over float arrays | Yes — one line of numpy |
+| An index | Finds near neighbours without scanning everything (lesson 5) | Not well, and not quickly |
+| Metadata and filtering | Store fields beside each vector, filter on them during search (lesson 6) | Yes, badly; the interaction with the index is the hard part |
+| Database chores | Persistence, updates, deletes, backups, replication, access control | Yes, and you will regret it |
+
+Rows one and three you can do yourself. Rows two and four are the actual product. Notice that neither of them matters at small scale: with 10,000 vectors you do not need an index, and with a corpus you rebuild from source in five minutes you do not need durability.
+
+That is why the honest advice is a ladder, not a recommendation.
+
+## 2. The ladder
+
+**Rung one: a numpy array.** Load your vectors into one `(n, d)` array, score with a matrix multiply, take the top k with `argsort`. This is exact — it compares against every vector, so it is perfectly accurate by construction — and it is fast up to roughly tens of thousands of vectors. It has no service, no client library, no network hop, and you can print the scores when something looks wrong, which is worth more during development than any feature on this page. Pickle the array beside a list of chunk texts and you have persistence.
+
+Stop being embarrassed about this rung. Most internal tools never need to leave it.
+
+**Rung two: pgvector.** If your application data is already in Postgres — and for most teams it is — this is the natural next step. `pgvector` adds a `vector` column type and the index types from lesson 5. Vectors live in the same database as your users, documents and permissions, which means filters and joins against your own tables are just SQL, and an update to a document and its vector happens in one transaction. Nothing to operate that you were not already operating.
+
+```sql
+-- pgvector: schema, index, and a filtered nearest-neighbour query
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE chunks (
+  id         bigserial PRIMARY KEY,
+  doc_id     text NOT NULL,
+  tenant_id  text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  body       text NOT NULL,
+  embedding  vector(1024) NOT NULL          -- must match your model's dimensions
+);
+
+CREATE INDEX ON chunks USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX ON chunks (tenant_id);
+
+-- <=> is cosine distance, so smaller is closer. Order by it and take the top 5.
+SELECT id, doc_id, body, 1 - (embedding <=> $1) AS similarity
+FROM chunks
+WHERE tenant_id = $2
+ORDER BY embedding <=> $1
+LIMIT 5;
+```
+
+Note `vector(1024)` — the dimension is fixed in the schema. Changing embedding model means an `ALTER TABLE` and a full re-embed, which is exactly the migration lesson 2 warned about, now written down in DDL.
+
+**Rung three: a dedicated store.** Qdrant, Weaviate, Milvus and Chroma self-hosted; Pinecone and the managed offerings from the others if you would rather not run it. You climb here for reasons you can state: tens of millions of vectors, sustained write throughput, filtering behaviour Postgres struggles with, sharding, or a team that wants the ops handled.
+
+## 3. Choosing between them, and when to move
+
+| | numpy array | pgvector | Dedicated self-hosted | Managed |
+|---|---|---|---|---|
+| Where it runs | In your process | Your existing Postgres | A service you deploy | Someone else's cloud |
+| Practical scale | Up to ~10^4–10^5 | ~10^5–10^7, with care | 10^7+ | 10^7+ |
+| Filtering | Whatever you write | Full SQL, joins to your own tables | Strong, purpose-built | Strong, purpose-built |
+| Ops burden | None | None beyond Postgres | Real: deploy, upgrade, monitor, back up | Low |
+| Cost shape | Free | Whatever Postgres already costs | Servers and memory | Per vector or per pod, monthly |
+| Debuggability | Print the array | `psql` | Its own API and dashboard | Its own dashboard |
+| Getting out | Trivial | Trivial | Export and reload | Export and reload |
+
+Read the memory column implicitly: index structures like HNSW want your vectors in RAM. Ten million vectors at 1024 dimensions is around 40 GB of floats before index overhead, and that number — not query volume — is usually what forces a move.
+
+The signals that you have genuinely outgrown a rung are specific, and none of them are "it feels small-scale":
+
+- Search latency at your real corpus size exceeds your budget, measured, not guessed.
+- Vectors no longer fit comfortably in the memory of the machine you have.
+- You need concurrent writes and deletes without rebuilding an index.
+- You need filtering that your current rung does badly — lesson 6 is where that gets specific.
+
+Whatever rung you are on, keep the interface thin. One module exposing `search(query, k, filters) -> list[Chunk]` and one exposing `upsert(chunks)`. Everything else in your codebase talks to those two functions and knows nothing about the store behind them. Then climbing a rung is one file, an afternoon, and a re-index — instead of a rewrite. This is the same discipline as putting the embedding call behind one function in lesson 2, and it pays off for the same reason: the parts of a retrieval system that change are the parts you should have wrapped.
+
+> Adding a vector database is an optimisation. Do it when a measurement tells you to, and pick the rung that matches your corpus rather than the one that matches your ambitions.

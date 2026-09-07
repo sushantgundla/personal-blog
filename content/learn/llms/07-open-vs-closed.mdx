@@ -1,0 +1,109 @@
+---
+title: "Open weights vs closed APIs"
+subtitle: "What open really means here, what the licence actually lets you do, and the honest trade."
+part: 3
+minutes: 7
+why: "Someone on your team says we should just self-host an open model, and someone else says open models are not good enough. Neither of them has read a licence. You are the one who has to decide, and the internet is full of confident posts comparing a benchmark score from six months ago against a price from a different six months. This lesson gives you the two things that do not go stale — what you are actually being handed when a model is called open, and the shape of the trade against a closed API. After it you can answer the question in your own context instead of arguing about someone else's."
+wins:
+  - "Read the LICENSE file in the weights repo before you design anything around it."
+  - "Say open weights, not open source — the training data and recipe are almost never included."
+  - "Check the output-usage clause if you plan to train or distil your own model."
+  - "Choose closed for the frontier and zero ops, open for residency, stability and fine-tuning."
+  - "Judge the quality gap on your own eval, never on a leaderboard screenshot."
+quiz:
+  - q: "A model is described as open. What are you reliably being given?"
+    options: ["The training data, the training code and the weights", "A file of trained weights you can download and run", "An OSI-approved open source licence"]
+    answer: 1
+    explain: "Open in this world almost always means the weights are downloadable; the data and the training recipe usually are not."
+  - q: "Which of these is a real reason to reach for open weights over a closed API?"
+    options: ["The open model will beat the closed frontier model on hard reasoning", "Open weights are always free of licence conditions", "Nobody can deprecate the copy of the weights sitting on your disk"]
+    answer: 2
+    explain: "Model stability is one of the few advantages open weights give you unconditionally — the file cannot be retired out from under you."
+  - q: "Before shipping a product built on a downloaded model, the first thing to check is..."
+    options: ["The licence that ships with that specific version of the weights", "Its position on the public leaderboard", "Whether it has a GGUF build available"]
+    answer: 0
+    explain: "Licences vary from permissive to heavily conditioned, and they attach to the version you downloaded."
+  - q: "Apache-2.0 and a vendor community licence differ mainly in that..."
+    options: ["Apache-2.0 forbids commercial use", "Only community licences allow fine-tuning", "The community licence can add conditions such as acceptable-use rules or naming and scale requirements"]
+    answer: 2
+    explain: "Permissive licences add almost nothing; source-available community licences attach conditions you have to actually comply with."
+  - q: "The most honest way to describe the quality gap between open weights and the closed frontier is..."
+    options: ["There is no gap left", "It is real at the hard end and much smaller on ordinary production tasks", "It is a fixed number you can quote from a benchmark"]
+    answer: 1
+    explain: "The gap shows up on the hardest tasks; most production work is not the hardest task, which is why the honest answer is measure it on your own cases."
+deeper:
+  - { label: "Hugging Face — model cards and metadata", href: "https://huggingface.co/docs/hub/model-cards" }
+  - { label: "Open Source Initiative — the Open Source Definition", href: "https://opensource.org/osd" }
+  - { label: "Apache License 2.0 (full text)", href: "https://www.apache.org/licenses/LICENSE-2.0" }
+  - { label: "SPDX — the licence identifier list", href: "https://spdx.org/licenses/" }
+---
+
+Lessons 04 and 05 covered the big three providers and what you pay them. This lesson covers the other option: downloading the model and running it yourself. Before the mechanics of that, which is lesson 08, you need to know what you are actually downloading and what you are allowed to do with it. Those two questions are where most of the confusion lives.
+
+## 1. Open means the weights, and nothing else is promised
+
+A model, from lesson 01, is a very large pile of numbers. Those numbers are the **weights**. When a lab says a model is open, what they mean, almost always, is that you can download that file.
+
+That is genuinely useful and it is much less than open source normally means.
+
+| What you usually get | What you usually do not get |
+|---|---|
+| The weights, as a multi-gigabyte download | The training data, or a list of what was in it |
+| The architecture and config, so you can load it | The training code and the exact recipe |
+| A tokenizer | The compute to reproduce it — often millions of dollars |
+| A model card describing evals and intended use | Any warranty that it behaves a given way |
+
+In software terms it is closer to being handed a binary you are allowed to modify than being handed source. You can run it, quantise it, fine-tune it and serve it. You cannot rebuild it from scratch, and you cannot audit what went into it.
+
+The right phrase is **open weights**. Say that and you will never mislead anyone, including yourself. A few genuinely open efforts do publish data and code as well, and they say so loudly, because it is rare.
+
+## 2. The licence is the file you have to read
+
+There is no single open model licence. There is a spectrum, and where a model sits on it decides whether you can build a business on it.
+
+| Where it sits | Typical terms | What it means for you |
+|---|---|---|
+| Permissive — Apache-2.0, MIT | Use, modify, redistribute, commercially. Keep the notice. | Effectively no constraint. This is the easy case. |
+| Open weights with conditions — vendor community licences | Commercial use allowed, plus attached rules: acceptable-use policy, attribution or naming requirements, sometimes a scale threshold above which you must ask | Usable, but legal should read it, and you need to know which rules you are agreeing to |
+| Non-commercial or research-only — CC-BY-NC and similar | Free to experiment, not to sell | Fine for a prototype, fatal if it reaches production unnoticed |
+| Weights available, restricted | Download permitted, redistribution or hosting-as-a-service restricted | Check specifically whether you may serve it to third parties |
+
+Four clauses are worth finding by name every time:
+
+- **Commercial use.** Allowed at all, and allowed at your size?
+- **Output usage.** May you use the model's outputs to train or fine-tune another model? Several licences say no. If your plan is to distil a big model into a small one, this clause is the plan.
+- **Redistribution and hosting.** May you ship the weights inside your product, or serve them to customers?
+- **Acceptable use.** A list of prohibited applications you are contractually agreeing to enforce.
+
+> Open weights is a distribution model, not a licence. The only thing that tells you what you may do is the file that ships with the download.
+
+Two practical notes. The licence attaches to the version you downloaded, so a later release under different terms does not change your rights to the copy you have — and does not extend them either. And the blog post announcing a model is marketing; the `LICENSE` file in the weights repo is the agreement. Read the second one.
+
+```bash
+# The licence is metadata on every weights repo. Check it before you download 40 GB.
+curl -s https://huggingface.co/api/models/mistralai/Mistral-7B-Instruct-v0.3 \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id'), '->', d.get('cardData',{}).get('license'))"
+```
+
+That gives you the declared identifier, which is the start. For anything with conditions attached, open the actual text.
+
+## 3. The honest trade
+
+Neither side wins. They trade different things, and which trade suits you depends on facts about your product, not about the models.
+
+| | Closed API | Open weights |
+|---|---|---|
+| Peak quality | The frontier lives here first | Trails it, by a gap that keeps closing |
+| Ops burden | None. It is someone else's pager | Yours: GPUs, drivers, serving, upgrades, on-call |
+| Capacity planning | None. Rate limits instead (lesson 06) | Entirely yours — you size for peak and pay for idle |
+| Cost shape | Per token. Zero at zero traffic, linear upward | Per GPU-hour. Flat, whether busy or idle |
+| Data residency | Data leaves your network | Runs in your VPC, your datacentre, or air-gapped |
+| Model stability | The provider can deprecate it (lesson 10) | The file on your disk is yours forever |
+| Fine-tuning | Limited to what the provider offers | Full access — LoRA, full fine-tune, anything |
+| Control of behaviour | The provider's refusal and safety layer | Yours, with the responsibility that brings |
+
+On the quality gap, be careful about how you hold it. The frontier is closed, and on the hardest work — long multi-step reasoning, tricky code, unusual languages, careful tool use — the difference is real and you will feel it. On ordinary production work — classify this ticket, extract these fields, summarise this call, answer from this document — the gap is far smaller, and often small enough not to matter. Most of what teams actually ship is the second kind.
+
+Any specific number you read about that gap is a number about two specific model versions on one specific day, and it will be wrong within months. The stable version of the advice is: check the current public comparisons to build a shortlist, then decide with your own twenty cases. That is lesson 09.
+
+The last thing to notice is that this is not an exclusive choice. A common and boring architecture is open weights handling the routine majority in your own infrastructure, escalating to a closed frontier model for the hard remainder. You get most of the cost and residency benefit, and you keep the ceiling. Lesson 09 shows the routing that makes it work.

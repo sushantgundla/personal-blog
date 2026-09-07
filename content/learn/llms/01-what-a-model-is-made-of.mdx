@@ -1,0 +1,128 @@
+---
+title: "What a model is made of"
+subtitle: "Frozen numbers, one repeated attention step, and two training stages. That is the whole product."
+part: 1
+minutes: 7
+why: "You picked the bigger model because bigger sounded safer, and it came back slower, dearer, and no better at your actual job. Then someone asked whether it learns from the prompts you send it, and you were not certain either way. Both questions live one level below the API, in what the thing is made of. This lesson opens the box just far enough — the frozen weights, the step that makes long prompts expensive, and the training stage that really decides how a model behaves — so your next model choice is reasoned instead of guessed."
+wins:
+  - "Pin the exact model version string — new weights are a new model, not an update."
+  - "Read parameter count as a cost and memory signal, never as a quality score."
+  - "Expect long prompts to cost more than the extra words suggest, and measure it."
+  - "Blame training data and post-training, not architecture, when two same-size models differ."
+  - "Choose a model by testing it on your own task, because no spec sheet predicts that."
+quiz:
+  - q: "During normal serving, the numbers inside a model change..."
+    options: ["Slowly, as it learns from the requests it handles", "Never — they are frozen when training finishes", "Only once the context window fills up"]
+    answer: 1
+    explain: "Serving is read-only arithmetic over a fixed file; nothing you send is written back into the weights."
+  - q: "A larger parameter count reliably tells you..."
+    options: ["Roughly what it costs to serve, and how much it could have memorised", "That it will score better on your particular task", "How large its context window is"]
+    answer: 0
+    explain: "Size sets the cost floor and the capacity to store facts, but a smaller model with better data and post-training routinely beats a larger one."
+  - q: "You double the length of your prompt. The attention work roughly..."
+    options: ["Stays the same", "Doubles", "Quadruples"]
+    answer: 2
+    explain: "Attention compares every token with every other token, so the number of pairs grows with the square of the length."
+  - q: "Two models with the same architecture and the same parameter count behave differently mainly because of..."
+    options: ["The programming language of the serving stack", "Their training data and their post-training", "How many accelerators serve them"]
+    answer: 1
+    explain: "Architecture is largely shared and largely public; what differs is what they read and how they were tuned afterwards."
+  - q: "A base model is the output of..."
+    options: ["Pre-training only, before any instruction tuning", "Preference tuning on ranked answers", "Compressing a larger model to run on less memory"]
+    answer: 0
+    explain: "Pre-training produces a text continuer; every instruction-following habit is added later."
+deeper:
+  - { label: "Attention Is All You Need (the transformer paper)", href: "https://arxiv.org/abs/1706.03762" }
+  - { label: "Training Compute-Optimal Large Language Models (Chinchilla)", href: "https://arxiv.org/abs/2203.15556" }
+  - { label: "Training language models to follow instructions with human feedback", href: "https://arxiv.org/abs/2203.02155" }
+  - { label: "Anthropic — models overview", href: "https://docs.anthropic.com/en/docs/about-claude/models" }
+---
+
+You can rent one of these for a fraction of a cent and never think about what it is. That works right up until you have to choose between two of them, or explain to someone why the small one is worse at your task, or work out why adding a few thousand words to a prompt cost more than a few thousand words should. This lesson opens the box far enough to answer those.
+
+## 1. It is a file of frozen numbers
+
+A model is a large array of numbers called **weights**. Training sets those numbers. Serving reads them. Once a model is shipped, the file does not change — not while it answers you, not after a long conversation, not ever.
+
+Everything you notice about a model follows from that:
+
+- **It cannot learn from your conversation.** Whatever you send is arithmetic input for one request and then it is gone. Whether your data is *stored* or later used for training is a policy question about the provider, and a completely different question from this one.
+- **There is no lookup table inside.** Facts are not rows it reads. They are patterns baked into the numbers, which is why it can be confidently wrong about one.
+- **An updated model is a different file.** Behaviour can shift between versions — a prompt that worked may not, and an output format may drift. Pin the exact version string in your code rather than a floating alias, and re-run your tests when you move.
+
+**Parameter count** is simply how many numbers are in that file, quoted in billions. It is the number everyone reaches for, and it is worth knowing exactly what it buys.
+
+| Parameter count predicts | Parameter count does not predict |
+|---|---|
+| The memory needed to hold and serve it | Quality on your specific task |
+| Roughly the floor on cost and latency | How well it follows instructions |
+| The ceiling on how much it could have memorised | How good its tool calling or JSON output is |
+| Whether it fits on hardware you own | How current its knowledge is |
+
+Two things make this less useful than it looks. First, closed providers mostly do not publish parameter counts at all, so for frontier models the number is not available to compare with. Second, even where it is published, training data and post-training move quality more than size does. A well-trained smaller model beating a larger, older one is not an upset. It is the normal case.
+
+## 2. Inside: attention, and why length costs more than it looks
+
+The architecture is a **transformer**: a stack of identical blocks, each doing two things in turn — an attention step, then a small network applied to each token on its own.
+
+Attention is the part worth understanding. In one line: **every token looks at every other token and pulls in whatever is relevant to it.**
+
+Slightly deeper, because the shape of the cost falls out of it. Each token produces three vectors — a query (what am I looking for), a key (what do I offer), and a value (what I would contribute). The model scores every query against every key, turns those scores into weights that add up to one, and gives each token a weighted blend of the other tokens' values. Stack that step dozens of times and the representation of each token has absorbed the context around it. That is how the model knows that *it* in your sentence refers to the database and not the query.
+
+Now count the comparisons. Every token against every other token, so `n` tokens means about `n²` pairs.
+
+> Attention compares every token with every other token. Double the prompt, and you roughly quadruple that part of the work.
+
+Two honest caveats, because you will measure this and it will not be a clean curve. The per-token network in each block grows linearly, not quadratically, and it dominates at short lengths. And serving stacks fight the quadratic hard — cached keys and values, batching, attention kernels written for the hardware. Real latency lands somewhere between linear and quadratic. But it is never flat, and the direction never reverses.
+
+The practical consequences:
+
+- **A long prompt is slow before it is anything else.** The time before the first token appears is mostly the model reading your input.
+- **Generation is a separate cost.** Each output token is another pass over everything so far, produced one at a time. Long answers are slow answers.
+- **Memory grows with the conversation.** The cached keys and values for a long context take real memory on the server, which is part of why long-context requests are priced and rate-limited differently.
+
+## 3. Where behaviour comes from: two training stages
+
+Almost everything you like or dislike about a model was decided in one of two stages, and it is usually the second one.
+
+**Pre-training.** Read an enormous pile of text, predict the next token, adjust the weights when wrong, repeat for trillions of tokens. This takes months on thousands of accelerators and burns most of the money. What comes out is a **base model**: it has absorbed grammar, facts, code, reasoning patterns and style, and it can do exactly one thing — continue text.
+
+**Post-training.** Much smaller, much cheaper, and it decides nearly everything you interact with. Two stages inside it: supervised fine-tuning on written demonstrations of good answers, then preference tuning, where people (or another model working from written rules) rank candidate answers and the weights move toward the preferred one. This is where instruction following, tone, refusals, formatting habits, and tool use come from.
+
+| | Pre-training | Post-training |
+|---|---|---|
+| Data | Trillions of tokens of general text | Thousands to millions of curated examples |
+| Cost | Most of the total | A small fraction |
+| Produces | A base model that continues text | The model you actually call |
+| Decides | What it knows | How it behaves |
+| Changes between versions | Rarely, it is a new model | Often, and you feel it |
+
+So why do two models of the same size behave so differently? Not architecture — the transformer is public, and the frontier labs are building recognisably similar things. The differences are:
+
+- **Data.** What was collected, how it was filtered and deduplicated, how much code and maths is in the mix, how much of it is synthetic. This is the most closely guarded part of the whole business.
+- **The compute and token budget.** How many tokens each parameter was trained on. Training a smaller model on far more data can beat training a larger one on less, which is the practical lesson of the Chinchilla work and a large part of why small models got good.
+- **Post-training.** The demonstrations, the preference data, the rules. Two labs can start from near-identical base models and ship products that feel nothing alike.
+
+Which leaves you with one instruction: **you cannot read quality off a spec sheet.** Not from parameter count, not from a leaderboard built on someone else's tasks. Write twenty examples from your own workload, with the answers you want, and run the candidates against them. That is a morning of work and it outranks every number a provider publishes.
+
+```python
+# pip install anthropic
+import time
+from anthropic import Anthropic
+
+client = Anthropic()
+
+filler = "The quick brown fox jumps over the lazy dog. " * 200
+
+for repeats in (1, 4, 16):
+    prompt = filler * repeats + "\n\nReply with the single word: done."
+    start = time.monotonic()
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=10,              # output pinned, so we are timing the reading
+        messages=[{"role": "user", "content": prompt}],
+    )
+    print(resp.usage.input_tokens, "tokens in", round(time.monotonic() - start, 2), "s")
+```
+
+The answer is ten tokens every time, so what moves is the cost of reading the input. You will not see a clean squaring — the provider's caching and batching flatten it — but you will not see a flat line either, and that gap is the thing to hold in your head next time someone suggests pasting the whole manual into every request.

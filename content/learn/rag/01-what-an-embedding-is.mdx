@@ -1,0 +1,120 @@
+---
+title: "What an embedding really is"
+subtitle: "Text as a point in space, and an honest list of what that buys you and what it costs you."
+part: 1
+minutes: 7
+why: "You have used embeddings. You called an API, got back a list of floats, computed a cosine score, and it mostly worked. Then it did something stupid — it scored a question and its own negation as almost identical, or it could not tell invoice INV-4471 from invoice INV-4472 — and you had no model in your head for why. This lesson gives you that model. Not the training maths, just enough of the mechanism that the failures stop being surprises and start being things you plan around."
+wins:
+  - "Treat an embedding as a direction in space, not as a summary you can read."
+  - "Score with cosine on unit vectors, which is just a dot product."
+  - "Expect wins on paraphrase, related concepts and other languages."
+  - "Expect failures on negation, identifiers, numbers and two-word strings."
+  - "Use the query and document modes when your model has them."
+quiz:
+  - q: "A single dimension of an embedding vector — say number 214 — means..."
+    options: ["Nothing you can name; meaning lives in the whole vector, not in any one slot", "A named feature such as formality or topic, chosen when the model was designed", "The count of a particular word in the text"]
+    answer: 0
+    explain: "The axes come out of training and are not labelled; only the arrangement of points relative to each other carries meaning."
+  - q: "Your vectors are all normalised to unit length. Ranking by cosine similarity and ranking by Euclidean distance will..."
+    options: ["Disagree often, because cosine ignores magnitude", "Give the same order, because on unit vectors the two are the same measure rearranged", "Disagree only for very short texts"]
+    answer: 1
+    explain: "For unit vectors, squared Euclidean distance is 2 minus twice the cosine, so one is a monotone function of the other and the ranking is identical."
+  - q: "Which pair is an embedding model most likely to get wrong?"
+    options: ["A French sentence and its English translation", "How do I cancel and how do I terminate my plan", "This ships to Canada and this does not ship to Canada"]
+    answer: 2
+    explain: "Negation flips the meaning while changing almost none of the words, and embeddings are driven by the words."
+  - q: "Asymmetric search means..."
+    options: ["Queries are shorter than documents, so you must pad them", "A question and the passage that answers it do not read alike, so some models embed the two roles differently", "You must search the index in both directions and merge"]
+    answer: 1
+    explain: "The question and its answer share little surface form, so models trained for retrieval offer separate query and document modes to close that gap."
+  - q: "You embed the string OK on its own. The result is..."
+    options: ["Unusable — too short to embed at all; the API will reject it", "Fine, but weak — there is almost no signal in two characters, so it will sit near many unrelated things", "The most reliable kind of embedding, because there is no ambiguity"]
+    answer: 1
+    explain: "Very short strings carry little context, so their vectors are generic and match far too much."
+deeper:
+  - { label: "OpenAI — embeddings guide", href: "https://platform.openai.com/docs/guides/embeddings" }
+  - { label: "Sentence-Transformers documentation", href: "https://www.sbert.net/" }
+  - { label: "Sentence-BERT (the paper the modern approach comes from)", href: "https://arxiv.org/abs/1908.10084" }
+  - { label: "Voyage AI — embeddings docs", href: "https://docs.voyageai.com/" }
+---
+
+Lesson 4 of Build with LLMs introduced embeddings as coordinates for meaning and left it there, because that is all you need to build the first thing. This course is the second pass. Same idea, much closer up: what the numbers are, why the distance measure is the one it is, and where the whole approach quietly stops working.
+
+## 1. A fixed-length list of floats, and what it is not
+
+An embedding model takes any text and returns the same shape of output every time: a list of floating point numbers, a few hundred to a few thousand long. Two sentences, forty pages, one word — same length out. That fixed length is the point. It makes text something you can put in an array and compare with arithmetic.
+
+The model is trained so that texts meaning similar things come out with similar numbers. Nothing more mystical than that is going on. During training the model is repeatedly shown pairs that should be close and pairs that should be far, and it adjusts until the geometry agrees.
+
+Now the part people get wrong. Here is what those numbers are **not**:
+
+| The belief | The reality |
+|---|---|
+| Each dimension is a nameable feature | No dimension means anything on its own. Number 214 is not formality. It is a coordinate that only has meaning next to the other 767. |
+| You can decode the vector back to the text | You cannot. It is lossy in a way that is not reversible. Embeddings are a comparison tool, not a compression format. |
+| A higher number means more of something | The sign and size of any one component tell you nothing you can act on. |
+| Two models' vectors are comparable | They are not, ever. Different models, different spaces. A vector from model A scored against a vector from model B is noise that looks like a number. |
+
+That last row causes real outages. If you re-embed half your corpus with a new model and leave the other half alone, search does not degrade gracefully — it returns confident nonsense from whichever half happens to score higher.
+
+> An embedding is a position, and a position only means something relative to the other positions in the same space. There is no meaning inside one vector.
+
+## 2. Cosine, and why not Euclidean
+
+Picture each embedding as an arrow from the origin out to its point. **Cosine similarity** is the cosine of the angle between two arrows. Pointing the same way scores 1, at right angles scores 0, opposite scores -1. In practice you will see roughly 0 to 0.3 for unrelated text and 0.8 upwards for near-duplicates, and the useful range is narrower than you expect — get used to reading your own scores rather than trusting a threshold you read somewhere.
+
+The reason it is cosine and not straight-line distance is direction versus magnitude. Arrow length tends to track things you do not care about, like how long the text is or how emphatic it is. Angle tracks topic. A one-line answer and a three-page article on the same subject point the same way but sit at different distances from the origin, and cosine ignores exactly that difference.
+
+There is a catch worth knowing, because it saves you an argument. Most embedding APIs return **unit-length** vectors — already scaled so the arrow has length 1. On unit vectors, cosine similarity is just the dot product, one matrix multiply, no division. And Euclidean distance becomes a rearrangement of the same quantity, so it ranks results in exactly the same order. So:
+
+| Situation | Cosine vs Euclidean |
+|---|---|
+| Vectors are unit length (the normal case) | Identical ranking. Cosine is faster and reads nicer. |
+| Vectors are not normalised | They differ, and Euclidean will let long texts drift away from short ones on length alone. Normalise, then use cosine. |
+| You want a distance for a database index | Most stores take either. Pick the one your model's docs recommend and stay consistent between index and query. |
+
+The last row is a real bug source: build an index with cosine distance, query it with L2, and you get results that are wrong in a way no error message will tell you about.
+
+```python
+# pip install sentence-transformers numpy
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+texts = [
+    "How do I reset my password?",                                   # the query
+    "Use Forgot password on the sign-in page to recover your login.",  # the answer
+    "Invoices are charged to the card on file each month.",            # unrelated
+    "How do I avoid resetting my password?",                           # the opposite
+]
+v = model.encode(texts, normalize_embeddings=True)   # unit length
+q = v[0]
+
+print("cosine    ", (v @ q).round(3))                  # dot product == cosine here
+print("euclidean ", np.linalg.norm(v - q, axis=1).round(3))
+# Same ordering both ways: on unit vectors, d^2 = 2 - 2*cos.
+# And look at the last entry - the opposite question scores near the top.
+```
+
+Run it. The score for the negated question is the lesson of section 3.
+
+## 3. What it is good at, and where it falls over
+
+Embeddings are strong on the thing keyword search cannot do: matching meaning across different words. They are weak on the thing keyword search is trivially good at: exact strings.
+
+| Query | How embedding search does | Why |
+|---|---|---|
+| how do I cancel (doc says terminate your subscription) | Reliable win | Paraphrase is the core competence. |
+| database indexing (doc is about query performance) | Usually finds it | Related concepts sit near each other, not just synonyms. |
+| A question in Spanish over English docs | Often works, with a multilingual model | Many models are trained to put translations in the same place. |
+| invoice INV-4471 | Frequently wrong | INV-4472 sits essentially on top of it. The model has no notion of identity. |
+| shipped after 2019 | Wrong | Numbers are tokens, not quantities. There is no arithmetic in the space. |
+| this does not ship to Canada | Wrong | Negation changes one small word and almost nothing in the vector. |
+| OK | Useless | Two characters of context match everything weakly. |
+
+None of these are fixable by picking a better model. They are properties of the approach. The fix is architectural: keep a keyword index alongside for identifiers, put dates and numbers in metadata columns you filter on, and never expect a vector to enforce a rule. Part 3 of this course builds that out.
+
+One more asymmetry, and it explains a frontmatter field you may have skipped. A question and the passage that answers it **do not look alike**. "What is the refund window?" shares little with "Requests submitted within 30 days of purchase are honoured in full." Retrieval models are trained on exactly that mismatch, and many of them expose it as two modes — an `input_type` of `query` or `document`, or a short prefix string you prepend. Same model, two jobs.
+
+Use them. Embedding your documents in query mode, or your queries in document mode, costs you real recall for no reason, and it fails silently: everything still returns results, they are just quietly worse. Lesson 2 comes back to this, because forgetting one half of the pair is one of the most common bugs in a working RAG system.

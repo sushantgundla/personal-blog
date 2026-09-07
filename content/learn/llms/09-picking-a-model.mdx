@@ -1,0 +1,139 @@
+---
+title: "Picking a model"
+subtitle: "Start from your task and twenty of your own cases, not from a leaderboard."
+part: 4
+minutes: 7
+why: "You have a task, a dozen candidate models, and a browser full of leaderboards that disagree with each other. Every one of them is measuring something, and none of them is measuring your thing. So the choice ends up being made by whichever blog post you read most recently, which is a bad way to pick a dependency you will build a product on. This lesson replaces that with a method that takes an afternoon and keeps working after every model on today's list has been replaced."
+wins:
+  - "Write down the task and its real constraint before you look at a single model."
+  - "Use public benchmarks to cut twelve candidates to three, then stop using them."
+  - "Build twenty cases from your own real inputs and let those decide."
+  - "Pick two of cost, latency and quality — you will not get all three."
+  - "Route the easy majority to a small model and escalate on a signal you can measure."
+quiz:
+  - q: "The main problem with choosing a model from a public benchmark is that..."
+    options: ["Benchmarks are usually run on old hardware", "They measure a general skill on public data, which is rarely the same as your specific task", "Only the model vendors are allowed to run them"]
+    answer: 1
+    explain: "A benchmark score is real evidence about the benchmark; your task is a different distribution of inputs."
+  - q: "Benchmark contamination means..."
+    options: ["Vendors run the tests more than once and report the best score", "The benchmark questions are public text, so they can end up in a model's training data", "The scoring harness has bugs"]
+    answer: 1
+    explain: "Anything published on the internet can be scraped into training data, and a model that has seen the answers scores high without being better."
+  - q: "You have one afternoon to choose between three shortlisted models. Best use of it?"
+    options: ["Collect 20 real inputs with expected outcomes and run all three against them", "Read every model card and release note carefully", "Try each one in the playground on a few prompts you invent"]
+    answer: 0
+    explain: "Twenty of your own cases give you a comparable score per model; invented prompts and marketing pages do not."
+  - q: "In the cost, latency and quality triangle, an offline nightly batch job should sacrifice..."
+    options: ["Quality", "Cost", "Latency"]
+    answer: 2
+    explain: "Nobody is waiting for it, so you trade response time for a cheaper or better model, often through a discounted batch endpoint."
+  - q: "In a routing setup, what should trigger escalation to the bigger model?"
+    options: ["A random sample of requests, for coverage", "Whichever model the user asks for", "A measurable signal — the output failed a validator, or the input scored as complex"]
+    answer: 2
+    explain: "Escalation has to key off something you can compute, otherwise you are paying for the big model at random."
+deeper:
+  - { label: "Anthropic — test and evaluate", href: "https://docs.anthropic.com/en/docs/test-and-evaluate" }
+  - { label: "OpenAI — evals guide", href: "https://platform.openai.com/docs/guides/evals" }
+  - { label: "LMArena — head-to-head human preference rankings", href: "https://lmarena.ai" }
+  - { label: "Hendrycks et al. — Measuring Massive Multitask Language Understanding", href: "https://arxiv.org/abs/2009.03300" }
+---
+
+Everything so far has been about what the models are and what they cost. This lesson is the decision itself. It is deliberately unglamorous, because the glamorous version — reading comparisons and picking the winner — is the version that goes wrong.
+
+## 1. The leaderboard is a filter, not a decision
+
+Public benchmarks are not fake. They are careful work and they measure something real. The problem is narrower than that and harder to get around: they measure a general capability on public data, and your job is a specific capability on your data.
+
+| Benchmark family | What it genuinely measures | What it does not tell you |
+|---|---|---|
+| Broad knowledge tests, MMLU-style | Recall and reasoning over academic multiple choice | Whether it follows your output format |
+| Coding benchmarks | Writing small self-contained functions that pass tests | Whether it can work in your codebase, with your conventions |
+| Human preference arenas | Which answer people prefer in open-ended chat | Anything about extraction, classification, or strict formats |
+| Tool-use and agent benchmarks | Calling functions correctly in a synthetic harness | Whether it calls *your* tools correctly, on your schemas |
+
+Three things degrade these scores further:
+
+- **Contamination.** Benchmarks are published on the internet. Training data is scraped from the internet. A model that has effectively seen the answer key scores well without being better, and nobody can fully rule this out for any public test.
+- **Saturation.** Once every strong model scores in the nineties on a test, the remaining differences are noise, and vendors move to a harder test. A one-point gap is not a decision.
+- **Self-reported harnesses.** Vendors report their own numbers, on their own prompts and settings. Reproducing them is genuinely hard.
+
+Use them anyway, for the one job they are good at: cutting a list of twelve candidate models down to three that are plausibly in the right class for your task, along with the constraints that lessons 05 and 06 covered — price, context window, rate limits, latency, region. Then close the tab.
+
+## 2. Twenty cases of your own decide it
+
+The `build-with-llms` course covers evals properly in its lesson 08, *Evals: proving it works*. Read it — this is the same tool, pointed at a different question. There you use an eval to tell whether your prompt edit helped. Here you use it to tell which model to buy.
+
+The build is small on purpose:
+
+1. **Pull twenty real inputs** out of your logs, your ticket queue, your existing data. Real ones. Inputs you invent are inputs shaped by what you already expect.
+2. **Weight it towards trouble.** Roughly half ordinary cases, half the awkward ones — long inputs, missing fields, hostile users, the two edge cases you already know break things.
+3. **Write down the expected outcome** for each. Exact value where there is one, a short rubric where there is not.
+4. **Grade with the cheapest method that fits.** An equality check beats a regex, which beats a model judging a model.
+5. **Run all three candidates**, at temperature 0, on the same twenty, and put the results in one table alongside cost and p95 latency.
+
+> Twenty real cases from your own traffic will tell you more in an afternoon than every leaderboard on the internet, and they keep being true after the leaderboards change.
+
+Keep the set. It is the artefact that makes lesson 10 possible: when a model is deprecated or a cheaper one appears, you already own the thing that answers whether to switch.
+
+## 3. Cost, latency, quality — and the routing pattern
+
+For any given task, you get two of these three. Deciding which one you are giving up is most of the work, and it is a product decision, not a technical one.
+
+| Task | What it needs | What it can give up |
+|---|---|---|
+| Live chat with a user | Latency, quality | Cost — a slow reply is a lost user |
+| Nightly bulk classification | Cost, quality | Latency — use the batch endpoint and its discount |
+| Autocomplete, inline suggestions | Latency, cost | Quality — the user judges instantly and can ignore it |
+| Legal, medical, financial output | Quality, and quality again | Cost and latency both, without argument |
+
+Then a table by task type, as a starting point to test rather than a conclusion:
+
+| Task type | Start with | Because |
+|---|---|---|
+| Classification, extraction, routing | The smallest instruct model that passes your eval, temperature 0 | The work is pattern-shaped and a big model is wasted money |
+| Summarising, rewriting, tone | A mid-tier model | Quality is visible to a human but the task is not hard |
+| Code generation and review | A strong model | Small models produce code that looks right and is not |
+| Multi-step agents and tool use | The strongest one with reliable tool calling | Errors compound across steps, so per-step accuracy dominates |
+| Long-document question answering | Judge by context window and recall over long inputs, not general score | The constraint here is lesson 03, not raw capability |
+| Bulk offline processing | The cheapest model that passes, on a batch endpoint | Nobody is waiting, so cost is the only axis |
+
+**The routing pattern** is how you stop choosing. Send everything to a small cheap model first. Escalate to the big one only when a signal you can actually compute says the cheap answer is not good enough. Typical signals: the output failed a schema or business-rule validator, the model reported low confidence when asked for one, an input-length or complexity score crossed a threshold, or the request came from a tier that pays for the better answer.
+
+The economics work because in most real workloads the easy majority is a large majority. The proportion that stays cheap varies a lot by task, so measure yours rather than trusting anyone's percentage, including a number in a lesson.
+
+```python
+# pip install openai
+import os, json
+from openai import OpenAI
+
+client = OpenAI()
+CHEAP  = os.environ.get("CHEAP_MODEL",  "gpt-4o-mini")   # your own ids here
+STRONG = os.environ.get("STRONG_MODEL", "gpt-4o")
+
+def classify(text: str, model: str) -> dict | None:
+    r = client.chat.completions.create(
+        model=model,
+        temperature=0,
+        max_tokens=100,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": 'Reply as JSON: {"label": one of billing|bug|other, "confident": true or false}'},
+            {"role": "user", "content": text},
+        ],
+    )
+    try:
+        out = json.loads(r.choices[0].message.content)
+    except json.JSONDecodeError:
+        return None                                   # unparseable counts as a failure
+    return out if out.get("label") in {"billing", "bug", "other"} else None
+
+def route(text: str) -> dict:
+    cheap = classify(text, CHEAP)
+    if cheap and cheap.get("confident"):              # a measurable signal, not a guess
+        return cheap
+    return classify(text, STRONG) or {"label": "other"}
+
+print(route("I was charged twice for the same invoice last Tuesday."))
+```
+
+Log which model served each request. Without that line you cannot tell whether the escalation rate is 5 percent or 60, and the whole point of routing is that number.

@@ -1,0 +1,149 @@
+---
+title: "Measuring retrieval"
+subtitle: "Build a fifty-query eval set by hand, score recall@k, MRR and nDCG, and always test retrieval separately from generation."
+part: 4
+minutes: 8
+why: "Someone on your team says the answers feel worse since Tuesday. You changed the chunk size on Tuesday, and also the embedding model, and also the prompt. You have no way to tell which one did it, or whether anything actually got worse at all. That is not a hard problem, it is an unmeasured one. This lesson gets you a number: fifty real queries, the passage ids that should come back, and three metrics that tell you whether a change helped. The annotation is genuinely a day of work and there is no shortcut, so it is worth knowing exactly what you get for it."
+wins:
+  - "Write down fifty real queries with the chunk ids that should answer each."
+  - "Track recall@k first - generation cannot recover what retrieval missed."
+  - "Use MRR when the ordering matters, nDCG when relevance is graded."
+  - "Score retrieval on its own, before any model call, so you know which half broke."
+  - "Rerun the eval on every chunking, embedding or fusion change."
+quiz:
+  - q: "Why is recall@k the metric to watch first?"
+    options: ["It is the cheapest to compute", "If the right chunk never enters the top k, no prompt or model can recover it", "It is the only metric that works without human labels"]
+    answer: 1
+    explain: "Retrieval sets a hard ceiling - the model can only use what you put in the prompt."
+  - q: "What does MRR tell you that recall@k does not?"
+    options: ["Whether the answer was correct", "How many relevant chunks exist in total", "How high up the list the first relevant chunk landed"]
+    answer: 2
+    explain: "MRR averages 1 divided by the rank of the first relevant result, so it rewards putting the right chunk near the top."
+  - q: "When is nDCG the right choice over recall@k?"
+    options: ["When relevance is graded rather than yes or no, and the ordering among relevant results matters", "When your corpus is under a thousand chunks", "When you are using a hosted vector database"]
+    answer: 0
+    explain: "nDCG handles graded relevance and discounts results by position, so partly relevant results still count for something."
+  - q: "Your end-to-end answer quality dropped. What do you check first?"
+    options: ["Swap in a bigger generation model and compare", "Rewrite the system prompt and compare", "Rerun the retrieval eval alone to see whether recall@k moved"]
+    answer: 2
+    explain: "Measuring the halves separately is the whole point - it tells you which one to fix."
+  - q: "Roughly how do you build the eval set?"
+    options: ["Generate queries and labels with a model and use them unchecked", "Take real user queries and label by hand which chunk ids answer each one", "Sample chunks at random and treat each as its own answer"]
+    answer: 1
+    explain: "A model can draft candidates, but the labels have to be checked by a human or you are measuring against the model's guesses."
+deeper:
+  - { label: "BEIR - a benchmark for retrieval evaluation", href: "https://github.com/beir-cellar/beir" }
+  - { label: "trec_eval - the standard IR scoring tool", href: "https://github.com/usnistgov/trec_eval" }
+  - { label: "Discounted cumulative gain, explained", href: "https://en.wikipedia.org/wiki/Discounted_cumulative_gain" }
+  - { label: "Ragas - RAG evaluation library", href: "https://docs.ragas.io/" }
+---
+
+## 1. The eval set is the work
+
+Everything in this lesson depends on one artefact: a list of queries paired with the chunk ids that should come back for them. Without it, every metric below is undefined and every change you make is a guess.
+
+Build it like this.
+
+**Take fifty real queries.** Not fifty you invented at your desk - those are queries phrased the way you already think about the corpus, which is exactly the bias you are trying to measure past. Pull them from support tickets, search logs, your chat app's history, or ask five colleagues what they would type. Include the awkward ones: acronyms, typos, follow-ups, questions your docs do not actually answer.
+
+**For each, find the chunk ids that answer it.** Search your own corpus, read the results, and write down the ids. Some queries have one right chunk, some have three, some have none - record the none ones too, they are how you test whether your app correctly says it does not know.
+
+**This part is manual.** You can have a model draft candidates - point it at a chunk and ask what question this passage answers - and that is a reasonable way to get to a first draft fast. But if you ship the labels unchecked, you are measuring your retriever against another model's opinion, and any systematic mistake in that opinion becomes invisible to you forever. Read them. It is a day.
+
+Fifty is enough to see a real change and small enough to actually finish. Grow it later, mostly by adding queries that failed in production - a failure you have written down is a regression test.
+
+> Fifty labelled queries is a day of work. Not having them costs you that day every month, in arguments about whether the answers feel worse.
+
+## 2. Three metrics, plainly
+
+Set the eval up so it runs on retrieval alone - queries in, ranked chunk ids out, no generation call. It should take seconds and cost nothing.
+
+| Metric | The question it answers | Range | Use it when |
+|---|---|---|---|
+| recall@k | Did the right chunk make the top k at all? | 0 to 1 | Always. This is the ceiling |
+| precision@k | How much of what I retrieved was relevant? | 0 to 1 | Context budget is tight |
+| MRR | How high was the first right chunk? | 0 to 1 | Ordering matters, one right answer per query |
+| nDCG@k | How good is the whole ordering, with graded relevance? | 0 to 1 | Results are partly relevant, not just yes or no |
+
+**recall@k** is the share of queries whose correct chunk appears anywhere in the top k. It matters most because it is a hard ceiling: if the answer is not in the k chunks you paste into the prompt, the model cannot produce it. Recall@5 of 0.6 means four questions in ten are unanswerable before the model is called. No prompt fixes those.
+
+**MRR** - mean reciprocal rank - averages `1 / rank of the first relevant chunk` across queries. First place scores 1.0, third place scores 0.33, missing scores 0. It tells you about ordering, which is the thing reranking from lesson 08 is supposed to improve. If recall@50 is high but MRR is low, you have a ranking problem and a reranker is the fix. If recall@50 is low, ranking is not your problem.
+
+**nDCG@k** - normalised discounted cumulative gain - is for when relevance is graded rather than binary. Some chunks fully answer the question, some give useful context, some are noise. nDCG assigns each a gain, discounts it by how far down it appeared, and divides by the best possible ordering so the number lands between 0 and 1. It is the standard metric in the IR literature and in benchmarks like BEIR, so you will meet it. It also needs graded labels, which is more annotation work. Binary labels and recall@k plus MRR will serve most teams fine.
+
+```python
+# gold: query -> the chunk ids a human said actually answer it
+gold = {
+    "refund window for ebooks": {"policy-14"},
+    "return an unopened blender": {"policy-15"},
+    "who approves expenses over 5k": {"finance-3", "finance-4"},
+}
+
+# runs: what your retriever returned, best first
+runs = {
+    "refund window for ebooks": ["policy-14", "policy-2", "policy-9"],
+    "return an unopened blender": ["policy-2", "policy-9", "policy-15"],
+    "who approves expenses over 5k": ["hr-1", "finance-9", "finance-3"],
+}
+
+def recall_at_k(k):
+    hits = [any(d in gold[q] for d in runs[q][:k]) for q in gold]
+    return sum(hits) / len(hits)
+
+def mrr():
+    total = 0.0
+    for q in gold:
+        for position, doc_id in enumerate(runs[q], start=1):
+            if doc_id in gold[q]:
+                total += 1 / position
+                break
+    return total / len(gold)
+
+print(f"recall@1 {recall_at_k(1):.2f}")   # 0.33
+print(f"recall@3 {recall_at_k(3):.2f}")   # 1.00
+print(f"MRR      {mrr():.2f}")            # 0.56
+```
+
+Forty lines and no dependencies. That is the whole barrier between you and knowing whether Tuesday's change helped.
+
+### Which k
+
+Measure at the k you actually send to the model, and at the k your first stage returns.
+
+| k | What it tells you |
+|---|---|
+| recall@k where k is what you paste in the prompt | Your real ceiling on answer quality |
+| recall@n where n is your rerank candidate count | Whether the reranker has the answer to find |
+| recall@1 | How often you nail it outright - a useful vanity check, not a target |
+
+The gap between those first two numbers is your reranker's opportunity. If recall@50 is 0.94 and recall@5 is 0.71, there are twenty-three questions in a hundred where the answer is in the candidate pile and not in the prompt. That gap is exactly what lesson 08 is for.
+
+## 3. Test the halves separately
+
+This is the habit worth more than any individual metric.
+
+A RAG pipeline has two failure modes, and end-to-end answer quality mixes them into one unusable number. Score them apart.
+
+| Layer | Input | Output | Scored by | Needs a model call |
+|---|---|---|---|---|
+| Retrieval | Query | Ranked chunk ids | recall@k, MRR, nDCG | No |
+| Generation | Query plus the correct chunks | An answer | Faithfulness, correctness | Yes |
+
+For the generation half, hand the model the chunks you *know* are correct - the gold ids from your eval set, not what retrieval returned. Now you are measuring the answering step in isolation. If it is wrong with the right passages in front of it, the prompt is the problem. If it is right there but wrong in production, retrieval is the problem. The build-with-llms lesson on evals covers scoring the generated text itself.
+
+A worked diagnosis:
+
+| recall@k | Answer quality with gold chunks | What is broken |
+|---|---|---|
+| Low | High | Retrieval. Chunking, embeddings, hybrid, rewriting |
+| High | Low | Generation. Prompt, citation rules, model |
+| Low | Low | Both. Fix retrieval first - it is the ceiling |
+| High | High but bad in production | Your k is too small, or reranking is misordering |
+
+### Running it
+
+Wire the eval to a single command and run it on every change to chunking, the embedding model, the index, filters, fusion weights, the reranker or the candidate count. Every one of those moves retrieval, and every one of them is the kind of change that feels obviously good and sometimes is not.
+
+Keep the number in the repo next to the code, one row per run, so the history is visible. When someone says the answers feel worse, you open the file.
+
+Two honest limits. Fifty queries is a small sample - a change worth two or three questions is inside the noise, so do not celebrate small moves. And your eval set drifts as your corpus and your users change; add the queries that failed in production and re-read the labels every few months.
