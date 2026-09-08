@@ -32,7 +32,7 @@ quiz:
     answer: 1
     explain: "Uniformity and switchability are the product; new features generally land on the provider's own API first."
 deeper:
-  - { label: "Anthropic — Messages API reference", href: "https://docs.anthropic.com/en/api/messages" }
+  - { label: "Anthropic — Messages API reference", href: "https://platform.claude.com/docs/en/api/messages" }
   - { label: "OpenAI — API reference", href: "https://platform.openai.com/docs/api-reference" }
   - { label: "Google — Gemini API docs", href: "https://ai.google.dev/gemini-api/docs" }
   - { label: "Amazon Bedrock — documentation", href: "https://docs.aws.amazon.com/bedrock/" }
@@ -72,7 +72,7 @@ Here is the honest split.
 
 **What mostly does not differ:**
 
-- The core loop. Messages in, tokens out, stateless, billed per token, with temperature and a maximum output length.
+- The core loop. Messages in, tokens out, stateless, billed per token, with a maximum output length. The sampling knobs bolted to it are one of the things that does differ.
 - The engineering problems. Hallucination, prompt injection, evaluation, cost control, latency. You solve all of them the same way regardless of the logo.
 - The top of the capability range. The frontier models trade places release to release, and the gap between the best and third-best on a general task is usually smaller than the gap between your first prompt and your fifth.
 

@@ -32,10 +32,10 @@ quiz:
     answer: 1
     explain: "An untested fallback is not a fallback; the switch has to be something you have already exercised."
 deeper:
-  - { label: "Anthropic — model deprecations", href: "https://docs.anthropic.com/en/docs/about-claude/model-deprecations" }
+  - { label: "Anthropic — model deprecations", href: "https://platform.claude.com/docs/en/about-claude/model-deprecations" }
   - { label: "OpenAI — deprecations", href: "https://platform.openai.com/docs/deprecations" }
   - { label: "LiteLLM — one interface across providers", href: "https://docs.litellm.ai/" }
-  - { label: "Anthropic — test and evaluate", href: "https://docs.anthropic.com/en/docs/test-and-evaluate" }
+  - { label: "Anthropic — test and evaluate", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
 ---
 
 Lesson 09 was about choosing a model. This one is about the fact that you will choose again. Prices fall, better models ship, and providers retire the one you built on. The teams that handle this well are not the ones with the best model — they are the ones for whom changing model is boring.
@@ -66,7 +66,7 @@ The conclusion is short and worth taping to the wall: **a model swap is a re-tes
 This takes an afternoon if you already have the twenty cases from lesson 09, and a week if you do not — which is itself the argument for having them.
 
 1. **Freeze the eval set.** Do not edit cases while comparing; you need one fixed ruler.
-2. **Run both models on it.** Same inputs, same temperature, same everything except the model id.
+2. **Run both models on it.** Same inputs, same settings, same everything except the model id.
 3. **Diff the failures, and sort them into three piles.** Cases both models fail — pre-existing, not your problem today. Cases only the old one fails — free wins. Cases only the new one fails — this is the entire migration.
 4. **Fix the prompt against the new model.** Read those failures, find the instruction the new model reads differently, rewrite it. Then re-run everything, because a fix for one case often breaks another.
 5. **Never patch the output instead.** If the new model adds a preamble, do not strip it with a regex. That regex is permanent, it hides the real difference, and you now maintain two models' habits at once.

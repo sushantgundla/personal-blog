@@ -32,9 +32,9 @@ quiz:
     answer: 0
     explain: "0.95 to the fifth power is about 0.77, which is a direction to worry about rather than a number to quote."
 deeper:
-  - { label: "Anthropic — chain complex prompts", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts" }
+  - { label: "Anthropic — chain complex prompts", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts" }
   - { label: "Anthropic — building effective agents", href: "https://www.anthropic.com/engineering/building-effective-agents" }
-  - { label: "Anthropic — prompt engineering overview", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+  - { label: "Anthropic — prompt engineering overview", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview" }
   - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
 ---
 
@@ -76,7 +76,6 @@ def ask(system: str, user: str, max_tokens: int) -> str:
     resp = client.messages.create(
         model="claude-sonnet-5",
         max_tokens=max_tokens,
-        temperature=0,
         system=system,
         messages=[{"role": "user", "content": user}],
     )

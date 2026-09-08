@@ -32,9 +32,9 @@ quiz:
     answer: 2
     explain: "Text that looks like an instruction can still steer the model, whichever slot it arrived in, so the check has to happen in your code."
 deeper:
-  - { label: "Anthropic — system prompts", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts" }
-  - { label: "Anthropic — prompt caching", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching" }
-  - { label: "Anthropic — Messages API reference", href: "https://docs.anthropic.com/en/api/messages" }
+  - { label: "Anthropic — system prompts", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role" }
+  - { label: "Anthropic — prompt caching", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-caching" }
+  - { label: "Anthropic — Messages API reference", href: "https://platform.claude.com/docs/en/api/messages" }
   - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
 ---
 
@@ -91,7 +91,6 @@ If a change has no user-visible effect, omit it entirely."""
 resp = client.messages.create(
     model="claude-sonnet-5",
     max_tokens=500,
-    temperature=0,
     # A list of blocks, not a plain string, so the stable part can be cached.
     system=[{
         "type": "text",
