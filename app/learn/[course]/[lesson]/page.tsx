@@ -21,9 +21,11 @@ interface Props {
 /**
  * One lesson — the page most readers land on first, straight from a search
  * result. It opens with the platform sign, which places them on the line
- * before they read a word of the body, and then it is one column: title,
- * the rule in the course ink, why this matters, the prose, what they take
- * away, the recall quiz, further reading, and the line continuing.
+ * before they read a word of the body, and then it is the reading column:
+ * title, the rule in the course ink, why this matters, the prose, what
+ * they take away. The recall quiz breaks out of the column as a full-width
+ * band — a checkpoint, not more body text — and the column resumes after
+ * it with further reading and the line continuing.
  *
  * Everything comes from the filesystem at build time, so every lesson is a
  * static page — same shape as the articles route.
@@ -92,9 +94,16 @@ export default function LessonPage({ params }: Props) {
         </div>
 
         <Wins items={lesson.wins} />
+      </div>
 
-        <Quiz courseSlug={course.slug} lessonSlug={lesson.slug} questions={lesson.quiz} />
+      {/* The quiz is a band, not a block of the column: it sits outside
+          .measure so its hairlines span the window, the same shape as the
+          position strip above. It puts its own .measure back inside, so
+          the questions line up with the h1 exactly. */}
+      <Quiz courseSlug={course.slug} lessonSlug={lesson.slug} questions={lesson.quiz} />
 
+      {/* Back into the column for what comes after the checkpoint. */}
+      <div className="measure">
         <Deeper links={lesson.deeper} />
 
         <PrevNext courseSlug={course.slug} prev={prev} next={next} />

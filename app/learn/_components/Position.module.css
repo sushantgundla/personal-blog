@@ -108,12 +108,33 @@
   color: var(--ln-ink-quiet);
 }
 
-/* The stops either side, as plain text. Not links — PrevNext at the foot
-   of the page is where the reader goes somewhere. */
+/* The stops either side, as real links: the line can be walked from here
+   without scrolling to PrevNext at the foot. Same signage-quiet voice as
+   the rest of the strip, and the same hover and focus as everything else
+   in the section — an instant step to --ln-mark, never a movement. */
 .ends {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem 1.5rem;
+}
+
+/* The :global(.learn-root) prefix is load-bearing: these links carry
+   .sign-quiet too, and `.learn-root a.sign-quiet:hover` in learn.css is
+   more specific than a doubled class on its own, so a plain `.end.end`
+   would never get the hover through. */
+:global(.learn-root) a.end.end {
+  text-decoration: none;
+}
+
+:global(.learn-root) a.end.end:hover {
+  color: var(--ln-mark);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+:global(.learn-root) a.end.end:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
 }
 
 @media (max-width: 52rem) {

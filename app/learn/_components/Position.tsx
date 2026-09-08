@@ -29,6 +29,10 @@ interface Props {
  * per lesson at uniform pitch, the current one ringed. It is a position
  * indicator, not navigation — the ticks are not links, the SVG is
  * aria-hidden, and the text around it carries every piece of meaning.
+ *
+ * The one exception is the pair of stops either side, under the strip:
+ * those are real links, so the line can be walked from the top of the page
+ * as well as the foot.
  */
 
 /* The track's own coordinate space. x is 0–100 and stretches to whatever
@@ -135,15 +139,27 @@ export function Position({ course, lesson, prev, next }: Props) {
           {lesson.minutes > 0 && <span>~{lesson.minutes} MIN</span>}
         </p>
 
-        {/* The stops either side. Plain text, and hidden from screen
-            readers: PrevNext at the foot of the page gives the same two
-            titles as real links inside a labelled nav, so announcing them
-            here as well would only read the lesson names twice. */}
+        {/* The stops either side, as real links. A reader who finishes a
+            lesson should not have to scroll back to the foot of the page
+            to carry on, and someone who landed here mid-line often wants
+            the stop before this one first.
+            PrevNext at the foot offers the same two destinations, so the
+            two navs carry distinct aria-labels — "Nearby stops" here,
+            "Lesson navigation" there — and a screen-reader user hears
+            which one they are in rather than the same list twice. */}
         {(prev || next) && (
-          <p className={`sign-quiet ${styles.ends}`} aria-hidden="true">
-            {prev && <span>Last stop: {prev.title}</span>}
-            {next && <span>Next stop: {next.title}</span>}
-          </p>
+          <nav className={styles.ends} aria-label="Nearby stops">
+            {prev && (
+              <Link href={`/learn/${course.slug}/${prev.slug}`} className={`sign-quiet ${styles.end}`} rel="prev">
+                Last stop: {prev.title}
+              </Link>
+            )}
+            {next && (
+              <Link href={`/learn/${course.slug}/${next.slug}`} className={`sign-quiet ${styles.end}`} rel="next">
+                Next stop: {next.title}
+              </Link>
+            )}
+          </nav>
         )}
       </div>
     </div>

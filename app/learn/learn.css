@@ -24,8 +24,10 @@
    Hard rule from the site owner: never a fixed pixel max-width.
    The reading column is .measure — a min() of a character measure
    and the viewport minus fluid gutters — so the layout fills any
-   window and never leaves grey bars at the sides. The diagram
-   uses .bleed and runs edge to edge.
+   window and never leaves grey bars at the sides. The character
+   measure itself is a token, --ln-measure, because the reader
+   picks between two of them (see section 3). The diagram uses
+   .bleed and runs edge to edge.
    ============================================================ */
 
 /* ============================================================
@@ -77,6 +79,11 @@
   --ln-gutter: clamp(1rem, 5vw, 6rem);
   --ln-w: 6px;
   --ln-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* The reading measure, in characters — never px. The reader
+     switches between this and the wide value from the rail; see
+     section 3 and app/learn/_components/ViewWidth.tsx. */
+  --ln-measure: 70ch;
 
   min-height: 100vh;
   display: flex;
@@ -146,8 +153,22 @@
    the character measure when there is room and the full
    viewport-minus-gutters when there isn't. */
 .learn-root .measure {
-  width: min(70ch, 100% - 2 * var(--ln-gutter));
+  width: min(var(--ln-measure), 100% - 2 * var(--ln-gutter));
   margin-inline: auto;
+}
+
+/* Wide mode. The reader asked for a column that covers more of a
+   large screen, so the measure has a second setting — still a
+   character count, so a long line is still a readable line and the
+   min() still hands the whole window back on a phone.
+
+   The attribute is set on <html> by a blocking script in
+   app/learn/layout.tsx before first paint, and again by
+   ViewWidth.tsx on every click, so there is no flash of the narrow
+   column on a reload. Anything else that wants both widths just
+   uses .measure and inherits it. */
+[data-ln-width='wide'] .learn-root {
+  --ln-measure: 104ch;
 }
 
 /* The diagram band. Runs edge to edge — the gutter is padding
@@ -281,6 +302,36 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem var(--ln-gutter);
+}
+
+/* The right of the rail: the reading-width switch, then the way out. */
+.learn-root .learn-rail-right {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.6rem, 2vw, 1.5rem);
+}
+
+/* On a phone the three pieces genuinely do not fit across 350-odd pixels
+   — measured, not guessed: the section name alone is most of it. So the
+   rail becomes two rows rather than shrinking the signage or dropping the
+   switch, which is the one control a reader on a small screen most wants.
+   The name takes the first row; the switch and the way out share the
+   second, pushed to the two gutters, so both rows still line up with the
+   column under them. */
+@media (max-width: 34rem) {
+  .learn-root .learn-rail-inner {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .learn-root .learn-rail-inner > :first-child {
+    flex: 1 0 100%;
+  }
+
+  .learn-root .learn-rail-right {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .learn-root .learn-main {
