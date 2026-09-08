@@ -1,0 +1,137 @@
+---
+title: "When one agent becomes five"
+subtitle: "Splitting one agent into several cuts its context into pieces, and you pay for every piece on every step."
+part: 4
+minutes: 7
+why: "Your single agent kept losing the thread on big tasks, so you split it into five specialists — a planner, two researchers, a writer, a reviewer. The token bill went up several times over. The accuracy went up a little. And you inherited a new class of bug: two workers that made opposite assumptions about the same task, and a merge step with no way to tell which one was right. This lesson is about what splitting actually buys, the two patterns that survive contact with production, and the plain rule for when the overhead is worth paying."
+wins:
+  - "Split a task only when the subtasks never need to read each other's work."
+  - "Reach for orchestrator-worker before anything where every agent talks to every agent."
+  - "Give each worker a full brief: objective, output shape, tools, and boundaries."
+  - "Measure the single-agent baseline before and after, on the same tasks."
+  - "Keep one agent for work that is a single thread of dependent decisions."
+quiz:
+  - q: "The main thing you give up when you split one agent into five is..."
+    options: ["Access to tools, since workers cannot call tools", "Shared context — each worker sees only its own slice, so they can make conflicting assumptions", "Determinism, since a single agent is deterministic"]
+    answer: 1
+    explain: "A split is a context split first and a compute split second; anything two workers both needed to know is now something you have to pass explicitly."
+  - q: "Which task is a genuine fit for parallel fan-out?"
+    options: ["Writing one feature across several files in one codebase", "Looking up the same three facts about forty different companies", "A multi-step refactor where each step depends on the last"]
+    answer: 1
+    explain: "Forty lookups never need to read each other's results, so they can run at once and merge trivially. The other two are one thread of dependent decisions."
+  - q: "In orchestrator-worker, the orchestrator's most important output is..."
+    options: ["A shortlist of which model each worker should use", "The final merged answer only", "A brief per worker that states the objective, the output shape, the tools and the boundary"]
+    answer: 2
+    explain: "Vague subtask descriptions are the most common coordination failure — two workers duplicate the same search, or one answers a question nobody asked."
+  - q: "You measure your new five-agent setup and it costs several times the single agent for a small accuracy gain. The right response is..."
+    options: ["Revert to the single agent unless that accuracy gain is worth the multiple", "Add a sixth agent to review the other five", "Switch the workers to a smaller model and keep the architecture"]
+    answer: 0
+    explain: "The multiple is the price of the architecture, not a tuning problem. If the gain does not justify it, the architecture was the wrong call."
+  - q: "A free-for-all where every agent can message every other agent tends to fail because..."
+    options: ["Most providers block agent-to-agent messages", "Messages arrive out of order and corrupt the transcript", "Coordination messages grow with the square of the agents, and no one owns the final decision"]
+    answer: 2
+    explain: "Cost climbs fast and accountability disappears — there is no single place where the plan lives, so nothing can be debugged or capped."
+deeper:
+  - { label: "Anthropic — How we built our multi-agent research system", href: "https://www.anthropic.com/engineering/built-multi-agent-research-system" }
+  - { label: "Cognition — Don't build multi-agents", href: "https://cognition.com/blog/dont-build-multi-agents" }
+  - { label: "Why Do Multi-Agent LLM Systems Fail? (Cemri et al.)", href: "https://arxiv.org/abs/2503.13657" }
+  - { label: "Anthropic — Building effective agents", href: "https://www.anthropic.com/engineering/building-effective-agents" }
+  - { label: "Anthropic — Effective context engineering for AI agents", href: "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" }
+---
+
+An agent that keeps losing the thread on a long task looks like a staffing problem, and staffing problems have an obvious fix: hire more. That instinct is why so many teams end up with five agents and one very surprising invoice. This lesson is about what the extra agents actually do for you, what they always cost, and the small number of shapes worth wiring up.
+
+## 1. What splitting an agent actually does
+
+You are not adding four more brains. You are cutting one context into five and adding a message-passing layer between the pieces. Both halves of that are real, and the second one is the half people forget.
+
+**What you gain.** Each worker gets a smaller, cleaner context — its own instruction, its own tools, its own transcript. A worker that only searches never sees the formatting rules, so the formatting rules never crowd out the search. That is the same effect lesson 6 described inside one run, applied across processes. And when subtasks do not depend on each other, they run at the same time, so a job that took six sequential minutes finishes in ninety seconds.
+
+**What you pay.** Every worker re-reads a brief. Every worker's output is read again by whatever merges it. The orchestrator spends tokens deciding what to dispatch, and spends them again when a worker comes back with something unusable. A multi-agent run costs several times what the same task costs a single agent. The multiplier depends entirely on how chatty your workers are and how much of the brief you resend, so measure yours rather than trusting any published figure, including a vendor's.
+
+There is a second cost that never shows on an invoice. Workers cannot see each other's transcripts, so they make **silently incompatible decisions**. One picks a date format, another picks a different one. One decides the answer should be a summary, another writes bullet points. Nothing errors. The merge step receives two coherent halves of two different answers and has no way to know which assumption was right, because it never saw either agent decide.
+
+| | One agent | Orchestrator and workers | Parallel fan-out |
+|---|---|---|---|
+| Who picks the next step | The model, one thread | Orchestrator picks, workers execute | Your code, once, up front |
+| What each part sees | Everything | Its own brief and its own results | Its own input only |
+| Runs concurrently | No | Workers do | Yes, that is the point |
+| Token cost vs one agent | Baseline | Several times | Several times, but wall-clock is much lower |
+| Best at | Dependent decisions, code, anything with one thread | Broad tasks with separable branches | The same operation over many inputs |
+| Fails when | Context fills, or one task needs many tool families | Briefs are vague, so workers duplicate or drift | Subtasks were not actually independent |
+
+> Splitting an agent splits its context. Anything two workers both needed to know is now either something you pass explicitly, or something they will each quietly guess at.
+
+## 2. The two patterns that hold up
+
+Almost everything worth building is one of these two, or a shallow nesting of them.
+
+Both names appeared in lesson 1, in the list of workflow patterns, and that is not a contradiction — it is the same test doing its job. Lesson 1 asks who picks the next step, and the answer here is **whether the model chooses the decomposition**. When you enumerate the subtasks in your own code, this is a workflow that happens to run several contexts at once, and everything lesson 1 says about a drawable path and a known bill still holds. When an orchestrator reads the task and decides at run time how many workers there are and what each one is for, the same picture is an agent, and you have bought its unpredictability along with its flexibility.
+
+**Orchestrator-worker.** One agent owns the plan. It reads the task, decides what the separable pieces are, writes a brief for each, dispatches them, reads what comes back, and decides whether it has enough. Workers are ordinary agents with a narrow tool set and no knowledge of each other.
+
+The whole quality of this pattern lives in the brief. A brief that says "research the pricing" produces two workers doing the same search and neither of them answering the question. A brief that works states four things: the objective in one sentence, the exact output shape you want back, which tools to use, and the boundary — what this worker must not go and do. Anthropic's own write-up on their research system lands in the same place: their most common coordination failures were spawning workers for a task that did not need them, duplicated effort, and task descriptions too vague to act on.
+
+**Parallel fan-out.** The same worker prompt over many inputs, with no orchestrator reasoning in between. This is `map` with a model inside it. Forty companies, the same three questions about each. Two hundred support tickets, the same classification. It is the cheapest kind of multi-agent work because there is no coordination at all — you wrote the decomposition yourself, in code, and no model spends a token deciding it.
+
+**What does not hold up** is worth naming, because it is what people build first. A free-for-all where every agent can message every other agent: the message volume grows with the square of the agent count, nothing owns the plan, and there is no single place to cap or debug. Debate loops, where two agents argue to a consensus: expensive, and the wins are hard to reproduce outside the write-up that reported them. Deep hierarchies: every level adds a full round-trip of latency before any real work starts, so three levels of orchestration is three model calls of pure overhead on every task.
+
+```python
+import concurrent.futures as futures
+
+from anthropic import Anthropic
+
+client = Anthropic()
+MAX_WORKERS = 5          # a ceiling, not a target
+
+def run_worker(brief: str) -> str:
+    """One subtask, its own context. This worker never sees the others."""
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=1000,
+        system=(
+            "You answer one narrow question and report only what you found. "
+            "If you cannot find it, say so. Do not guess and do not broaden the question."
+        ),
+        messages=[{"role": "user", "content": brief}],
+    )
+    return resp.content[0].text
+
+def fan_out(briefs: list[str]) -> list[str]:
+    if len(briefs) == 1:
+        return [run_worker(briefs[0])]            # one subtask is not a fan-out
+    if len(briefs) > MAX_WORKERS:
+        raise ValueError(f"{len(briefs)} subtasks is a batching problem, not a fan-out")
+    with futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        return list(pool.map(run_worker, briefs))
+
+# Each brief is complete on its own: objective, output shape, boundary.
+briefs = [
+    "Who currently chairs the board of company A? Return the name and one source URL. "
+    "Do not research anything else about company A.",
+    "Who currently chairs the board of company B? Return the name and one source URL. "
+    "Do not research anything else about company B.",
+]
+for brief, finding in zip(briefs, fan_out(briefs)):
+    print(brief[:40], "->", finding[:80])
+```
+
+Two things in there are load-bearing. `MAX_WORKERS` raises rather than silently dropping subtasks — a fan-out that quietly discards work is the worst kind of bug, because the output still looks complete. And each brief repeats its own boundary, because a worker that has no idea another worker exists will happily expand its scope into that worker's job.
+
+## 3. The rule, and how to know you were right
+
+Coordinate only when **the subtasks are genuinely independent**, or **the task is too big for one context and the value is worth the multiple**. That is the whole rule. Nearly every multi-agent setup that disappointed its team failed one of those two tests before a line of it was written.
+
+| Question | Yes | No |
+|---|---|---|
+| Could two subtasks reach opposite conclusions and both look fine? | Do not split | Splitting is safe |
+| Does subtask B need to read subtask A's output? | Do not split — that is one thread | Independent, fan out |
+| Does the whole task fit in one context with room to work? | One agent is enough | A split may earn itself |
+| Is wall-clock time the thing users complain about? | Fan-out pays even at higher cost | Cost wins, stay single |
+| Can you write each subtask's brief in one clear sentence? | Good sign | You have not decomposed it yet |
+
+Writing code is the standard example of a task that fails this test. Every edit depends on every earlier edit; two workers writing two files are making constant implicit decisions about names, shapes and conventions that the other one cannot see. Broad research is the standard example of a task that passes it: forty independent lookups, merged at the end, where being wrong about one does not corrupt the other thirty-nine.
+
+Being blunt about it: **most multi-agent setups are not worth it.** They usually get built because a single agent was struggling, and a single agent struggling is far more often a tool-design problem, a context problem, or a missing step limit than a headcount problem. Fix those first — they are lessons 3, 6 and 4 of this course, they cost nothing extra to run, and they frequently make the split unnecessary.
+
+If you do split, prove it. Keep the single-agent version working and run both over the same twenty tasks. Record, for each: whether the answer was right, the total tokens across every agent in the run, and wall-clock time. You will get one of three results. The multi-agent version is clearly better and the multiple is worth it, so ship it. It is clearly better on time but not on quality, which is still a real win for anything a user waits on. Or it costs several times as much for a difference you cannot see, which is the common outcome — and the useful one, because now you know, and you can go back to the one agent with a clear conscience and a much smaller bill.

@@ -1,0 +1,161 @@
+---
+title: "What the loop remembers within one run"
+subtitle: "The transcript is not memory. It is a queue that gets more expensive and less useful the longer it gets."
+part: 2
+minutes: 8
+why: "At step two you told the agent never to write to the ledger. At step forty-one it wrote to the ledger. You go and check the transcript and the instruction is still in there, word for word, sitting a hundred thousand tokens back under thirty tool results. Nothing was truncated. Nothing was lost. The constraint just stopped mattering, because the only place you kept it was a conversation that had since filled up with search output. This lesson is about where a long run should actually keep the things it must not forget."
+wins:
+  - "Treat the transcript as a growing cost, not as storage."
+  - "Keep anything the run must not forget outside the context window."
+  - "Re-inject the task, constraints and current state on every step, from your own code."
+  - "Clear old tool results before you reach for a summary - that is where the tokens are."
+  - "Budget compaction honestly: it is lossy, it costs a call, and it breaks your prompt cache."
+quiz:
+  - q: "An agent forty steps in ignores a constraint it was given at step two. The most likely reason is..."
+    options: ["The model has a bug", "The constraint was never actually sent", "The constraint is still in the window but buried under tool output, and nothing has repeated it since"]
+    answer: 2
+    explain: "Being present in the context is not the same as being attended to. A single early sentence competes with everything that arrived after it."
+  - q: "What does tool-result clearing remove, and what does it leave behind?"
+    options: ["The whole conversation before a cutoff point", "Old tool results, while keeping the recent ones and the record that the calls happened", "The system prompt, to make room"]
+    answer: 1
+    explain: "It is the lightest-touch option: the model still knows it searched, it just no longer carries what came back."
+  - q: "What is the honest cost of compaction?"
+    options: ["None - it runs on the server", "It is a lossy summary, it costs a model call, and it invalidates the cached prefix", "It only works below a fixed conversation length"]
+    answer: 1
+    explain: "Detail goes, latency arrives, and everything before the summary point changes, so the cache you were relying on is gone."
+  - q: "Which of these survives compaction unchanged?"
+    options: ["A constraint stated once in the first user message", "A tool result from step three", "A note the agent wrote to a file outside the context window"]
+    answer: 2
+    explain: "Compaction rewrites the conversation. It cannot touch a store your handler owns, which is exactly why the store is the right place for facts."
+  - q: "Your harness re-injects a state block on every step. Where does it go in the turn?"
+    options: ["First, before the tool results, so the model reads it early", "After the `tool_result` blocks, at the end of the user turn", "In the system prompt, rewritten each step"]
+    answer: 1
+    explain: "The API requires tool_result blocks first in a turn, and the end of the window is the part the model weighs most heavily anyway. Rewriting the system prompt would also destroy your cache."
+deeper:
+  - { label: "Anthropic - effective context engineering for AI agents", href: "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" }
+  - { label: "Anthropic - context editing", href: "https://platform.claude.com/docs/en/build-with-claude/context-editing" }
+  - { label: "Anthropic - compaction", href: "https://platform.claude.com/docs/en/build-with-claude/compaction" }
+  - { label: "Claude Cookbook - memory, compaction and tool clearing", href: "https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools" }
+  - { label: "Anthropic - effective harnesses for long-running agents", href: "https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" }
+---
+
+## 1. Why the transcript forgets
+
+The transcript is everything you send on every step: the system prompt, the tool definitions, the task, and then every tool call and every tool result the run has produced so far. It only grows. Three things go wrong as it does, and they go wrong in this order.
+
+**Signal thins out.** Your constraint is one sentence. Between it and the current step sit thirty tool results, several of which are four hundred lines of JSON. The sentence is still in the window and the model still misses it. This is the same effect the **LLMs** course covers in *Context windows and their limits*, arriving from a direction that lesson does not: nobody wrote the noise, a loop generated it.
+
+**You pay for all of it, every step.** Step forty re-sends steps one to thirty-nine. That is why cost inside a loop is quadratic-ish in the number of steps rather than linear, and why a run that is comfortably inside its step budget can still be far outside anything you would have signed off.
+
+**Then it fills.** You hit the window and the request fails, or your harness truncates from the front and quietly deletes the oldest thing in the conversation - which, since the task and its constraints were the first thing you sent, is the task and its constraints.
+
+Not everything in there is equally worth keeping:
+
+| What is in the window | Grows with | Safe to drop |
+|---|---|---|
+| System prompt and tool definitions | Nothing - fixed | No |
+| The task and its constraints | Nothing - fixed | Never |
+| Model reasoning and thinking blocks | Every step | Yes, oldest first |
+| Tool call arguments | Every call | Often |
+| Tool results | Every call, and they are the biggest thing here | Yes - and this is where the tokens are |
+
+That last row is most of your context and nearly all of your growth. It is also the least valuable per token after the step that used it.
+
+## 2. State that lives outside the window
+
+The fix costs almost nothing and it is a change of habit rather than of stack: **stop using the conversation as storage.**
+
+Three shapes, and they compose.
+
+**A scratchpad the agent writes to.** Give it a tool that writes a note to a file, and one that reads it back. Anthropic calls this structured note-taking, and the reason it works is dull: a note on disk is not affected by anything that happens to the transcript. The agent records what it found, the transcript can be trimmed to nothing, and the finding is still there.
+
+**A state block your harness re-injects.** Your code owns the invariants - the task, the constraints, what has been done, the current sub-goal, the budget spent - renders them, and appends them at the end of every step. The model cannot lose what you keep handing back. This is the direct fix for the opener, it is about twenty lines, and it is the one to write first.
+
+**A task list.** The same idea with a second benefit: it gives you a progress signal you can read without a model call, which is what lesson 4's no-progress detector wants.
+
+| | The transcript | A scratchpad the agent writes | State your harness re-injects |
+|---|---|---|---|
+| Who writes it | The loop, automatically | The model, deliberately | Your code |
+| Where it lives | In the context window | In a store you own | Outside, rendered each step |
+| Survives trimming or compaction | No | Yes | Yes |
+| Can the model lose it | Yes | Only by not reading it | No |
+| Token cost | All of it, every step | Only what gets read back | Small and fixed |
+| How it fails | Fills up, thins out | The note drifts from reality | You keep re-sending a stale fact |
+
+The last row is the honest one. Both alternatives have a failure mode, and both are better failure modes than the transcript's, because both are things your code can see and fix.
+
+> Anything the run must not forget should not live in the transcript alone. Keep it where your code can put it back.
+
+## 3. Compaction, and what it actually costs
+
+When the window is genuinely under pressure, there are two mechanics, and they are routinely confused.
+
+**Tool-result clearing** drops the oldest tool results from the history and keeps the last few. The model still knows it called `search` at step six; it no longer carries the four hundred lines that came back. Anthropic ships this as a `context_management` edit called `clear_tool_uses_20250919`, with a `trigger` threshold, a `keep` count, and an `exclude_tools` list for the ones you never want cleared. Lightest touch, most predictable loss.
+
+**Compaction** summarises the run so far and continues from the summary. Anthropic's version is `compact_20260112`: when it fires, the response carries a `compaction` content block, and on later requests everything before that block is dropped. You have to pass the block back or the next request will not know where the summary starts. There is a matching `clear_thinking_20251015` for thinking blocks.
+
+Those type strings carry dates for a reason. They are beta surfaces and the names move - check the context editing and compaction docs before you copy any of them.
+
+The costs, none of which the feature pages lead with:
+
+- **It is lossy in an unpredictable direction.** If step six produced the exact error string that turns out to matter, and the summary says "the build failed", the string is gone and no future step can get it back.
+- **It is a model call.** Latency you did not budget for, on the step where it fires, plus a chance of being wrong.
+- **It breaks your prompt cache.** Everything before the compaction point changed, so the cached prefix is dead and the next step pays full price for the whole window.
+- **It is not a substitute for a scratchpad.** Compact the conversation. Keep the facts somewhere a summariser cannot blur them.
+
+| Situation | Reach for |
+|---|---|
+| Old tool results are dead weight | Tool-result clearing, first, always |
+| The run is long and genuinely needs the gist of its whole history | Compaction |
+| A fact must survive whatever happens to the window | A scratchpad, or re-injected state |
+| The run is long because the task splits cleanly | Sub-agents with their own windows - see *When one agent becomes five* |
+
+```python
+import json
+from anthropic import Anthropic
+
+client = Anthropic()
+
+# Facts the run must not lose. Your code owns these; the transcript does not.
+state = {
+    "task": "Reconcile the March invoices against the ledger.",
+    "constraints": ["Never write to the ledger.", "Ignore invoices under 50 GBP."],
+    "checked": [],
+}
+
+def user_turn(tool_results, state):
+    # tool_result blocks must come first in the turn; text goes after them.
+    return {
+        "role": "user",
+        "content": tool_results + [{
+            "type": "text",
+            "text": ("Run state, authoritative - prefer this over anything earlier "
+                     "in the conversation:\n" + json.dumps(state, indent=2)),
+        }],
+    }
+
+def step(messages, tools):
+    resp = client.beta.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=2048,
+        tools=tools,
+        messages=messages,
+        betas=["context-management-2025-06-27", "compact-2026-01-12"],
+        context_management={"edits": [
+            # Old tool results are where the tokens are. Drop those first.
+            {"type": "clear_tool_uses_20250919",
+             "trigger": {"type": "input_tokens", "value": 60_000},
+             "keep": {"type": "tool_uses", "value": 5}},
+            # Summarise only once the window is genuinely under pressure.
+            {"type": "compact_20260112",
+             "trigger": {"type": "input_tokens", "value": 150_000}},
+        ]},
+    )
+    # Append the whole response, compaction block included, or the next request
+    # will not know where the summary starts.
+    return messages + [{"role": "assistant", "content": resp.content}]
+```
+
+The two thresholds are placeholders. Pick yours from your own runs: log input tokens per step across real tasks, see where they climb, and set the clearing trigger below the point where the window starts hurting and the compaction trigger well above it. Clearing should be doing the routine work; compaction should be rare.
+
+All of this ends when the run does. The next lesson is about what you choose to keep afterwards, and why that is a much harder problem than this one.

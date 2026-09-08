@@ -1,0 +1,162 @@
+---
+title: "Why the bill exploded"
+subtitle: "A loop re-reads its whole past on every step, so cost grows with the square of the run, not with the task."
+part: 4
+minutes: 7
+why: "You costed the task by hand. One prompt in, one answer out, a few cents. Then you put it in a loop, and a run came back having billed a hundred times that. Nothing looked wrong in the logs — no error, no retry storm, no obviously enormous prompt. The money went somewhere you were not looking, because a loop bills on a completely different curve from a single request. This lesson is about that curve: what grows, what grows faster than you expect, and which four controls actually flatten it."
+wins:
+  - "Expect input cost to grow with the square of the step count, not linearly."
+  - "Truncate a tool result before it enters the transcript, never after."
+  - "Put stable instructions and tool schemas in a cached prefix, volatile content last."
+  - "Cap steps and total tokens per run, and return `budget_exhausted` when either is hit."
+  - "Log per-step usage tagged with a run id, so one bad run is a query not a hunt."
+quiz:
+  - q: "In a loop, total input tokens billed across a run grow roughly with..."
+    options: ["The square of the number of steps, because every step resends everything before it", "The number of steps, linearly", "The size of the final answer"]
+    answer: 0
+    explain: "Step 20 sends steps 1 to 19 again, so the run bills the sum of every prefix, not the size of the last one."
+  - q: "A tool returns a 200,000-character page. The cheapest correct fix is to..."
+    options: ["Raise `max_tokens` so the model can summarise it", "Truncate or extract before the result is appended to the transcript", "Ask the model to ignore the irrelevant parts"]
+    answer: 1
+    explain: "Once it is in the transcript you pay for it on every remaining step of the run, not just the step that fetched it."
+  - q: "Prompt caching pays off in a loop mainly because..."
+    options: ["It stores the model's answers so repeated questions are free", "The same stable prefix is re-read on every single step of every run", "It removes the need for a step limit"]
+    answer: 1
+    explain: "It is a prefix cache, and a loop is the most repetitive prefix reader there is — the same system prompt and tool schemas on every step."
+  - q: "Which of these is a runaway loop rather than an expensive one?"
+    options: ["A step budget of 12 that is usually hit at step 9", "An agent that calls `list_files` on the same directory eleven times, then calls it again", "A long system prompt resent every step"]
+    answer: 1
+    explain: "It is not making progress; it is re-asking a question it has already answered, and only a cap will ever stop it."
+  - q: "The right place to enforce a spend limit on an agent is..."
+    options: ["A monthly alert on the provider dashboard", "Inside the loop, counting tokens per run against a ceiling", "The `max_tokens` parameter"]
+    answer: 1
+    explain: "A dashboard tells you after the money is gone; `max_tokens` caps one response. Only an in-loop counter can stop the run that is currently burning."
+deeper:
+  - { label: "Anthropic — Prompt caching", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-caching" }
+  - { label: "Anthropic — Token counting", href: "https://platform.claude.com/docs/en/build-with-claude/token-counting" }
+  - { label: "Anthropic — Context editing", href: "https://platform.claude.com/docs/en/build-with-claude/context-editing" }
+  - { label: "Anthropic — Batch processing", href: "https://platform.claude.com/docs/en/build-with-claude/batch-processing" }
+  - { label: "Anthropic — Pricing (look the current rates up here)", href: "https://www.anthropic.com/pricing" }
+---
+
+The **LLMs** course has a lesson called *What you actually pay for*. That one is about the meter: per-token billing, why output costs more than input, and the three levers that move a single request. Everything in it is still true here, and this lesson assumes you have read it. This one is about what a `while` loop does to that meter — because the shape of the bill changes completely once the same conversation gets sent back thirty times.
+
+## 1. A loop bills on a different curve
+
+Here is the whole lesson in one piece of arithmetic.
+
+A single request bills once for what you sent. A loop bills, on every step, for **everything that happened before it**. The transcript is the input. Step one sends the task. Step two sends the task, the model's first tool call, and the tool's result. Step twenty sends all nineteen previous rounds.
+
+So if each step adds roughly the same amount of text, the input tokens billed across the whole run are not the size of the final transcript. They are the sum of every prefix — which grows with the square of the step count.
+
+| Step | Input sent that step | Total input billed so far |
+|---|---|---|
+| 1 | 2k | 2k |
+| 5 | 10k | 30k |
+| 10 | 20k | 110k |
+| 20 | 40k | 420k |
+| 40 | 80k | 1.6m |
+
+Those are round numbers to show the shape, not a measurement of anything. The shape is the point. Doubling the step count roughly quadruples the input bill. A run that goes to forty steps instead of twenty did not cost twice as much — it cost about four times as much, and that is before you notice it also got four times slower, since time-to-first-token is mostly the model reading your input.
+
+> A request is billed once, for what you sent. A loop is billed on every step, for everything that has already happened.
+
+This is also why cost and correctness point in the same direction here, which is rare and worth exploiting. A shorter transcript is cheaper *and* the model attends to it better. Almost every fix in this lesson improves both.
+
+## 2. The four things that actually blow it up
+
+**The transcript you resend.** Already covered, and it is the largest one by a distance in a normal run. The variable you control is not the number of steps so much as **how much each step adds**. One step that appends a 200,000-character web page has just raised the price of every remaining step in the run. Which leads directly to the second one.
+
+**Tool results nobody trimmed.** A tool returns whatever the underlying system returns: a full HTML page, a hundred-row query result, a stack trace, a directory listing of four thousand files. If you append that verbatim, you pay for it on every subsequent step. Truncate or extract at the boundary — in your executor, before the result becomes part of the conversation. Keep the head and the tail; the tail is usually where the error message is. A tool that returns a summary and an id you can fetch the full thing with is nearly always the better design.
+
+**Redundant calls.** The model calls `list_files` on a directory it already listed. It re-reads a file it read at step four, because that read is now buried under twelve steps of other output. It searches for the same thing twice with slightly different wording. None of this errors, none of it appears in your logs as a problem, and all of it costs a full round-trip plus a permanent addition to the transcript. A small cache keyed on the tool name and its arguments, scoped to one run, kills most of it in ten lines — and it is the same observation lesson 4 made as a stop signal, spent on the bill instead of on the ending.
+
+**The run that does not stop.** This is the different one. The first three make a run expensive; this one makes it unbounded. An agent that cannot tell it has finished will keep going — re-checking, re-confirming, re-summarising — and every one of those steps costs more than the last. Lesson 4 covered why the loop fails to stop. The point here is purely financial: without a hard cap, one bad task multiplied by a thousand daily users is not a bigger bill, it is a different order of magnitude of bill, and you find out from an invoice.
+
+| Failure | What it looks like | The fix | What the fix costs you |
+|---|---|---|---|
+| Resent transcript | Steady cost per step, climbing | Compaction, and fewer steps | A summarisation call, and lost detail |
+| Fat tool results | One step where input jumps and stays high | Truncate at the executor | The model may need a second fetch |
+| Redundant calls | The same tool and arguments twice in a trace | A per-run result cache | Staleness within a long run |
+| Runaway loop | Step count with no ceiling | A step cap and a token budget | Some legitimate long runs get cut off |
+
+## 3. Caching, capping, and where each earns its keep
+
+**Prompt caching** is the single highest-leverage change in a loop, and for a reason specific to loops. It is a prefix cache: the provider reuses processing it already did for a byte-identical opening stretch of your request. A loop re-reads the same system prompt and the same tool schemas on *every step of every run* — there is no more repetitive prefix anywhere in this stack. Cache reads bill at a fraction of a normal input token.
+
+Three rules make it work, and the third is the one loops break. The prefix must be byte-identical, so nothing volatile — a timestamp, a step counter, a user name — can sit above the breakpoint. Stable content goes first, volatile content last. And entries expire in minutes, so caching pays on sustained traffic and is a small loss on an occasional call. The current cache lifetimes and the exact discount are on the provider's caching page; read them there rather than anywhere else, including here.
+
+**Step limits and token budgets** are not optimisations. They are the seatbelt. A step cap bounds the worst case. A token budget bounds it better, because ten steps that each append a large page cost far more than thirty small ones. Enforce both, inside the loop, and end at the ceiling the way lesson 4 asked you to: return `budget_exhausted` as its own outcome, carrying the partial work and the reason, next to `finished` and `failed`. What you must never do is hand back the last thing the model said dressed as a final answer — a run that quietly gives up looks like a working feature producing bad output, which is a far more expensive problem than a run that says it ran out.
+
+```python
+import logging
+
+from anthropic import Anthropic
+
+client = Anthropic()
+log = logging.getLogger(__name__)
+
+MAX_STEPS = 12                 # bounds the worst case
+TOKEN_BUDGET = 300_000         # bounds it better, since steps are not equal sized
+TOOL_RESULT_CHARS = 4_000      # trimmed before it enters the transcript, not after
+
+INSTRUCTIONS = open("prompts/agent.md").read()      # stable across every run
+TOOL_DOCS = open("prompts/tools.md").read()         # long, and identical on every step
+
+SYSTEM = [
+    {"type": "text", "text": INSTRUCTIONS},
+    # The breakpoint sits on the last stable block, so everything above it is
+    # cached. Nothing volatile may go above this line.
+    {"type": "text", "text": TOOL_DOCS, "cache_control": {"type": "ephemeral"}},
+]
+
+def clip(text: str) -> str:
+    text = str(text)
+    if len(text) <= TOOL_RESULT_CHARS:
+        return text
+    half = TOOL_RESULT_CHARS // 2
+    return f"{text[:half]}\n...[{len(text) - TOOL_RESULT_CHARS} chars cut]...\n{text[-half:]}"
+
+def run(task: str, tools, dispatch, run_id: str):
+    messages = [{"role": "user", "content": task}]
+    seen: dict[tuple, str] = {}
+    spent = 0
+
+    for step in range(MAX_STEPS):
+        resp = client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=1000,
+            system=SYSTEM,
+            tools=tools,
+            messages=messages,
+        )
+        u = resp.usage
+        spent += u.input_tokens + u.cache_creation_input_tokens   # cache reads bill lower
+        log.info(
+            "run=%s step=%d in=%d cache_read=%d out=%d full_price_total=%d",
+            run_id, step, u.input_tokens, u.cache_read_input_tokens, u.output_tokens, spent,
+        )
+        if spent > TOKEN_BUDGET:
+            return {"outcome": "budget_exhausted", "step": step, "messages": messages}
+        if resp.stop_reason != "tool_use":
+            return {"outcome": "stopped_talking", "step": step, "response": resp}
+
+        messages.append({"role": "assistant", "content": resp.content})
+        results = []
+        for block in resp.content:
+            if block.type != "tool_use":
+                continue
+            key = (block.name, repr(sorted(block.input.items())))
+            if key not in seen:                                   # same call twice in one run
+                seen[key] = clip(dispatch(block.name, block.input))
+            results.append(
+                {"type": "tool_result", "tool_use_id": block.id, "content": seen[key]}
+            )
+        messages.append({"role": "user", "content": results})
+
+    return {"outcome": "budget_exhausted", "step": MAX_STEPS, "messages": messages}
+```
+
+Note what `spent` is honest about: it counts full-price input and cache writes and ignores cache reads, so it is a deliberate slight overcount of the expensive part rather than a true cost. If you want the real number, weight each usage field by the rate on the current pricing page and keep those rates in config, not in code.
+
+The last piece is the one that makes all of this actionable: **log usage per step, tagged with a run id.** Not per run, per step. A per-run total tells you a run was expensive. A per-step record tells you it was step seven, which called `fetch_page`, which appended eighty thousand characters, and every step after it paid for that. That is a two-minute fix. Without the per-step record it is an afternoon of guessing, and that is exactly the position the next lesson is about getting out of.

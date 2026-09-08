@@ -32,17 +32,24 @@
 
 /* ============================================================
    1. Tokens — printed transit inks on near-black
-   Eight colour roles, and nothing else. Line colour is
+   Nine colour roles, and nothing else. Line colour is
    structural: it appears in the diagram, in a lesson's position
    strip and in the one rule under a lesson title. It never
    colours body text and never fills a background.
    ============================================================ */
 
 .learn-root {
-  /* --- The three transit inks, one per course --------------- */
+  /* --- The four transit inks, one per course ----------------
+     Amber is the fourth because it is the only hue left that a
+     protanope and a deuteranope can still tell from all three of
+     the others; blue-violet collapses into --ln-prompt. It runs
+     lighter than the other three, which is what a saturated
+     yellow does — the saturation, not the lightness, is what
+     keeps it in the printed-ink family. See DESIGN.md. */
   --ln-llms: #c4372f;
   --ln-prompt: #4a72c4;
   --ln-rag: #3e8c5e;
+  --ln-agents: #cb881d;
 
   /* --- Marks, ground and ink -------------------------------- */
   --ln-mark: #f2efe9; /* you-are-here ring, terminus fill */
@@ -102,6 +109,7 @@
   --ln-llms: #a82e27;
   --ln-prompt: #2b4c8c;
   --ln-rag: #2e6b47;
+  --ln-agents: #ab6f06;
   --ln-mark: #12100e;
   --ln-ground: #f7f5f1;
   --ln-ink: #191714;
@@ -141,6 +149,11 @@
 .learn-root[data-line='rag'],
 .learn-root [data-line='rag'] {
   --ln-line: var(--ln-rag);
+}
+
+.learn-root[data-line='agents'],
+.learn-root [data-line='agents'] {
+  --ln-line: var(--ln-agents);
 }
 
 /* ============================================================

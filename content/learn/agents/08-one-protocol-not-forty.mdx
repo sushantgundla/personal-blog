@@ -1,0 +1,125 @@
+---
+title: "One protocol instead of forty integrations"
+subtitle: "MCP standardises how a tool is described, listed and called — and deliberately says almost nothing about whether it is safe or any good."
+part: 3
+minutes: 7
+why: "You wrote `search_tickets` for your own agent loop. Then a colleague wanted it in theirs, so it got rewritten against a different tool-registration API. Then it went into the desktop assistant, and that was a third copy. Three implementations of one function, drifting apart, and a bug fixed in one of them twice. That is the duplication MCP removes. This lesson is about what it standardises, and about the half people skip: the parts it leaves to you on purpose, which are the parts that decide whether the whole thing is safe."
+wins:
+  - "Write a tool once as a server, instead of once per agent runtime."
+  - "Name the three things a server offers: tools, resources, prompts."
+  - "Reach for stdio locally and Streamable HTTP over a network."
+  - "Own auth, sandboxing and tool quality yourself — the spec leaves them out deliberately."
+  - "Check the spec's own changelog before pinning a revision; this one moves."
+quiz:
+  - q: "What does MCP actually standardise?"
+    options: ["How a host discovers, describes and calls a tool, over JSON-RPC", "How a model decides which tool to call", "How tools are sandboxed and authorised"]
+    answer: 0
+    explain: "It is an interface between an app and a server of capabilities. Tool selection is the model's job and isolation is yours."
+  - q: "A server can offer three kinds of thing. Which is the set?"
+    options: ["Tools, memories, embeddings", "Tools, resources, prompts", "Functions, agents, workflows"]
+    answer: 1
+    explain: "Tools are functions the model can call, resources are data it can read, prompts are templated workflows offered to the user."
+  - q: "Your MCP server runs as a local subprocess of the host, over stdio. How should it get credentials?"
+    options: ["From the environment — the spec says stdio servers should not run the OAuth flow", "By running the same OAuth 2.1 flow as an HTTP server", "It cannot be authenticated at all"]
+    answer: 0
+    explain: "Authorization in the spec covers HTTP transports; stdio servers are told to take credentials from the environment instead."
+  - q: "A tool arrives annotated as read-only. What is that worth?"
+    options: ["A guarantee enforced by the protocol", "A claim from the server, which the spec says to treat as untrusted unless the server is trusted", "Nothing at all, annotations are ignored by every client"]
+    answer: 1
+    explain: "Annotations describe intent. Nothing in the protocol stops an annotated tool doing something else."
+  - q: "When is standing up an MCP server the wrong move?"
+    options: ["When more than one host needs the same tool", "When you want to use somebody else's published tools", "When one app calls three of its own functions in one loop"]
+    answer: 2
+    explain: "With a single consumer you have added a process boundary and a wire format and removed no duplication; a plain function was fine."
+deeper:
+  - { label: "MCP — the current specification", href: "https://modelcontextprotocol.io/specification/latest" }
+  - { label: "MCP — key changes in the current revision", href: "https://modelcontextprotocol.io/specification/2026-07-28/changelog" }
+  - { label: "MCP — tools", href: "https://modelcontextprotocol.io/specification/2026-07-28/server/tools" }
+  - { label: "MCP — authorization", href: "https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization" }
+  - { label: "MCP Python SDK", href: "https://github.com/modelcontextprotocol/python-sdk" }
+---
+
+The three copies of `search_tickets` are the problem worth naming first. Each agent runtime had its own way of registering a function, its own schema format, its own idea of what a tool result looks like. So the same function got written three times, and the number of integrations you maintain is runtimes times tools rather than runtimes plus tools. MCP — the Model Context Protocol — is an open protocol that turns that multiplication into an addition.
+
+## 1. What it standardises
+
+Three roles. A **host** is the LLM application — an IDE, a chat app, your agent. A **client** is the connector inside the host that talks to one server. A **server** is a process that offers capabilities. Messages are JSON-RPC 2.0.
+
+A server can offer three kinds of thing, and the distinction is the part people get wrong:
+
+| | Tools | Resources | Prompts |
+|---|---|---|---|
+| What it is | A function the model may call | Context and data to read | A templated message or workflow |
+| Who drives it | The model, mid-loop | The host or the model, by URI | The user, usually from a menu |
+| Example | `create_issue(title, body)` | `file:///project/src/main.rs` | "Review this diff" |
+| Has side effects | Often | Should not | No |
+
+Tools are the ones this course cares about. The wire calls are plain: `tools/list` to discover what a server offers, `tools/call` to invoke one. A tool definition carries a `name`, an optional `title`, a `description`, an `inputSchema` that is real JSON Schema, an optional `outputSchema`, and optional `annotations`. If that list looks familiar, it should — it is the same shape as the tool definitions in lesson 2, because MCP did not invent function calling. It standardised the envelope around it.
+
+Two standard transports. **stdio**: the host launches the server as a subprocess and they exchange newline-delimited JSON-RPC over the standard streams. **Streamable HTTP**: each message is an HTTP POST to a single endpoint, and the reply is either a JSON object or a stream scoped to that request. Local tools use the first; anything across a network uses the second. Custom transports are allowed and rare.
+
+That is the whole idea. The interface is standard, so the tool is written once:
+
+| | Without a protocol | With one |
+|---|---|---|
+| Integrations to maintain | Runtimes × tools | Runtimes + tools |
+| Adding a fourth host | Reimplement every tool for it | It speaks the protocol; nothing to do |
+| Using someone else's tool | Read their code, port it | Point a client at their server |
+| Schema format | Whatever that runtime uses | JSON Schema, in `inputSchema` |
+| Where a fix lands | In three files | In one server |
+
+> MCP standardises the socket. It has nothing to say about the appliance you plug into it.
+
+## 2. The half it leaves to you
+
+The spec is unusually honest about this. Its own security section says MCP "cannot enforce these security principles at the protocol level" and hands them to implementors. Read that as a list of your jobs, not as a gap.
+
+**Auth policy.** Authorization is **optional** in the spec, and only defined for HTTP transports. When you do use it, a protected MCP server acts as an OAuth 2.1 resource server and the client acts as an OAuth client; the authorization server itself is explicitly out of scope. The client discovers where to authenticate from a 401 with a `WWW-Authenticate` header pointing at protected resource metadata. For **stdio** servers the spec says the opposite — do not run this flow, take credentials from the environment. And none of that answers the question you actually have, which is *which user is this and what rows are they allowed to touch*. That check lives inside your tool.
+
+**Sandboxing.** Nothing. A tool is a function running in a process on some machine with some file system and some network. The protocol carries the call; it does not care what the call can reach. That is lesson 9, and it is the reason lesson 9 exists.
+
+**Tool quality.** The protocol will carry a vague description perfectly faithfully. Everything in lesson 3 — narrow enums, `additionalProperties: false`, naming a tool for what it does, fewer and better-scoped tools — applies unchanged, because the model is still reading your `description` field to decide whether to call the thing.
+
+**Trust in what a server tells you.** The spec is blunt: clients **must** treat tool annotations as untrusted unless they come from a trusted server. An annotation saying a tool is read-only is a claim by whoever wrote the server. On tools it says there **should** always be a human able to deny an invocation, and that clients should show tool inputs to the user before the call.
+
+| Standardised by the protocol | Yours |
+|---|---|
+| Discovery — `tools/list` | Which tools a given user may see |
+| Invocation — `tools/call` | What the tool is allowed to touch |
+| Schema format for arguments | Whether the schema is any good |
+| Where the OAuth flow is advertised | Who the user is and what they may do |
+| The shape of a result | Whether you believe the server |
+| Transport framing | Isolation, rate limits, audit logging |
+
+## 3. Standing one up, and what keeps moving
+
+The Python SDK collapses a server to about the length of the function itself. Type hints are the schema; the docstring is the description the model reads.
+
+```python
+# pip install "mcp[cli]" — then: uv run mcp dev server.py
+from mcp.server import MCPServer
+
+mcp = MCPServer("support")
+
+
+@mcp.tool()
+def search_tickets(query: str, status: str = "open") -> list[dict]:
+    """Search support tickets by free text. status is one of: open, closed, all."""
+    # Your existing function. The protocol does not make it safe or correct —
+    # the permission check and the query limit still belong right here.
+    return db.search(query=query, status=status, limit=20)
+
+
+@mcp.resource("ticket://{ticket_id}")
+def ticket(ticket_id: str) -> str:
+    """The full text of one ticket."""
+    return db.get(ticket_id).body
+```
+
+Every host that speaks MCP can now call that, and there is one copy of it.
+
+**When it earns its keep:** more than one host needs the same tool; you want to publish tools for other people; you want to consume somebody else's. **When it does not:** one app, one loop, three of your own functions. Then you have paid for a process boundary and a wire format and removed no duplication. A Python function was the right answer and still is.
+
+Two more things worth carrying. First, MCP is not the only protocol here, and the main alternative addresses a different seam. **Agent2Agent (A2A)**, which Google donated to the Linux Foundation, is about agents talking to other agents: each one publishes an Agent Card describing what it can do, and they exchange tasks over JSON-RPC. That is a different question from the one MCP answers, which is how one app reaches a server of tools. Learn MCP first, because it is the seam your own tools sit on, and read A2A when you actually have two agents that have to negotiate with each other.
+
+Second, and more useful: **this specification moves.** Revisions are dated, and the current one at the time of writing is `2026-07-28`, which you can confirm yourself at the spec's own "latest" page. That revision alone removed protocol-level sessions and the `initialize` handshake and made the core stateless, replaced the old subscribe mechanism, deprecated dynamic client registration in favour of Client ID Metadata Documents, and deprecated the Roots, Sampling and Logging features under a new lifecycle policy with a twelve-month window before anything is removed. Pin a revision, read the changelog for the one after it, and do not trust a version string in any tutorial — including this one.

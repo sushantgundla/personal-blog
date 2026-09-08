@@ -1,0 +1,12 @@
+{
+  "title": "Agents and Tool Use",
+  "subtitle": "Giving a model hands, and keeping them on a leash.",
+  "blurb": "An agent is a model, a loop, and a set of functions it is allowed to call. How the model decides which tool to reach for, what happens when a call fails mid-run, and what an agent should never be allowed to touch.",
+  "order": 4,
+  "parts": [
+    { "n": 1, "name": "The shape of an agent" },
+    { "n": 2, "name": "Running the loop" },
+    { "n": 3, "name": "Reaching outside" },
+    { "n": 4, "name": "Running it at scale" }
+  ]
+}

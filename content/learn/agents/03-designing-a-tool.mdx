@@ -1,0 +1,147 @@
+---
+title: "Designing a tool a model can actually use"
+subtitle: "Close the schema, narrow the values, name it for the job — and ship four tools instead of thirty."
+part: 1
+minutes: 8
+why: "Your trace shows the agent calling `search(query=\"the thing about the refund policy for the customer who emailed on Tuesday\")` and getting nothing back, then calling it twice more with worse queries before giving up and inventing an answer. The tool worked. The model used it the way a person uses a colleague, not the way a person uses a search box, because nothing in the definition told it otherwise. This lesson is about writing the definition so that the first call is the right one — closing the schema, replacing free text with enums, naming for the job rather than the endpoint, and cutting the toolbox down."
+wins:
+  - "Set `strict: true` with `additionalProperties: false` and stop repairing types by hand."
+  - "Replace every free-text field whose answers are finite with an enum."
+  - "Name tools and parameters for the job, and namespace them by service."
+  - "Ship a few task-shaped tools instead of one per API endpoint."
+  - "Return the fields the next step needs, and make errors say what to do."
+quiz:
+  - q: "What does `strict: true` with `additionalProperties: false` actually buy you?"
+    options: ["A guarantee the arguments match your schema, so the repair code goes away", "A guarantee the arguments are correct for the task", "A smaller `tools` array and cheaper requests"]
+    answer: 0
+    explain: "Sampling is constrained to schema-valid output, so the shape and the types are guaranteed. Whether the values make sense is a separate problem."
+  - q: "A `status` parameter typed as a plain string will..."
+    options: ["Be rejected at request time", "Collect synonyms, casing variants and values you never defined", "Be inferred into an enum from your examples"]
+    answer: 1
+    explain: "Anything a string can hold, the model can produce. An enum is the only thing that closes the set."
+  - q: "You have thirty endpoints to expose to an agent. The better first move is..."
+    options: ["Thirty tools, one per endpoint, named after the endpoint", "A handful of task-shaped tools that each finish a job the agent actually needs", "One `call_api` tool with a `path` and a `body` parameter"]
+    answer: 1
+    explain: "Thirty tools make selection ambiguous and cost tokens every step; a generic passthrough throws away the schema, which is the only thing constraining the model."
+  - q: "The agent calls your search tool with a query no human would type. The most likely cause is..."
+    options: ["Sampling temperature is too high", "The description never said what the index holds or what a usable query looks like", "The model is too small for retrieval"]
+    answer: 1
+    explain: "The model writes a query for the tool it imagines. Describe the real one — what is indexed, what syntax works, what a good query looks like."
+  - q: "A good tool result..."
+    options: ["Returns the full upstream payload so nothing is lost", "Returns the fields the model needs next, and on failure says what to do about it", "Returns a numeric error code on failure so it stays compact"]
+    answer: 1
+    explain: "The result is the model's next input, so bloat costs context and an opaque code gives it nothing to act on."
+deeper:
+  - { label: "Anthropic — writing tools for agents", href: "https://www.anthropic.com/engineering/writing-tools-for-agents" }
+  - { label: "Anthropic — strict tool use", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" }
+  - { label: "OpenAI — structured outputs", href: "https://developers.openai.com/api/docs/guides/structured-outputs" }
+  - { label: "Understanding JSON Schema", href: "https://json-schema.org/understanding-json-schema" }
+  - { label: "Anthropic — tool search tool", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-search-tool" }
+---
+
+A tool a person can use and a tool a model can use are not the same object. A person reads the docs once, remembers what the index contains, and learns from being wrong. A model gets your description, guesses, and — inside a loop — gets to be wrong repeatedly and expensively.
+
+## 1. Make the schema refuse
+
+Two knobs remove a whole class of failure, and both are one line.
+
+`strict: true` on the tool definition constrains sampling so the arguments are guaranteed to match your JSON Schema. Not validated afterwards — constrained during generation, so an invalid argument is never produced in the first place. Without it, a field typed `integer` can come back as `"2"` or as `"two"`, and you write the repair code. With it, `passengers` is an int every time.
+
+`additionalProperties: false` closes the object. Left open, the model can invent a field it thinks ought to exist — `"urgency": "high"` on a tool that has no urgency — and your handler either ignores it silently or throws on an unexpected keyword. Closed, that door is shut.
+
+The two providers spell it slightly differently, and the differences are worth knowing before you port a schema:
+
+| | Anthropic | OpenAI |
+|---|---|---|
+| Schema field | `input_schema` | `parameters` |
+| Strict flag | `strict: true` on the tool | `strict: true` on the tool |
+| `additionalProperties: false` | Required for strict | Required for strict, on every object |
+| Optional parameters | Leave them out of `required` | Must be in `required`; make them nullable instead |
+| Schema coverage | A documented subset of JSON Schema | A documented subset of JSON Schema |
+| Guarantees | Input matches the schema; the tool name is always real | Arguments match the schema |
+
+Then narrow the values inside the shape. A `string` is an invitation; an `enum` is a decision.
+
+| Field | As free text you get | As an enum you get |
+|---|---|---|
+| `status` | `paid`, `Paid`, `payment received`, `PAID` | Exactly the four values you defined |
+| `sort_by` | `newest`, `date desc`, `most recent first` | `created_at` or `relevance` |
+| `region` | `EU`, `Europe`, `eu-west-1`, `Germany` | Your real region codes |
+| `time_range` | `last week`, `recently`, `7d` | `24h`, `7d`, `30d`, `all` |
+
+Every row on the left becomes a normalising function in your code that grows a branch each time production surprises you. Readers of the **Prompt Engineering** course have met this argument in *Output contracts*; it applies with more force here, because in a loop a bad argument is not one failed response, it is a wasted step, a confusing result and a model that now has to recover from its own mistake with the mistake still sitting in its context.
+
+Which is the right place to mark the seam between the two courses. Prompt Engineering's *Validating what comes back* and *Retries and fallbacks* are about *one prompt call*: did this single response satisfy the contract, and is this single call worth sending again. This course treats the same words as properties of *a running loop* — a schema that has to hold on step nine as well as step one, and an error string that becomes the model's next input rather than your exception handler's problem. Read those two for the single call. Lesson 5 here is the loop version.
+
+> A schema constrains what the model can say. A description decides what it will try to say. You need both, and only one of them is enforced.
+
+## 2. Name it for the job
+
+Names are read as part of the prompt, exactly like descriptions, and a good one saves you a paragraph.
+
+- **Say what it does, not what it is.** `get_customer_context` beats `customer_service`. A verb tells the model when the tool applies.
+- **Namespace by service once you have more than a handful.** `github_list_prs`, `slack_send_message`, `stripe_refund_charge`. Ambiguity grows with the size of the library, and a prefix kills most of it.
+- **Name parameters unambiguously.** `user_id` rather than `user`. Given `user`, the model will cheerfully pass an email address.
+- **Do not name for your internals.** `fetch_v2_records` tells the model nothing. It will still call it, at the wrong time.
+
+Now the `search(query)` failure from the top of this lesson. The model wrote that query because it was imagining a colleague who knows about Tuesday. Nothing said otherwise. The description has to describe the *real* index: what is in it, what is not, what syntax it honours, how many results come back, and one example of a query that works. This is the field where an example earns the most. Anthropic's tool definitions take an optional `input_examples` array of schema-valid example inputs, which costs roughly twenty to fifty tokens for a simple one — cheap next to three wasted round trips.
+
+If a parameter is genuinely hard to get right, stop making the model write it. A `time_range` enum of four values cannot be malformed. A `date` with `format: date` under strict mode cannot be prose. Every constraint you can express in the schema is one fewer thing the description has to teach.
+
+## 3. Fewer tools, and a result worth reading
+
+The instinct is one tool per endpoint. It is the wrong instinct, and it degrades quietly.
+
+| | One tool per endpoint | Task-shaped tools |
+|---|---|---|
+| Count | Grows with your API | Grows with the jobs the agent does |
+| Selection | Many near-identical candidates | Few, clearly distinct |
+| Steps per task | Several calls to assemble one answer | One call, one answer |
+| Token cost per step | The whole catalogue, every step | A short array |
+| Failure mode | Right tools, wrong order | Fewer choices to get wrong |
+
+The move is consolidation. Replace `get_customer_by_id`, `list_transactions` and `list_notes` with one `get_customer_context` that returns the three things together, because an agent that wants one of them almost always wants all three. Replace `create_pr`, `review_pr` and `merge_pr` with one `pull_request` tool taking an `action` enum. Anthropic's guidance is to build a few thoughtful tools for high-impact workflows rather than wrapping every endpoint, and OpenAI's is a soft ceiling of fewer than twenty functions available at the start of a turn. Both providers now offer a tool-search mechanism for genuinely large libraries — a way to load definitions on demand instead of paying for all of them on every step. Reach for that when you have hundreds, not as an excuse to keep thirty.
+
+Consolidation has a limit. Do not merge tools with different blast radii. A read and a write behind one `action` parameter means you cannot put a permission gate on the dangerous half without gating the safe one too, which is a problem lesson 9 will make you regret.
+
+Last piece, and the one most often skipped: the result is not a return value, it is the model's next input. Return the fields needed for the next decision and drop the rest — semantic names and stable identifiers over internal UUIDs and MIME types. Paginate or truncate long results and say in the truncated result what to do to get more. And make errors instructive: `"No order found for A-91422. Order IDs look like ORD-00012345. Try search_orders with the customer email."` gives the model a next move. `Error 422` gives it nothing, so it guesses.
+
+```python
+REFUND_TOOL = {
+    "name": "stripe_refund_charge",
+    "description": (
+        "Issue a full or partial refund against a single Stripe charge. "
+        "Use this only after the customer has confirmed the amount out loud. "
+        "Returns the refund ID and the new charge status. "
+        "It cannot refund a charge more than 90 days old, and it does not cancel subscriptions."
+    ),
+    "strict": True,
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "charge_id": {"type": "string", "description": "Stripe charge ID, e.g. ch_3PqR2x..."},
+            "amount_cents": {"type": "integer", "description": "Omit to refund the full charge."},
+            "reason": {"type": "string", "enum": ["duplicate", "fraudulent", "requested_by_customer"]},
+        },
+        "required": ["charge_id", "reason"],
+        "additionalProperties": False,          # no invented fields
+    },
+    "input_examples": [
+        {"charge_id": "ch_3PqR2xEXAMPLE", "reason": "requested_by_customer"},
+        {"charge_id": "ch_3PqR2xEXAMPLE", "reason": "duplicate", "amount_cents": 1500},
+    ],
+}
+
+def run_refund(args: dict) -> str:
+    """Whatever this returns becomes the model's next input. Write it for a reader."""
+    try:
+        refund = stripe.Refund.create(**args)
+    except stripe.error.InvalidRequestError as err:
+        # Instructive, not opaque: name the problem and the next move.
+        return f"Refund failed: {err.user_message} Check the charge ID with stripe_get_charge."
+    return f"Refunded {refund.amount} to charge {refund.charge}. Refund ID {refund.id}."
+```
+
+One more boundary. A tool result is text from outside your system, and text from outside your system can carry instructions. That is *Prompt injection* in the Prompt Engineering course, and lesson 9 here is about limiting what an injected instruction can reach. Neither is a schema problem, so neither belongs in this lesson — but write your tools knowing the results are untrusted.
+
+That closes Part 1. You have a loop, a model that picks tools for reasons you can now see, and tools built so the first call is usually the right one. Part 2 is about what happens when the loop keeps going.
