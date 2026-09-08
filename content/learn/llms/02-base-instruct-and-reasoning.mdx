@@ -7,7 +7,7 @@ why: "You downloaded a model called something-7b, sent it a polite instruction, 
 wins:
   - "Default to an instruct model — a base model does not follow instructions at all."
   - "Turn thinking on for multi-step work, and off for extraction, labelling, and rewriting."
-  - "Budget thinking tokens explicitly — they are billed as output and they fill the window."
+  - "Steer thinking with an effort level, not a token budget — either way it is billed as output."
   - "Measure the accuracy gain before you leave reasoning switched on; often there is none."
   - "Try `think it through step by step` on a plain instruct model first — far cheaper."
 quiz:
@@ -32,7 +32,7 @@ quiz:
     answer: 2
     explain: "Prompted step-by-step working captures a good share of the gain for a fraction of the tokens, and it costs one sentence to test."
 deeper:
-  - { label: "Anthropic — extended thinking", href: "https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking" }
+  - { label: "Anthropic — thinking and effort", href: "https://platform.claude.com/docs/en/build-with-claude/thinking" }
   - { label: "Training language models to follow instructions with human feedback (InstructGPT)", href: "https://arxiv.org/abs/2203.02155" }
   - { label: "Direct Preference Optimization", href: "https://arxiv.org/abs/2305.18290" }
   - { label: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models", href: "https://arxiv.org/abs/2201.11903" }
@@ -90,16 +90,24 @@ What it costs: often several times the output tokens, and seconds to minutes of 
 | Pull fields out of a document | Instruct model, no thinking | The answer is read off the input |
 | Rewrite, translate, change the tone | Instruct model, no thinking | Style work does not decompose into steps |
 | Summarise | Instruct model, no thinking | Length is the challenge, not depth |
-| Multi-step maths or logic | Reasoning, modest budget | An early slip changes the final answer |
-| Non-trivial code and debugging | Reasoning, modest budget | Working through cases genuinely helps |
-| Planning with conflicting constraints | Reasoning, larger budget | It has to hold several rules at once |
+| Multi-step maths or logic | Thinking on, ordinary effort | An early slip changes the final answer |
+| Non-trivial code and debugging | Thinking on, ordinary effort | Working through cases genuinely helps |
+| Planning with conflicting constraints | Thinking on, raised effort | It has to hold several rules at once |
 | Continuing text in a fixed style | Base model, or an instruct model with examples | Instruction following is not what you need |
 
 > A base model continues your text. An instruct model does what you asked. A reasoning model thinks first, and bills you for the thinking.
 
-Two things have changed how this looks in practice. Thinking is increasingly a **toggle with a token budget on an ordinary model**, rather than a separate model you switch to — so the decision is per request, not per deployment, and you can turn it on for the hard ten percent of your traffic. And a large thinking budget on an easy task can actually be *worse*, not just wasteful, because the model talks itself out of a correct first instinct.
+Two things have changed how this looks in practice, and both are recent enough that plenty of working code still has the old shape in it.
 
-So the working rule: start on the instruct model, temperature 0, no thinking. Find the requests that fail. Turn thinking on for those, with the smallest budget that fixes them, and confirm on a test set that it actually did.
+**Thinking is a mode on an ordinary model, not a model you switch to.** The decision is per request rather than per deployment, so you can pay for thinking on the hard ten percent of your traffic and leave the rest alone.
+
+**You no longer hand it a token budget.** The old interface was a number — this many tokens of working, on every request, whether that request needed working or not. It is going away: Anthropic's current models reject a fixed budget outright with a 400. What replaced it is **adaptive thinking**. The model reads the request and decides for itself whether to think at all and how far to take it. What you set instead is an **effort** level, from low up to a maximum, and that is a statement about how thorough you want the whole answer rather than a token count. A hard question at low effort still gets thought about. An easy one gets answered straight away.
+
+That is a better default, and for the reason the budget was always awkward. A large amount of working on an easy task is not merely wasteful — it can be *worse*, because the model talks itself out of a correct first instinct. A number you fixed in advance cannot know which kind of request turned up. The model reading the request can.
+
+The other half of the change is an inversion worth expecting. On the current frontier models thinking is **on unless you turn it off**, so the question is no longer *is this worth switching on* but *is this cheap enough to leave on*. For a classifier running a million times a day, it usually is not.
+
+So the working rule: start with thinking off and the lowest effort your task tolerates. Find the requests that fail. Turn thinking back on for those, raise effort one step at a time, and confirm on a test set that it actually did.
 
 ```python
 from anthropic import Anthropic
@@ -112,14 +120,16 @@ question = "A shop sells pens only in packs of 7 and packs of 12. What is the la
 plain = client.messages.create(
     model="claude-sonnet-5",
     max_tokens=500,
+    thinking={"type": "disabled"},                 # on by default on this model
     messages=[{"role": "user", "content": question}],
 )
 
-# Same model, told to work first. The budget caps what you pay for the working.
+# Same model, allowed to think. It decides how far to go; effort is how hard you ask it to try.
 thought = client.messages.create(
     model="claude-sonnet-5",
-    max_tokens=4000,                                          # must exceed the budget
-    thinking={"type": "enabled", "budget_tokens": 2000},
+    max_tokens=4000,                               # thinking is output, so it counts against this
+    thinking={"type": "adaptive"},
+    output_config={"effort": "high"},              # the default; low and medium spend less
     messages=[{"role": "user", "content": question}],
 )
 

@@ -20,7 +20,7 @@ quiz:
     answer: 2
     explain: "The value is the right type and the right shape; only a lookup against your own records can catch it."
   - q: "A summary quotes a sentence that is not in the document you supplied. The cheapest check is..."
-    options: ["Asking a second model whether the quote is genuine", "Searching for the quoted span in the source text and rejecting the response if it is absent", "Lowering the temperature"]
+    options: ["Asking a second model whether the quote is genuine", "Searching for the quoted span in the source text and rejecting the response if it is absent", "Asking the model to double-check its own quote"]
     answer: 1
     explain: "A substring search costs nothing and catches an invented quote outright."
   - q: "Validation fails in production and the one thing you did not log was..."
@@ -34,8 +34,8 @@ quiz:
 deeper:
   - { label: "Pydantic — documentation", href: "https://docs.pydantic.dev/latest/" }
   - { label: "Zod — documentation", href: "https://zod.dev/" }
-  - { label: "Anthropic — tool use", href: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use" }
-  - { label: "Anthropic — reduce hallucinations", href: "https://docs.anthropic.com/en/docs/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" }
+  - { label: "Anthropic — tool use", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" }
+  - { label: "Anthropic — reduce hallucinations", href: "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" }
 ---
 
 Lesson 6 made the shape a contract. That was worth doing, and it fixed the class of bug where you were pulling JSON out of a fenced code block with a regex. It did not make the content true. This lesson is about everything that is still wrong after the parse succeeds.

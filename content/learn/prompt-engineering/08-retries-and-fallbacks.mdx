@@ -8,7 +8,7 @@ wins:
   - "On a validation failure, retry with the error message included — never blindly."
   - "Cap retries at two; a third failure means the prompt is wrong, not unlucky."
   - "Retry malformed output, 429s and timeouts; never retry a wrong answer or a 400."
-  - "Nudge the temperature up on a retry to break a deterministic loop."
+  - "Break a stuck loop by changing the request, not by hoping for different sampling."
   - "Put a hard budget cap on the loop, and fail loudly rather than silently."
 quiz:
   - q: "Validation fails. The retry most likely to succeed is the one that..."
@@ -23,17 +23,17 @@ quiz:
     options: ["A 429 rate limit response", "A request that timed out", "A 400 saying your image is over the size limit"]
     answer: 2
     explain: "A 400 describes something wrong with the request itself, so an identical retry fails identically."
-  - q: "Nudging the temperature up on a retry helps because..."
-    options: ["A higher temperature makes the model more capable", "At temperature 0 the same input tends to give the same output, so a blind retry reproduces the failure", "It lowers the cost per token"]
+  - q: "An identical retry keeps producing an identical failure. The move that reliably breaks it is..."
+    options: ["Sending it a fourth and a fifth time", "Changing the request — attach the error, reword the instruction, reorder an example", "Lowering `max_tokens` so it commits sooner"]
     answer: 1
-    explain: "A little randomness is what lets the second attempt take a different path."
+    explain: "A second attempt only takes a different path if something about the request changed; sampling alone may not differ enough to escape."
   - q: "The last rung of a fallback ladder should be..."
     options: ["Retrying forever with backoff", "Silently returning an empty result", "Failing loudly so a human finds out"]
     answer: 2
     explain: "A silent failure becomes a data quality problem you discover weeks later; a loud one gets fixed."
 deeper:
-  - { label: "Anthropic — rate limits", href: "https://docs.anthropic.com/en/api/rate-limits" }
-  - { label: "Anthropic — errors and error codes", href: "https://docs.anthropic.com/en/api/errors" }
+  - { label: "Anthropic — rate limits", href: "https://platform.claude.com/docs/en/api/rate-limits" }
+  - { label: "Anthropic — errors and error codes", href: "https://platform.claude.com/docs/en/api/errors" }
   - { label: "AWS — exponential backoff and jitter", href: "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/" }
   - { label: "Google SRE Book — handling overload", href: "https://sre.google/sre-book/handling-overload/" }
 ---
@@ -81,7 +81,9 @@ Retrying the wrong failure is worse than not retrying, because you pay for it an
 
 For the rate-limit and overload cases, the retry needs a delay, and the delay needs jitter — exponential backoff with a random component, so that a thousand clients that failed together do not retry together. The rate-limit lesson in the **LLMs** course covers the headers to read and the token-bucket behaviour behind them; the point here is only that a 429 belongs in a different branch from a validation failure, with a sleep in it.
 
-One more knob: **temperature**. If your first call runs at temperature 0 — which most extraction calls should — the sampling is close to deterministic, so a blind retry with identical input tends to reproduce the identical failure. Nudging the retry to 0.3 or 0.4 introduces enough variation to take a different path. It is not a fix for a bad prompt, and it should never be your first move. It is a way out of a loop that is otherwise stuck.
+One more knob, and a caveat about it that has become the more important half. The classic move here was **temperature**. If your first call runs at temperature 0 the sampling is close to deterministic, so a blind retry with identical input tends to reproduce the identical failure, and nudging the retry to 0.3 or 0.4 introduces enough variation to take a different path. That still works on OpenAI models, and on any open-weight model you run yourself.
+
+It is not a universal dial any more. Anthropic's current models do not accept `temperature` at all — anything but the default value is a 400, and `top_k` and most values of `top_p` go the same way. There is no replacement knob, and you do not need one here, because the trap it got you out of was a temperature-0 trap in the first place: leave the sampling alone and two identical calls already differ a little. So the durable version of this move is not about the sampler at all. **If a loop is stuck, change the request.** Attach the error, reword the instruction, drop or reorder an example, or go up a rung of the ladder below. That works on every model, and it is the better move anyway — it makes the second attempt better informed rather than merely different.
 
 ## 3. The fallback ladder, and the bill
 
@@ -117,8 +119,7 @@ def call_with_repair(messages, validate):
             resp = client.messages.create(
                 model="claude-sonnet-5",
                 max_tokens=400,
-                temperature=0 if attempt == 0 else 0.4,   # break a stuck loop
-                messages=messages,
+                messages=messages,      # the repair turn below is what breaks a stuck loop
             )
         except APIStatusError as err:
             if err.status_code in (429, 500, 503) and attempt < MAX_ATTEMPTS - 1:

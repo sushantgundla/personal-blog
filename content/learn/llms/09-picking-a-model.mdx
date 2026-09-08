@@ -32,7 +32,7 @@ quiz:
     answer: 2
     explain: "Escalation has to key off something you can compute, otherwise you are paying for the big model at random."
 deeper:
-  - { label: "Anthropic — test and evaluate", href: "https://docs.anthropic.com/en/docs/test-and-evaluate" }
+  - { label: "Anthropic — test and evaluate", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
   - { label: "OpenAI — evals guide", href: "https://platform.openai.com/docs/guides/evals" }
   - { label: "LMArena — head-to-head human preference rankings", href: "https://lmarena.ai" }
   - { label: "Hendrycks et al. — Measuring Massive Multitask Language Understanding", href: "https://arxiv.org/abs/2009.03300" }
@@ -69,7 +69,7 @@ The build is small on purpose:
 2. **Weight it towards trouble.** Roughly half ordinary cases, half the awkward ones — long inputs, missing fields, hostile users, the two edge cases you already know break things.
 3. **Write down the expected outcome** for each. Exact value where there is one, a short rubric where there is not.
 4. **Grade with the cheapest method that fits.** An equality check beats a regex, which beats a model judging a model.
-5. **Run all three candidates**, at temperature 0, on the same twenty, and put the results in one table alongside cost and p95 latency.
+5. **Run all three candidates** on the same twenty, with the settings you would actually ship, and put the results in one table alongside cost and p95 latency.
 
 > Twenty real cases from your own traffic will tell you more in an afternoon than every leaderboard on the internet, and they keep being true after the leaderboards change.
 
@@ -90,7 +90,7 @@ Then a table by task type, as a starting point to test rather than a conclusion:
 
 | Task type | Start with | Because |
 |---|---|---|
-| Classification, extraction, routing | The smallest instruct model that passes your eval, temperature 0 | The work is pattern-shaped and a big model is wasted money |
+| Classification, extraction, routing | The smallest instruct model that passes your eval | The work is pattern-shaped and a big model is wasted money |
 | Summarising, rewriting, tone | A mid-tier model | Quality is visible to a human but the task is not hard |
 | Code generation and review | A strong model | Small models produce code that looks right and is not |
 | Multi-step agents and tool use | The strongest one with reliable tool calling | Errors compound across steps, so per-step accuracy dominates |
@@ -107,8 +107,8 @@ import os, json
 from openai import OpenAI
 
 client = OpenAI()
-CHEAP  = os.environ.get("CHEAP_MODEL",  "gpt-4o-mini")   # your own ids here
-STRONG = os.environ.get("STRONG_MODEL", "gpt-4o")
+CHEAP  = os.environ["CHEAP_MODEL"]     # the small one in the family you shortlisted
+STRONG = os.environ["STRONG_MODEL"]    # the strong one, for what the small one cannot do
 
 def classify(text: str, model: str) -> dict | None:
     r = client.chat.completions.create(

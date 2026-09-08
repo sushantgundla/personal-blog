@@ -8,7 +8,7 @@ wins:
   - "Ask for the reasoning before the answer — after the answer it is only a justification."
   - "Skip step-by-step reasoning on extraction, formatting and anything mechanical."
   - "Put the working in tags, strip it before display, and keep it in your logs."
-  - "Prefer a reasoning model's own budget over bolting think step by step on top of it."
+  - "Prefer a reasoning model's own thinking over bolting think step by step on top of it."
   - "Price it — reasoning tokens are output tokens, so they set your latency."
 quiz:
   - q: "Chain-of-thought helps mainly because..."
@@ -32,8 +32,8 @@ quiz:
     answer: 1
     explain: "The model is already doing the pass; what it still cannot guess is which constraints and edge cases you care about."
 deeper:
-  - { label: "Anthropic — let Claude think (chain of thought)", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-of-thought" }
-  - { label: "Anthropic — extended thinking", href: "https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking" }
+  - { label: "Anthropic — let Claude think (chain of thought)", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#leverage-thinking-and-interleaved-thinking-capabilities" }
+  - { label: "Anthropic — thinking and effort", href: "https://platform.claude.com/docs/en/build-with-claude/thinking" }
   - { label: "Chain-of-Thought Prompting Elicits Reasoning (Wei et al., 2022)", href: "https://arxiv.org/abs/2201.11903" }
   - { label: "Language Models Don't Always Say What They Think (Turpin et al., 2023)", href: "https://arxiv.org/abs/2305.04388" }
 ---
@@ -93,7 +93,6 @@ def decide(expense: str) -> tuple[str, str]:
     resp = client.messages.create(
         model="claude-sonnet-5",
         max_tokens=400,          # room for the working, not just the word
-        temperature=0,
         system=SYSTEM,
         messages=[{"role": "user", "content": expense}],
     )
@@ -111,7 +110,9 @@ Note what the system prompt asks for: rule, then fact, then conclusion. Not "thi
 
 Keep the working in your logs. It is the best debugging artefact this whole course offers — even though it is not a faithful trace, it shows which rule the model latched onto, and that is usually enough to find the ambiguity in your policy.
 
-**Reasoning models.** Some models do this internally: you set a thinking budget, they reason, and the API returns the thinking separately from the answer. Where that is available, use it instead of hand-rolling tags. You get the separation for free, the model was trained to use that budget well, and you are not spending your own prompt on scaffolding.
+**Reasoning models.** Most current models do this internally, and on the newest ones it is on by default: they reason, and the API returns the thinking separately from the answer. Where that is available, use it instead of hand-rolling tags. You get the separation for free, the model was trained to do this working well, and you are not spending your own prompt on scaffolding.
+
+You do not set a thinking budget for it any more. That interface is going away — Anthropic's current models reject a fixed budget outright with a 400 — and what replaced it is an **effort** level. The model reads the request and decides for itself whether to think and how far to take it; effort says how thorough you want the whole answer. The LLMs course covers that trade in *Base, instruct, and reasoning models*.
 
 On those models, adding "think step by step" is usually redundant, and sometimes actively worse — you get a second, shallower pass layered on top of the real one, and a longer answer for no gain. What still helps is telling it *what* to consider: the constraints, the edge cases, the rule that trips people up, the thing you always find yourself checking by hand. That is information the model does not have. "Think" is information it already had.
 

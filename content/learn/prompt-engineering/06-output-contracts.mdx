@@ -32,7 +32,7 @@ quiz:
     answer: 1
     explain: "Structure and truth are different guarantees, and only one of them comes from the schema."
 deeper:
-  - { label: "Anthropic — tool use overview", href: "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview" }
+  - { label: "Anthropic — tool use overview", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" }
   - { label: "OpenAI — structured outputs", href: "https://platform.openai.com/docs/guides/structured-outputs" }
   - { label: "Understanding JSON Schema", href: "https://json-schema.org/understanding-json-schema" }
   - { label: "Pydantic documentation", href: "https://docs.pydantic.dev/latest/" }
@@ -126,7 +126,6 @@ RECORD_INVOICE = {
 resp = client.messages.create(
     model="claude-sonnet-5",
     max_tokens=500,
-    temperature=0,
     system="Read the invoice. Use null for anything not stated. Never infer a value.",
     tools=[RECORD_INVOICE],
     tool_choice={"type": "tool", "name": "record_invoice"},   # not optional

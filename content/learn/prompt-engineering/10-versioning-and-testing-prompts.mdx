@@ -32,8 +32,8 @@ quiz:
     answer: 0
     explain: "A prompt tuned against one model version is not the same product against another, so they have to be versioned together."
 deeper:
-  - { label: "Anthropic — create strong empirical evaluations", href: "https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests" }
-  - { label: "Anthropic — models overview and versions", href: "https://docs.anthropic.com/en/docs/about-claude/models/overview" }
+  - { label: "Anthropic — create strong empirical evaluations", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
+  - { label: "Anthropic — models overview and versions", href: "https://platform.claude.com/docs/en/models/overview" }
   - { label: "promptfoo — testing and evaluating prompts", href: "https://www.promptfoo.dev/docs/intro" }
   - { label: "OpenAI — Evals framework", href: "https://github.com/openai/evals" }
 ---
@@ -74,11 +74,13 @@ Twenty cases. That is the whole recommendation.
 | The cases | ~20 real inputs with the outcome you expect | Real ones, from your logs. Invented cases are too tidy |
 | The hard ones | The empty input, the ambiguous one, the very long one | This is where prompt edits actually break things |
 | The regressions | Every production bug, added the day it is found | This is how the set stays valuable instead of stale |
-| The runner | A loop that calls the model at temperature 0 and records the output | Fifty lines. Do not buy a framework first |
+| The runner | A loop that calls the model once per case and records the output | Fifty lines. Do not buy a framework first |
 | The grader | Exact match where you can, a substring or rule check where you cannot | Match the cheapest method that fits the task |
 | The record | The run output, committed to the repo | So the next change is a diff you can read |
 
 Run it on every prompt change, before the review, and put the number in the pull request.
+
+One assumption not to build on: that a case gives the same answer every run. Turning the temperature down used to be how people suppressed that, and where you can still set it — OpenAI models, anything open-weight you run yourself — it is worth doing. Anthropic's current models do not accept `temperature` at all, so on those you cannot. It was never a guarantee either way. Which is fine, because a case that flips between two runs of an unchanged prompt is not noise to be filtered out; it is the harness telling you that case is genuinely borderline. Run that one a few times, then either fix the prompt or write the expected outcome as a rule both answers satisfy.
 
 The bar is **regression, not perfection**. You are not trying to get to twenty out of twenty; some of those cases may be genuinely hard, and a couple may be ambiguous enough that reasonable people disagree. What you need is that the number does not go down and that any case whose output changed gets looked at deliberately. Committing the run output is what makes that cheap: the reviewer sees exactly which three answers moved, instead of a score dropping from 17 to 16 with no idea where.
 
@@ -99,7 +101,6 @@ def run_case(case: dict) -> str:
     resp = client.messages.create(
         model=MODEL,                    # "claude-sonnet-5", pinned next to the prompt
         max_tokens=10,
-        temperature=0,                  # remove the sampling noise from the measurement
         system=SYSTEM,
         messages=[{"role": "user", "content": case["input"]}],
     )

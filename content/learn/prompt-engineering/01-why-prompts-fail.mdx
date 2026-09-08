@@ -32,8 +32,8 @@ quiz:
     answer: 0
     explain: "Role prompting changes how the answer sounds; evidence that it changes how often the answer is right is thin and task-dependent."
 deeper:
-  - { label: "Anthropic — be clear and direct", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct" }
-  - { label: "Anthropic — prompt engineering overview", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+  - { label: "Anthropic — be clear and direct", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct" }
+  - { label: "Anthropic — prompt engineering overview", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview" }
   - { label: "Lost in the Middle — how models use long contexts", href: "https://arxiv.org/abs/2307.03172" }
   - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
 ---
@@ -48,7 +48,7 @@ Every prompt failure is one of these.
 |---|---|---|
 | **Ambiguous** — you and the model read the instruction differently | The output is confident and well-formed, and answers a slightly different question. The shape changes between runs. | Describe the output, not the intent. |
 | **Buried** — your instruction is competing with a wall of context | Works on a short input, falls apart on a long one. The model mirrors the pasted text's own formatting. | Move it, delimit it, or cut the context. |
-| **Beyond the model** — the task is genuinely too hard as posed | Fails the same way every time, even at temperature 0, even on a tiny clean input. | Split it, give it a tool, or do that part in code. |
+| **Beyond the model** — the task is genuinely too hard as posed | Fails the same way every time, on a tiny clean input, however you word it. | Split it, give it a tool, or do that part in code. |
 
 Most people reach straight for the third. "The model can't do this" is a comfortable conclusion — it ends the debugging. It is also wrong most of the time, because the first cause is enormously more common and looks exactly like incompetence from the outside.
 
@@ -78,7 +78,6 @@ TASK = "Summarise the support ticket below for the on-call engineer."
 resp = client.messages.create(
     model="claude-sonnet-5",
     max_tokens=300,
-    temperature=0,
     messages=[{
         "role": "user",
         "content": (
@@ -97,7 +96,7 @@ Answer 3 is the one you want. Every item it lists is a decision you left to a co
 
 **Step two: shrink the input.** If the restatement is right but the answer is still wrong, cut the context down to one small, clean example and re-run. If it now works, the problem was never capability. Your instruction was buried, and the fix is placement: document first and task last, clear delimiters around the data, and less pasted context rather than more.
 
-**Step three: only now, believe it is hard.** A task that fails on a tiny clean input, at temperature 0, with an accurate restatement, is a task the model cannot do as posed. That is a real category — exact arithmetic on long numbers, anything needing information the model does not have, anything with five interacting sub-tasks. The fix is not a better sentence. It is decomposition (lesson 4), a tool, or code.
+**Step three: only now, believe it is hard.** A task that fails on a tiny clean input, with an accurate restatement, and fails the same way on every attempt, is a task the model cannot do as posed. That is a real category — exact arithmetic on long numbers, anything needing information the model does not have, anything with five interacting sub-tasks. The fix is not a better sentence. It is decomposition (lesson 4), a tool, or code.
 
 | You observed | Test | If the test passes |
 |---|---|---|

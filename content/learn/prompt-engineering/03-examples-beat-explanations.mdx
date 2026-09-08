@@ -32,10 +32,10 @@ quiz:
     answer: 0
     explain: "Examples are context like any other, so their content can be reused as readily as their shape."
 deeper:
-  - { label: "Anthropic — multishot (few-shot) prompting", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/multishot-prompting" }
+  - { label: "Anthropic — multishot (few-shot) prompting", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#use-examples-effectively" }
   - { label: "Language Models are Few-Shot Learners (GPT-3)", href: "https://arxiv.org/abs/2005.14165" }
   - { label: "Rethinking the Role of Demonstrations (Min et al., 2022)", href: "https://arxiv.org/abs/2202.12837" }
-  - { label: "Anthropic — prompt engineering overview", href: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" }
+  - { label: "Anthropic — prompt engineering overview", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview" }
 ---
 
 The basics of few-shot prompting are easy to state: two to five examples, include a hard one, keep them consistent. That is the right advice and it is where most people stop. This lesson is about the part that actually decides whether it works — *which* examples, and when to stop using them at all.
@@ -120,7 +120,6 @@ def note(commit: str) -> str:
     resp = client.messages.create(
         model="claude-sonnet-5",
         max_tokens=60,
-        temperature=0,
         system=SYSTEM,                 # stable, cacheable, holds the examples' rules
         messages=EXAMPLES + [{"role": "user", "content": commit}],
     )
