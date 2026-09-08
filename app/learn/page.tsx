@@ -5,7 +5,7 @@ import { Network } from './_components/Network'
 import styles from './page.module.css'
 
 /**
- * The /learn index. The diagram is the page: three lines, every tick a
+ * The /learn index. The diagram is the page: one line per course, every tick a
  * real lesson. The heading above it says where a stranger has landed,
  * and the only prose sits under it, out of the way.
  *

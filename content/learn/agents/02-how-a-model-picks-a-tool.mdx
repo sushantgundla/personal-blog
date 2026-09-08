@@ -1,0 +1,145 @@
+---
+title: "How a model picks a tool"
+subtitle: "Your tools arrive at the model as text, and the description does more work than every type in the schema."
+part: 1
+minutes: 7
+why: "You gave it a `get_order_status` tool. A user asked where their order was. The model wrote a helpful paragraph about typical delivery times and called nothing at all. There was no error, no warning, no 400 — just a confident answer built out of thin air. Nothing about the API tells you why, so you started guessing: bigger model, louder system prompt, more parameters. This lesson replaces the guessing with the actual mechanism, so that the next time a tool does not fire you know which of three things to go and look at."
+wins:
+  - "Picture your `tools` array as text the API pastes into a system prompt."
+  - "Debug a tool that did not fire by reading its description as the model sees it."
+  - "Write descriptions that say when to use a tool, not only what it does."
+  - "Use `tool_choice` to settle whether to call, and prompting to settle which."
+  - "Treat two overlapping descriptions as an ambiguity bug, not model stupidity."
+quiz:
+  - q: "How do tool definitions reach the model?"
+    options: ["Over a side channel the model queries when it needs one", "As text the API builds from your `tools` array and puts in the system prompt", "As weights loaded into the model for that request"]
+    answer: 1
+    explain: "The API constructs a system prompt containing your schemas in JSON Schema form. It is prompt text, and it is billed as input tokens."
+  - q: "The model 'calls' a tool by..."
+    options: ["Emitting a `tool_use` block that your code then executes", "Opening a connection to the endpoint you registered", "Returning a callable reference the SDK invokes"]
+    answer: 0
+    explain: "It emits a name and a JSON object of arguments. Everything after that is your process."
+  - q: "A tool that obviously should have fired did not. What do you look at first?"
+    options: ["Raise `max_tokens` so there is room for the call", "The description — whether it says when to use the tool, not just what it does", "Move to a larger model"]
+    answer: 1
+    explain: "Selection is driven by the text you supplied. A description that names the trigger condition fixes far more misses than a model swap."
+  - q: "Setting `tool_choice` to `any` does what?"
+    options: ["Forces one of your tools to be called, without saying which", "Allows any number of tools including none, which is the default", "Selects a tool at random, for testing"]
+    answer: 0
+    explain: "`auto` is the permissive default; `any` removes the option of answering in prose; `tool` names a specific one."
+  - q: "Two tools whose descriptions overlap will..."
+    options: ["Be merged by the API into one entry", "Return a 400 at request time", "Turn selection into a coin flip settled by wording rather than by your intent"]
+    answer: 2
+    explain: "Nothing validates that your descriptions carve up the space cleanly, so the model resolves the overlap on phrasing alone."
+deeper:
+  - { label: "Anthropic — tool use overview", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" }
+  - { label: "Anthropic — define tools", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" }
+  - { label: "Anthropic — handle tool calls", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" }
+  - { label: "OpenAI — function calling", href: "https://developers.openai.com/api/docs/guides/function-calling" }
+  - { label: "Toolformer — Schick et al.", href: "https://arxiv.org/abs/2302.04761" }
+---
+
+Function calling looks like a plugin system from the outside: you register functions, the model uses them. It is not one. Once you see what actually happens the failure modes stop being mysterious.
+
+## 1. Your tools become text
+
+Send a request with a `tools` array and the API does something plain: it builds a system prompt out of your tool definitions and prepends it to the conversation. Anthropic publishes the scaffold. It opens by telling the model it has access to a set of tools, adds formatting instructions and a note that string and scalar parameters go in as-is while lists and objects use JSON, then says *here are the functions available in JSONSchema format* and pastes your definitions in. Your own system prompt goes after that, and the tool configuration after that.
+
+Three consequences fall straight out of this.
+
+**Tool definitions cost input tokens, on every request.** Names, descriptions and schemas are all prompt text, plus a few hundred tokens of scaffold. The exact scaffold cost varies by model and by `tool_choice`; there is a table on the tool use overview page — look it up rather than trusting a number in a tutorial, this one included. The practical point is that a forty-tool array is a fixed tax paid on step one and again on step thirty of the same run.
+
+**Prompt caching applies to it.** The tools array sits at the front and rarely changes, which makes it the ideal thing to cache across the steps of a long run. Changing `tool_choice` mid-run invalidates cached message content, so pick it and leave it alone.
+
+**Descriptions are read the way instructions are read.** They are not documentation sitting next to the model. They are in the prompt, competing for attention with everything else in the prompt.
+
+Here is what the model does and does not have:
+
+| The model has | The model does not have |
+|---|---|
+| Your tool names | Your function bodies |
+| Your descriptions, word for word | Your API docs, unless you pasted them in |
+| Your JSON Schema, types and enums | Any idea what the tool returns until it has called it |
+| The conversation so far | Any memory of a previous run |
+| Results of tools it already called this run | Knowledge that a tool is slow, expensive or destructive |
+
+Read the right-hand column when a tool call surprises you. Almost every "why did it do that" is something in that column that you assumed was in the left.
+
+## 2. Tool, or no tool
+
+With the default `tool_choice` of `auto`, the model makes two decisions in order, and they fail for different reasons. First: does this turn need a tool at all? Second: which one?
+
+The first one is a judgement about whether the answer is already available. Stable knowledge, creative work and ordinary conversation get answered directly. A request that maps onto a described capability, and whose answer is not already in context, gets a tool call. That boundary is soft, which is exactly why your `get_order_status` tool sat there while the model wrote a plausible paragraph — the model treated the question as answerable from what it knew.
+
+You have two ways to move that boundary, and they are not interchangeable.
+
+| Lever | What it does | Use it when |
+|---|---|---|
+| System prompt wording | Nudges the threshold. "Use the tools to investigate before responding" raises tool use; "use your judgement" lowers it | The model is usually right and occasionally lazy |
+| `tool_choice: auto` | Default. Zero, one or several tools, or none | Normal operation |
+| `tool_choice: any` | Some tool must be called; the model still picks which | Every turn genuinely requires an action |
+| `tool_choice: tool` | This exact tool, this turn | Extraction, or the first step of a fixed pipeline |
+| `tool_choice: none` | No tools this turn | Summarising results you already have |
+
+Two things to know before you reach for the forced options. Forcing a tool prefills the assistant turn, so you lose the natural-language sentence the model would have written first — if you want both the explanation and the call, stay on `auto` and ask for the tool in the user message instead. And forced tool use is not universally supported: some models and some thinking settings reject `any` and `tool` with a 400. Check the current support table before you build on it.
+
+## 3. Which tool, and why the description wins
+
+Now the second decision. The model is matching the request against the text of each definition and picking the best fit. It has your description, your parameter names and your types. It has nothing else.
+
+This is why the description does more work than the schema. Types tell the model what a legal argument looks like. Only the description tells it what the tool is *for*, and selection is a question about purpose.
+
+| The schema tells the model | The description has to tell the model |
+|---|---|
+| That `ticker` is a string | That a ticker is a symbol on a major US exchange |
+| That `limit` is an integer | What happens if you ask for more than there is |
+| That `status` is one of four values | Which value means a refund was issued |
+| Nothing about when to call it | When to use this tool, and when not to |
+| Nothing about what comes back | What the result contains, and what it leaves out |
+
+Anthropic's own guidance is blunt about it: extremely detailed descriptions are by far the most important factor in tool performance, and they suggest three or four sentences minimum. A description that says "Gets the stock price for a ticker" leaves the model guessing about the exchange, the currency, whether it is live or delayed, and whether it also returns volume. A description that says all of that, plus "use this when the user asks about the current or most recent price of a specific stock" and "it will not provide any other information about the company", removes every one of those guesses.
+
+The second failure is overlap. Nothing checks that your descriptions carve the space up cleanly. Ship `search_docs` and `search_knowledge_base` with descriptions that could each be either, and the model resolves the tie on wording — consistently, and consistently wrong for half your traffic. The fix is not a better model, it is one description that says what the other one does not cover.
+
+> The model never sees your function. It sees your sentence about your function. Treat every selection bug as a description bug until you have ruled that out.
+
+The way to settle an argument about this is to run it. Two definitions, same task, one call:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+vague = {
+    "name": "get_order_status",
+    "description": "Gets order status.",
+    "input_schema": {
+        "type": "object",
+        "properties": {"order_id": {"type": "string"}},
+        "required": ["order_id"],
+    },
+}
+
+specific = {
+    **vague,
+    "description": (
+        "Look up the live delivery status of a single customer order by its order ID. "
+        "Use this whenever a customer asks where their order is, whether it has shipped, "
+        "or when it will arrive - never answer those from general knowledge. "
+        "Returns the current status, the carrier and the estimated delivery date. "
+        "It does not return line items, prices or refund history."
+    ),
+}
+
+for label, tool in [("vague", vague), ("specific", specific)]:
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=512,
+        tools=[tool],
+        messages=[{"role": "user", "content": "Where is my order? It's A-91422."}],
+    )
+    called = [b.name for b in resp.content if b.type == "tool_use"]
+    print(f"{label:9} stop_reason={resp.stop_reason:10} called={called or 'nothing'}")
+```
+
+Run it against your own tools with your own real user phrasings. When the two rows differ, you have found the cheapest fix in this course. Next: how to write the schema underneath that description so the arguments are right the first time.

@@ -12,8 +12,9 @@ badge and percentage.
 
 **OWN-WORLD.** A printed signalling diagram on near-black. Strokes at 90° and
 45° only, never a curve. Uniform tick pitch along a line. Hollow bone-white
-interchange rings, solid capsule termini. Three transit inks — deep red, navy,
-forest — one per course, at printed-ink saturation rather than screen neon.
+interchange rings, solid capsule termini. Four transit inks — deep red, navy,
+forest, amber — one per course, at printed-ink saturation rather than screen
+neon.
 Archivo in signage caps for every label and heading; Inter for the reading
 column alone; JetBrains Mono confined to code and tabular numerals. No cards, no
 shadows, no glass, no gradient, no rounded containers.
@@ -22,7 +23,7 @@ shadows, no glass, no gradient, no rounded containers.
 tells them the line, the zone and the stops either side before they decide to
 stay. They read one column of prose, then retrieve five answers from memory.
 
-**FIRST VIEWPORT.** The index is the network: three lines drawn full-bleed, each
+**FIRST VIEWPORT.** The index is the network: every course a line drawn full-bleed, each
 tick a real lesson, each line labelled with its course name at the left terminus.
 No hero, no card grid, no marketing copy above it. The diagram is the page.
 
@@ -40,16 +41,38 @@ Scoped under `.learn-root`. Every value below is a local token defined in
 | `--ln-llms` | `#C4372F` | `#A82E27` | The LLMs line |
 | `--ln-prompt` | `#4A72C4` | `#2B4C8C` | The Prompt Engineering line |
 | `--ln-rag` | `#3E8C5E` | `#2E6B47` | The RAG line |
+| `--ln-agents` | `#CB881D` | `#AB6F06` | The Agents and Tool Use line |
 | `--ln-mark` | `#F2EFE9` | `#12100E` | You-are-here ring, terminus fill |
 | `--ln-ground` | `#12100E` | `#F7F5F1` | Page ground |
 | `--ln-ink` | `#EDE9E2` | `#191714` | Body text |
 | `--ln-ink-quiet` | `#9A948B` | `#6B655C` | Labels, meta, secondary |
 | `--ln-rule` | `#2A2725` | `#DDD8D0` | Hairlines, zone divisions |
 
-Strategy: **full palette, three named roles.** Line colour is structural, never
+Strategy: **full palette, four named roles.** Line colour is structural, never
 decorative — it appears in the diagram layer, in the lesson's position strip, and
 in the one rule under the lesson title. It never colours body text, never fills a
 background region, and never appears in the reading column.
+
+**Adding a fifth ink.** A new line colour has to clear three bars, measured, not
+argued:
+
+1. **Family.** Chroma inside the range the existing inks already occupy (C\* 32
+   to 67 in CIELAB). Lightness is free — a saturated yellow is simply lighter
+   than a deep red, and forcing it dark makes mud.
+2. **Ground.** At least 3:1 against `--ln-ground` in **both** themes. It carries
+   no text — it is a 6px stroke and a 3px `.rule-line` — so 4.5:1 is not the bar,
+   but a stroke a reader has to hunt for is a failed line.
+3. **Colour blindness.** Simulate protanopia and deuteranopia, then measure ΔE00
+   against every existing ink in both themes. The floor is the worst pair already
+   shipped: deep red against forest, which sits at 9.2. Anything that scores
+   below that is not a fourth colour, it is a fifth name for one of the first
+   three. Blue-violet fails this — it collapses into `--ln-prompt`.
+
+Amber cleared all three at ΔE00 ≥ 12.7 in the worst case (deuteranopia, against
+deep red, light theme). It is also why the palette will not stretch much further:
+the hues that survive a red/green/blue/amber set are close to exhausted, and the
+next course may have to earn its identity from the diagram's shape rather than a
+new ink.
 
 Dark is the default. The scene decided it: an engineer at a laptop with an editor
 open beside this, often at night, and a signalling diagram lives on a dark panel.
@@ -108,9 +131,10 @@ signage-caps label, and they belong to one line, not the whole page.
   two diagram surfaces it is on:
   - **The network, on the index.** Horizontal lines with labels below on wide
     screens; below `52rem` the whole network turns vertical — lines running down,
-    labels to the right — which is how a platform sign works anyway. Three
-    horizontal lines stacked is the shape that shows the whole system at once,
-    and the labels there are titles only.
+    labels to the right — which is how a platform sign works anyway. Horizontal
+    lines stacked, one per course, is the shape that shows the whole system at
+    once, and the labels there are titles only. The stack takes however many
+    courses exist; nothing in it is sized for a fixed count.
   - **One course's line, on its own page. Vertical at every width.** A syllabus
     is a list, and each stop's label carries a whole sentence of subtitle. Across
     the page those sentences had to be truncated to keep the row level, and a

@@ -1,5 +1,5 @@
 /* ============================================================
-   Network — the three lines, stacked.
+   Network — one line per course, stacked.
 
    The width is `.bleed`'s job: it already runs edge to edge with
    --ln-gutter as padding, so there is nothing to set here but the

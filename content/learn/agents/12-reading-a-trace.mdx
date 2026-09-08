@@ -1,0 +1,135 @@
+---
+title: "Reading a trace after it breaks"
+subtitle: "The run finished, nothing raised, and the answer is wrong — so the only evidence you have is what each step did."
+part: 4
+minutes: 8
+why: "The agent returned a number. It was confident, it was formatted correctly, it was wrong. Nothing raised, nothing alerted, the run finished in a normal amount of time. You went looking for the bug and found that all you had was the final answer and a log line saying the run completed, which told you nothing at all about where it went wrong. This lesson is about the three places a silent wrong answer can come from, how to tell them apart by reading the run forward, and the handful of fields you have to log from the start so this is a five-minute question instead of a day of guessing."
+wins:
+  - "Read a trace forward and stop at the first step that is wrong, not the last."
+  - "Separate a tool-selection mistake from a bad tool result from a reasoning mistake."
+  - "Log the exact arguments and the raw result, never a summary of either."
+  - "Give every run an id and every step an index, and put both on every line."
+  - "Treat a confident answer with no citation as an unproven answer, not a passing one."
+quiz:
+  - q: "You have a trace of a run that produced a wrong answer. The right place to start reading is..."
+    options: ["The last step, since that is where the wrong answer appeared", "The first step whose output is wrong, reading forward from the top", "The step with the highest token count"]
+    answer: 1
+    explain: "Everything after the first bad step is the model reasoning correctly over bad input, so debugging the end tells you nothing about the cause."
+  - q: "The agent called `get_orders(status='shipped')` when the question was about refunds. That is..."
+    options: ["A tool-selection mistake — wrong tool or wrong arguments for the question", "A bad tool result — the tool returned the wrong data", "A reasoning mistake — the model misread correct data"]
+    answer: 0
+    explain: "The tool did exactly what it was asked. The mistake happened before the call, in choosing what to ask for."
+  - q: "The tool returned an empty list, and the agent answered `there are no refunds`. The list was empty because a filter defaulted wrong. The fix belongs in..."
+    options: ["The system prompt, to tell the model to double-check empty results", "The tool, so it distinguishes 'no matches' from 'query was not valid'", "The model, by switching to a larger one"]
+    answer: 1
+    explain: "An empty result that means two different things is a tool contract problem; no amount of prompting makes the model able to tell them apart."
+  - q: "Which pair of fields makes a trace debuggable at all?"
+    options: ["Latency and token count per step", "A run id on every line and a step index within the run", "The model name and the temperature"]
+    answer: 1
+    explain: "Without those two you cannot reassemble one run's steps in order out of interleaved logs, and everything else you logged is unusable."
+  - q: "Logging a summary of each tool result instead of the raw result is a mistake because..."
+    options: ["Summaries take more storage than raw results", "The bug is usually in the detail the summary dropped", "Summaries cannot be searched"]
+    answer: 1
+    explain: "You are debugging what the model actually saw; a summary is a different document, and it hides the field that was null."
+deeper:
+  - { label: "OpenTelemetry — GenAI semantic conventions", href: "https://github.com/open-telemetry/semantic-conventions-genai" }
+  - { label: "OpenTelemetry — Traces", href: "https://opentelemetry.io/docs/concepts/signals/traces/" }
+  - { label: "TRAIL — Trace Reasoning and Agentic Issue Localization", href: "https://arxiv.org/abs/2505.08638" }
+  - { label: "Langfuse — Observability for LLM applications", href: "https://langfuse.com/docs/observability/overview" }
+  - { label: "Anthropic — Tool use overview", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" }
+---
+
+Every other failure in this course announces itself. A tool raises, a schema rejects, a budget trips, a step cap fires. This one does not. The run completes, the answer looks like every correct answer you have seen, and it is wrong. There is no exception to read, so the only evidence that exists is what the loop did, step by step — which means the whole question is whether you wrote that down.
+
+## 1. Read it forward, and stop at the first wrong step
+
+The instinct is to look at the last step, because that is where the wrong answer came out. That is the one place the answer is not.
+
+A loop carries its mistakes forward. If step four fetched the wrong record, then steps five through eleven are the model reasoning perfectly well over the wrong record — and they will look completely reasonable, because they are. The last step is where you noticed. It is almost never where it happened.
+
+So read from the top, and at each step ask one question: **given everything before it, is this step's output correct?** Not "is it sensible", not "is it what I would have done" — correct. Walk down until the answer is no. That step is the bug; everything below it is consequence.
+
+> The last step is where you noticed the failure. The first wrong step is where it happened, and they are rarely the same step.
+
+Three things make this go faster.
+
+**Read the arguments before the results.** Most of the time the mistake is visible in what the model asked for, not in what came back. A tool called with a date range off by a month, an id from the wrong entity, a query string no human would type — you can spot those in a second, and they explain everything downstream.
+
+**Check the empty and near-empty results specifically.** Zero rows, an empty string, `null`, a default value. These are the highest-risk results in any trace, because they carry no information and the model has to guess what they mean. An empty list is where a confident wrong answer is usually born.
+
+**Note where the model stopped looking.** A run that found something plausible at step three and stopped is a different bug from a run that searched eleven times and picked badly. The first is premature commitment, the second is a ranking problem.
+
+## 2. Three kinds of mistake, and telling them apart
+
+Once you have the first wrong step, it is one of three things. The distinction matters because the three have different fixes, and you cannot prompt your way out of two of them.
+
+| | Tool-selection mistake | Bad tool result | Reasoning mistake |
+|---|---|---|---|
+| What went wrong | Wrong tool, or right tool with wrong arguments | The tool ran and returned something wrong, stale, empty or misleading | The tool returned correct data and the model drew the wrong conclusion |
+| What the trace shows | Arguments that do not match the question | Correct-looking arguments, a result that is wrong on inspection | Correct arguments, correct result, wrong next step |
+| How to confirm | Re-read the question, then the arguments | Run the same call by hand, outside the agent | Read the result yourself and answer the question |
+| Where the fix goes | Tool description, parameter names, enums, fewer tools | The tool: its contract, its errors, its defaults | The prompt, or a verification step |
+| What will not fix it | A bigger model | Any amount of prompting | Better tool schemas |
+
+**A tool-selection mistake** is a lesson 3 problem arriving late. The model picked `search_docs` when it needed `search_tickets`, or called the right tool with a query that could never have matched. The fix is almost always in the tool definitions: a description that says what the tool is *for* rather than what it does, narrower enums instead of free text, and fewer overlapping tools so there is less to get wrong.
+
+**A bad tool result** is your system, not the model. You have met it already: it is the opener of lesson 5, where a caught exception became an empty result and the model filled the gap with something plausible. This is that failure from the debugging end, after it has shipped — and it reads the same in a trace whether the empty result came from a swallowed error or from a filter that silently rejected the input. The classic is a tool that returns an empty list for two different reasons — genuinely no matches, and a filter that silently rejected the input — with no way to distinguish them. The model sees `[]` both times and says "there are none", which is a perfectly sound reading of what it was given. Confirm it by running the exact call from the trace by hand. If you get the same wrong thing, the agent was never the problem. Fix the contract: return an explicit error for an invalid query, say `0 results for filter X` rather than `[]`, and make stale data carry its own timestamp.
+
+**A reasoning mistake** is the residual, and you only get to call it that after you have ruled out the other two — which is why the order matters. The tool returned the right data, and the model read it wrong: inverted a condition, used the wrong row of a table, assumed a field it did not have. This is the one where the prompt is the fix, and where a cheap verification step earns its place: ask for the answer and the specific value it came from, then check that the value actually appears in a tool result. An answer with no traceable source is not an answer, it is a guess with good formatting.
+
+There is a fourth thing that is not a mistake at all and is worth ruling out first: the task was ambiguous, and the agent answered a different reasonable reading of it. That looks identical in a trace to a reasoning mistake. The difference is that the fix is in the task description, and no amount of agent work will find it for you.
+
+## 3. Log this from the start, or you will be guessing
+
+None of the above is possible without a record, and the record has to be written while the loop runs. You cannot reconstruct it afterwards, and re-running the task usually produces a different path — which is worse than no evidence, because it feels like evidence.
+
+One structured record per step, with anything long run through the `clip` from the previous lesson. These fields, and they are not negotiable:
+
+| Field | Why it has to be there |
+|---|---|
+| `run_id` | Without it you cannot pull one run out of interleaved logs |
+| `step` | The order steps ran in, which is the axis you read along |
+| `kind` and `name` | Model call or tool call, and which one |
+| `input` | The exact arguments, verbatim — this is where most bugs are visible |
+| `output` | The raw result the model saw, not a summary of it |
+| `stop_reason` | Distinguishes "decided it was done" from "ran out of tokens" |
+| tokens and `ms` | Cost and latency attribution, from the previous lesson, for free |
+
+```python
+import json
+import logging
+import time
+
+log = logging.getLogger("agent.trace")
+
+# clip() is the `clip` from the previous lesson: it keeps the head and the
+# tail and cuts the middle, because the error is usually in the tail.
+
+def log_step(run_id, step, kind, name, arguments, result, started, usage=None):
+    log.info(json.dumps({
+        "run_id": run_id,
+        "step": step,
+        "kind": kind,                       # "model" or "tool"
+        "name": name,                       # the model id, or the tool called
+        "input": clip(arguments),           # exact arguments, never a description of them
+        "output": clip(result),             # what the model actually saw
+        "input_tokens": getattr(usage, "input_tokens", None),
+        "output_tokens": getattr(usage, "output_tokens", None),
+        "ms": round((time.monotonic() - started) * 1000),
+    }))
+
+# Inside the loop, around every tool call:
+started = time.monotonic()
+result = dispatch(block.name, block.input)
+log_step(run_id, step, "tool", block.name, block.input, result, started)
+```
+
+That is a dozen lines and it is the difference between a five-minute answer and a day of re-running the task hoping it misbehaves again.
+
+Two things make it better without much more work. **Redact at the edge**, not in the log line — pass tool arguments through the same scrubber your other logs use, because a trace captures everything a tool was given, including whatever the user typed into it. And **emit spans rather than lines** once you have more than a couple of agents in production. OpenTelemetry's GenAI semantic conventions define agreed span kinds and attribute names for model calls, tool calls and agent steps, so a trace from your code looks the same as a trace from a library, and any tool that understands the convention can render it as a tree. The conventions are still moving, so check their current state rather than pinning to a summary. If you are not ready for that, structured JSON lines with a `run_id` get you most of the value today.
+
+The last thing to build is the smallest one: when a run ends, write down the answer, the run id, and the tool results the answer actually depended on. That triple is what turns "the agent was wrong last Tuesday" into a trace you can open. Without it, the wrong answers you hear about are the ones a user bothered to report, and those are always a small fraction of the ones that happened.
+
+---
+
+That is the course. You started with a loop and a model that decides its own next step, worked through tools it can use correctly, errors it meets mid-run, what it remembers and forgets, the protocol and the permissions at the boundary, and now the bill and the trace. None of it is more than a `while` loop, a set of functions, and a record of what happened — which is the useful thing to know, because it means everything that goes wrong is somewhere you can look.

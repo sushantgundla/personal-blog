@@ -1,0 +1,166 @@
+---
+title: "Planning a run, and knowing when to stop"
+subtitle: "Reason, act, observe, repeat - and the line nobody writes, which is the one that ends it."
+part: 2
+minutes: 7
+why: "Your agent finished the task at step nine. You watched it in the log. Then it checked its work, then it checked the check, then it re-read a file it had already read twice, and forty tool calls later it was still going. Nothing had errored. Nothing was stuck. It just had no reason to stop, because you never gave it one - your loop exits when the model stops calling tools, and that is a decision you handed to the model. This lesson is about taking it back."
+wins:
+  - "Write the exit condition before you write the loop."
+  - "Give every run a step budget and a token budget, enforced by your code."
+  - "Read `stop_reason` as the model's opinion, not as your termination condition."
+  - "Make finishing an explicit act - a `finish` tool, not prose you have to interpret."
+  - "When a budget runs out, return the partial work and the reason; never fail silently."
+quiz:
+  - q: "Your loop exits when `stop_reason` is anything other than `tool_use`. What has that proved about the task?"
+    options: ["The task is complete", "Only that the model produced a turn with no tool call, which may or may not mean the work is done", "That the harness ran out of steps"]
+    answer: 1
+    explain: "`end_turn` means the model had nothing more to say on that turn. It can arrive early, and it can fail to arrive at all."
+  - q: "Which termination condition fires no matter what the model does?"
+    options: ["A `finish` tool the system prompt tells it to call", "An instruction to stop once the task is done", "A step or token budget enforced by your harness"]
+    answer: 2
+    explain: "The first two are requests to the model. Only the budget is code you run, so only the budget is a guarantee."
+  - q: "`stop_reason` comes back as `pause_turn`. The right move is..."
+    options: ["Append the response as an assistant message and continue the loop", "End the run - the model has paused", "Retry the request from scratch"]
+    answer: 0
+    explain: "A server-side tool loop hit its own iteration limit. The run is not over; it is waiting for you to continue it."
+  - q: "A run ends because it hit its step budget. What should it return?"
+    options: ["Nothing - raise, and let the caller run the whole thing again", "The best-looking answer from any step, presented as the final one", "The partial work, the reason it stopped, and enough state to resume"]
+    answer: 2
+    explain: "Budget exhausted is a third outcome, not a disguised success and not a plain failure. Say which one it was."
+  - q: "The model calls `search` with byte-identical arguments on three consecutive steps. That is..."
+    options: ["Normal - retries often repeat", "A stuck loop: nothing changed, so nothing new will come back", "A sign the tool result was too long to read"]
+    answer: 1
+    explain: "Same call, same arguments, same result. The run is spending money to stand still, and only your harness can see it."
+deeper:
+  - { label: "Anthropic - Building effective agents", href: "https://www.anthropic.com/engineering/building-effective-agents" }
+  - { label: "Yao et al. - ReAct: synergizing reasoning and acting", href: "https://arxiv.org/abs/2210.03629" }
+  - { label: "Anthropic - stop reasons and how to handle them", href: "https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons" }
+  - { label: "Anthropic - tool runner and `max_iterations`", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-runner" }
+  - { label: "Anthropic - effective harnesses for long-running agents", href: "https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" }
+---
+
+## 1. Four steps, and one of them is not written down
+
+The loop everyone draws has three steps. Reason, act, observe. It has four, and the fourth is where runs go wrong.
+
+| Step | Who does it | The failure that lives here |
+|---|---|---|
+| Reason | The model | It plans a step the task did not need |
+| Act | Your harness | The tool runs, and the side effect is real |
+| Observe | Your harness | You hand back a result that does not say what happened |
+| Decide whether to go again | **Usually nobody** | The run never ends |
+
+In most code the fourth step is a single line: keep going while `stop_reason == "tool_use"`. That line reads like plumbing. It is actually the whole termination policy, and it delegates the policy to the model.
+
+The model is not a bad judge of "am I done". It is an inconsistent one, in both directions. It stops early on a task that had three parts and it answered two. It carries on past a finished task because checking again is a reasonable-looking next step and nothing in its context says checking has a cost. Neither of those is a bug you fix in the prompt. They are the predictable result of having no condition that your own code can evaluate.
+
+## 2. Three ways a run can end
+
+Pick all three deliberately. They are not alternatives; they stack.
+
+| How it ends | Who owns it | Fires when | What it is good for | Where it lets you down |
+|---|---|---|---|---|
+| The model stops talking | The model | It returns a turn with no tool call | Short, well-shaped tasks | Silent early stops, and runs that never trigger it |
+| The model calls a `finish` tool | The model, but on your terms | It calls the tool you gave it | Turning "done" into an event you can log, validate, and reject | It still has to choose to call it |
+| Your harness stops it | You | Steps, tokens, wall clock, or a check on the world | Every run, always | It is a ceiling, not an answer |
+
+The middle one is the cheapest upgrade in this lesson. Add a tool called `finish` that takes the answer and a field for anything unresolved. Now the end of a run is a structured object rather than a paragraph you parse. You can validate it - is the answer non-empty, does the file it claims to have written exist - and if it fails, you hand back the failure and the run continues. "Done" stops being a vibe read off prose.
+
+The third one is the only one that is a guarantee. Everything else is a request to a model.
+
+> A run that can only end when the model says so has no end condition. `end_turn` is an opinion. Your budget is the promise.
+
+One stop reason is not an ending and gets misread as one. `pause_turn` means a server-side tool loop hit its own iteration limit - ten per request as the docs stand today, and like every vendor default it belongs on the stop-reasons page in the further reading rather than in a lesson - and the run is waiting for you. Append the response and call again. Treat it as termination and you will ship an agent that silently gives up mid-search.
+
+## 3. Budgets, and what to do at the ceiling
+
+**Steps.** Count iterations and stop at a number you measured. Log steps-to-completion across real tasks, take a high percentile, add headroom. Twenty because it sounded generous is how you get a ceiling that is both too low for the hard cases and far too high for the runaway.
+
+**Tokens.** Steps are not cost. Every step re-sends the whole transcript, so step thirty costs several times what step three cost, and a run can be well inside its step budget while being wildly outside anything you would have agreed to pay. Track cumulative input tokens and cap those too. The bill inside a loop gets its own lesson later on, *Why the bill exploded*.
+
+**Wall clock.** For anything a person is waiting on, a deadline is the budget that actually matters. Check it before each model call, not after.
+
+**The world.** The strongest ending is not a count at all. If the task was "write the file", check that the file exists. If it was "make the test pass", run the test. A condition you can evaluate against the world outside the loop beats every proxy, because it is the only one that cannot be satisfied by a model that thinks it is finished. Anthropic's own write-up of long-running agent harnesses lands on the same point from the other side: agents will happily mark a feature done after writing the code and running a unit test, without ever checking that the thing works end to end. If your task has a checkable condition, that is your termination condition, and the step budget is only the backstop behind it.
+
+This is also the clean way to say what the difference is between the two kinds of stopping. **The model deciding it is done is a claim. The harness deciding is a fact.** A `finish` call is the model's claim in a shape you can test - so test it. If `finish` says the file was written and the file is not there, reject the claim, hand back what you found, and let the run continue. That is a far better use of the remaining budget than trusting a sentence.
+
+**Progress.** The cheapest useful detector: the same tool name with the same arguments twice in a row. Nothing in the world changed between those two calls, so the second result will match the first, and the model is about to read it and do the same thing again. Two identical calls is a warning; three is a loop. Some harnesses instead hash the last few tool results and stop when they stop changing. Either works. Doing nothing does not.
+
+Now the part that gets skipped. **What happens at the ceiling is a design decision, and the wrong answers are both common.**
+
+- Raising and returning nothing throws away work the run actually did.
+- Returning the last thing the model said, dressed as a final answer, is worse: it looks like success.
+
+Return a third outcome. Partial result, the reason it stopped, the step count, and enough state that a person or a follow-up run can pick it up. `budget_exhausted` belongs in your logs as its own value, next to `finished` and `failed`, because the three want three different responses from you.
+
+```python
+import time
+from anthropic import Anthropic
+
+client = Anthropic()
+
+MAX_STEPS = 20                 # measured from real runs, not guessed
+MAX_INPUT_TOKENS = 400_000
+DEADLINE_SECONDS = 300
+
+FINISH = {
+    "name": "finish",
+    "description": "Call this once the task is complete. Do not call other tools after it.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "answer": {"type": "string"},
+            "unresolved": {"type": "string", "description": "Anything you could not do."},
+        },
+        "required": ["answer"],
+    },
+}
+
+def run(task, tools, execute):
+    messages = [{"role": "user", "content": task}]
+    tokens, started, last_call, repeats = 0, time.monotonic(), None, 0
+
+    for step in range(MAX_STEPS):
+        if tokens > MAX_INPUT_TOKENS or time.monotonic() - started > DEADLINE_SECONDS:
+            return {"outcome": "budget_exhausted", "step": step, "messages": messages}
+
+        resp = client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=2048,
+            tools=tools + [FINISH],
+            messages=messages,
+        )
+        tokens += resp.usage.input_tokens
+        messages.append({"role": "assistant", "content": resp.content})
+
+        if resp.stop_reason == "pause_turn":
+            continue                          # a server tool paused; not the end
+        if resp.stop_reason != "tool_use":
+            return {"outcome": "stopped_talking", "step": step, "messages": messages}
+
+        results = []
+        for block in (b for b in resp.content if b.type == "tool_use"):
+            if block.name == "finish":
+                return {"outcome": "finished", "step": step, "result": block.input}
+
+            call = (block.name, repr(block.input))
+            repeats = repeats + 1 if call == last_call else 0
+            last_call = call
+            if repeats >= 2:                  # same tool, same arguments, three in a row
+                return {"outcome": "stuck", "step": step, "call": call}
+
+            results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": execute(block.name, block.input),
+            })
+        messages.append({"role": "user", "content": results})
+
+    return {"outcome": "budget_exhausted", "step": MAX_STEPS, "messages": messages}
+```
+
+Four outcomes, and none of them is silence. `stopped_talking` is deliberately not called `finished`: the model went quiet without calling `finish`, which is a thing you want to see in a dashboard rather than a thing you want to assume went well.
+
+If you use an SDK loop instead of writing your own, the same discipline applies - Anthropic's tool runner takes `max_iterations`, and a runner without one is the unbounded loop again with nicer types.
+
+The next lesson is about the other reason a step goes wrong: the tool call itself failed, and the loop has to decide what to do with that.

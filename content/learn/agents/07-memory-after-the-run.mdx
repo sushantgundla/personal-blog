@@ -1,0 +1,145 @@
+---
+title: "What sticks around after the run ends"
+subtitle: "Memory across sessions is a database you let a language model write to, with no review step."
+part: 2
+minutes: 8
+why: "A user opened your agent and it greeted them with a summary in bullet points, because it remembered they prefer bullets. They never said that. Three weeks earlier they had asked one question to be answered briefly, and somewhere in that run the agent wrote `prefers short, bulleted answers` into its store as a standing fact about this person. Nothing was corrupted and nobody attacked you. A guess got written down, and from then on every run read it as truth. This lesson is about the writes."
+wins:
+  - "Treat a persistent store as lower-trust than the transcript, not higher."
+  - "Write on a decision, not on a turn - and only things that will still be true next month."
+  - "Store the source and the run id next to every fact, or you cannot audit it."
+  - "Refuse to persist anything that came out of a tool result."
+  - "Give the store a human-readable form, a delete path, and an expiry."
+quiz:
+  - q: "Why is a bad entry in a persistent store worse than a bad turn inside one run?"
+    options: ["It costs more tokens", "It outlives the run that made it and steers every later run until somebody deletes it", "It cannot be logged"]
+    answer: 1
+    explain: "Within a run, the damage ends with the run. Across runs, the write is the damage, and it is silent."
+  - q: "The agent read a preference off a web page it had fetched and wrote it to memory. Where do you stop that?"
+    options: ["A system prompt telling the agent to be careful with web content", "A check when the memory is read back", "The write handler, which should refuse to persist anything sourced from a tool result"]
+    answer: 2
+    explain: "The handler is your code and runs on every write. A prompt is a request, and a read-time check has already lost the provenance."
+  - q: "What should sit alongside every stored fact?"
+    options: ["The model's confidence in it", "Its source and the run that wrote it, with a timestamp", "The full transcript of the run"]
+    answer: 1
+    explain: "Without provenance you cannot tell a fact the user stated from one the agent inferred, and both look identical when read back."
+  - q: "Anthropic's memory tool is client-side. What follows from that?"
+    options: ["Your application executes every read and write against storage you own, so every check is yours to write", "Anthropic stores the files and you query them", "The model can read memory but never write it"]
+    answer: 0
+    explain: "The model only requests operations under `/memories`. Your handler decides what actually happens, which is where path checks, size caps and source rules live."
+  - q: "An agent 'remembers' a preference the user never set. The likeliest cause is..."
+    options: ["An attacker planted it", "The agent generalised a one-off instruction into a standing one, and nothing checked the write", "The store was corrupted on disk"]
+    answer: 1
+    explain: "Poisoning is real, but ordinary drift is far more common and looks identical from outside - which is exactly why writes need a source and the store needs to be readable."
+deeper:
+  - { label: "Anthropic - memory tool", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool" }
+  - { label: "Anthropic - effective context engineering for AI agents", href: "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" }
+  - { label: "OWASP - Agent Memory Guard", href: "https://owasp.org/www-project-agent-memory-guard/" }
+  - { label: "OWASP GenAI - memory is a feature, and an attack surface", href: "https://genai.owasp.org/2026/05/13/memory-is-a-feature-it-is-also-an-attack-surface/" }
+  - { label: "Packer et al. - MemGPT", href: "https://arxiv.org/abs/2310.08560" }
+---
+
+## 1. Two memories, two problems
+
+Lesson 6 was about one task, one user, one window. The worst thing that happens there is that the run forgets and redoes work, and when the run ends the mess goes with it.
+
+Everything changes when a write outlives the run that made it.
+
+| | Within one run | Across runs |
+|---|---|---|
+| Lifetime | Minutes | Until somebody deletes it |
+| Blast radius of a bad entry | This run | Every future run |
+| Who can check it | The run itself, against the world it is looking at | Nobody, unless you build the check |
+| Cost of forgetting | Repeated work | Lost context, and a colder start |
+| Cost of remembering wrongly | One bad step | A wrong default, permanently |
+| How much to trust it | The same as the transcript | Strictly less |
+
+That last row is the one people get backwards. A persistent store feels authoritative because it survived - it looks like a settled fact rather than a passing remark. It is the opposite. The transcript at least came from the conversation you are having. The store came from a conversation you cannot see, written by a model that was not asked to justify itself, read now by a run with no idea where any of it came from.
+
+The mechanics are simple enough to describe in a paragraph. There is a store of files or rows. The agent reads it at the start of a run and writes to it during one. Anthropic ships this as the memory tool - one entry in your `tools` array, `{"type": "memory_20250818", "name": "memory"}` - and the model then issues `view`, `create`, `str_replace`, `insert`, `delete` and `rename` commands against paths under `/memories`. Every other implementation is a variant of that shape.
+
+The part that matters is the half people skim: **the memory tool is client-side.** The model only asks. `/memories` is a prefix your handler maps onto real storage, and your code performs every operation. Nothing about it is managed for you, which means no check exists unless you write it.
+
+## 2. Deciding what gets written
+
+The default failure is writing too much. An agent that records something after every turn builds a store that takes longer to read than the task takes to do, full of things that were true once.
+
+| Worth persisting | Not worth persisting |
+|---|---|
+| A stable preference, in the user's own words | A fact about the world the agent derived - derive it again, it may have moved |
+| A decision and the reason for it | A blow-by-blow of what happened this run - that is a log |
+| A correction the user made to the agent's behaviour | Anything read out of a tool result |
+| A pointer to where something lives | Credentials, tokens, personal data |
+| A constraint that applies to all future work | Anything the agent inferred but nobody confirmed |
+
+Four rules that hold up:
+
+**Write on a decision, not on a turn.** The test is whether it will still be true next month. "The user asked for this in bullets" is an event. "The user prefers bullets" is a claim, and the gap between them is the opener's entire bug.
+
+**Store provenance with the fact.** Who said it, when, in which run. A fact with no source cannot be audited, cannot be explained to the user who asks why the agent thinks that, and cannot be safely believed.
+
+**Prefer editing to appending.** The memory tool has `str_replace`, `rename` and `delete` for a reason. A store that only grows becomes a store nobody reads, including the agent - it will start paging through it and skipping.
+
+**Expire, and scope.** Give entries a last-read timestamp and delete the cold ones. And map `/memories` per user in your handler, or one person's preference quietly becomes everybody's.
+
+## 3. When a memory is wrong, or was planted
+
+Two shapes, and they are indistinguishable once written.
+
+**Drift.** The agent turned a one-off into a standing rule. Nobody lied, nothing was attacked, and the store is simply wrong in a way that steers every future run a few degrees off. This is the common case by a wide margin.
+
+**Poisoning.** Content from a tool result - a web page, an inbound email, a document, a file in a repo - ends up in the store as a fact or an instruction. OWASP tracks this as **ASI06: Memory & Context Poisoning** in its Top 10 for Agentic Applications, and has a reference defence project, Agent Memory Guard, aimed squarely at it.
+
+Where the instruction comes from and how it gets into a model's context is the **Prompt Engineering** course's lesson *Prompt injection*, and this course's later lesson *Letting an agent touch the real world* covers limiting the damage once it lands. Neither is re-taught here. The part that belongs to memory is narrow and specific: **a persistent store turns a one-off injection into a standing instruction.** The page that carried it may be gone by the time it fires. The attack and its effect are separated in time, which is also why it does not look like an attack when you finally investigate - it looks like the model behaving oddly.
+
+Which leads to the practical framing. Do not think of this as a security feature bolted onto memory. Think of it as hygiene, and the checks fall out of that:
+
+- **Classify by source at write time.** A fact the user typed and a fact scraped from a page are not the same class. Refuse the second outright, or store it labelled, and make sure the label is still attached when the agent reads it back.
+- **Validate in the handler, not in the prompt.** Your write path is the choke point every operation passes through. Path validation first - lesson 9's resolve-then-check, unchanged, because `/memories/../../secrets.env` is a real request your handler will receive. Then a size cap, then a schema, then the source rule.
+- **Keep the store human-readable.** Plain files, plain sentences. If a store is a pile of embeddings, nobody can look at it and notice a line that should not be there.
+- **Ship a delete path.** The user must be able to see what the agent believes about them and remove it. This is a product requirement before it is a security one.
+- **Log and diff every write.** Attach the run id. When behaviour changes for no apparent reason, the diff of the store is the first place to look, and without the log you will be reading model outputs and guessing.
+
+> Within a run, forgetting is the bug. Across runs, remembering the wrong thing is the bug - and it never announces itself.
+
+```python
+import logging
+from datetime import datetime, timezone
+from pathlib import Path
+
+MEMORY_ROOT = Path("/srv/agent-memory")
+MAX_BYTES = 32_000
+audit = logging.getLogger("memory.audit")
+
+def resolve(user_id: str, path: str) -> Path:
+    # /memories is only a prefix the model sees. Map it to storage you own,
+    # scoped per user.
+    if not path.startswith("/memories"):
+        raise ValueError("path must start with /memories")
+    root = (MEMORY_ROOT / user_id).resolve()
+    target = (root / path.removeprefix("/memories").lstrip("/")).resolve()
+    target.relative_to(root)          # lesson 9's guard: resolve, then check
+    return target
+
+def write(user_id: str, path: str, text: str, source: str, run_id: str) -> str:
+    # Anything that arrived in a tool result is untrusted. It does not get to
+    # become a standing fact about this user.
+    if source not in {"user_stated", "user_confirmed"}:
+        audit.warning("refused memory write source=%s path=%s run=%s", source, path, run_id)
+        raise PermissionError(f"will not persist memory from source={source!r}")
+    if len(text.encode()) > MAX_BYTES:
+        raise ValueError("memory entry too large")
+
+    target = resolve(user_id, path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        f"# source: {source}\n"
+        f"# run: {run_id}\n"
+        f"# written: {datetime.now(timezone.utc).isoformat()}\n"
+        f"{text}\n"
+    )
+    audit.info("memory write path=%s run=%s source=%s", path, run_id, source)
+    return f"File created successfully at: {path}"
+```
+
+Three headers and a path check. That is the whole difference between a store you can reason about a year from now and one you can only apologise for.

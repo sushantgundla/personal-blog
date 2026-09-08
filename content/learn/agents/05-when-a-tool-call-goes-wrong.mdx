@@ -1,0 +1,140 @@
+---
+title: "When a tool call goes wrong"
+subtitle: "A failed tool result is an input to the next step, not the end of the request - so decide what the next step should be."
+part: 2
+minutes: 7
+why: "Your agent called `get_invoice` with a date in the wrong format. The tool raised, your handler caught it, and to keep the run alive you returned an empty result. The model read the blank, decided the invoice must not exist, and wrote a confident summary containing a total it made up. Nothing threw. Nothing turned red. The run finished in the normal number of steps and the answer was fiction. This lesson is about the space between a tool failing and the model reading about it."
+wins:
+  - "Send the tool's error back as a `tool_result` with `is_error` set, never as an empty result."
+  - "Write error text the model can act on: what went wrong and what to try next."
+  - "Retry infrastructure failures below the loop, so a dropped socket costs no model call."
+  - "Cap failures per tool per run, then disable that tool and say so."
+  - "Never let a run continue as though a failed call had worked."
+quiz:
+  - q: "Your tool raises and you return an empty `tool_result` with no error flag. What does the model most likely do?"
+    options: ["Stop and report a tool failure", "Read it as no data, keep going, and fill the gap with something plausible", "Call the tool again automatically"]
+    answer: 1
+    explain: "An empty result is a valid-looking answer meaning nothing was found. The model has no way to tell it apart from a genuine empty set."
+  - q: "A tool call fails with a 503. Where does that retry belong?"
+    options: ["In your harness, below the loop - a dropped connection should not cost a model call", "In the model's next step, by handing it the error and letting it decide", "Nowhere; a 5xx should end the run"]
+    answer: 0
+    explain: "Transient infrastructure failures carry no information the model can use. Absorb them under the tool and only surface what survives."
+  - q: "The model has now sent invalid arguments to the same tool three times. The right conclusion is..."
+    options: ["A fourth attempt with a firmer instruction will work", "The tool is down", "The tool's schema or description is wrong - stop rewriting and go and look at the tool"]
+    answer: 2
+    explain: "Two repair attempts catch nearly everything genuinely recoverable. A third failure is a design problem in the tool, not bad luck."
+  - q: "How is this different from the Prompt Engineering lesson 'Retries and fallbacks'?"
+    options: ["It is not; the same policy applies", "That lesson is one call failing and deciding whether to try again. This is a running loop deciding what its next step should be", "That lesson covers 429s and this one covers 500s"]
+    answer: 1
+    explain: "One is a round trip you either repeat or abandon. The other has a plan in flight, other tools available, and partial work worth keeping."
+  - q: "A `send_email` tool times out. The safe next move is..."
+    options: ["Retry at once - a timeout means nothing happened", "Check whether the send landed, using an idempotency key, before retrying", "Hand the timeout to the model and let it choose"]
+    answer: 1
+    explain: "A timeout tells you the response was lost, not that the work was. Blind retries on a side effect send the message twice."
+deeper:
+  - { label: "Anthropic - handle tool calls and `is_error`", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" }
+  - { label: "Anthropic - strict tool use", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" }
+  - { label: "Martin Fowler - CircuitBreaker", href: "https://martinfowler.com/bliki/CircuitBreaker.html" }
+  - { label: "AWS - exponential backoff and jitter", href: "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/" }
+  - { label: "Google SRE Book - addressing cascading failures", href: "https://sre.google/sre-book/addressing-cascading-failures/" }
+---
+
+Before anything else, the seam. The **Prompt Engineering** course has a lesson called *Retries and fallbacks*. That one is about a single call: it failed, do you send it again, and what do you return when you stop trying. Read it - the ladder in it is still the right ladder.
+
+This lesson starts where that one ends. Here the request is not over. There is a plan in flight, three other tools on the table, and work from the previous nine steps you would rather not throw away. The question is not "retry or give up". It is **what should the next step be, given what just failed** - and that is a question only a loop gets to ask.
+
+## 1. A tool error is a message, not an exception
+
+When your tool raises, nothing raises in the model's world. The model is not running your code. It asked for a call, and the only thing it will ever learn about the outcome is the text you choose to put in the `tool_result` block. You are writing that text. It is a prompt.
+
+Two ways engineers get it wrong, and they fail in opposite directions.
+
+**Sending nothing.** You catch the exception, return an empty result, and the run limps on. That is the opener. An empty result is indistinguishable from a genuine empty set, and a model that reads "no data" on a step it needed data for will do the most human thing available: carry on with an assumption. Set `is_error: true` and say what happened.
+
+**Sending everything.** You return a forty-line stack trace. The model reads a Python traceback it cannot do anything with, spends a step, and usually tries the identical call again. Anthropic's own tool-use docs put it plainly: write instructive errors, not generic ones - `Rate limit exceeded. Retry after 60 seconds.` rather than `failed`. The error text should name the problem and the next move.
+
+Where the failure came from decides who can fix it, and that is the classification worth making:
+
+| Origin | What it looks like | Who can fix it |
+|---|---|---|
+| The model built bad arguments | Schema violation, missing field, an enum value that does not exist | The model, if you tell it exactly what was wrong |
+| The world said no | 404, permission denied, an empty but legitimate result | Nobody, by retrying. The plan has to change |
+| The infrastructure failed | Timeout, 5xx, connection reset, 429 | Time, plus backoff - and none of it needs the model |
+| Your harness refused | Budget spent, unknown tool, policy block | You. Say so in the error so the model stops trying |
+
+Note the third row. Those failures carry no information a language model can use. Handle them under the tool, where a retry costs milliseconds instead of a full model call on a growing transcript.
+
+## 2. Four moves, and how to pick one
+
+| Move | Use it when | Do it where | Cost of choosing it wrongly |
+|---|---|---|---|
+| Retry the same call | Timeout, 5xx, 429 | In the harness, invisibly | You retry a 400 forever and pay for it |
+| Rewrite the arguments | Schema or validation error | Return the error, let the model repair | You paper over a bad tool schema |
+| Try a different route | The world said no | The model's next step | You give up on a task another tool could finish |
+| Stop and say so | The failure is on the critical path and the routes are gone | The harness | You return an answer built on a hole |
+
+**Retry the same call.** Backoff with jitter, two or three attempts, then surface it. The model should never see a transient failure that resolved itself.
+
+**Rewrite the arguments.** Return the validator's own message, verbatim - the field name and the constraint are exactly what the model needs. Cap it. Anthropic's docs say Claude will retry an invalid tool call two or three times on its own before apologising to the user; your cap should sit in the same neighbourhood, because past that point the model is not the thing that is wrong. Go and read your tool's description. This class of failure mostly disappears if you turn on strict tool use, which makes the API guarantee the arguments match your schema.
+
+**Try a different route.** This is the move the single-call lesson cannot make. `get_user(id)` returns 404, and `search_users(email)` might not. A step failed; the plan still has options. For the model to take one, your error has to say the door is closed - `No user with that id. Do not retry; try search_users.` - or it will knock again.
+
+**Stop and say so.** Partial result, the step that failed, the error. Lesson 4's `budget_exhausted` outcome and this one are siblings: both are honest endings, and both beat an invented answer.
+
+The fifth move is the one in the opener, and it is never correct: continue as though the call had worked.
+
+> An empty tool result is not the absence of an answer. It is an invitation to invent one.
+
+## 3. Making it hold up over a long run
+
+**Budget failures per tool, not just per run.** Count how many times each tool has failed this run. At three, take it off the table - and tell the model you have, in the error text, so it stops planning around a tool that is gone. That is a circuit breaker scoped to a single run, and it is the difference between a bad tool costing you three steps and a bad tool costing you the whole budget.
+
+**Leave the failed call in the transcript.** It is tempting to delete a failed call to keep the context clean. Do not. The record of "I tried that and it did not work" is the only thing stopping the model trying it again, and it is cheap. When you start clearing old tool results - the next lesson - failures are the ones to keep.
+
+**Guard side effects with an idempotency key.** A tool that writes, sends, or charges may have succeeded before it timed out. Give each logical operation a key, check the key before acting, and a retry becomes safe. The model call is always safe to repeat; what the tool does with it usually is not.
+
+```python
+import logging
+import random
+import time
+
+from pydantic import ValidationError
+
+log = logging.getLogger(__name__)
+TRANSIENT = (TimeoutError, ConnectionError)
+MAX_TRANSIENT_ATTEMPTS = 3
+MAX_FAILURES_PER_TOOL = 3
+
+def call_tool(name, args, tools, failures):
+    """Returns (content, is_error) for a tool_result block."""
+    if failures.get(name, 0) >= MAX_FAILURES_PER_TOOL:
+        return (f"{name} has failed {MAX_FAILURES_PER_TOOL} times and is unavailable "
+                "for the rest of this run. Use another tool, or finish with what "
+                "you have."), True
+
+    try:
+        parsed = tools[name].schema(**args)          # your validator
+    except ValidationError as err:
+        failures[name] = failures.get(name, 0) + 1
+        return f"Invalid arguments: {err}. Correct them and call {name} again.", True
+
+    for attempt in range(MAX_TRANSIENT_ATTEMPTS):
+        try:
+            return tools[name].run(parsed), False
+        except TRANSIENT as err:
+            log.warning("%s transient failure on attempt %s: %s", name, attempt, err)
+            if attempt < MAX_TRANSIENT_ATTEMPTS - 1:
+                time.sleep(2 ** attempt + random.random())   # backoff, below the loop
+        except PermissionError as err:
+            failures[name] = failures.get(name, 0) + 1
+            return f"Permission denied: {err}. Do not retry {name}; try another route.", True
+        except LookupError as err:
+            return f"Not found: {err}. This is a real empty result, not a failure.", False
+
+    failures[name] = failures.get(name, 0) + 1
+    return f"{name} is unreachable. Try a different tool, or stop and report this.", True
+```
+
+Read the two `False` returns. One is a success. The other is a genuine "not found" that is not an error at all - and telling those apart in your code, rather than making the model guess from an empty string, is most of this lesson in one branch.
+
+Every error string in there names the problem and the next move. None of them is a stack trace, and none of them is blank.

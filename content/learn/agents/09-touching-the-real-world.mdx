@@ -1,0 +1,133 @@
+---
+title: "Letting an agent touch the real world"
+subtitle: "Sandboxing and permissions: you cannot stop the agent making a bad call, so decide in advance how bad the worst call is allowed to be."
+part: 3
+minutes: 8
+why: "A coding agent was helping you clean up a repo and it deleted the wrong directory. Not a hacked one, not a poisoned one — it just resolved a relative path against the wrong working directory and ran the delete. It could do that because you had handed it your own shell, your own file system and your own credentials, so anything you could destroy, it could destroy. The model was never going to be perfect. The mistake was that a plausible-looking wrong call had nothing standing between it and your disk. This lesson is about what to put there."
+wins:
+  - "Sort every tool into read, reversible write, and irreversible before you ship it."
+  - "Run tool code somewhere the agent's worst call is survivable, not in your shell."
+  - "Deny network and filesystem by default; allow named domains and one directory."
+  - "Give the agent its own short-lived, narrowly scoped credentials, never yours."
+  - "Gate the irreversible step on a human who can see the resolved arguments."
+quiz:
+  - q: "The most useful first question about any tool you give an agent is..."
+    options: ["Is it fast enough to call in a loop", "Does the model understand its description", "Does it change anything outside the process, and can that change be undone"]
+    answer: 2
+    explain: "Read, reversible write and irreversible need three different levels of protection; sorting tools that way decides everything else."
+  - q: "Default-deny network access for a sandboxed tool means..."
+    options: ["Blocking a list of known-bad domains", "No outbound connections except to an explicit allowlist of hosts", "Turning off networking entirely, always"]
+    answer: 1
+    explain: "A blocklist has to guess every destination in advance. Deny everything, then name the few hosts the task genuinely needs."
+  - q: "Your tool code checks that a path sits inside the workspace before writing. Is that a sandbox?"
+    options: ["No — it is a policy check inside your process, and a subprocess it launches ignores it entirely", "Yes, path validation is the standard sandbox", "Only if the check runs before the model sees the tool"]
+    answer: 0
+    explain: "Policy in your code and isolation from the OS are two separate layers; a shell command your tool spawns is bounded only by the second."
+  - q: "Your agent has a `delete_path` tool and it is the one that worries you. What shrinks the blast radius most?"
+    options: ["A line in the system prompt telling it to be careful with deletes", "Making the tool move the path to a trash directory instead, so the action becomes reversible", "Logging every delete so you can see afterwards what it removed"]
+    answer: 1
+    explain: "Moving an action out of the irreversible bucket takes the pressure off every other control. A prompt is a request and a log is a record; neither gets the directory back."
+  - q: "Where should human confirmation be spent?"
+    options: ["On every tool call, so nothing slips through", "Only at the start of the run, as a single blanket approval", "On the few irreversible or outward-facing actions, showing the resolved arguments"]
+    answer: 2
+    explain: "Confirm everything and people click through everything; a rare prompt showing the actual path or actual recipient is one people still read."
+deeper:
+  - { label: "MCP — security best practices", href: "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices" }
+  - { label: "NVIDIA — practical security guidance for sandboxing agentic workflows", href: "https://developer.nvidia.com/blog/practical-security-guidance-for-sandboxing-agentic-workflows-and-managing-execution-risk/" }
+  - { label: "Anthropic — Sandbox Runtime", href: "https://github.com/anthropics/sandbox-runtime" }
+  - { label: "gVisor — documentation", href: "https://gvisor.dev/docs/" }
+  - { label: "Firecracker — microVMs", href: "https://firecracker-microvm.github.io/" }
+---
+
+Lesson 8 handed you a clean way to expose tools and was explicit that it does nothing about what those tools can reach. This is that lesson. It is defensive throughout: the goal is not to make the agent incapable of a bad decision, which is not on offer, but to make a bad decision boring.
+
+One connection to make before anything else. The **Prompt Engineering** course has a lesson called *Prompt injection* about text arriving in your context window that the model treats as an instruction. **Injection is where the instruction comes from. This lesson is about what it can reach once it lands.** They are two halves of one problem and neither half is sufficient alone — a perfectly filtered input pipeline still ends at a tool with your credentials, and a perfectly sandboxed tool still gets called for the wrong reasons. Read both.
+
+## 1. Reading and acting are different jobs
+
+Sort every tool you own into three buckets before you think about anything else.
+
+| | Reads | Reversible write | Irreversible |
+|---|---|---|---|
+| Examples | `search_docs`, `read_file`, `get_order` | `write_file` in a scratch dir, `draft_email`, a commit on a branch | `delete_path`, `send_email`, `charge_card`, `force_push` |
+| Worst case | Wrong or leaked data | An hour of cleanup | It is gone, or it is out there |
+| Needs isolation | Yes, for the credential it uses | Yes | Yes |
+| Needs a human gate | No | Rarely | Yes |
+| Retry safely in a loop | Yes | Usually | Never without an idempotency key |
+
+Most tools want to be in the first two buckets and can be, with a little design. `delete_path` becomes "move to a trash directory". `send_email` becomes "write a draft". "Commit to `main`" becomes "commit to a branch". Each of those turns an irreversible action into a reversible one and takes the pressure off every other control in this lesson.
+
+The bucket a tool is in is a fact about your code, not a label. MCP lets a server annotate a tool as read-only, and the spec tells clients to treat those annotations as untrusted unless the server is trusted — because an annotation is a claim, and nothing in the protocol enforces it. If you are the host, classify tools yourself, in a table you maintain, and let that table decide the permissions.
+
+The other design move is the one from the injection lesson, stated from this side. Do not build the powerful tool. `run_sql(query)` is one tool that can do everything the database can do; `get_orders_for_customer(customer_id)` is one tool that can do one thing. The narrow one is more work, and it is the difference between a mistake and an incident.
+
+## 2. Where the tool actually runs
+
+Now the second layer, and the one people skip because the first felt like enough. A validation check in your Python is **policy**. It runs in your process and a subprocess your tool spawns has never heard of it. **Isolation** is what the operating system enforces around that subprocess. You need both, and they are not substitutes.
+
+| Level | What it stops | Cost | Reach for it when |
+|---|---|---|---|
+| Same process as the agent | Nothing | None | Never, for anything that executes code |
+| Subprocess + OS sandbox | Reads and writes outside named paths, unlisted network | Milliseconds | Local tools, coding agents on your own machine |
+| Container | Casual filesystem and process access | Seconds, and a daemon | Server-side tools you wrote |
+| gVisor | Most of the host kernel's syscall surface | Some syscall overhead | Untrusted code, shared hosts |
+| microVM | Host kernel access, via a separate kernel per workload | Hundreds of ms to boot | Running code you did not write, at all |
+
+The rule of thumb worth remembering: **start strong and relax deliberately.** Code the agent generated is untrusted code, even though you asked for it. Anthropic's own Sandbox Runtime is a good concrete example of the second row — it uses Seatbelt on macOS and bubblewrap plus seccomp filters on Linux to bound an ordinary process without a container at all.
+
+Whatever level you pick, four settings do most of the work:
+
+- **Default-deny the network.** Not a blocklist. Deny all outbound traffic, then allow the named hosts the task actually needs, through a proxy that can log what was attempted. A tool that only reads your own database has no business reaching the internet, and the moment it tries you want to know.
+- **Default-deny the filesystem.** One writable working directory. Read access to what the task needs and nothing above it. Resolve every path and check it is still inside the workspace afterwards, because `../..` and a symlink both look innocent before resolution.
+- **No ambient credentials.** The sandbox should not inherit your environment. No `~/.aws`, no `~/.ssh`, no shell profile, no cloud metadata endpoint. If a tool needs a secret, hand it exactly that one, scoped and short-lived, and preferably read-only.
+- **Hard caps and an ephemeral disk.** CPU, memory, wall clock, output size. Throw the filesystem away at the end of the run. A runaway loop then costs you a container instead of a weekend.
+
+Credentials deserve a sentence of their own, because the opening story is really a credentials story. **The agent's identity should not be the human's identity.** Give it its own principal, with its own scopes, its own rate limits and its own audit trail. Then "what can this agent do" is a question with an answer you can look up, rather than "everything I can do".
+
+> Policy is what your code refuses to do. Isolation is what the machine refuses to let it do. Only the second one survives a subprocess.
+
+## 3. The gate on the irreversible step
+
+Some actions cannot be made reversible and cannot be made narrow. Those get a human, and the gate has to be built so that the human is actually reading it.
+
+```python
+from pathlib import Path
+
+WORKSPACE = Path("/srv/agent/workspace").resolve()
+READ_ONLY = {"read_file", "list_dir", "grep_repo"}
+NEEDS_APPROVAL = {"write_file", "delete_path", "send_email"}
+
+
+def in_workspace(candidate: str) -> Path:
+    """Resolve first, then check — '../..' and symlinks both look fine before this."""
+    resolved = (WORKSPACE / candidate).resolve()
+    if not resolved.is_relative_to(WORKSPACE):
+        raise PermissionError(f"path outside workspace: {candidate}")
+    return resolved
+
+
+def call_tool(name: str, args: dict, ask_human, audit) -> dict:
+    if name not in READ_ONLY | NEEDS_APPROVAL:
+        return {"ok": False, "error": f"unknown tool: {name}"}   # not an exception:
+                                                                 # the loop can recover
+    if "path" in args:
+        args = args | {"path": str(in_workspace(args["path"]))}
+
+    audit.write(tool=name, args=args)          # every call, before it happens
+
+    if name in NEEDS_APPROVAL and not ask_human(name, args):
+        return {"ok": False, "error": "denied by operator"}      # back into the loop
+
+    return TOOLS[name](**args)                 # runs inside the sandbox, not here
+```
+
+Three things about that snippet. The path check happens **after** resolution, which is the only order that catches `../..`. The denial is returned to the model as a tool result rather than raised, so the loop can pick something else — that is the error-handling lesson applied to a permission failure. And the comment on the last line is the honest part: none of this is a sandbox. It is the policy layer from section 2, and it is worth nothing if `TOOLS[name]` shells out to a process with your file system.
+
+For the human gate itself, two rules decide whether it works:
+
+- **Show the resolved arguments, not the intent.** "Delete `/Users/you/Projects/client-work`" is a prompt someone stops at. "The agent would like to clean up some files" is a prompt everyone approves.
+- **Spend the interruptions.** Confirmation fatigue is real and it is the failure mode of over-gating: ask on every call and people learn to click yes without reading, which is worse than not asking. Gate the irreversible bucket and nothing else.
+
+Then log everything, whether or not it was gated. For each tool call: the name, the arguments as they were finally resolved, which agent run it belonged to, what came back, and what it changed. You want this before you need it, because the question you will eventually have to answer is "what did it touch" — and lesson 12 is about reading exactly that trace after a run goes wrong.
+
+Last, run the injection lesson's three-ingredient test over the tools you just sorted into buckets. It takes a minute and it is the cheapest design review there is. That lesson tells you when the combination is dangerous; the table at the top of this one tells you which of the three you can most cheaply take away, and which tools you would have to re-shape to do it.
