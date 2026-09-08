@@ -90,8 +90,19 @@ signage-caps label, and they belong to one line, not the whole page.
 ## Layout
 
 - **Never a fixed pixel max-width.** The reading column is
-  `min(70ch, 100% - 2 * var(--ln-gutter))` with `--ln-gutter:
+  `min(var(--ln-measure), 100% - 2 * var(--ln-gutter))` with `--ln-gutter:
   clamp(1rem, 5vw, 6rem)`. The diagram runs edge to edge.
+- **The reader picks the measure.** `--ln-measure` is `70ch` by default and
+  `104ch` when `<html>` carries `data-ln-width="wide"`. Both are character
+  counts, so the rule above still holds and a phone still gets the whole
+  window either way. The switch is in the rail, the choice is kept in
+  `localStorage` under `learn:width:v1`, and a blocking script in the learn
+  layout applies it before first paint so the narrow column never flashes.
+- **A band is the way out of the column.** Full width, a hairline top and
+  bottom spanning the window, and a `.measure` inside so its left edge is
+  the h1's to the pixel — never `.bleed`, which adds a gutter of its own and
+  insets a nested `.measure` twice. Two exist: the position strip at the head
+  of a lesson and the recall quiz. A band has no fill and no tint.
 - **The diagram rotates, it does not shrink.** Labels are always horizontal. No
   rotated text at any breakpoint. Which way a line runs depends on which of the
   two diagram surfaces it is on:
@@ -130,6 +141,20 @@ no badge, no streak, no celebration. Stored in `localStorage` under
 `app/learn/_components/` owns the section's vocabulary. Any new element is built
 from the four primitives above. A stock card, a shadowed panel or an icon tile
 inside this world is a lapse, not a shortcut.
+
+Two additions worth naming:
+
+- **Segmented pair** (`ViewWidth`) — two buttons in the signage voice split by
+  one hairline, the setting in force at full `--ln-ink` and the other at
+  `--ln-ink-quiet`. No fill, no pill, no radius, no border round the group. It
+  is the same read/unread distinction the ticks on a line use.
+- **Checkpoint header** — a band's header row: the label on the left, a count in
+  tabular numerals on the right (`02 / 05 ANSWERED`), live as it changes.
+
+The line can be walked from either end of a lesson. The stops either side are
+real links in the position strip as well as in `PrevNext` at the foot; the two
+navs carry distinct `aria-label`s (`Nearby stops`, `Lesson navigation`) so the
+same pair of titles is never announced as one undifferentiated list.
 
 ## Accessibility
 

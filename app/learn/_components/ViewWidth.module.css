@@ -1,0 +1,55 @@
+/* ViewWidth — the reading-width switch in the platform rail.
+
+   A segmented pair in the signage voice, split by one hairline. No fill,
+   no pill, no radius, no border around the group: the active setting is
+   simply at full ink and the other is stepped back, which is the same
+   read/unread distinction the ticks on a line use. */
+
+.group {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+/* The :global(.learn-root) prefix is not decoration. These buttons also
+   carry .sign-quiet for the signage voice, and `.learn-root .sign-quiet`
+   in learn.css sets a colour at the same specificity as a doubled class —
+   it is bundled after this file, so a plain `.on.on` loses the tie and the
+   active setting never lights up. The extra ancestor settles it. */
+:global(.learn-root) .option.option {
+  padding: 0.15rem 0.6rem;
+  border: 0;
+  background: none;
+  color: var(--ln-ink-quiet);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* The split, on the second button only, so it sits between the two and
+   never on an outside edge. */
+.option + .option {
+  border-left: 1px solid var(--ln-rule);
+}
+
+:global(.learn-root) .option.option:hover {
+  color: var(--ln-ink);
+}
+
+/* The setting in force. Full ink, and the aria-pressed state carries the
+   same thing for anyone not reading the colour. */
+:global(.learn-root) .on.on {
+  color: var(--ln-ink);
+}
+
+/* The rail is one thin row, and on a phone it holds the section name, the
+   switch and the way out. Trim the padding rather than dropping anything:
+   a reader on a small screen is the one who most wants the wide column. */
+@media (max-width: 34rem) {
+  :global(.learn-root) .option.option {
+    padding-inline: 0.4rem;
+  }
+
+  :global(.learn-root) .option.option:first-child {
+    padding-left: 0;
+  }
+}

@@ -1,28 +1,52 @@
-/* Quiz — retrieval practice at the foot of a lesson.
+/* Quiz — retrieval practice, as a checkpoint across the page.
+
+   The band is the same shape as the position strip at the head of a
+   lesson: full width, a hairline top and bottom spanning the whole
+   window, and everything inside it in .measure so its left edge is the
+   h1's left edge to the pixel. .bleed is deliberately not used — it
+   carries a gutter of its own, and a .measure nested inside it comes out
+   inset twice. No fill and no tint: nothing in this world has a
+   background region.
 
    Options are full-width rows separated by hairlines, not cards. Nothing
    is filled, nothing is rounded; the letter, the glyph and the colour
    together carry the result, so no one of them is the only signal.
 
-   The right/wrong colours are declared as custom properties on .quiz and
+   The right/wrong colours are declared as custom properties on .band and
    overridden under :global(.light), which is the class next-themes puts on
    <html>. Both pairs clear 4.5:1 on their own ground. Everything else is
    an --ln-* token from app/learn/learn.css. */
 
-.quiz {
+.band {
   --quiz-right: #35b37e;
   --quiz-wrong: #f2604c;
 
-  margin-top: clamp(2.5rem, 6vw, 3.5rem);
-  padding-top: clamp(1.5rem, 3vw, 2rem);
+  width: 100%;
+  /* Deeper and PrevNext below carry their own top margin, so the band
+     only spaces itself off the Wins block above it. */
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+  padding-block: clamp(2rem, 5vw, 3.5rem);
   border-top: 1px solid var(--ln-rule);
+  border-bottom: 1px solid var(--ln-rule);
 }
 
 /* Darker on the light theme, where the dark-mode green and red wash out
    against a near-white page. */
-:global(.light) .quiz {
+:global(.light) .band {
   --quiz-right: #1c7a51;
   --quiz-wrong: #b8382b;
+}
+
+/* The header row: what this is on the left, how far through it on the
+   right. They sit on one line while there is room and stack on a phone,
+   where the gutter is down to 1rem and the counter would otherwise crowd
+   the instruction. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
 }
 
 /* The heading. RECALL carries it at heading scale; NO SCROLLING BACK sits
@@ -35,6 +59,16 @@
   align-items: flex-start;
 }
 
+/* The answered count. A tabular pair, so the row does not shift width as
+   the first digit ticks over. */
+:global(.learn-root) .counter.counter {
+  flex: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--ln-ink-quiet);
+}
+
 /* Doubled, so this beats .learn-root .sign on size without depending on
    which stylesheet the bundler puts last. */
 .headingLead.headingLead {
@@ -43,12 +77,20 @@
   color: var(--ln-ink);
 }
 
+/* Every question is its own unit: a hairline above each one after the
+   first, and the same space either side of it. Spacing and rules, never a
+   box. */
 .list {
   list-style: none;
   margin-top: clamp(1.25rem, 3vw, 1.75rem);
   display: flex;
   flex-direction: column;
-  gap: clamp(1.75rem, 4vw, 2.5rem);
+  gap: clamp(1.5rem, 3.5vw, 2rem);
+}
+
+.list > li + li {
+  padding-top: clamp(1.5rem, 3.5vw, 2rem);
+  border-top: 1px solid var(--ln-rule);
 }
 
 .qLabel {

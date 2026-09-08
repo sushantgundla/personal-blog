@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import Link from 'next/link'
+import { ViewWidth } from './_components/ViewWidth'
 import './learn.css'
 
 /**
@@ -17,7 +18,24 @@ import './learn.css'
  * so next-themes still drives both modes without --primary or the
  * --surface-* ramp reaching in. Every rule there is scoped under
  * .learn-root and never leaks out.
+ *
+ * The rail also carries the reading-width switch. Its value lives in
+ * localStorage and has to be on <html> before the first paint, or every
+ * reader who chose the wide column would watch it snap in from the narrow
+ * one — hence the blocking script below, which is the same trick
+ * next-themes uses for dark mode.
  */
+
+/**
+ * Runs before anything paints. Deliberately tiny and dependency-free: it
+ * blocks the parser, so every byte is time on screen. localStorage throws
+ * outright in some privacy modes, so the whole body is in a try/catch and
+ * failing simply leaves the default narrow column.
+ *
+ * Keep the key in step with WIDTH_KEY / WIDTH_ATTR in
+ * app/learn/_components/ViewWidth.tsx.
+ */
+const WIDTH_SCRIPT = `try{var w=localStorage.getItem('learn:width:v1');if(w==='wide')document.documentElement.setAttribute('data-ln-width','wide')}catch(e){}`
 
 export const metadata: Metadata = {
   // Section-wide default. The listing, a course and a lesson each set
@@ -36,14 +54,21 @@ export const viewport: Viewport = {
 export default function LearnLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="learn-root">
+      <script dangerouslySetInnerHTML={{ __html: WIDTH_SCRIPT }} />
+
       <header className="learn-rail">
         <div className="learn-rail-inner">
           <Link href="/" className="sign">
             Sushant Gundla / Learn
           </Link>
-          <a href="https://sushantgundla.com" className="sign-quiet">
-            The site ↗
-          </a>
+
+          {/* The right of the rail: how wide to read, then the way out. */}
+          <div className="learn-rail-right">
+            <ViewWidth />
+            <a href="https://sushantgundla.com" className="sign-quiet">
+              The site ↗
+            </a>
+          </div>
         </div>
       </header>
 
