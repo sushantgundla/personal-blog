@@ -1,7 +1,7 @@
 ---
 title: "Changing the embedding model underneath a live index"
 subtitle: "Two vectors from two different models are not comparable numbers, so the swap is a migration, not a config change."
-part: 3
+part: 2
 minutes: 7
 why: "You read about a better embedding model, changed one line in your config, and redeployed. Searches for anything indexed since Monday got noticeably better. Searches for everything indexed before Monday got quietly worse, and nothing logged an error - the query still returned five results, just the wrong five. What happened is that your index now holds vectors from two different models sitting in the same collection, and a similarity score between them means nothing at all. This lesson is the migration you needed to run instead of the config change you actually ran: how to move a live corpus to a new embedding model without breaking the half you already indexed."
 wins:

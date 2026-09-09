@@ -3,7 +3,7 @@ title: "From source system to corpus"
 subtitle: "Extraction is the bottleneck, not the embedding call - because the content still lives inside someone else's system."
 part: 1
 minutes: 7
-why: "*Parsing documents before you chunk them* fixed the two-column PDF that read left to right across both columns and scrambled every sentence into nonsense. Say you fixed it - layout-aware parsing, tables turned to markdown, the works. Retrieval is still missing whole documents, and none of them are PDFs. They are pages in a wiki, tickets in a helpdesk, records in a CRM, files in a shared drive nobody remembers the name of. Nothing ever tried to get them out, or the script that tried breaks every time someone renames a folder. Getting bytes out of the system they actually live in is a different problem from turning those bytes into text, and for most real corpora it is the bigger one. This lesson is that problem: connectors versus hand-rolled extraction, and why extraction eats most of an ingestion budget before parsing or embedding get a turn."
+why: "Say you fix every parsing problem you can think of - the two-column PDF that read left to right across both columns and scrambled every sentence into nonsense, layout-aware parsing, tables turned to markdown, the works (*Parsing documents before you chunk them*, next, is where that happens). Retrieval is still missing whole documents, and none of them are PDFs. They are pages in a wiki, tickets in a helpdesk, records in a CRM, files in a shared drive nobody remembers the name of. Nothing ever tried to get them out, or the script that tried breaks every time someone renames a folder. Getting bytes out of the system they actually live in is a different problem from turning those bytes into text, and for most real corpora it is the bigger one. This lesson is that problem: connectors versus hand-rolled extraction, and why extraction eats most of an ingestion budget before parsing or embedding get a turn."
 wins:
   - "Treat getting content out of the source system as its own problem, separate from parsing the file."
   - "Reach for a maintained connector before you write a scraper against someone else's API."
@@ -38,7 +38,7 @@ deeper:
   - { label: "Requests - documentation", href: "https://requests.readthedocs.io/en/latest/" }
 ---
 
-*Parsing documents before you chunk them* is about a file you already have. This lesson is about the step before that file exists on your disk at all - getting it out of a wiki, a helpdesk, a CRM, or a shared drive that was never built to be read by a pipeline. Skip it, and no amount of layout-aware parsing helps, because the document never arrives.
+This lesson is about the step before a file exists on your disk at all - getting it out of a wiki, a helpdesk, a CRM, or a shared drive that was never built to be read by a pipeline. *Parsing documents before you chunk them*, next, is about what happens once that file is in hand. Skip this step, and no amount of layout-aware parsing helps, because the document never arrives.
 
 ## 1. Getting bytes out is a different job than parsing them
 
@@ -122,7 +122,7 @@ def extract_pages(base_url: str, api_token: str, since_cursor: str | None = None
     return documents
 ```
 
-Notice what the function returns: not just text, but a `content_hash` and a `source_url` alongside it. That is not incidental - it is the beginning of the schema *The schema you wish you had written on day one* argues you need before a single document is chunked, and it is cheapest to capture right here, at the point of extraction, rather than reconstructed later from a corpus that has already forgotten where anything came from.
+Notice what the function returns: not just text, but a `content_hash` and a `source_url` alongside it. That is not incidental - it is the beginning of a schema every document needs before it is ever chunked: a stable id, a content hash, and a source url decided at the point of extraction, and it is cheapest to capture right here rather than reconstructed later from a corpus that has already forgotten where anything came from.
 
 ## 3. Where the ingestion budget actually goes
 
@@ -140,4 +140,4 @@ Embedding a chunk costs the same whether that chunk came from a PDF, a wiki page
 
 > The embedding call looks the same for every document. Getting the document is different every single time - that is where the budget goes.
 
-This is worth saying plainly before you scope a project, because it changes what you plan for. A four-source corpus is not one extraction problem times four - it is four different extraction problems, each with its own way of breaking, and each needing someone to notice when it does. The next lesson picks up right where this one's example script leaves off: once you are pulling documents from several systems on purpose, you will very quickly find the same policy sitting in two of them at once, disagreeing with itself.
+This is worth saying plainly before you scope a project, because it changes what you plan for. A four-source corpus is not one extraction problem times four - it is four different extraction problems, each with its own way of breaking, and each needing someone to notice when it does.
