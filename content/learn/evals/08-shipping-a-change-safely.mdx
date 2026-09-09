@@ -1,0 +1,108 @@
+---
+title: "A/B testing and shipping a change safely"
+subtitle: "An eval score is a hypothesis. A rollout is the experiment that checks it."
+part: 3
+minutes: 8
+why: "The eval says the new prompt wins - it scored higher on your golden set, the judge preferred it in most head-to-heads, the regression run was clean. You ship it, and real users like the old one better. This isn't a contradiction, it's a reminder of what an eval score actually is: a judge's opinion on a fixed set of cases, not a measurement of what your actual users do with the actual thing. This lesson is about the gap between those two - rolling a change out to real traffic without betting the whole thing on day one, choosing what to watch while it's live, and deciding, with a real metric instead of a re-run of the eval, whether it actually worked."
+wins:
+  - "Treat a passing eval as a hypothesis to test, not a decision already made."
+  - "Roll out in stages - shadow, then canary, then a full comparison - never all at once."
+  - "Pick a real success metric before you ship: task completion, not a judge's score."
+  - "Set the rollback thresholds before you ramp up traffic, not after something looks wrong."
+  - "Freeze the judge and the golden set for the length of the test, so the comparison stays honest."
+quiz:
+  - q: "A prompt change wins on your eval set but users seem to prefer the old version in production. What does this most likely mean?"
+    options: ["The users are wrong and the eval is right", "The eval measured something that isn't the same thing users actually care about", "The rollout was configured incorrectly"]
+    answer: 1
+    explain: "An eval score reflects whatever your judge and golden set were built to measure; if that doesn't match what users value, a win on paper can lose in practice."
+  - q: "What does shadow traffic actually do?"
+    options: ["Sends a fraction of real users to the new version and measures their outcomes", "Duplicates real requests to the new version in the background, without any user seeing its response", "Replays last month's traffic against the new version offline"]
+    answer: 1
+    explain: "Shadow mode compares outputs on live inputs with zero user-facing risk, because the candidate's response never actually reaches anyone."
+  - q: "Why put a canary stage between shadow traffic and a full rollout, instead of going straight to 50/50?"
+    options: ["Canary traffic is cheaper to compute than a full A/B test", "It limits how many real users are affected if something the eval and shadow test missed shows up", "Canary tests don't require a success metric"]
+    answer: 1
+    explain: "A small percentage of real traffic bounds your exposure while you watch for problems shadow testing, which has no real user, couldn't catch."
+  - q: "What should you decide before ramping traffic up, not after?"
+    options: ["The final headline for the launch announcement", "The rollback thresholds - the metric values that trigger pulling the change back", "Which team gets credit for the change"]
+    answer: 1
+    explain: "Deciding the trigger in advance means the system can act on it immediately; deciding after you're already worried is slower and more political."
+  - q: "A canary test on 200 users shows the new prompt slightly ahead on your success metric. What's the right read?"
+    options: ["Ship it immediately to 100% of traffic - the numbers favor it", "Treat it as a small, possibly noisy signal, and only ramp further once the sample is large enough to trust", "Ignore it, since only the offline eval score matters"]
+    answer: 1
+    explain: "A small sample can easily show a difference that isn't real; ramping is how you get a bigger, more trustworthy sample before betting everything on the result."
+deeper:
+  - { label: "FutureAGI - A/B testing LLM prompts: the statistical playbook", href: "https://futureagi.com/blog/ab-testing-llm-prompts-best-practices-2026/" }
+  - { label: "FutureAGI - what is canary deployment, an LLM gateway guide", href: "https://futureagi.com/glossary/canary-deployment/" }
+  - { label: "MLflow - canary deployment for AI models, a guide", href: "https://mlflow.org/articles/what-is-canary-deployment-ai" }
+  - { label: "Releasing AI features without breaking production - shadow, canary, A/B", href: "https://tianpan.co/blog/2026-04-09-llm-gradual-rollout-shadow-canary-ab-testing" }
+  - { label: "Evan Miller - how not to run an A/B test", href: "https://www.evanmiller.org/how-not-to-run-an-ab-test.html" }
+---
+
+Everything from *Regression testing a prompt or model change* onward has been about deciding whether to merge. This lesson is about what happens after you do - because a golden set and a judge, however well calibrated, are still a proxy for the thing you actually care about: what happens when real people use the real thing.
+
+## 1. An eval score is a hypothesis
+
+A judge's verdict, a regression run that stayed green, a pairwise comparison that favored the new version - all of it is evidence gathered against a fixed set of cases, scored by a fixed rubric. That's genuinely useful, and it's also not the same measurement as "users got more value from this." The golden set can't include a case it never anticipated. The judge's rubric can reward something - concision, a particular tone, a format - that doesn't actually move whether a real task got completed. None of that means the eval was worthless. It means a passing eval is the reason to *try* the change on real traffic, not the reason to skip trying it.
+
+This is the same trap *Why "looks good to me" fails* opened the whole course with, one level up: eyeballing five demo cases wasn't enough, so you built a golden set - and now the golden set itself needs checking against the thing it's a proxy for. The fix is the same shape every time: don't trust the proxy alone, go measure the real thing, on a scale small enough that being wrong is cheap.
+
+None of this means the earlier work was wasted. The regression gate from the last lesson still did its job - it caught the version that would have broken three existing cases outright, before a single user saw it. What it can't do is tell you whether the version that cleared the gate is actually the one people prefer. Those are two different questions, and shipping safely means answering both, not stopping at the first one because it's the one you already had a number for.
+
+## 2. Shadow, then canary, then a real comparison
+
+The three stages differ in exactly one thing: how much of a real user's outcome depends on the new version before you've had a chance to notice a problem.
+
+| | Shadow | Canary | Full A/B |
+|---|---|---|---|
+| Who sees the new version's output | Nobody - it runs alongside the real response but is discarded | A small slice of real users (often 1-5%) | A meaningful share of traffic, split deliberately |
+| What it costs | Extra compute, run in parallel, for no direct benefit yet | Real exposure, capped by the slice size | Full commitment to running both versions for the test's duration |
+| What it tells you | Whether outputs differ meaningfully at all, and whether the new version errors, times out, or costs oddly more | Whether real usage surfaces a problem the eval and shadow test missed | Whether the new version actually wins on the metric you chose, at a sample size you can trust |
+| Risk if something's wrong | None - no user is affected | Bounded to the canary slice | Bounded by the traffic split, but the test runs longer |
+
+Run them in that order, not because the earlier stages are formalities, but because each one is cheaper to be wrong in than the next. Shadow traffic costs you compute and tells you if the new version is obviously broken - crashes, timeouts, wildly different output shape - with zero user impact. Canary traffic costs a small, bounded number of real users something if you're wrong, in exchange for a signal shadow mode structurally can't give you: how the new version performs when someone's actual request depends on the answer. Only once canary looks clean do you commit to a full comparison sized to actually settle the question.
+
+> The eval told you it should win. The rollout tells you if it did.
+
+## 3. Deciding it worked, before you start
+
+Two decisions belong before you route a single real user to the new version, not after you're already looking at numbers and wondering what they mean.
+
+**Pick the real metric first.** Not the judge's score again - something closer to what the user actually experienced: task completion, whether they asked a follow-up because the first answer didn't land, a regeneration or a thumbs-down, whether they abandoned the flow. The eval score got you here; it doesn't get to also be the metric that decides whether the rollout worked, or you've just measured your proxy against itself.
+
+**Set the rollback trigger before you ramp.** Decide, in writing, what would make you pull the change back - an error rate above some level, a latency regression, the success metric dropping, cost per request spiking - and wire the check to act on it rather than waiting for someone to notice and raise an alarm. Deciding this while you're already staring at a dashboard that looks a little off is slower and more political than deciding it in advance, when nobody has a stake in the answer yet.
+
+Keep the judge and the golden set frozen for the length of the test, the same discipline as the regression gate. If you're also running an automated judge over sampled live comparisons during the rollout, changing its model or rubric mid-test means you can no longer tell whether a metric moved because the candidate got better, or because the thing measuring it did - the exact failure *How to trust a judge* spent a whole lesson on preventing.
+
+```python
+import hashlib
+
+CANARY_PERCENT = 5          # start small - see the table above
+ROLLBACK_THRESHOLDS = {
+    "error_rate": 0.02,      # 2% - decided before the rollout started, not during it
+    "p95_latency_ms": 4000,
+}
+
+def in_canary(user_id: str, percent: int = CANARY_PERCENT) -> bool:
+    """Deterministic bucket: the same user always lands on the same side,
+    so their experience doesn't flip between requests."""
+    digest = hashlib.sha256(user_id.encode()).hexdigest()
+    bucket = int(digest, 16) % 100
+    return bucket < percent
+
+def should_roll_back(metrics: dict) -> bool:
+    return (metrics["error_rate"] > ROLLBACK_THRESHOLDS["error_rate"]
+            or metrics["p95_latency_ms"] > ROLLBACK_THRESHOLDS["p95_latency_ms"])
+
+# routing decision for one request
+version = "candidate" if in_canary(user_id="user_48213") else "control"
+
+# a scheduled check against live metrics - not a one-time glance
+live_metrics = {"error_rate": 0.031, "p95_latency_ms": 2100}
+if should_roll_back(live_metrics):
+    print("rolling back: error_rate exceeded threshold")   # act automatically, don't wait
+```
+
+One more thing worth saying plainly: a canary on a couple hundred users that shows the new version slightly ahead is not a result yet, it's a coin that's landed heads a few extra times. How big a sample you need before you trust a difference is genuine statistics - sample sizing, confidence intervals, the mechanics of why a small early lead often evaporates - and it's worth reading up on properly rather than eyeballing a dashboard, because the mistakes here are well studied and avoidable. Full A/B is the stage sized to actually answer the question; canary is sized to catch a disaster, not to declare a winner.
+
+None of this protects you from a different problem: the model behind an unchanged prompt quietly changing on its own, with no rollout of yours to blame. *Drift: when the model changes under you* picks up exactly that case.

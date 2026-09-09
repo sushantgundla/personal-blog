@@ -1,0 +1,111 @@
+---
+title: "Latency and cost as first-class metrics"
+subtitle: "A correct answer that takes nine seconds and burns a fortune in tokens is still a problem."
+part: 4
+minutes: 6
+why: "Someone swapped in a model that scored higher on your golden set, shipped it, and a week later support is asking why a feature that used to feel instant now has a visible pause. The eval said better. Nobody had a number for slower and pricier, so nobody was watching for it, and the regression that actually reached users was never the one anyone measured. Quality is not the only axis a change can move. This lesson treats latency and cost as metrics with the same seriousness as accuracy — tracked, alerted on, and checked before a change ships, not discovered afterward from a ticket."
+wins:
+  - "Track p50 and p95 latency separately - the median hides the tail your users actually complain about."
+  - "Measure time to first token for anything the user watches stream, not just total time."
+  - "Put a latency and a cost budget on a change before you ship it, next to the quality bar."
+  - "Alert on p95, not on the average - an average can look fine while one in twenty requests crawls."
+  - "Look up current numbers yourself when it matters - a rate or a benchmark in a lesson like this one will be stale before you finish reading it."
+quiz:
+  - q: "Why track p95 latency in addition to the average?"
+    options: ["p95 is easier to calculate from raw logs", "The average can look healthy while a meaningful share of requests are far slower, and those are the ones users notice and complain about", "p95 is the only percentile supported by most monitoring tools"]
+    answer: 1
+    explain: "A slow tail can sit under a fine-looking average because most requests are fast; p95 is what tells you how bad the bad ones actually get."
+  - q: "For a response that streams to the user as it generates, which metric matters most for how fast it *feels*?"
+    options: ["Total tokens generated", "Time to first token — how long before anything appears at all", "The model's context window size"]
+    answer: 1
+    explain: "A stream that starts appearing quickly feels fast even if the full answer takes a while, because the user has something to read immediately; a silent wait before the first token feels slow no matter how fast the rest streams."
+  - q: "A new model scores higher on your golden set from *Building an eval set from your own traffic* and is three times slower. What is the right way to decide whether to ship it?"
+    options: ["Ship it - the eval score is the only thing that matters", "Check whether the latency increase crosses your budget for that feature, and treat the quality gain and the latency cost as two separate questions", "Reject it automatically, since any slowdown at all disqualifies a change"]
+    answer: 1
+    explain: "A quality win and a latency cost are both real and both need a threshold; conflating them into one decision is how a change that fails a real budget still ships because the eval number looked good."
+  - q: "Why is cost worth alerting on the same way you would alert on an error rate, rather than checking it once a month?"
+    options: ["Because pricing changes require immediate action", "Because a change that quietly increases tokens per request compounds across every request that follows, and a monthly check catches it only after weeks of the increase", "Because most providers require real-time cost monitoring by contract"]
+    answer: 1
+    explain: "Cost per request scales with volume the same way latency and quality do; a silent per-request increase is a silent total increase, and the earlier you see it the smaller the bill you've already paid before noticing."
+  - q: "This lesson deliberately avoids giving specific latency or cost numbers to target. Why?"
+    options: ["Because latency and cost do not matter enough to quantify", "Because a specific number here would be someone else's traffic, not yours, and would be wrong for your system almost immediately", "Because providers prohibit publishing performance numbers"]
+    answer: 1
+    explain: "The right threshold depends on your own feature, your own users, and a rate card that moves — this lesson gives you the percentiles and the habit of measuring, and you set the actual numbers from your own traffic."
+deeper:
+  - { label: "Google Cloud — latency percentiles and what they tell you", href: "https://cloud.google.com/blog/products/monitoring-tools/latency-percentiles-and-what-they-tell-you" }
+  - { label: "Google SRE Book — service level objectives", href: "https://sre.google/sre-book/service-level-objectives/" }
+  - { label: "Prometheus — practices for histograms and summaries", href: "https://prometheus.io/docs/practices/histograms/" }
+  - { label: "Anthropic — prompt caching", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-caching" }
+---
+
+Every lesson before this one has been about correctness — does the output match what you want. This one is about the two axes a correct answer can still fail on, which is why *Why "looks good to me" fails* opened this course with a demo that read well and told you almost nothing: the same trap catches teams here, on a different pair of metrics. An answer can be exactly right and still be a bad answer to ship, if it arrives too slowly or costs too much to be worth what it delivers.
+
+## 1. Latency is a distribution, not a number
+
+The average latency of your endpoint is close to the least useful number you can report about it, because it hides exactly the shape you need to see.
+
+Say ninety-five requests out of a hundred finish in half a second and five take eight seconds — a retry, a cold cache, a longer input. The average lands around 0.8 seconds, which sounds fine, and reports nothing about the one user in twenty who waited eight seconds and is now telling a colleague the feature is broken. Percentiles fix this because they describe the tail directly instead of blending it into a number that hides it.
+
+| Metric | What it tells you | Where it goes wrong if ignored |
+|---|---|---|
+| p50 (median) | What a typical request feels like | Fine to report casually, useless for catching a bad tail |
+| p95 | The experience your worse-off users actually get | Everyone tracks this or should; if you track only one number, this is it |
+| p99 | The rare, ugly cases | Worth watching for anything with real volume, easy to overreact to at low volume |
+| Time to first token | How long before a streamed response shows anything at all | Ignoring it makes a fast total time still feel slow, if the wait comes all up front |
+
+**Time to first token** deserves its own line because it measures something total latency cannot. Two responses that both finish in four seconds do not feel the same if one starts streaming after 200 milliseconds and the other sits silent for three and a half seconds before dumping the whole answer at once. If your interface streams, track this separately — it is often the bigger lever on perceived speed than total generation time, and it is invisible if all you watch is the number at the end.
+
+> An average with no percentile next to it is a claim about a typical request, dressed up as a claim about all of them.
+
+## 2. Cost is the same shape as latency
+
+Cost per request behaves exactly like latency: it has a distribution, it has a tail, and a change that looks fine on average can still be a real regression for a meaningful slice of traffic. A prompt that occasionally triggers a much longer response — a retry loop, a verbose edge case, an unusually long tool result stuffed into context — costs a lot more on those requests, and if you only ever look at an average cost per request, that tail is invisible in exactly the way a p95 latency spike is invisible in an average latency number.
+
+Track it the same way: total tokens in and out per request, split by the step that used them if a run has more than one model call, and a distribution rather than a single average. The two levers worth watching by name, both measurable without needing a price card:
+
+- **Tokens per request**, input and output separately, since a change that inflates the prompt and a change that inflates the response are different bugs with different fixes.
+- **Cache hit rate**, if you use prompt caching for a system prompt or a repeated context block — a dropping hit rate is often the real cause behind a cost or latency regression that looks unrelated at first glance, because a cache miss silently reprocesses everything a hit would have skipped.
+
+Rates and dollar figures belong in your own provider's current pricing page, not in a lesson — they move, and a number printed here would be wrong before you finish reading this sentence. What does not move is the habit: measure tokens and cache behaviour as metrics you track over time, the same way you already track quality, so a regression shows up as a graph moving instead of an invoice at the end of the month.
+
+```python
+from dataclasses import dataclass, field
+
+@dataclass
+class RequestMetrics:
+    input_tokens: int
+    output_tokens: int
+    time_to_first_token_ms: float
+    total_latency_ms: float
+    cache_read_tokens: int = 0
+
+def record(m: RequestMetrics, history: list[RequestMetrics] = []):
+    history.append(m)
+
+def p95(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = int(len(ordered) * 0.95)
+    return ordered[min(index, len(ordered) - 1)]
+
+def report(history: list[RequestMetrics]) -> dict:
+    return {
+        "p95_latency_ms": p95([m.total_latency_ms for m in history]),
+        "p95_ttft_ms": p95([m.time_to_first_token_ms for m in history]),
+        "avg_output_tokens": sum(m.output_tokens for m in history) / len(history),
+        "cache_hit_rate": sum(1 for m in history if m.cache_read_tokens > 0) / len(history),
+    }
+```
+
+This is the shape of the thing, not a library to adopt — the point is that latency, time to first token, tokens, and cache behaviour all live on one record per request, the same request your trace from *Tracing a multi-step run* already produced, so nothing here requires a second collection system next to the one you already built.
+
+## 3. Treat both as SLOs, not a monthly surprise
+
+An SLO — a service level objective — is a target you set on purpose and alert against, the same posture this course has taken toward quality since *Why “looks good to me” fails*: a number you check on a schedule, not one you learn about from a complaint. Latency and cost deserve the identical treatment, and for the identical reason — both degrade quietly, and both are cheap to catch early and expensive to catch late.
+
+Set a p95 latency target per feature, not one target for the whole system — a background summarization job and a live chat response have completely different tolerances, and a single global number will be too loose for one and too strict for the other. Set a cost-per-request ceiling the same way, scoped to what that feature can justify. Alert when either one crosses its line, exactly the way *Drift* alerts on a golden set score crossing its baseline — the mechanism is identical, only the metric changed.
+
+The habit this closes is the one the whole course opened with. A demo of five good answers told you nothing about the other five thousand. A model that scored well on a leaderboard told you nothing about your traffic. And a change that passes every quality check you have can still ship a regression, if speed and cost were never on the list of things anyone was checking. Watching them is not a lesser concern bolted onto evaluation — it is the same discipline, aimed at the two dimensions that never show up in a correctness score, and it is worth the same seriousness as everything that came before it.
+
+You now have the whole loop: a way to build a test set from real traffic, a way to judge output at scale, a way to ship a change without breaking what worked, and a way to watch a system that is quietly changing on its own. None of it is exotic. It is a habit of measuring instead of assuming, applied consistently, to the parts of the system that go wrong silently if nobody is looking.

@@ -1,0 +1,102 @@
+---
+title: "Offline evals and online evals"
+subtitle: "One runs before a stranger sees the output, one runs after."
+part: 1
+minutes: 7
+why: "A team spends a real week building the eval set from the last lesson - fifty cases, sourced from traffic, every past incident included. A prompt change passes all fifty. They ship it, feel good about it, and move on. Two weeks later, a category of input the golden set never covered - a conversation in a second language, a thread that runs past ten turns - starts failing in production, and nobody notices for days because the only check that existed was the one that already said yes. The golden set did its job perfectly. It was just never going to catch a failure it had never seen. That gap is the whole reason offline and online evals are both required, not one or the other."
+wins:
+  - "Run the golden set before every change ships, without exception."
+  - "Sample real production traffic continuously, after the change is already live."
+  - "Expect offline and online to disagree sometimes - that disagreement is the useful part."
+  - "Turn anything online catches into a new permanent case in the offline set."
+  - "Never treat a clean offline run as a reason to stop watching production."
+quiz:
+  - q: "An offline eval runs..."
+    options: ["Continuously, on a random sample of live traffic", "Before a change ships, against a fixed set of cases you already have", "Only after a customer files a complaint"]
+    answer: 1
+    explain: "Offline means before anyone outside your team sees the output - it's a gate, not a monitor."
+  - q: "Why can a change pass every offline case and still fail in production?"
+    options: ["Offline evals always use a weaker model than production", "Real traffic includes inputs and patterns the golden set never anticipated", "Online evals are more lenient by design"]
+    answer: 1
+    explain: "The golden set can only test what someone thought to put in it; production traffic is under no such obligation."
+  - q: "A prompt change scores better on your golden set, but users seem to prefer the old version. The most likely explanation is..."
+    options: ["Users are wrong and the eval set is right", "The golden set doesn't cover the case that changed, or it's measuring something users don't actually care about", "Online evals cannot be trusted"]
+    answer: 1
+    explain: "A win on a fixed set is a hypothesis about quality, not a guarantee it matches what real users experience."
+  - q: "Online sampling turns up a new failure mode in production. What should happen next?"
+    options: ["Log it and move on, since it's already been noticed once", "Add it to the offline golden set as a permanent case, so future changes are checked against it", "Wait to see if it happens again before doing anything"]
+    answer: 1
+    explain: "This is how the golden set keeps pace with reality instead of going stale the week after it's built."
+  - q: "Your last five changes all passed the offline eval cleanly. Is it safe to stop watching production for a while?"
+    options: ["Yes, a clean offline run is the final check", "No - production traffic and the model behind your API can both shift with no code change on your side", "Only if the team is short on time that week"]
+    answer: 1
+    explain: "Offline tells you a change didn't break what you already knew about; it says nothing about what happens next."
+deeper:
+  - { label: "Evidently AI - LLM evaluation guide", href: "https://www.evidentlyai.com/llm-guide/llm-evaluation" }
+  - { label: "Langfuse - evaluation overview", href: "https://langfuse.com/docs/evaluation/overview" }
+  - { label: "Traceloop - catching silent LLM degradation", href: "https://www.traceloop.com/blog/catching-silent-llm-degradation-how-an-llm-reliability-platform-addresses-model-and-data-drift" }
+  - { label: "OpenAI Evals framework (GitHub)", href: "https://github.com/openai/evals" }
+---
+
+## 1. Two checks, at two different moments
+
+Offline and online evals are not two competing ways of measuring the same thing. They run at different points in a change's life, against different data, and they exist to catch different kinds of failure. Neither one is optional.
+
+| | Offline eval | Online eval |
+|---|---|---|
+| When it runs | Before the change ships, on demand | Continuously, after the change is live |
+| What it scores | Your golden set - fixed, known cases | A sample of real, current production traffic |
+| What it catches | A known failure resurfacing, a clear regression on cases you already understand | A category of input, or a shift in the model or the world, nobody wrote a case for |
+| What it costs | Cheap and fast - it's the same set every time | Ongoing - it needs sampling, storage, and something scoring the sample |
+| How fast it tells you something's wrong | Immediately, before anyone outside the team is affected | After the fact - by definition, real users saw it first |
+
+The offline set is the gate: nothing ships past it without passing. The online sample is the smoke detector: it doesn't stop anything, it tells you something is burning while it's still small enough to matter. You need the gate because you don't want to find out about a known failure from a user. You need the smoke detector because the gate can only test what someone thought to put behind it.
+
+Neither one substitutes for the other, and teams tend to over-invest in whichever one they built first. A team that only runs the offline set gets exactly the failure this lesson opened with - a clean pass on paper, a real problem live, and no mechanism watching for it. A team that only watches production, with no gate before shipping, finds out about every regression from a user instead of from a test run, which is the more expensive way to learn the same lesson. The two together give you what neither gives you alone: a check you control the timing of, and a check that's actually looking at what's happening right now.
+
+## 2. Why an offline win can still lose live
+
+An offline pass is a claim about a specific, finite set of cases. It is not a claim about your users. Three gaps explain most of the disagreements you'll see between the two:
+
+**Coverage.** The golden set was built from past traffic and past incidents. A new usage pattern - a different language, a much longer conversation, a feature that just launched - has, by definition, no cases in it yet. The eval isn't wrong about what it tested. It never tested the thing that broke.
+
+**Distribution.** Even when the golden set includes a category, it may not include it in the proportion real traffic does. A prompt change that trades a rare failure for a common one can look neutral or even positive on fifty balanced cases and be clearly worse the moment ten thousand real requests, weighted toward the common case, hit it.
+
+**What's actually being measured.** An offline score - exact match, a rubric, a judge's rating - is a proxy for "the user was satisfied." Sometimes the proxy and the real thing point in different directions: a rewritten answer might score higher against a rubric for completeness while reading, to an actual user, as longer and more annoying.
+
+> An offline win is a hypothesis about quality. Production is the experiment that checks it.
+
+None of this means the offline set was a waste of effort. It means the offline set answers "did I break anything I already know about," and only production traffic can answer "does this actually work for everyone using it right now."
+
+Treat a disagreement between the two as information rather than a tie-break to argue over. If offline says better and users say worse, something about the golden set or its grading is measuring the wrong thing, and that's worth finding before you trust the next offline run either.
+
+## 3. Running both, as a loop, not a one-off
+
+The two checks work together as a loop, not as a sequence you complete once. Before any change - a prompt edit, a model swap, a new tool the system can call - run the golden set and require it to pass. After the change ships, keep sampling real traffic on an ongoing basis and scoring what comes back, at whatever rate you can afford to review.
+
+The loop closes exactly the way the last lesson described: whatever online sampling catches becomes a new permanent case in the offline set. That's what keeps the gate from going stale. A golden set built once and never updated slowly turns into a test of last year's traffic.
+
+```python
+import random
+
+SAMPLE_RATE = 0.02  # review roughly 2% of production traffic; tune to your review capacity
+
+def maybe_queue_for_review(request_id: str, input_text: str, output_text: str) -> None:
+    """Call this after every real response. Most calls do nothing -
+    a small, random slice gets written somewhere a human or a judge will look at it."""
+    if random.random() < SAMPLE_RATE:
+        review_queue.append({
+            "request_id": request_id,
+            "input": input_text,
+            "output": output_text,
+            "sampled_at": now_iso(),
+        })
+        # A separate, scheduled job scores this queue and flags anything
+        # that looks wrong for a human to confirm - see the next part of this course.
+```
+
+Two percent of a busy system is still a lot of real cases every day, and unlike your golden set, it's a sample of exactly what's happening right now. When something in that queue turns out to be a genuine failure, it doesn't stay in the queue - it goes into the golden set, and the next offline run is checked against it forever.
+
+The sample rate itself is a knob, not a constant. Turn it up right after a risky change - a new model version, a rewritten system prompt, a feature that touches a lot of traffic - when you most want an early read on whether something's off. Turn it back down once the change has settled and nothing unusual has shown up. What you're buying with that percentage is review capacity spent where it's most likely to find something, not an attempt to look at everything.
+
+That's the whole loop: offline stops you from shipping a known mistake, online tells you about the mistakes nobody knew to look for, and every real failure moves permanently from the second category into the first.

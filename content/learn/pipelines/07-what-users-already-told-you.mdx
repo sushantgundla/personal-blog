@@ -1,0 +1,97 @@
+---
+title: "What your users already told you"
+subtitle: "Turning production traffic into a dataset, instead of arguing about it from memory."
+part: 3
+minutes: 7
+why: "Two engineers are arguing about whether a prompt change made things better or worse. One has a theory about hedging language. The other has a theory about tone. Neither has a single example on screen, because neither has looked - there's a log table with six months of real queries, real answers, and a thumbs-down button that a noticeable share of users have clicked, and nobody has ever queried it. The argument could be settled in ten minutes by reading twenty rows. It instead runs for an hour, in a meeting, from memory. This lesson is about the pipeline that makes that table worth opening: what to log, how to sample it down to something a human can actually read, and how real failures get back to the people who can fix them."
+wins:
+  - "Log every production call with its input, output, and any user signal, from day one - not once you need it."
+  - "Sample for review deliberately: recent, flagged, and random, not just whatever's on top."
+  - "Route negative signal - a thumbs-down, a retry, an abandoned session - to a queue a human actually reads."
+  - "Redact or tokenize anything sensitive before it lands in a table other people can query."
+  - "Treat this as a capture pipeline, not the evaluation itself - it feeds the eval set, it isn't one."
+quiz:
+  - q: "Two engineers are debating whether a prompt change helped, with no data in front of them. What's the fastest way to actually answer the question?"
+    options: ["Ship both versions and see which gets fewer complaints over the next quarter", "Sample real production queries and outputs from before and after the change and read them", "Ask a model to compare the two prompts and judge which is better"]
+    answer: 1
+    explain: "The data to answer this already exists in the logs. Reading a sample of it is faster and more concrete than a guess or a long-running experiment."
+  - q: "Why sample production traffic instead of reviewing everything?"
+    options: ["Reviewing everything is more thorough and should always be preferred", "Volume makes full review impossible; a deliberate sample makes review actually happen", "Sampling is required by most logging libraries"]
+    answer: 1
+    explain: "A queue nobody can finish is a queue nobody starts. A sample sized for a human to actually read is what makes review a habit rather than an aspiration."
+  - q: "A user's session ends with them rephrasing the same question three times and then leaving. What should your capture pipeline do with that?"
+    options: ["Ignore it - no explicit feedback button was clicked", "Flag it as an implicit negative signal worth sampling into the review queue", "Automatically retrain the model on it"]
+    answer: 1
+    explain: "Explicit feedback (a thumbs-down) is only part of the signal. Abandonment and repeated rephrasing are strong implicit signals that something failed."
+  - q: "What belongs in this lesson's capture pipeline versus a separate evals process?"
+    options: ["The pipeline should also build and score the eval set itself", "The pipeline captures and samples real traffic; scoring it and building the eval set is a separate, later step", "There is no meaningful difference between the two"]
+    answer: 1
+    explain: "Capturing and sampling real usage is the input. Turning that sample into a scored, structured eval set is a distinct job that comes after."
+  - q: "Why redact sensitive fields before writing a log row, rather than after?"
+    options: ["It doesn't matter which order it happens in", "Once unredacted data lands in a table other people query, you can't guarantee every downstream copy gets cleaned too", "Redaction only works on structured data"]
+    answer: 1
+    explain: "Data spreads the moment it's written - to dashboards, exports, other services. Redacting before the first write is the only point you fully control."
+deeper:
+  - { label: "Hamel Husain - A Field Guide to Rapidly Improving AI Products", href: "https://hamel.dev/blog/posts/field-guide/" }
+  - { label: "Hamel Husain - AI Evals notes", href: "https://hamel.dev/notes/llm/evals/" }
+  - { label: "OpenTelemetry - Inside the LLM call: GenAI observability", href: "https://opentelemetry.io/blog/2026/genai-observability/" }
+  - { label: "Anthropic - Is my data used for model training?", href: "https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training" }
+---
+
+## 1. The log table is already the dataset
+
+Every production LLM call already produces the raw material for improving it: the input, the output, and usually some signal about whether it landed - a thumbs-down, a copy-to-clipboard, a rephrase, a support ticket filed twenty seconds later. Almost every team logs the first two. Far fewer capture the third, and fewer still ever go back and read any of it. The result is the scene this lesson opened on: an argument conducted from memory and intuition, next to a table that could settle it in minutes, because nobody built the habit - or the pipeline - of actually opening it.
+
+This isn't a data science problem. It's a plumbing problem. The queries exist. The failures exist. What's missing is the path from "a call happened" to "a person looked at it," and that path has to be built the same way any other pipeline is: deliberately, with a schema, and with someone responsible for it running.
+
+| What's usually logged | What's usually missing |
+|---|---|
+| The prompt and the response | Which version of the prompt or model produced it |
+| A request ID and a timestamp | Any user signal - thumbs, retries, abandonment |
+| Token counts, latency | A sampled, human-readable view of any of it |
+
+The gap in the right-hand column is the entire subject of this lesson.
+
+None of it requires anything exotic. A logging call around the model request, a column for whatever signal your product already surfaces, and a place to write both that isn't a scrolling terminal output nobody keeps - that's the whole starting infrastructure. The reason it's usually missing isn't difficulty, it's that logging feels like observability plumbing rather than a feature, so it gets built to the standard of "enough to debug an outage" and never revisited once the outage passes. The version this lesson is arguing for is built to the standard of "enough to answer a real product question six months from now," which is a different bar and needs deciding on early, before six months of unlabelled traffic has already gone by unrecorded.
+
+## 2. Sampling: turning a firehose into something a person can read
+
+Nobody reads a million rows a day, so the pipeline's real job is picking which few hundred to put in front of a person. A bad sample - whatever happens to be newest, or a pure random draw - either misses the failures or drowns them in traffic that worked fine. A useful sample is deliberately mixed.
+
+| Sample source | Catches | Misses if used alone |
+|---|---|---|
+| Pure random | An honest baseline of typical traffic | Rare but serious failures, since they're rare by definition |
+| Flagged (thumbs-down, retried, escalated) | The failures users noticed and told you about | Failures users didn't notice, or didn't bother to flag |
+| Recent-heavy | Whatever just shipped, right after it shipped | Slow-building drift that shows up only after weeks |
+
+The practical answer is to run all three as separate lanes into the same review queue, sized to what a human will actually finish - a few dozen rows a day is sustainable, a few thousand is a queue nobody opens. Weight the flagged lane heavily, because it's the cheapest failures you'll ever find: a user already did the work of telling you something was wrong.
+
+```python
+import random
+
+def build_review_sample(rows, n_flagged=30, n_random=20, n_recent=10):
+    flagged = [r for r in rows if r["signal"] in ("thumbs_down", "retried", "escalated")]
+    remainder = [r for r in rows if r not in flagged]
+
+    sample = random.sample(flagged, min(n_flagged, len(flagged)))
+    sample += random.sample(remainder, min(n_random, len(remainder)))
+    sample += sorted(remainder, key=lambda r: r["ts"], reverse=True)[:n_recent]
+
+    return sample  # feed this into the review queue, not the raw log table
+```
+
+A user rephrasing the same question twice and then leaving never clicks a thumbs-down button, but it's one of the strongest negative signals you have. Capture session-level events like this alongside the explicit ones - the flagged lane above should include both, not just the button click.
+
+> Six months of thumbs-down clicks sitting in a log table is not evidence of nothing wrong. It's evidence nobody has looked yet.
+
+Sampling only pays off if the review queue it feeds is one a human actually keeps up with. A queue that grows faster than anyone clears it teaches the same lesson as an unread inbox: eventually nobody opens it. Size the sample to the reviewer time you actually have, not the volume you'd ideally review, and treat "we reviewed today's sample" as a habit worth protecting the same way you'd protect a standup or an on-call rotation - it's infrastructure with a person in the loop, and it decays the moment that person's time gets reclaimed for something louder.
+
+## 3. Where the capture pipeline stops
+
+It's worth being precise about the boundary here, because it's easy to over-build this into something it isn't. This lesson's job is capture: get the input, the output, the signal, and a sensible sample of it into a place a human can review, on a schedule someone actually keeps. Turning that reviewed sample into a structured, scored eval set - deciding what "good" means for a given task, writing graders, tracking scores over time - is a separate discipline with its own course, Evals and Observability, and it starts from what this pipeline hands it.
+
+Keep the seam clean in both directions. This pipeline shouldn't try to score anything; scoring needs judgment calls about what "correct" means that belong with the people building the eval set, not baked silently into a logging library. And the eval side shouldn't have to build its own capture path from scratch - if this pipeline is doing its job, the raw material for every future eval is already landing somewhere queryable, redacted, and sampled sanely, waiting for someone to turn it into a test.
+
+The two habits that make this pipeline worth having: log the signal, not just the exchange, from the very first day a feature ships, because a signal you didn't capture in January can't be reconstructed in June. And redact anything sensitive - names, account numbers, anything a user typed that they didn't expect a dashboard to show - before the row is written, not after, because once it's written it's already been copied somewhere you don't control.
+
+One more habit worth naming plainly: version everything that could have produced the row - the prompt, the model, any retrieval configuration in front of it - and write that version onto the log entry itself. A sample of "how did this go" is close to useless if you can't tell which version of the system produced each row in it. That single field is usually the difference between the ten-minute conversation this lesson opened with and the hour-long one it was arguing against.

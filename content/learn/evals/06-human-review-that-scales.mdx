@@ -1,0 +1,101 @@
+---
+title: "Pairwise comparison and human review that scales"
+subtitle: "\"Which is better, A or B\" gets a cleaner answer than \"rate this 1 to 5.\""
+part: 2
+minutes: 7
+why: "You asked five reviewers to rate a batch of answers from 1 to 5, and got noise back: two reviewers gave the same answer a 3 and a 5, and neither one was wrong, they just weighted things differently. A star rating asks a reviewer to invent an absolute scale in their head and hold it steady across a hundred examples, which people are bad at and inconsistent about. This lesson covers a question people answer more consistently - which of these two is better - and how to spend a human reviewer's limited attention on the comparisons that actually change a decision, instead of reviewing everything."
+wins:
+  - "Ask \"which is better\" before you ask \"how good\" - scores compress toward the middle, comparisons don't."
+  - "Randomize which side an answer appears on, in every pairwise comparison, human or model."
+  - "Write down what \"better\" means before a reviewer sees a single example."
+  - "Route a human to a case only when judges disagree or confidence is low."
+  - "Treat a full human review of every output as the exception, not the default."
+quiz:
+  - q: "Two reviewers rate the same answer a 3 and a 5 on a 1-to-5 scale. What does this usually mean?"
+    options: ["One of the two reviewers is not paying attention", "Absolute scores are naturally noisy - reviewers hold different internal scales", "The rubric needs a sixth point"]
+    answer: 1
+    explain: "Absolute scales ask each reviewer to invent and hold a personal reference point; the disagreement is not a sign anyone made a mistake."
+  - q: "Why does pairwise comparison usually track human preference better than a 1-to-5 score?"
+    options: ["It asks a simpler, more concrete question - which of these two is better - rather than an abstract one", "It requires fewer reviewers overall", "It always produces a numeric score, which is easier to store"]
+    answer: 0
+    explain: "\"Which is better\" is a comparison people (and judges) answer consistently; \"how good is this on its own\" invites drift."
+  - q: "What's the real cost of pairwise comparison at scale?"
+    options: ["It cannot be automated with an LLM judge", "The number of comparisons grows quadratically as the candidate set grows", "It only works with exactly two reviewers"]
+    answer: 1
+    explain: "Comparing every pair among many candidates grows fast; that's why pairwise is used on a sampled subset, not the whole traffic."
+  - q: "Pairwise comparison automatically removes position bias from a judge. True or false?"
+    options: ["True - asking for a comparison instead of a score fixes it", "False - a pairwise judge can still favor whichever answer it sees first, so you still need to randomize order", "True, but only for human reviewers, not model judges"]
+    answer: 1
+    explain: "Pairwise judging changes the question, not the judge's underlying tendency to favor a slot; order randomization is still required."
+  - q: "You have a fixed number of hours of human review time each week. Where should most of it go?"
+    options: ["Spread evenly across every output the system produces", "Cases where two judges disagree, or a judge's confidence is low", "Whichever cases are easiest to review quickly"]
+    answer: 1
+    explain: "Disagreement and low confidence are where a human's judgment actually changes the outcome; agreement between judges on an easy case rarely needs a second look."
+deeper:
+  - { label: "Evidently AI - LLM-as-a-judge, a complete guide", href: "https://www.evidentlyai.com/llm-guide/llm-as-a-judge" }
+  - { label: "Galtea - the complete guide for LLM evaluations", href: "https://galtea.ai/blog/llm-evaluation-complete-guide" }
+  - { label: "Zhu et al. - The Comparative Trap: pairwise comparisons amplify biased preferences of LLM evaluators", href: "https://arxiv.org/pdf/2406.12319" }
+---
+
+*How to trust a judge* got you a judge you can rely on for most cases. This lesson is about the reviewer time you still have left over - human or model - and how not to waste it on the wrong question.
+
+## 1. Why "rate this 1 to 5" gets you noise
+
+Ask a reviewer to score an answer on a scale and you're asking them to do two things at once: build a mental reference for what a 3 looks like versus a 5, and then hold that reference steady across a hundred examples reviewed over an afternoon. People don't do this consistently. Scores cluster in the middle of the range because reviewers hedge, drift over a session as fatigue sets in, and disagree with each other in ways that have nothing to do with the answer's actual quality. None of that is a training problem you can fix with a better rubric page - it's a property of the task you asked for.
+
+**Pairwise comparison** asks a smaller, more concrete question: given these two answers to the same input, which one is better? That's a task people (and judges) answer far more consistently, because there's no scale to invent - just a choice between two things sitting side by side. The same holds when the reviewer is a judge model rather than a human: a judge asked to compare tends to agree with human preference more closely than the same judge asked to rate each answer alone.
+
+| | Absolute scoring (1-5, or similar) | Pairwise comparison |
+|---|---|---|
+| What it asks | How good is this, on its own | Which of these two is better |
+| Consistency across reviewers | Low - scores cluster and drift | Higher - a binary choice is easier to hold steady |
+| Reviewer fatigue | Compounds - each score requires inventing context | Lower per judgment, but many more judgments needed to rank many items |
+| Cost to compare N items | One score each, N judgments | Grows with the number of pairs, not just N |
+| Best for | A single absolute bar you check against repeatedly (did this clear a floor) | Deciding which of a few candidates is better - a prompt edit, a model swap, a rollout decision |
+
+Use absolute scoring where you genuinely need a floor - "did this pass," "is this safe to show a user" - and pairwise where the actual question is "which of these two should we ship."
+
+## 2. Pairwise comparison, and its own trap
+
+Pairwise isn't a free fix, and treating it as one is the mistake to avoid here. A judge asked to compare two answers can still favor whichever one it saw first, for the same structural reason a scoring judge does - it's reading position, not just content. Research specifically comparing the two setups has found that pairwise comparison can *amplify* an evaluator's existing biases rather than remove them: a judge that leans toward longer or more confidently worded answers carries that lean straight into the comparison, and a side-by-side layout gives it more surface to act on, not less.
+
+The fix is the same one from the last lesson, applied again here rather than assumed to be handled already: randomize or swap which side each answer appears on, across every comparison you run, human or model. If flipping the order flips the verdict on the same pair, the "better" answer was actually "the one in slot A," and you've learned something about your judge, not about the two candidates.
+
+> A star rating tells you a reviewer's mood. A pairwise choice tells you their preference - as long as you don't let the slots tell you the answer first.
+
+The other real cost is scale. Comparing every pair among a set of candidates grows with the square of how many candidates you have - five candidates is ten pairs, twenty candidates is one hundred and ninety. That's fine when you're comparing two prompt versions head to head, which is the common case in this course. It stops being fine the moment someone suggests ranking a dozen candidate prompts against each other pairwise "to be thorough." Don't do that. Pick the comparison you actually need answered - usually old vs. new, one pair - and save the combinatorics for problems that genuinely require ranking many things against each other.
+
+## 3. Spending a human reviewer's attention where it changes a decision
+
+None of this argues for reviewing everything by hand - that was never the plan, and it doesn't scale past a demo. The plan is to have judges handle the volume and route a human only to the comparisons where a human's judgment would actually change the outcome.
+
+Two signals tell you where that is. **Disagreement**: run the comparison through two judges (different models, or the same judge with the order swapped) and send a human only the cases where they land on opposite sides. **Low confidence**: if your judge setup produces something like a margin or a repeated-run consistency check, a comparison the judge itself is unsure about is exactly the one worth a second, human opinion. Everything else - the cases where judges agree confidently and repeatedly - is not where a human's hour is best spent.
+
+```python
+from collections import Counter
+
+def needs_human_review(question: str, answer_a: str, answer_b: str,
+                        judge_fn, n_runs: int = 3) -> bool:
+    """Sample the same comparison a few times, swapping order half the time.
+    Route to a human only on disagreement - not on every comparison."""
+    verdicts = []
+    for i in range(n_runs):
+        if i % 2 == 0:
+            verdicts.append(judge_fn(question, answer_a, answer_b))
+        else:
+            flipped = judge_fn(question, answer_b, answer_a)
+            verdicts.append("B" if flipped == "A" else "A")  # un-swap the label
+
+    counts = Counter(verdicts)
+    top_count = counts.most_common(1)[0][1]
+    agreement = top_count / n_runs
+    return agreement < 1.0   # anything less than unanimous goes to a human
+
+# Example: three runs, one disagreement -> flagged for human review
+sample_verdicts = ["A", "A", "B"]
+print(Counter(sample_verdicts).most_common(1)[0][1] / len(sample_verdicts))  # 0.67, flagged
+```
+
+This is a small function doing a large amount of work: it turns "review everything" into "review the fraction that's actually ambiguous," which is usually a small slice of total volume. Write down what "better" means for your task - correctness first, tone second, whatever your rubric actually is - before a reviewer sees a single example, so that when a case does reach a human, they're applying the same standard the judges were asked to apply, not inventing a new one on the spot.
+
+With a calibrated judge and a way to route the hard cases, you have what you need to check a change before it ships. *Regression testing a prompt or model change* is where that judgment gets applied to an actual diff.

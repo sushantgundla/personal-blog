@@ -1,0 +1,103 @@
+---
+title: "What to log, and what never to"
+subtitle: "See what happened without collecting what you shouldn't have kept."
+part: 4
+minutes: 6
+why: "Someone piped full prompts and responses into a third-party observability tool because *Tracing a multi-step run* said log everything verbatim, and six months later a customer's SSN turned up in a support screenshot of the trace viewer, sitting in plain text where a request had asked the assistant to confirm it. Nobody put it there on purpose. The pipeline just did what it was told: log the input, log the output. This lesson draws the line the last one left open — what to keep, what to strip before it is written, and why a trace store is a liability the moment it holds something you would not want a subpoena to find."
+wins:
+  - "Log structure, timing, and token counts on every span, unconditionally."
+  - "Redact or hash user-supplied content before it is written, never after."
+  - "Treat a trace store as a data store with the same rules as your database, not as a debugging scratchpad exempt from them."
+  - "Set a retention window and actually delete on it, rather than keeping everything because storage is cheap."
+  - "Never log a secret — API keys, tokens, credentials — full stop, no redaction step required because it should never be captured at all."
+quiz:
+  - q: "The previous lesson said to log inputs and outputs verbatim. What does this lesson add to that rule?"
+    options: ["It reverses the rule — nothing should be logged verbatim", "It scopes the rule — log structure and metadata unconditionally, but redact or exclude the categories of content that carry personal or secret data", "It applies the rule only to tool calls, not model calls"]
+    answer: 1
+    explain: "Verbatim logging is still right for the fields that are safe; the addition is a second pass that decides, per field, which ones are not."
+  - q: "A user pastes their own SSN into a chat asking the assistant to double check a form. What is the right thing to store in the trace?"
+    options: ["The full message, since the user typed it themselves and it is their own data", "A redacted or hashed version of that field, with the rest of the message intact", "Nothing at all from that turn, since one sensitive field means discarding the whole trace"]
+    answer: 1
+    explain: "The user typing sensitive data does not make it safe to retain in plain text in a store built for debugging, not for holding identity data; redact the field, keep the rest of the trace useful."
+  - q: "Which of these belongs in the 'never log' category, with no redaction step at all?"
+    options: ["The tool name and arguments used in a step", "An API key or credential that appears anywhere in a request", "The token count and duration of a model call"]
+    answer: 1
+    explain: "Secrets should never be captured in the first place — there is no safe redacted form of a credential in a log line, so the fix is to keep it out at the source, not to scrub it afterward."
+  - q: "Why does 'we will clean it up later' not work once sensitive data has reached a third-party observability tool?"
+    options: ["Third-party tools charge extra for deletion requests", "The data has already left your infrastructure and may be cached, indexed, or replicated somewhere you do not control", "Third-party tools do not support deleting individual records"]
+    answer: 1
+    explain: "Once data crosses into another system you do not operate, you are relying on that system's deletion guarantees rather than your own, and by then any copy, cache, or index it already made is out of your hands."
+  - q: "A trace store with no retention window set will eventually..."
+    options: ["Automatically compress old data with no loss of information", "Accumulate personal data with no expiry, which is exactly the liability a retention policy exists to prevent", "Stop accepting new writes once it reaches a size limit"]
+    answer: 1
+    explain: "Without a deletion policy, every redaction gap and every edge case you missed sits there indefinitely; a retention window bounds how much exposure a mistake can cause."
+deeper:
+  - { label: "OWASP — Logging Cheat Sheet", href: "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" }
+  - { label: "OWASP GenAI Security Project — LLM Top 10", href: "https://genai.owasp.org/llm-top-10/" }
+  - { label: "GDPR — Article 5, principles of processing personal data", href: "https://gdpr-info.eu/art-5-gdpr/" }
+  - { label: "GDPR.eu — what counts as personal data", href: "https://gdpr.eu/eu-gdpr-personal-data/" }
+---
+
+*Tracing a multi-step run* told you to log inputs and outputs verbatim, and that advice was correct for the fields it meant — arguments, results, timing. It did not mean every field, and it left the actual line-drawing to this lesson, because the two questions are genuinely different. That lesson asks what makes a run answerable. This one asks what makes a trace store safe to have built in the first place.
+
+## 1. A trace store is a data store
+
+Once tracing works, it is tempting to treat it as a debugging scratchpad — a place that only engineers look at, only when something breaks, so ordinary data handling rules feel like they do not apply. They apply exactly as much as they do anywhere else. A trace store holding full prompts and responses from real users is a store of whatever those users typed and whatever the model returned, which includes anything they mentioned: a name, an address, a medical detail, a account number, pasted into a chat because that is what chats are for.
+
+The store does not know the difference between a field that is safe to keep and one that is not — it writes what it is given. The judgment has to happen before the write, because a trace store is generally optimized for search and retention, not for the access controls and deletion guarantees a system holding personal data is supposed to have. Treating it as exempt from those rules because it is "just logs" is how a debugging tool becomes the least protected copy of your users' data in the whole system.
+
+| | Application database | Trace or observability store |
+|---|---|---|
+| Built for | Structured records, access control, deletion by request | Search across free-text, long retention, broad read access |
+| Who can typically query it | A narrow, audited set of services | Most engineers, plus a third-party vendor if you use one |
+| Deletion on request | Usually designed in from the start | Often an afterthought, if it exists at all |
+| What tends to land in it | Whatever the schema allows | Whatever a user typed, verbatim, if nobody stopped it |
+
+That last row is the whole risk. A schema constrains what can end up in a database field. A trace of a free-text conversation has no such constraint — the user can type anything, the model can echo it back, and both ends land in the trace unless something explicitly stops them.
+
+## 2. Three categories, decided before the write
+
+Every field a span could capture falls into one of three buckets. Deciding which bucket up front, at instrumentation time, is what makes this workable — sorting it out after millions of trace rows already exist is a much worse version of the same job.
+
+**Always log.** Structure, timing, token counts, span kind, model id, tool name, status. None of this identifies a person or exposes a secret, all of it is exactly what makes a trace answerable, and none of it should ever be the thing you strip to be careful — a trace with the content redacted but the shape intact is still useful; a trace with the shape gone is not a trace at all.
+
+**Redact or hash.** Free-text fields a user controls — the message content, a tool argument built from user input, a model's response that might echo something the user said back. These carry the debugging value the previous lesson cared about, so the fix is not to drop them; it is to run them through a scrubber that masks structured patterns like phone numbers, emails, and national id formats before the write, and hash the rest if you need to correlate "the same user hit this twice" without keeping what they said both times.
+
+**Never log, no exception.** Secrets: API keys, auth tokens, session cookies, credentials of any kind. There is no safe redacted form of a credential sitting in a log line, so the answer is not a scrubber for this category — it is making sure these values never reach the logging call to begin with, by keeping them out of the objects that get passed to `span()` in the first place.
+
+```python
+import re
+
+# A short list, not exhaustive - extend to match what your own inputs look like.
+PATTERNS = {
+    "email": re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"),
+    "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+    "phone": re.compile(r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b"),
+}
+
+def scrub(text: str) -> str:
+    for label, pattern in PATTERNS.items():
+        text = pattern.sub(f"[{label}]", text)
+    return text
+
+def safe_span_input(user_message: str, tool_args: dict) -> dict:
+    return {
+        "user_message": scrub(user_message),
+        "tool_args": {k: scrub(str(v)) for k, v in tool_args.items()},
+        # never include: api_key, auth_token, or anything from a credentials object
+    }
+```
+
+A pattern-based scrubber like this one will miss things — an id format you did not anticipate, a name with no fixed pattern at all. Treat it as a floor, not a guarantee, and pair it with the retention policy below so a miss has a shelf life instead of living forever.
+
+> The safest field in a trace store is the one that was never written. Everything after that is damage control.
+
+## 3. Sampling and retention are part of the same decision
+
+Two more knobs sit next to redaction, and both reduce exposure the same way redaction does — by shrinking what is kept and for how long.
+
+**Sample, don't capture everything at full detail forever.** Trace every run at the structural level — timing, status, token counts — because that is cheap and the always-log bucket is not the risk. Capture full redacted content for a percentage of runs, weighted toward the ones you actually need: errors, low eval scores, anything flagged for review. A representative slice with content is worth more than a complete set of shapes with nothing in them, and it is far less exposure than capturing every single run at full detail by default.
+
+**Set a retention window, and let things actually expire.** Storage being cheap is not a reason to keep data indefinitely — every day a redacted-but-imperfect field sits in the store is another day a scrubber miss is sitting there too. A 30- or 90-day window on raw content, with the structural, non-identifying fields kept longer for trend analysis like the drift checks in the previous part of this course, gives you enough history to debug last week's incident without accumulating a permanent archive of everything anyone ever typed.
+
+Both of these are decisions to make once, at the same time you build the tracing pipeline, not patches to bolt on after a store already has months of unredacted history in it. The cheapest time to decide what a trace store should never hold is before the first row is written.

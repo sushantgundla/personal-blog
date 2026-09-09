@@ -1,0 +1,105 @@
+---
+title: 'Why "looks good to me" fails'
+subtitle: "A demo of five examples tells you almost nothing about the other five thousand."
+part: 1
+minutes: 7
+why: "You rewrote the prompt, ran it against the handful of cases you keep in a scratch file, and every one of them read better than before. You shipped it on a Friday afternoon. By the following Wednesday, support has a spike of tickets about a kind of question nobody on the team happened to try - a long conversation, a question typed in a hurry, a complaint phrased as a question instead of a question phrased as a question. The prompt did not get worse at the five things you tested. It got worse at the five thousand things you did not, and you had no way to see that coming, because looking at output and deciding it seems good was the only check anyone ran. This lesson is about why that check fails, in every shape it takes - including the one that looks like a real number: a public benchmark score."
+wins:
+  - "Never ship a change on the strength of a handful of examples you tried yourself."
+  - "Notice when you are only re-running the cases you already expect to pass."
+  - "Treat a public benchmark score as someone else's five examples, not a measurement of your system."
+  - "Ask what a number was actually computed on before you let it change your mind."
+  - "Replace 'looks good to me' with a fixed set of your own cases, checked the same way every time."
+quiz:
+  - q: "You tried a prompt change against the six examples you always test with, and all six looked better. What does that tell you?"
+    options: ["The change is safe to ship", "Almost nothing about the cases you did not try", "The change is provably better than the old prompt"]
+    answer: 1
+    explain: "Six cases you picked in advance say nothing about the distribution of inputs you did not think to test."
+  - q: "Why does a manual demo tend to look good even when nothing actually improved?"
+    options: ["You pick and remember the cases you already expect to work, so the demo mostly reflects your own priors back at you", "Demo environments always run at a lower temperature than production", "Demos are cached, so they load faster and feel more polished"]
+    answer: 0
+    explain: "Selection happens before you type a single test case - you reach for the inputs you already trust, not the ones that would break something."
+  - q: "A public leaderboard score is a weak stand-in for your own eval mainly because..."
+    options: ["It was computed on someone else's examples, not your traffic, and may already have leaked into what the model was trained on", "Leaderboards are updated too often to be trustworthy", "Benchmarks only exist for image-generation models"]
+    answer: 0
+    explain: "The score describes performance on a fixed, public set of questions - not the questions your users actually ask."
+  - q: "A teammate says a new model should replace the current one because it 'scores higher on the leaderboard.' The right next step is to..."
+    options: ["Ship it, since the score is public and anyone can check it", "Check what it actually does on your own cases, since the leaderboard never saw your traffic", "Wait for a second leaderboard to confirm the first one"]
+    answer: 1
+    explain: "The leaderboard measures a different set of questions than the ones your system has to answer."
+  - q: "The fix for 'looks good to me' is..."
+    options: ["Getting a bigger group of people to eyeball the same five examples", "A fixed set of your own cases, checked the same way every time, so a change is measured against your last run instead of your memory", "Trusting the model's own stated confidence"]
+    answer: 1
+    explain: "A repeatable comparison against a set of cases replaces a vibe with a number, however small that number starts out."
+deeper:
+  - { label: "Hamel Husain - Your AI product needs evals", href: "https://hamel.dev/blog/posts/evals/" }
+  - { label: "Eugene Yan - Evals: to measure performance", href: "https://eugeneyan.com/writing/evals/" }
+  - { label: "Digital Applied - LLM benchmark methodology and leaderboard contamination", href: "https://www.digitalapplied.com/blog/llm-benchmark-methodology-2026-contamination-leaderboard-guide" }
+  - { label: "Towards Contamination-Resistant Benchmarks (arXiv)", href: "https://arxiv.org/abs/2505.08389" }
+---
+
+## 1. Five examples is an anecdote, not a sample
+
+Here is what actually happens when you "try a prompt change and see how it looks." You open a scratch file, or the vendor's playground, and you type in a handful of inputs. Which inputs? The ones you already have on hand - last week's support ticket, the query from the demo, the one case a teammate mentioned. You run the old prompt, you run the new one, and you compare.
+
+Two things go wrong before you have read a single output.
+
+**The sample is tiny.** Five or ten cases is not a small sample of your traffic, it is close to no sample at all. If one input in twenty trips up the new prompt, you need on the order of dozens of tries just to have a even chance of hitting it once, and you are not running dozens, you are running the five you already had.
+
+**The sample is not random - you chose it, and you chose it badly for this purpose.** You reach for cases you already understand, because those are the ones you can judge quickly. That means you systematically under-sample the inputs that are long, or ambiguous, or in a register you do not personally write in. Those are exactly the inputs most likely to break something, and they are the ones least likely to appear in a five-minute manual check.
+
+Put those two together and you get a check that is biased toward telling you the change is fine. It is not lying to you. It is answering a much narrower question than the one you think you asked.
+
+There is a third failure hiding in the first two, and it's the quiet one: you also decide when to stop. The moment the five examples look better, you stop trying inputs. You do not keep going looking for the sixth case that breaks it, because the point of the exercise, in your head, was to confirm the change worked - not to find out whether it didn't. That stopping rule is doing as much damage as the small sample itself.
+
+| | Eyeballing a demo | A public benchmark score | An eval set from your own traffic |
+|---|---|---|---|
+| Sample size | A handful, chosen on the spot | Fixed, often thousands | As large as you build it |
+| Who chose the cases | You, just now, from memory | Benchmark authors, for a general audience | You, from real production traffic |
+| Matches your users | Rarely - you sample your own priors | Almost never - it was never about your product | By construction, since the cases came from your users |
+| What it tells you | Whether five things you already trust still work | Where a model sits against other models on their questions | Whether your system is getting better or worse on your questions |
+| What it misses | Nearly everything you did not think to try | Anything specific to your domain, tone, or workflow | Only what has not shown up in traffic yet |
+
+## 2. The benchmark score is the same trap in a nicer outfit
+
+It is tempting to think a public benchmark solves the sample-size problem, because the number is big and somebody else computed it carefully. It does not, and the reason is the same reason the five-example demo fails: the sample was chosen by someone who is not you, for a purpose that is not yours.
+
+A benchmark is a fixed set of questions, written by researchers, published once, and then reused by everyone comparing models against it for years. That creates two problems that have nothing to do with how careful the benchmark authors were. First, the questions are general by design - they test broad reasoning or broad knowledge, not the specific shape of the requests your product actually receives, your domain's vocabulary, or the tone your users write in. Second, a benchmark that has been public for a while has a real chance of having leaked into the training data of the very models being scored on it, which quietly inflates the number without improving anything you would notice in production.
+
+Neither problem is a scandal. It is just what a benchmark is: someone else's narrow sample, standing in for the much wider range of things your system has to get right.
+
+> A benchmark score is somebody else's five examples, run once, with a leaderboard attached.
+
+None of this means benchmarks are worthless - they are a reasonable first filter when you are choosing between models you have never used, before you have any traffic of your own to test with. The mistake is treating a leaderboard position as evidence about your product, months into building it, instead of treating it as a rough starting point you replace with your own numbers as soon as you can.
+
+## 3. What actually tells you something
+
+The fix is not a bigger demo, and it is not a better leaderboard. It is a fixed set of cases that came from your own traffic, checked the same way every time you make a change, so that "looks good" turns into a number you can compare against the last number.
+
+You do not need this to be sophisticated to get value out of it immediately. Even five real cases, checked by code instead of by eye, beat five real cases checked by memory - because a script does not get tired, does not selectively remember the ones that passed, and produces the same answer if you run it twice.
+
+```python
+# The smallest possible upgrade from "looks good to me": stop trusting your memory,
+# start trusting a record. This is not yet a real eval set - just five cases,
+# saved once, so the *next* run is a comparison instead of a fresh impression.
+
+cases = [
+    {"input": "cancel my subscription", "expected_contains": "cancel"},
+    {"input": "why was I charged twice", "expected_contains": "refund"},
+    {"input": "asdkjhasd", "expected_contains": "didn't understand"},
+    {"input": "wht is ur refund policy???", "expected_contains": "refund"},
+    {"input": "", "expected_contains": "didn't understand"},
+]
+
+def run_case(prompt_fn, case):
+    output = prompt_fn(case["input"])
+    passed = case["expected_contains"].lower() in output.lower()
+    return {"input": case["input"], "output": output, "passed": passed}
+
+def run_all(prompt_fn):
+    results = [run_case(prompt_fn, c) for c in cases]
+    print(f"{sum(r['passed'] for r in results)}/{len(results)} passed")
+    return results
+```
+
+Run this before a change and after it, and you already have something a demo never gives you: a count, and a record of exactly which case flipped. It is still only five cases, so it still cannot tell you much about the other five thousand - that gap is real, and closing it is the whole subject of the next lesson, *Building an eval set from your own traffic*. But it has already stopped being a vibe. That is the entire point of this lesson: the failure was never "not enough time to test." It was mistaking an impression for a measurement.

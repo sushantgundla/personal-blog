@@ -1,0 +1,107 @@
+---
+title: "Reading the ingestion pipeline's own trace"
+subtitle: "The job reported success, and a third of the batch never reached the index - the only way to catch that is to have written down what happened to each document."
+part: 4
+minutes: 7
+why: "Your nightly ingestion job finished on schedule and logged 'batch complete: 10,000 documents.' A reader searched for a policy that was uploaded that morning and got nothing back. You went looking and found that 3,400 of those documents threw partway through extraction, got caught by the per-document try/except that keeps the loop running, and were quietly skipped - the job's own success flag only ever meant the loop didn't crash. This lesson is about the difference between those two things, the handful of places a document silently vanishes on the way in, and the fields you have to log per document so a missing third of a batch is a five-minute query instead of a support ticket you can't explain."
+wins:
+  - "Treat a job's own success flag as 'the loop didn't crash,' never as 'every document landed.'"
+  - "Separate a swallowed parse failure from a dedup false positive from a failed write."
+  - "Log one record per document per stage - not one line per batch."
+  - "Reconcile attempted count against succeeded count before calling a batch done."
+  - "Never let a per-item try/except run silently; count what it swallows."
+quiz:
+  - q: "An ingestion job catches errors per document to keep the loop running, and reports 'success' at the end. What does that flag actually tell you?"
+    options: ["Every document was extracted, deduplicated, chunked, embedded, and written correctly", "The loop finished without an uncaught exception - nothing about whether each document inside it actually made it in", "The vector count in the index now matches the document count in the source"]
+    answer: 1
+    explain: "A per-item try/except that keeps the loop alive also hides every failure it catches, unless something outside the loop is counting them."
+  - q: "A third of a batch silently failed to parse and never reached the index. Where would this show up in a log that only records job-level success?"
+    options: ["It wouldn't - a job-level flag says nothing about per-document outcomes", "In the job's total runtime, which would be noticeably shorter than usual", "In the vector database's own error dashboard, automatically"]
+    answer: 0
+    explain: "Nothing about a shorter runtime or a clean dashboard tells you which specific documents didn't make it - only a per-document record does."
+  - q: "A document gets dropped because the near-duplicate check wrongly flags it as a copy of an unrelated document. That's..."
+    options: ["A parse failure - the extraction step must have produced bad text", "A dedup false positive - the similarity check itself made the wrong call", "A write failure - the index rejected a valid chunk"]
+    answer: 1
+    explain: "The text extracted and chunked fine; the mistake is specifically in *One document, five copies*'s similarity threshold treating two different documents as one."
+  - q: "Which pair of fields makes a per-document ingestion trace reconcilable at all?"
+    options: ["Latency and token count per pipeline stage", "A batch id on every record, and a per-document status at each stage the document passed through", "The parser version and the embedding model name"]
+    answer: 1
+    explain: "Without a batch id to group by and a per-stage status to check, you cannot answer 'did every document that entered this batch reach the index,' which is the only question that matters here."
+  - q: "What should decide whether a batch is reported as successful?"
+    options: ["Whether the job's loop finished without raising an exception", "Whether every attempted document has a recorded success at the final stage, checked by reconciling attempted against succeeded", "Whether the job finished within its usual time budget"]
+    answer: 1
+    explain: "A loop that finishes on time and without an exception can still have silently dropped a third of its input - reconciliation is the only check that catches it."
+deeper:
+  - { label: "OpenTelemetry - GenAI semantic conventions", href: "https://github.com/open-telemetry/semantic-conventions-genai" }
+  - { label: "AWS - Best practices for partial batch responses (SQS/Lambda)", href: "https://docs.aws.amazon.com/prescriptive-guidance/latest/lambda-event-filtering-partial-batch-responses-for-sqs/best-practices-partial-batch-responses.html" }
+  - { label: "Airbyte - Idempotency in Data Engineering", href: "https://airbyte.com/data-engineering-resources/idempotency-in-data-pipelines" }
+  - { label: "dataskew.io - Data Pipeline Design Patterns: Idempotency, DLQ, CDC and more", href: "https://dataskew.io/blog/data-pipeline-design-patterns/" }
+---
+
+## 1. What "batch complete" actually tells you
+
+Every ingestion job in this course has, somewhere, a loop over documents and a try/except inside it. That except is there on purpose - one malformed PDF should not take down the other 9,999 documents behind it in the batch. It is also, quietly, the thing that makes "batch complete" nearly meaningless as a success signal, because catching an error and reporting overall success are two different decisions that most pipelines make with the same line of code.
+
+| | Job crashed | Job "succeeded," items silently dropped |
+|---|---|---|
+| What you see | An exception, a non-zero exit code, an alert | A clean log line: "batch complete," a normal exit code |
+| What actually happened | The whole batch stopped, cleanly, at a known point | Some fraction of documents never reached the index, and the loop kept going past each one |
+| Who notices first | You, from the alert | A reader, from a missing search result |
+| Time to diagnose | Minutes - the stack trace names the failure | However long it takes someone to notice a document isn't searchable |
+
+The right column is the dangerous one, for the same reason a wrong-but-confident model answer is dangerous elsewhere in this course: there is no error to grep for. The job's own idea of success was never "every document landed." It was "the loop didn't crash," and those are only the same claim if you went and checked.
+
+> A batch job's own success flag tells you the loop didn't crash. It tells you nothing about whether every document inside that loop actually reached the index - that's a separate question, and it needs a separate answer.
+
+## 2. Three places a document silently vanishes
+
+Once you know to look, a dropped document is one of three things, and they need different fixes.
+
+| | Parse failure, swallowed | Dedup false positive | Write or embed failure |
+|---|---|---|---|
+| What went wrong | Extraction threw on this document and the per-item except ate it | The document was wrongly flagged as a near-duplicate of something else and dropped | The embedding call or the index write failed for this document, or one chunk of it |
+| What a bare "batch complete" log shows | Nothing - or a debug line nobody reads in production | Nothing distinct - it looks identical to a real duplicate being correctly skipped | Nothing, or a caught exception with no record of which document it was |
+| How to confirm | Re-run extraction on that exact document by hand outside the batch | Pull up both documents and read them - is the match real | Check whether the document's id exists in the index at all |
+| Where the fix goes | The parser's error handling: log the failure with the document id, and retry transient ones the way *Retries and fallbacks* retries a model call | The similarity threshold or the canonical-source logic in *One document, five copies* | Retry transient failures with backoff; for a genuine rejection, fail that document loudly instead of swallowing it |
+
+The middle row is worth sitting with. A dedup false positive doesn't look like a failure in the log at all - it looks exactly like the system correctly doing its job, because from the pipeline's point of view, dropping a duplicate is success. The only way to tell "correctly skipped, it really was a duplicate" apart from "wrongly skipped, it was not" is to have kept enough of a record - which document was matched against which - that you can go check.
+
+The same discipline from *Retries and fallbacks* applies directly to the third row: a 429 from your embedding provider or a transient write error is worth a retry with backoff; a document that's rejected outright - too large, wrong encoding, genuinely malformed - is not, and belongs in a place a human will see it rather than in a silently incremented failure counter nobody reads.
+
+## 3. Log this from the start, or you are guessing
+
+None of the above works from a summary log line written after the fact. It has to be one record per document per stage, written as the pipeline runs, because a batch job you re-run to "see what happens" usually processes a different subset of failures the second time - which feels like new information and is actually just noise.
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+
+class Stage(Enum):
+    EXTRACT = "extract"
+    DEDUP = "dedup"
+    CHUNK = "chunk"
+    EMBED = "embed"
+    WRITE = "write"
+
+@dataclass
+class IngestionRecord:
+    batch_id: str
+    doc_id: str
+    stage: Stage
+    ok: bool
+    reason: str | None = None   # why it failed, verbatim - never a summary
+
+def batch_reconciled(records: list[IngestionRecord], attempted: int) -> bool:
+    """A batch is successful only if every attempted document has an ok
+    record at the final stage - never just because the loop didn't crash."""
+    landed = {r.doc_id for r in records if r.stage is Stage.WRITE and r.ok}
+    return len(landed) == attempted
+```
+
+`batch_reconciled` is the fix to section one's whole problem: it makes "success" mean what you actually want it to mean, by checking the thing that matters - documents attempted versus documents that reached the last stage - instead of trusting the loop's own exit code.
+
+Three fields make this record worth keeping at all: `batch_id`, so you can pull one run's documents out of everything else you've logged; `doc_id` and `stage`, so you know exactly which document stalled and where; and `reason`, the verbatim error, not a category you invented afterward - a category hides the detail that would have told you it was a dedup false positive rather than a parse failure. Write one of these per document per stage it passes through or fails at, and reconciliation stops being a question you have to investigate and becomes a query you run every morning.
+
+---
+
+That is the course. You started with getting documents out of the systems they live in and into a corpus with a schema worth having, kept that corpus in sync as permissions and freshness and deletions changed underneath it, turned real usage into a dataset worth learning from, survived the day the embedding model and the chunking strategy both had to change under a live index, and split storage into the tiers that make those changes affordable instead of catastrophic. None of it is exotic - it's extraction, versioning, reconciliation, and a record of what happened, applied consistently. The corpus behind a retrieval system is not a one-time setup step. It's the part of the system that keeps moving, and now you know what to write down while it does.

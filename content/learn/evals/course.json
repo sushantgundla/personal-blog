@@ -1,0 +1,12 @@
+{
+  "title": "Evals and Observability",
+  "subtitle": "How to know it is working, and how to know when it stops.",
+  "blurb": "It worked on the five cases you tried. Building a test set from real traffic, judging output at scale, catching a regression before a user does, and watching a live system without drowning in dashboards.",
+  "order": 5,
+  "parts": [
+    { "n": 1, "name": "Why \"looks good\" is not a metric" },
+    { "n": 2, "name": "Judging the output" },
+    { "n": 3, "name": "Shipping a change" },
+    { "n": 4, "name": "Watching it run" }
+  ]
+}

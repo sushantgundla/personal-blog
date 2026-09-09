@@ -1,0 +1,111 @@
+---
+title: "Deterministic checks and LLM-as-judge"
+subtitle: "Reach for the cheap exact check first; save the model call for what actually needs one."
+part: 2
+minutes: 7
+why: "Someone on the team wires up an LLM call to grade every eval case with a prompt that says 'check if this response is valid JSON.' It works, it's slow, it costs a fraction of a cent per case that turns into real money at scale, and roughly one time in a hundred the judge confidently says a malformed object is fine. A JSON parser answers the same question instantly, for free, and never hallucinates a yes. The team reached for judgment when the question had a mechanical answer. This lesson is about telling those two situations apart, because most eval sets need far fewer model calls than people assume."
+wins:
+  - "Reach for a deterministic check whenever the question has one correct answer."
+  - "Save an LLM judge for qualities a rule genuinely cannot check - tone, relevance, faithfulness to a source."
+  - "Write the judge a rubric as specific as the one you'd hand a human reviewer."
+  - "Price a judge call like the model call it is, not like a free lint step."
+  - "Run the cheap check first and only call the judge on what's left."
+quiz:
+  - q: "A case just needs to confirm the output is valid JSON matching a known schema. The right tool is..."
+    options: ["An LLM judge prompted to check for valid JSON", "A schema validator - it answers instantly and never guesses", "Either one, since they'll usually agree"]
+    answer: 1
+    explain: "Validity is mechanical. A parser either accepts the input or it doesn't; there's no judgment call to outsource."
+  - q: "Which of these is a genuine candidate for an LLM judge rather than a rule?"
+    options: ["Whether a number in the output falls inside an allowed range", "Whether the response's tone matches a support policy that says 'firm but warm'", "Whether the output is under a fixed character limit"]
+    answer: 1
+    explain: "Tone has no single correct string to match against - it's exactly the kind of graded, contextual judgment a rule can't express."
+  - q: "A team routes every eval case through an LLM judge, including the ones with an exact expected answer. What's the main problem?"
+    options: ["It's slower and more expensive than a check that would have given the same answer for free, and it can be wrong in ways a rule can't be", "LLM judges cannot process JSON output at all", "Judges only work on English-language text"]
+    answer: 0
+    explain: "Where a rule already answers the question with certainty, a judge adds cost and a new source of error for no benefit."
+  - q: "What does an LLM judge need in order to score consistently rather than just plausibly?"
+    options: ["A larger context window than the model being evaluated", "A rubric as specific as the one you'd hand a human reviewer, not a vague 'rate this response'", "Access to the original training data"]
+    answer: 1
+    explain: "A vague instruction gets a vague, inconsistent score; a rubric that spells out what counts as good gives the judge something concrete to check against."
+  - q: "How should a judge call be priced when you're planning an eval run?"
+    options: ["As free, since it's just checking output rather than generating a user-facing answer", "As a real model call - with the token cost and latency that implies, multiplied by every case in the set", "At a fixed flat rate regardless of case count"]
+    answer: 1
+    explain: "A judge call is a generation call like any other; running it across a large eval set is a real, recurring cost."
+deeper:
+  - { label: "DeepEval - LLM-as-a-Judge in 2026", href: "https://deepeval.com/blog/llm-as-a-judge" }
+  - { label: "FutureAGI - LLM-as-Judge best practices: calibration, bias, and cost", href: "https://futureagi.com/blog/llm-as-judge-best-practices-2026/" }
+  - { label: "Deepchecks - LLM evaluation", href: "https://www.deepchecks.com/llm-evaluation/" }
+  - { label: "Langfuse - model-based evaluations", href: "https://langfuse.com/docs/scores/model-based-evals" }
+---
+
+## 1. The cheap check first
+
+Every eval case needs a grader - something that looks at the output and decides pass or fail. The instinct, once you have a model handy, is to hand that job to a second model call. Resist it until you've asked whether a rule already answers the question.
+
+A deterministic check is code: a schema validator, a regex, a range check, an exact-match comparison, a lookup against an allowed list. It runs in milliseconds, costs nothing beyond compute you already have, and gives the identical answer every time you run it on the identical input. An LLM judge is a model call: you send it the output, sometimes the input and a reference answer too, and a prompt describing what to check for, and it sends back a verdict.
+
+| | Deterministic check | LLM-as-judge |
+|---|---|---|
+| Answers | Questions with one correct answer | Questions that require graded judgment |
+| Speed | Milliseconds | Seconds - it's a generation call |
+| Cost | Effectively free | Real - tokens in, tokens out, every case |
+| Consistency | Perfect - same input, same output, always | Mostly consistent, not guaranteed - can drift or disagree with itself |
+| Can it be wrong | Only if you wrote the rule wrong | Yes - it can misjudge, and it can be confidently wrong |
+| Good for | Format, schema, range, exact match, presence of a required field | Tone, relevance, faithfulness to a source, whether an answer actually addresses the question |
+
+The rule of thumb: if you could write the check as an `if` statement, write it as an `if` statement. Valid JSON, a phone number matching a pattern, a required field present, a number inside a bound, an exact string match against a known-good answer - none of that needs a model to decide. A judge call spent on a question a parser already answers is pure waste: slower, more expensive, and carrying a small but real chance of being wrong about something that was never actually uncertain.
+
+This sounds obvious written down, and teams still get it backwards constantly, usually because the model is already sitting right there in the code and reaching for a second call feels like less work than writing the rule. It's the opposite. A schema check is a few lines you write once and never think about again. A judge prompt has to be written, tuned, re-checked when the underlying model changes, and paid for on every run - more work, spread out over a longer time, to answer a question that had a free answer already.
+
+## 2. What a judge is genuinely for
+
+Deterministic checks run out exactly where judgment starts to matter. No regex tells you whether a summary captured the important part of a document, whether a support reply matches a tone policy, or whether an answer is actually grounded in the passage it was supposed to cite rather than a plausible-sounding invention. Those are graded, contextual calls - the same kind a competent human reviewer would make by reading the output and thinking about it - and a model that's good at language is a reasonable stand-in for that reader, at a fraction of the time a human review would take.
+
+The judge is only as good as the question you hand it, though, and a vague one produces a vague answer:
+
+> "Rate this response 1 to 10" gets you a number. "Does this response state the refund window, and does it match what's in the source policy - yes or no, and quote the sentence that supports your answer" gets you something you can actually act on.
+
+Write the judge a rubric as specific as the one you'd hand a person: what exactly counts as a pass, what's explicitly out of scope, and where possible, ask for the evidence behind the verdict rather than just the verdict. A judge that has to point at the sentence it based its answer on is harder to fool than one that just outputs a score.
+
+Notice what the judge is not for. It's not a substitute for the deterministic checks in the section above - you don't ask a judge whether the output is valid JSON, you ask it whether valid JSON answers the actual question. And it's not a way to avoid deciding what "good" means for your product. Someone still has to write the rubric, the same way someone still has to write down the expected outcome for a traffic-sourced eval case. The judge does the reading; it doesn't do the deciding about what to look for.
+
+## 3. What it actually costs
+
+A judge call is not a free lint pass tacked onto your eval run - it's a model call, with the token cost and the latency of any other generation, and you're paying it once per case, every time the eval runs. That adds up faster than it looks. An eval set of a few hundred cases, run on every prompt change, with a judge call per case, is a few hundred generation calls per run, not a few hundred rule checks.
+
+```python
+import json
+
+from anthropic import Anthropic
+
+client = Anthropic()
+
+def deterministic_check(output: str, expected_schema: dict) -> bool:
+    """Free, instant, exact. Use this whenever the question has one right answer."""
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        return False
+    return all(key in data for key in expected_schema["required"])
+
+JUDGE_PROMPT = """You are checking one support reply against a rubric.
+
+Reply: {output}
+Source policy: {source}
+
+Does the reply state a refund window, and does that window match the source policy
+exactly? Answer with JSON: {{"pass": true or false, "quote": "the matching sentence, or empty"}}"""
+
+def judge_check(output: str, source: str) -> dict:
+    """A real model call - use it only where a rule genuinely cannot decide."""
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=200,
+        messages=[{"role": "user", "content": JUDGE_PROMPT.format(output=output, source=source)}],
+    )
+    return json.loads(resp.content[0].text)
+```
+
+Run the deterministic check first, on every case, since it's free. Route only what's left - the cases asking a question a rule can't answer - through the judge. That ordering alone is usually the difference between an eval run that costs a few cents and one that costs real money for no better result, because most eval sets have far more mechanically-checkable cases in them than people assume once they actually sort the pile.
+
+One more thing worth saying plainly before you lean on a judge's numbers: a judge is a model, and a model can be confidently wrong, or consistently biased in one direction, in ways a schema check structurally cannot be. Whether a particular judge's scores are worth trusting - and what to do about the ways they go wrong - is a real question with a real answer, and it's a different lesson from this one. For now, the working rule is: reach for the free, exact check first, reserve the judge for what genuinely needs a reader instead of a rule, and remember that every judge call you make is a bill, not a formality.

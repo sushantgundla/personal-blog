@@ -1,0 +1,119 @@
+---
+title: "Drift: when the model changes under you"
+subtitle: "Your prompt didn't change, but the model behind the API did."
+part: 3
+minutes: 6
+why: "Quality dropped overnight. You checked your git log first, the way you always do, and it was empty — no prompt edit, no dependency bump, no deploy. You checked the status page next and it said everything was fine. Two days later a support thread confirms it: the provider updated the model sitting behind the same API name, and nobody told you before they did it. Your regression tests from *Regression testing a prompt or model change* only run when you ship something. This time you shipped nothing, and it broke anyway. That gap is what this lesson closes."
+wins:
+  - "Treat a quality drop with no code change as drift, not a bug in your own system, until proven otherwise."
+  - "Rerun your golden set on a schedule, not only when you ship something."
+  - "Pin a dated model id so a provider-side swap cannot happen without your knowledge."
+  - "Store every eval run's score with a date and a model id, so a graph can show you the day it moved."
+  - "Alert on a score drop against your own baseline, not on the absence of a changelog entry."
+quiz:
+  - q: "You deploy nothing for two weeks and a support thread reports the assistant giving worse answers. What should you check first?"
+    options: ["Your own recent commits, since the bug must be in code you touched", "Your golden set's score today against its score from before the reports started", "The provider's public leaderboard ranking for the model you use"]
+    answer: 1
+    explain: "Nothing in your code changed, so the fastest way to confirm or rule out drift is comparing your own eval score across time, not reading commits that do not exist or a leaderboard that says nothing about your traffic."
+  - q: "How is drift different from the model swap covered in *Switching models safely*?"
+    options: ["Drift only affects open-weight models you host yourself", "Switching models is a change you chose and tested first; drift is a change nobody told you about and nothing on your side triggered", "Drift is a documentation problem, not a quality problem"]
+    answer: 1
+    explain: "The migration lesson is about a deliberate swap with a before-and-after eval run; drift is the same underlying risk arriving with no warning and no deploy of your own to point at."
+  - q: "Why does pinning a dated model id reduce your exposure to drift?"
+    options: ["Dated ids run on faster hardware than a moving alias", "A moving alias can point at a new model version with no deploy on your side, so your behaviour changes without your consent", "Pinning disables the provider's safety filters"]
+    answer: 1
+    explain: "A dated id only changes when you change it. An alias like a 'latest' pointer can move underneath you at any time, which is exactly the surprise drift detection exists to catch."
+  - q: "You rerun your golden set weekly and one week's score is two points lower than the ten weeks before it. What is the right response?"
+    options: ["Ignore it, since two points is noise from sampling", "Treat it as a signal worth a closer look — read which cases changed, not just the aggregate number", "Immediately roll back to a different provider without checking anything"]
+    answer: 1
+    explain: "A small aggregate move can hide a large change concentrated in a few cases; reading the individual failures tells you whether it is real drift or normal variance before you act."
+  - q: "A provider's changelog is not a reliable way to learn about drift because..."
+    options: ["Changelogs are usually written in a language you don't read", "Silent retuning and quality changes to a model version are often not published at all, or published after the fact", "Changelogs only cover pricing changes"]
+    answer: 1
+    explain: "Providers document some changes and not others, and 'not yet documented' looks identical to 'not happening' from where you sit — your own baseline is the only thing you can trust on a schedule you control."
+deeper:
+  - { label: "Traceloop — Catching silent LLM degradation", href: "https://www.traceloop.com/blog/catching-silent-llm-degradation-how-an-llm-reliability-platform-addresses-model-and-data-drift" }
+  - { label: "Anthropic — model deprecations", href: "https://platform.claude.com/docs/en/about-claude/model-deprecations" }
+  - { label: "Langfuse — LLM regression testing", href: "https://langfuse.com/resources/engineering/llm-regression-testing" }
+  - { label: "Braintrust — what is LLM evaluation, a practical guide", href: "https://www.braintrust.dev/articles/llm-evaluation-guide" }
+---
+
+*Regression testing a prompt or model change* covers the change you made on purpose. This lesson covers the one you did not — the day the model quietly gets worse, or different, with your code exactly as you left it.
+
+## 1. A change with no commit behind it
+
+Every other failure in this course has a cause you can point at: a prompt you edited, a model you swapped, a rollout you shipped. Drift has none of those. The behaviour changes and your side of the system is unchanged, which is precisely what makes it hard to believe at first — the instinct is to assume you missed a deploy, not that the ground moved.
+
+It happens because the model behind a stable API name is not one fixed thing forever. A provider can retune a model for safety, adjust its serving stack, change a default, or quietly route a fraction of traffic to a new checkpoint, all without changing the endpoint you call. The name on your config file stays `claude-sonnet-5`. What answers that name six weeks from now is not guaranteed to be byte-for-byte what answered it today.
+
+None of this is malicious, and most of it is never announced in a way you would notice in time. A provider that retrains a safety classifier is not lying to you by skipping a blog post about it. But from your side, silence and stability look identical until something you rely on stops working — a refusal rate that used to be near zero, a tool call that used to be reliably formatted, a summary that used to hit the length you asked for. You find out from a support ticket, not a changelog.
+
+> If nothing in your repository changed and the output did, the repository was never the whole system. The model was always the other half, and it can move without you.
+
+## 2. Where it actually comes from
+
+Drift is not one mechanism, and knowing which kind you are looking at changes how fast you can confirm it.
+
+| Cause | What is actually happening | How you would notice |
+|---|---|---|
+| Safety or policy retuning | The provider adjusts what the model refuses or hedges on | Refusal rate or hedging language changes on inputs that used to pass cleanly |
+| Silent version swap behind a stable name | The model serving an API name is updated without the name changing | Formatting, tone, or reasoning style shifts with no announcement |
+| Serving or infrastructure changes | Quantization, batching, or hardware changes alter output distribution slightly | Small, hard-to-pin quality wobble rather than a sharp break |
+| Scheduled deprecation | An old version is retired on a published date and traffic moves to its replacement | A calendar date you can plan around, if you are watching the deprecation page |
+| Your own traffic shifting | The mix of inputs you send has changed, not the model | Golden set score is stable; live sampled scores move — check this before blaming the provider |
+
+That last row matters because it is the one drift-shaped problem that is not drift at all. Before you conclude the provider changed something, rule out that your own users did. A new feature that sends a different kind of question, a marketing push that shifts your traffic mix, a new locale — all of these can drop your live quality numbers while your golden set, run against fixed inputs, stays flat. If the golden set has moved, the model moved. If only your live sampling has moved, look at your own traffic first.
+
+Scheduled deprecations are the one row you can plan for, because the provider tells you a date. The other rows do not come with a date, which is why they need a different kind of defense than reading a page.
+
+## 3. Your own golden set, on a schedule
+
+There is exactly one reliable way to catch the rows above that do not come with a warning: run the same test on a schedule and watch the number move.
+
+This is the golden set from *Building an eval set from your own traffic*, and it is doing here what it already does in CI — except instead of running once per prompt change, it runs on a clock, whether or not you touched anything. A nightly or weekly run against a pinned model id gives you a score you can plot next to yesterday's and last month's. A single point tells you nothing. A line tells you the day it moved.
+
+Three things make this work in practice rather than becoming a dashboard nobody reads:
+
+- **Pin the dated model id**, per *Switching models safely*, so a version change on the provider's side cannot happen without you at least knowing which id you are calling — a moving alias makes this whole exercise pointless, because you would be scoring a target that already changed under the alias before your test even ran.
+- **Store the score with its date and the exact model id it ran against.** A history of numbers with no id attached cannot tell you whether a dip lines up with a version change you can find in a deprecation notice.
+- **Alert on your own baseline, not on a provider announcement.** A published changelog is a nice confirmation after the fact. It is not a detector, because plenty of what changes a model's behaviour is never published as a change at all.
+
+```python
+import json
+from datetime import date, timedelta
+from pathlib import Path
+
+HISTORY_FILE = Path("golden_set_scores.jsonl")
+ALERT_THRESHOLD = 0.05          # a 5-point drop against the recent baseline
+
+def recent_baseline(days=14) -> float | None:
+    if not HISTORY_FILE.exists():
+        return None
+    cutoff = date.today() - timedelta(days=days)
+    scores = [
+        row["score"] for line in HISTORY_FILE.read_text().splitlines()
+        if (row := json.loads(line)) and date.fromisoformat(row["date"]) >= cutoff
+    ]
+    return sum(scores) / len(scores) if scores else None
+
+def record_and_check(score: float, model_id: str):
+    baseline = recent_baseline()
+    HISTORY_FILE.open("a").write(json.dumps({
+        "date": date.today().isoformat(),
+        "model_id": model_id,      # the pinned id this run actually called
+        "score": score,
+    }) + "\n")
+
+    if baseline is not None and baseline - score >= ALERT_THRESHOLD:
+        raise SystemExit(
+            f"drift alert: score {score:.2f} is {baseline - score:.2f} "
+            f"below the {baseline:.2f} baseline on {model_id}"
+        )
+
+# score = run_eval_suite(golden_set, model_id="claude-sonnet-5")
+# record_and_check(score, model_id="claude-sonnet-5")
+```
+
+The threshold in `ALERT_THRESHOLD` is a starting guess, not a law — set it from how noisy your own golden set score is run to run, the same way you would set any other alert threshold, and revisit it once you have a few months of history to look at.
+
+What this buys you is small and specific: the difference between a user finding the regression before you do, and a scheduled job finding it first. It will not tell you why the model changed, and most of the time you will never get a satisfying answer to that. It will tell you that it did, on a date you can point to, with a golden set score to back it up — which is the whole of what you actually need to decide whether to act.

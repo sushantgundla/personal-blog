@@ -1,0 +1,110 @@
+---
+title: "Building an eval set from your own traffic"
+subtitle: "Your users already wrote your test cases; you just haven't collected them."
+part: 1
+minutes: 7
+why: "Someone hands you a ticket: write tests for the chatbot. You open the codebase looking for the equivalent of assertEqual and there isn't one, because there is no single correct string for 'write a good reply to an angry customer.' So you write nothing, and the team goes back to checking changes by reading a few outputs and deciding they look fine - which is the exact failure the last lesson walked through. The way out is not a cleverer assertion. It is realizing you already have the raw material for a test suite sitting in your logs, your support queue, and your own memory of what broke last month. You just have not collected it into one place."
+wins:
+  - "Pull your first eval cases from real logs before you write a single invented one."
+  - "Write down the outcome you'd accept for each case, not just the input."
+  - "Add every production incident to the set on the day it happens."
+  - "Use synthetic cases only to cover a gap real traffic hasn't produced yet."
+  - "Start with a few dozen cases rather than waiting until the set feels complete."
+quiz:
+  - q: "The best source for your first eval cases is..."
+    options: ["Examples you invent at your desk, based on what you'd expect a user to ask", "Real inputs pulled from your own logs, support tickets, or chat history", "A generic set of LLM benchmark questions"]
+    answer: 1
+    explain: "Real traffic carries the phrasing, typos, and edge cases you would not think to invent."
+  - q: "Why are invented test cases 'too tidy' to catch much?"
+    options: ["They take too long to write", "They tend to be phrased the way you already think about the problem, so they miss the phrasing and edge cases real users actually produce", "Invented cases cannot be scored automatically"]
+    answer: 1
+    explain: "You write the question the way you'd ask it, not the way a confused or hurried user actually types it."
+  - q: "A production incident just happened - the system gave a bad answer to a real user. What should happen to that case?"
+    options: ["Note it informally and move on once it's fixed", "Add it to the eval set permanently, the same day, so the fix is enforced going forward", "Leave it out, since it's now a one-off that's already been patched"]
+    answer: 1
+    explain: "An incident you don't turn into a test case is a regression you're volunteering to repeat."
+  - q: "Synthetic (model-generated) eval cases are best used to..."
+    options: ["Replace real traffic entirely, since they're cheaper to produce", "Fill a specific gap real traffic hasn't produced yet, always checked by a human before they're trusted", "Score themselves, since the same model that wrote them can judge them"]
+    answer: 1
+    explain: "Synthetic cases are useful for coverage gaps, but unchecked ones risk testing against the model's own blind spots instead of reality."
+  - q: "How many cases do you need before an eval set is worth using?"
+    options: ["It needs to be comprehensive - hundreds of cases - before it's worth running", "A few dozen real, checked cases is enough to start; you grow it from there", "Exactly one for each feature the product has"]
+    answer: 1
+    explain: "A small set built today catches more than a large, comprehensive set you never get around to finishing."
+deeper:
+  - { label: "Braintrust - What is LLM evaluation? A practical guide", href: "https://www.braintrust.dev/articles/llm-evaluation-guide" }
+  - { label: "Langfuse - LLM regression testing", href: "https://langfuse.com/resources/engineering/llm-regression-testing" }
+  - { label: "OpenAI Cookbook - Getting started with OpenAI Evals", href: "https://cookbook.openai.com/examples/evaluation/getting_started_with_openai_evals" }
+  - { label: "Anthropic - develop tests for your prompts", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
+---
+
+## 1. Where real cases actually come from
+
+An eval case is two things: an input, and the outcome you would accept for it. The input half is the part people get stuck on, because it feels like it needs to be written. It does not - it needs to be collected.
+
+Your logs already contain the inputs. So does your support queue, your chat history, and the running list of "wait, what did the user actually type there" moments your team has had in Slack. Pull real requests, read them, and write down next to each one what a good response would have looked like. That second step is the part that turns a log line into a test case, and it is manual - nobody else can decide what "acceptable" means for your product.
+
+Three sources, and they are not interchangeable:
+
+| Source | Realism | Cost to produce | Blind spot |
+|---|---|---|---|
+| Traffic-sourced (logs, tickets, chat history) | High - these are real users, real phrasing | Low - the inputs already exist, you're just labeling them | Only covers what has already happened |
+| Expert-written (a domain person writes hard cases from memory) | Medium - realistic but shaped by what the expert thinks to write | Medium - needs a person who knows the domain well | Misses whatever that person doesn't think of, same as any invented case |
+| Synthetic (a model generates candidate cases) | Low until checked, since a model's idea of a hard case may not match reality | Low to generate, real cost to review | Can silently test against the model's own assumptions instead of your users' |
+
+Start with traffic-sourced cases. They are the cheapest to get and the hardest to argue with, because nobody has to guess whether a real user would actually type that - one already did.
+
+That doesn't mean expert-written cases are wasted effort. A domain expert who has spent years on the support desk knows shapes of questions that haven't shown up in your logs yet simply because the feature they'd apply to only launched last week. Use them to cover the near future your traffic hasn't caught up to. What you're avoiding is treating expert-written cases as a substitute for real ones rather than a supplement to them - the two blind spots stack differently, and traffic-sourced cases should always be the larger share of the set.
+
+Do not skip the parts of your traffic that are unpleasant to read. The empty input, the message in a different language, the multi-turn conversation that goes sideways in the third message, the question phrased as a complaint - these are disproportionately where prompt changes break something, precisely because they are the cases people leave out of a five-minute manual check.
+
+## 2. Every incident becomes a permanent case
+
+This is the single habit that keeps an eval set useful instead of stale, and it costs nothing extra because the work is already being done.
+
+When something breaks in production - a wrong answer, a policy violation, a support escalation that traces back to your system - somebody is already investigating it. The only new step is: once you understand what went wrong, write the input and the correct output down as a case, and add it to the set. Permanently. Not "until it's fixed," not "for this sprint" - forever, the same way a regression test in ordinary software stays in the suite long after the bug it caught is gone.
+
+> A production incident you don't turn into a test case is a regression you're volunteering to repeat.
+
+This is what separates a real eval set from a folder of examples someone built once during a sprint and never opened again. The folder goes stale the day traffic shifts. A set that absorbs every incident keeps pace with exactly the failures that have already cost you something, which are also the failures a stakeholder will ask about by name the next time they recur.
+
+## 3. Filling real gaps, carefully
+
+Real traffic has one honest limitation: it only shows you what has already happened. If you are about to launch a feature nobody has used yet, or you know a category of adversarial input exists but it has not shown up in your logs, traffic alone will not cover it. That is the legitimate use for synthetic generation - not as a shortcut to avoid reading logs, but as a way to fill a hole real traffic hasn't gotten around to producing.
+
+The rule is the same one you'd apply to an intern's first draft: useful as a starting point, not usable unread. Generate candidates, then have a person read every one before it goes in the set, because an unchecked synthetic case tests your system against a model's guess at what's hard, and any blind spot in that guess becomes an invisible blind spot in your eval set too.
+
+```python
+import json
+import random
+
+# Pull a sample of recent, real requests for a human to review and label.
+# This does not write the eval set - it drafts candidates for the day's review pass.
+
+def sample_candidates(log_path: str, n: int = 20) -> list[dict]:
+    with open(log_path) as f:
+        requests = [json.loads(line) for line in f]
+
+    # Skew toward the awkward ones instead of a plain random sample:
+    # empty, very short, or very long inputs are where prompt changes tend to break.
+    def is_awkward(r: dict) -> bool:
+        length = len(r["input"])
+        return length == 0 or length < 5 or length > 800
+
+    awkward = [r for r in requests if is_awkward(r)]
+    ordinary = [r for r in requests if not is_awkward(r)]
+
+    picked = awkward[: n // 2] + random.sample(ordinary, min(n - len(awkward[: n // 2]), len(ordinary)))
+    return [{"input": r["input"], "expected": None} for r in picked]  # a human fills in "expected"
+
+candidates = sample_candidates("logs/requests.jsonl", n=20)
+with open("evals/needs_review.jsonl", "w") as f:
+    for c in candidates:
+        f.write(json.dumps(c) + "\n")
+```
+
+Nothing in that script decides what a good answer looks like - it only surfaces candidates worth a human's time, weighted toward the inputs most likely to be revealing. If retrieval is part of your system, note that scoring whether the right passage came back is its own narrower measurement, covered in *Measuring retrieval* - what you're building here is a set that judges the whole system's output, not one pipeline stage.
+
+None of this needs to be finished before it's useful. A set of thirty real cases, checked by a person and run today, catches more than the four-hundred-case set you keep meaning to get around to next quarter. Start with what you can label in an afternoon, run it on the next change, and let the incident rule and the occasional synthetic gap-filler grow it from there. The set that exists beats the set that's still being planned.
+
+Once you have this set - traffic-sourced, incident-backed, a handful of synthetic cases filling real gaps - you have something worth running before every change. The next lesson, *Offline evals and online evals*, is about when to run it, and what it still cannot tell you even when every case passes.
