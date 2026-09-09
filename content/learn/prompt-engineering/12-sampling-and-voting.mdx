@@ -1,0 +1,114 @@
+---
+title: "Sampling and voting"
+subtitle: "When there's no error to catch, run it more than once and let the answers disagree with each other."
+part: 3
+minutes: 7
+why: "Your ticket classifier passes every check *Validating what comes back* taught you — valid enum, urgency in range, owner exists in your directory. It's still wrong. There's no error to retry against, because nothing failed. *Retries and fallbacks* fixes a call that came back broken; this one didn't. It came back well-formed, confident, and wrong, and you have no lever to pull. This lesson is that lever: run the prompt more than once and count what comes back."
+wins:
+  - "Reach for voting when there's no error to retry against — an open classification, a judgment call, a borderline case."
+  - "Run the N calls in parallel, not in sequence — voting buys reliability without paying retries' latency."
+  - "Use an odd N so a majority exists and ties are rare."
+  - "Only vote on comparable answers — a label or a number, never five different paragraphs of prose."
+  - "Escalate a genuine tie to a stronger model or a human. Never break it with a coin flip."
+quiz:
+  - q: "Anthropic's current models reject a custom `temperature`. Why do five identical calls still come back different?"
+    options: ["Default sampling still has some randomness in it", "Each call is silently routed to a different model version", "It doesn't — identical prompts always return identical text"]
+    answer: 0
+    explain: "*Sampling, and the knobs providers are taking away* covers why temperature 0 was never a true determinism guarantee even before it was locked — there's variation in the sampling step regardless of whether you can tune it."
+  - q: "Voting fixes..."
+    options: ["Malformed JSON that fails to parse", "A wrong-but-well-formed answer that would pass every check in your validator", "A 429 rate limit response"]
+    answer: 1
+    explain: "Malformed output is what a repair retry fixes. Voting is for a plausible, valid answer that might simply be one of several readings the model landed on."
+  - q: "Self-consistency works best on..."
+    options: ["A one-paragraph creative summary", "A short, comparable answer like a label or a number", "A task where every run already returns the identical answer"]
+    answer: 1
+    explain: "Voting needs answers you can compare against each other. Open prose gives you five different essays, not five ballots on the same question."
+  - q: "Five calls split 2-2-1 across three labels. The right move is..."
+    options: ["Take whichever answer arrived first", "Treat it as a genuine tie and escalate, rather than pick one to end the debugging", "Lower max_tokens and try again"]
+    answer: 1
+    explain: "A split this even is itself information — the case is genuinely ambiguous, and picking a winner arbitrarily throws that signal away."
+  - q: "The honest cost of voting with N=5 is..."
+    options: ["Five times the tokens of one call, though not five times the latency if run in parallel", "Free, since identical calls are served from a cache", "The same cost as one call, because only the winning answer is billed"]
+    answer: 0
+    explain: "You pay for every sample you take. The saving is that they don't need to run one after another the way retries do."
+deeper:
+  - { label: "Wang et al. — Self-Consistency Improves Chain of Thought Reasoning", href: "https://arxiv.org/abs/2203.11171" }
+  - { label: "Learn Prompting — Self-Consistency", href: "https://learnprompting.org/docs/intermediate/self_consistency" }
+  - { label: "Kinde — LLM Fan-Out 101: Self-Consistency, Consensus, and Voting Patterns", href: "https://www.kinde.com/learn/ai-for-software-engineering/workflows/llm-fan-out-101-self-consistency-consensus-and-voting-patterns/" }
+  - { label: "Anthropic — prompt engineering best practices", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" }
+---
+
+Before this lesson, every reliability tool in the course assumed you had something to react to: a schema violation, a timeout, a 429. This one is for the call that gives you nothing to react to at all — it just quietly gave you the wrong answer, formatted correctly.
+
+## 1. Why retrying the same call doesn't help here
+
+*Retries and fallbacks* is built around a specific shape of failure: the response fails validation, you attach the error, you ask again. That works because the error tells the model something concrete to fix. A classifier that returns `urgency: 4` when the true urgency is `2` hasn't failed anything. It's a valid integer, in range, a plausible reading of an ambiguous ticket. There's no exception to catch and nothing to attach to a repair turn, because as far as your code can tell, nothing went wrong.
+
+This is a different failure family: **well-formed and wrong**, rather than **malformed**. Retrying the identical prompt against it looks pointless at first glance — if the call already succeeded once, what does calling it again get you?
+
+More than you'd think, and here's why. *Sampling, and the knobs providers are taking away*, in the LLMs course, covers the mechanism: providers rescale or truncate the distribution over the next token before sampling from it, and — on Anthropic's current models — you can no longer even touch those knobs; temperature, top_p, and top_k outside their defaults are a flat 400. It would be reasonable to assume that means two identical calls now return identical output. They don't. Default sampling still draws from a distribution rather than always taking the single highest-probability token, so two calls with the same input remain two independent draws, not two copies. That's not a workaround for the locked knobs — it's the same fact that always made temperature 0 a weaker guarantee than people treated it as. *Retries and fallbacks* touched this from the other side, in its note that a stuck repair loop needs to change the request rather than lean on sampling variation.
+
+Five calls to the same prompt are therefore five real opinions, not five copies of one opinion. That's the entire premise of this lesson.
+
+> A retry with an error attached asks a narrower question. A vote asks the same question several times and listens for whether the answers agree.
+
+## 2. Counting the votes
+
+Once you have several independent answers, the question is how to turn them into one. That depends entirely on the shape of what came back.
+
+**Closed answers vote cleanly.** A label from a fixed set, an enum, a small integer range, yes/no — these are comparable. Five draws, take the mode, done. This is the case self-consistency was built for: Wang et al.'s original paper ran a model several times on the same reasoning problem and kept the final answer that recurred most often, on the theory that a wrong derivation is far less likely to land on the *same* wrong number twice than a right one is to land on the right number five times.
+
+**Open prose doesn't vote at all.** Five calls asking for a one-paragraph summary give you five different, individually reasonable paragraphs. There's no meaningful "majority" paragraph to extract — you'd need a second model call just to judge which of the five is best, which is a different technique (LLM-as-judge) belonging to a different course, not a vote.
+
+| | *Retries and fallbacks* | Voting (this lesson) |
+|---|---|---|
+| Triggered by | A validation failure or an error response | No failure — a plausible answer you don't trust |
+| What changes between calls | The prompt, with the error attached | Nothing — same prompt, independent draws |
+| Sequencing | Sequential — attempt 2 needs attempt 1's error | Parallel — the calls don't depend on each other |
+| Cost shape | Extra latency, bounded attempts (cap at 2 repairs) | N× the tokens, but not N× the wall-clock time |
+| Fixes | Malformed or invalid output | A wrong answer that would have passed every check |
+
+**Ties need a rule you set in advance.** A clean 3-2 split has a winner. A 2-2-1 split across three labels does not, and treating the first-arrived answer as the tiebreaker throws away exactly the signal a split vote is giving you — that the input is genuinely ambiguous. Escalate ties to a stronger model, or queue them for a human, the same fallback-ladder instinct from *Retries and fallbacks*. Never resolve a tie by coin flip; you'd be manufacturing false confidence on the cases you most need to flag.
+
+```python
+import anthropic
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+
+client = anthropic.Anthropic()
+
+def classify(ticket_text):
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=10,
+        system="Classify the ticket urgency as low, medium, or high. Reply with one word.",
+        messages=[{"role": "user", "content": ticket_text}],
+    )
+    return resp.content[0].text.strip().lower()
+
+def vote(ticket_text, n=5):
+    with ThreadPoolExecutor(max_workers=n) as pool:
+        votes = list(pool.map(lambda _: classify(ticket_text), range(n)))
+
+    counts = Counter(votes)
+    winner, top_count = counts.most_common(1)[0]
+
+    # A genuine tie: more than one label hit the same top count.
+    if list(counts.values()).count(top_count) > 1:
+        return None, counts  # signal "escalate", don't guess
+
+    return winner, counts
+
+label, tally = vote("Customer says checkout is broken for everyone, right now.")
+print(label, tally)
+```
+
+The `ThreadPoolExecutor` is doing the real work here — five calls fired at once, not five calls in a row. That's the whole latency argument from the table above made concrete.
+
+## 3. What it costs, and when it's worth it
+
+The cost is linear and unavoidable: N calls means N times the tokens of one call, billed in full every time, whether the votes agree or not. Where voting earns that back is latency, not money — because the calls don't depend on each other, they run concurrently, and five parallel calls at roughly the same latency as one is a very different trade than the two sequential repair attempts a retry loop pays for.
+
+Spend it where being wrong is expensive and there's no ground truth to check against — a support ticket getting misrouted to the wrong queue, a moderation call, a judgment classification with real consequences downstream. Skip it on anything cheap and low-stakes, or anything a schema can already fully validate; if there's a decisive check, use it, and save voting for the cases where "decisive" isn't available because the question is genuinely a judgment call.
+
+One more thing worth being honest about: voting doesn't make the model right more often on any single call — it makes you more likely to *notice* when the model isn't converging. A model that's confidently, consistently wrong will vote for its wrong answer just as cleanly as it would vote for a right one. What you're really buying is the disagreement signal on the cases that are actually ambiguous, and a slightly better hit rate on the cases where the model was directionally right but noisy. It's a reliability tool, not a correctness guarantee — keep that distinction in mind and you won't oversell it to whoever is reading your postmortem.

@@ -1,0 +1,95 @@
+---
+title: "Deleting is a feature"
+subtitle: "Tombstones, revocation propagation, and why re-indexing everything is not a deletion story."
+part: 2
+minutes: 7
+why: "A document was pulled from the source wiki three months ago - it was wrong, and someone finally noticed and deleted it. Today a reader asks your assistant a question and gets an answer built from that exact document, citation and all. The wiki has no record it ever existed. Your vector index still does, because deleting a row from a source system was never wired to deleting anything downstream. Nobody built a delete path, because ingestion pipelines are built to add data, and 'add' was the only verb anyone tested. This lesson is about the verb nobody tests: what actually has to happen, in what order, when something needs to stop being retrievable."
+wins:
+  - "Mark a deletion with a tombstone first; purge storage on a schedule, not in the request path."
+  - "Propagate a deletion to every copy of the data - raw store, parsed store, and vector index - not just the one you remember."
+  - "Treat 're-index everything' as a recovery plan, not a deletion feature."
+  - "Log every deletion with who, what, and when, so a mistaken one can be found and reversed."
+  - "Test deletion the same way you test retrieval: delete something on purpose and confirm it stops coming back."
+quiz:
+  - q: "A document deleted from the source three months ago is still cited by the assistant. What is the most likely root cause?"
+    options: ["The chunking strategy is wrong", "Nothing propagated the source deletion to the vector index", "The embedding model is out of date"]
+    answer: 1
+    explain: "Ingestion pipelines are usually built and tested for adding documents. Deletion is a separate path that has to be built and tested on its own."
+  - q: "Why mark a record with a tombstone instead of deleting it immediately?"
+    options: ["Tombstones are required by every vector database's API", "It lets you exclude the record from queries right away while the actual storage cleanup happens safely, later and in bulk", "It makes the embedding smaller"]
+    answer: 1
+    explain: "A tombstone is a fast, safe first step - hide it now - that decouples immediate correctness from the slower, riskier job of reclaiming storage."
+  - q: "A document lives as a raw file, a parsed text version, and a set of chunks in the vector index. A deletion request only removes the vector index rows. What's the risk?"
+    options: ["None - the vector index is the only place a search can read from", "The raw and parsed copies can resurface the content the next time the pipeline re-runs, undoing the deletion", "Vector search will run slower"]
+    answer: 1
+    explain: "Every copy of the data is a place the content can come back from. A deletion story that only touches one tier isn't finished."
+  - q: "Why is 're-index everything from scratch' not a real deletion feature?"
+    options: ["It's too fast to be trustworthy", "It doesn't prove the deleted item's source is actually gone, and it does nothing for the gap between deletion and the next re-index", "Re-indexing always changes the embedding model"]
+    answer: 1
+    explain: "A full re-index only removes what the source no longer contains, which needs the source to already be clean, and it leaves the deleted item retrievable in the meantime."
+  - q: "What should a deletion log record, at minimum?"
+    options: ["Nothing - deletions are final by design", "Who requested the deletion, what was deleted, and when, so a mistaken deletion can be found and reversed", "Only the total count of items deleted that day"]
+    answer: 1
+    explain: "A deletion you can't explain later is a deletion you can't safely undo when it turns out to be wrong."
+deeper:
+  - { label: "GDPR Article 17 - Right to erasure ('right to be forgotten')", href: "https://gdpr-info.eu/art-17-gdpr/" }
+  - { label: "Qdrant - Points (storage, updates, and deletion)", href: "https://qdrant.tech/documentation/concepts/points/" }
+  - { label: "Pinecone - Delete records", href: "https://docs.pinecone.io/guides/manage-data/delete-data" }
+  - { label: "Apache Kafka - Log compaction (tombstones as a deletion marker)", href: "https://kafka.apache.org/documentation/#compaction" }
+---
+
+## 1. Deletion is a path, not a side effect of not adding something
+
+Every ingestion pipeline gets tested on the happy path: a new document appears, it gets parsed, chunked, embedded, and written. Almost none get tested on the other path, because there usually isn't one - "delete" was never a verb the pipeline was built to handle, only "add" and sometimes "update." So when a document disappears from the source, the index doesn't hear about it. It just keeps answering questions from a document that, as far as the rest of the organization is concerned, no longer exists.
+
+This matters more than a stale-content bug, because deletion is often the response to something serious - a factual error, an expired contract, a person's legitimate request that their data stop being used. A retrieval system that can't reliably forget is not just out of date, it's making a promise it can't keep every time it says "your data has been removed." Regulations like GDPR's right to erasure put a deadline on that promise; a pipeline with no delete path can't meet it no matter how good its retrieval is.
+
+The fix starts with treating deletion as a first-class operation with its own design, not an afterthought bolted onto the ingestion job that already exists.
+
+It also matters because deletion requests rarely arrive alone or politely. They show up as a legal hold that just lifted, a customer who exercised a data-rights request with a countdown attached, or a compliance team asking "prove this is gone" on a schedule you don't control. A pipeline that can only add and update has no answer to any of those beyond "let us get back to you," which is not an answer a deadline accepts.
+
+## 2. Tombstone first, purge later
+
+The instinct is to delete the row the moment you're told to. Resist it. An immediate hard delete against a live index is slow relative to a request, can leave an index in a half-updated state if it fails partway, and gives you no record that anything happened if you later discover the deletion was a mistake - someone fat-fingered the wrong document ID, or a sync bug flagged the wrong batch.
+
+The pattern that holds up under all three problems is the tombstone: mark the record as deleted, filter it out of every query immediately, and reclaim the actual storage on a separate, slower schedule.
+
+| Approach | Speed to "invisible" | Storage cost | Recoverable if wrong |
+|---|---|---|---|
+| Hard delete immediately | Fast, but risky under load | Reclaimed right away | No - it's gone |
+| Tombstone, purge later | Fast - one flag flip | Held until the purge runs | Yes, until the purge |
+| Never delete, just stop linking to it | Fast | Never reclaimed | Yes, but it can still leak via a bulk export or a bug |
+
+A tombstone is one extra boolean and one extra clause on every query: `WHERE deleted_at IS NULL`. That's the entire cost of making a deletion take effect instantly. The actual storage reclaim - the compaction job, the vacuum pass, whatever your vector store calls its cleanup - can then run in a batch window where a mistake is a rollback, not an outage.
+
+```python
+# mark deleted: fast, reversible, effective on the very next query
+def tombstone_document(doc_id, reason, requested_by, chunk_store):
+    chunk_store.update_many(
+        filter={"doc_id": doc_id},
+        set={"deleted_at": now_utc(), "delete_reason": reason, "deleted_by": requested_by},
+    )
+    log.info("tombstoned", doc_id=doc_id, reason=reason, requested_by=requested_by)
+
+# purge: runs later, in a batch window, against only what's been tombstoned long enough
+def purge_tombstoned(chunk_store, older_than):
+    cutoff = now_utc() - older_than
+    to_purge = chunk_store.find({"deleted_at": {"$lt": cutoff}})
+    for chunk in to_purge:
+        vector_index.delete(ids=[chunk.vector_id])   # actual reclaim, e.g. Qdrant or Pinecone delete
+        chunk_store.delete_one({"_id": chunk.id})
+```
+
+> A tombstone doesn't finish the job. It buys you the time to finish it safely.
+
+The purge schedule itself is a real decision, not a default. Purge too eagerly and you lose the short recovery window that makes tombstoning worth doing over a hard delete. Purge too rarely and you're carrying storage - and, in some regulatory contexts, liability - for data you've already promised is gone. A day or two is a reasonable starting point for most corpora; a legal or compliance deletion may need to run on its own faster path with no delay at all, tombstone and purge in the same operation, because "we'll clean it up later" is not an acceptable answer to "prove it's gone" on a deadline.
+
+## 3. Every copy is a place the data can come back from
+
+Most RAG pipelines keep more than one copy of a document on its way into the index: a raw file or blob, a parsed text version, and the chunks-plus-vectors that actually get searched. A deletion request that only touches the vector index leaves the raw and parsed copies sitting there, and the next time anything re-runs against them - a re-chunking job, a migration, a bulk re-embed after a model change - the deleted content walks straight back in, because nothing told that job it had been deleted in the first place.
+
+The fix is to propagate the tombstone to every tier that holds a copy, not just the one your delete endpoint happens to touch. In practice that means the same `doc_id` needs to be markable as deleted wherever it's stored, and every job that reads from any tier needs to check that mark before doing its work - a re-chunker should skip tombstoned documents, a re-embedding job should skip them too, and an export job should never emit them. Revocation propagation is really this: making "deleted" a fact that every consumer of the data respects, not a one-time action against one table.
+
+This is also why "just re-index everything" is not a deletion feature, even though it sounds like one. A full re-index only reflects what's still in the source - it does nothing to close the gap between the moment something was deleted and the moment the re-index finishes, and it does nothing at all if the raw or parsed copies were never told to exclude the deleted item. Worse, a re-index that reads from a raw or parsed store which still contains the deleted document will faithfully rebuild the exact thing you were trying to remove, and now it looks freshly indexed instead of freshly leaked.
+
+Deletion needs its own explicit path with its own explicit test: delete something on purpose, on a test document, and confirm - immediately, and again after the purge - that it no longer comes back through search, through citations, or through any export or downstream re-index that touches the corpus. Write that test once and run it on a schedule, the same way you'd run any other test that protects a promise you've made to someone outside the engineering team.

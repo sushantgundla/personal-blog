@@ -1,0 +1,105 @@
+---
+title: "Regression testing a prompt or model change"
+subtitle: "Treat a one-line prompt edit like the code change it actually is."
+part: 3
+minutes: 7
+why: "Someone tweaks a prompt to fix one broken case a customer hit, runs it against that one case, sees it pass, and ships. Three other cases that used to work silently break, and nobody notices until a different customer hits one of those. The fix that got merged wasn't wrong on the case it targeted - it was incomplete on everything it didn't check. This lesson is about closing that gap: running your golden set on every prompt or model change, in CI, and reading a diff of what changed instead of a single number that hides which cases moved."
+wins:
+  - "Run the golden set on every prompt or model change, not just the case you were fixing."
+  - "Gate the merge on the aggregate result, and review the diff of which cases changed."
+  - "Treat a model version swap exactly like a prompt edit - run the same set against it."
+  - "Freeze the judge model and settings for the length of a comparison run."
+  - "Send genuinely ambiguous swings to a human; auto-block the clear regressions."
+quiz:
+  - q: "An engineer fixes one broken case, tests that one case, and ships. What does this approach miss?"
+    options: ["Nothing, if the targeted case now passes the fix worked", "Whether the edit silently broke any of the other cases the prompt already handled", "The cost of the extra model call"]
+    answer: 1
+    explain: "A prompt edit changes behavior across every input, not just the one you were looking at - see *Versioning and testing prompts* on why one example proves nothing."
+  - q: "A model version swap - same prompt, new model behind it - should be tested..."
+    options: ["Only if the release notes mention a behavior change", "The same way as a prompt edit - run the golden set against it before shipping", "It doesn't need testing since the prompt itself didn't change"]
+    answer: 1
+    explain: "The prompt and the model are one artefact together; change either one and behavior can move, so both get the same regression run."
+  - q: "The golden set's aggregate score barely moves after a change, but three specific cases flipped between pass and fail. What should gate the merge?"
+    options: ["The aggregate score alone - if it didn't drop, ship it", "A look at which cases changed, not just whether the total moved", "Nothing - a stable aggregate always means it's safe"]
+    answer: 1
+    explain: "An unchanged total can hide cases that flipped in opposite directions; a diff of per-case results is what a reviewer actually needs to see."
+  - q: "Why keep the judge model and settings frozen for the duration of a regression comparison?"
+    options: ["Frozen judges are cheaper to run", "So a score difference reflects your prompt or model change, not the judge changing underneath you", "It's required by most model providers' terms of service"]
+    answer: 1
+    explain: "If the judge itself drifts mid-comparison, you can no longer tell whether the number moved because of your change or because of the judge."
+  - q: "Where do most of the cases in a golden set worth gating a merge on come from?"
+    options: ["Randomly generated inputs designed to maximize coverage", "Real production traffic and past incidents, per *Building an eval set from your own traffic*", "Whatever the prompt's original author wrote as examples"]
+    answer: 1
+    explain: "A set built from real traffic and real incidents catches the failures your product has actually produced, not hypothetical ones."
+deeper:
+  - { label: "Langfuse - LLM regression testing: fail CI before regressions ship", href: "https://langfuse.com/resources/engineering/llm-regression-testing" }
+  - { label: "Braintrust - what is LLM evaluation, a practical guide", href: "https://www.braintrust.dev/articles/llm-evaluation-guide" }
+  - { label: "Promptfoo - testing prompts with GitHub Actions", href: "https://www.promptfoo.dev/docs/integrations/github-action/" }
+  - { label: "GitHub - about protected branches and required checks", href: "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches" }
+---
+
+*Versioning and testing prompts* left you with a real habit: twenty real cases, run on every edit, the result committed so the next change shows up as a diff. That's the minimum version, sized so you have no excuse not to start. This lesson is the fuller version of the same idea - the golden set from *Building an eval set from your own traffic*, run automatically, gating a merge instead of just informing one.
+
+## 1. A prompt edit is a diff, not a vibe
+
+Nothing about what a prompt change actually *is* changes between the minimal harness and this one. It's still: run a set of real cases before and after, compare, look at what moved. What changes is what you do with the result. A number a developer glances at before pushing is a habit. A number that has to clear a bar before the pull request can merge is a gate - and a gate is what stops the fix-one-thing-break-three-things pattern, because it runs whether or not the person making the edit remembers to check.
+
+The same logic extends past prompt text. A **model version swap** - same prompt, new model behind the same API call - is exactly as capable of changing behavior as an edited word, because the pair of prompt and model is the actual artefact, not the prompt alone. Treat an upgrade the same way: run the golden set against the new model before it goes anywhere near production traffic, not after.
+
+This is also where the two habits from earlier in the course actually pay off, rather than just sitting in a repo looking tidy. A golden set nobody runs automatically is a set someone forgets to run on a Friday. A prompt kept in git with no gate on the diff still gets reviewed by a person who's trusting their own read of the change, the same read that missed the three broken cases in the story above. The gate is what makes the habit load-bearing instead of aspirational.
+
+## 2. Running the set in CI, and reading a diff instead of a score
+
+The mechanics are close to what you already built, extended in three ways: it runs automatically on every relevant pull request, it compares against the last known-good run rather than against nothing, and it fails the build rather than waiting for someone to notice a number dropped.
+
+A practical shape: a CI job runs the golden set against the changed prompt or model, scores each case (deterministic checks where you can, a calibrated judge from *How to trust a judge* where you can't), and compares the aggregate against the last committed run. If the aggregate drops beyond a tolerance you set in advance, the job fails and the merge is blocked. That part is close to what teams running this in production already do - failing a pull request automatically when quality drops below a threshold, rather than relying on a reviewer to eyeball a score in a comment.
+
+The part worth doing deliberately, and the part a bare pass/fail number hides, is **which specific cases changed**. Two runs with the same aggregate score can differ in which cases pass - three regressions and three new passes look identical to a total that didn't move. Post the actual diff: which case IDs flipped, and in which direction. That's what turns "the score is fine" into something a reviewer can actually check in thirty seconds.
+
+```python
+import json
+import sys
+
+def load_run(path: str) -> dict:
+    with open(path) as f:
+        return json.load(f)               # {case_id: "pass" | "fail"}
+
+def diff_runs(baseline: dict, candidate: dict, tolerance: int = 0) -> dict:
+    regressions = [cid for cid in baseline
+                   if baseline[cid] == "pass" and candidate.get(cid) != "pass"]
+    fixes = [cid for cid in baseline
+             if baseline[cid] == "fail" and candidate.get(cid) == "pass"]
+    return {"regressions": regressions, "fixes": fixes}
+
+baseline = load_run("evals/last_run.json")      # committed by the previous change
+candidate = load_run("evals/candidate_run.json")  # produced by this pull request
+
+result = diff_runs(baseline, candidate)
+print(f"{len(result['regressions'])} regressions, {len(result['fixes'])} fixes")
+for case_id in result["regressions"]:
+    print(f"  REGRESSION: {case_id}")
+
+if len(result["regressions"]) > 0:
+    sys.exit(1)   # fail the CI job - this is what blocks the merge
+```
+
+This doesn't replace the runner from *Versioning and testing prompts* - it reads the two JSON files that runner already produces. The new piece is entirely the comparison and the exit code; the golden set and the per-case runner stay exactly as they were.
+
+> A prompt edit that fixes one case and breaks three is not progress. It's redistribution.
+
+## 3. What blocks a merge, and what still needs a human
+
+Not every case belongs in the automatic gate the same way. The table is the honest version of what each layer catches.
+
+| | Golden-set regression run | Human review |
+|---|---|---|
+| Catches | Clear pass/fail regressions on cases you already know the right answer to | A case that's technically passing but reads worse, or a new failure mode the set never anticipated |
+| Speed | Minutes, runs on every push | Slower, and doesn't scale to every change |
+| What it needs | A calibrated judge or deterministic check, per case | Someone who understands the product, looking at the actual diff |
+| Where it's wrong | Silent on anything outside the golden set's coverage | Inconsistent without a rubric - route it through *Pairwise comparison and human review that scales*, not raw eyeballing |
+
+The gate should auto-block anything that clearly regresses - a case that passed and now fails, beyond whatever tolerance you decided in advance. It should not try to auto-approve everything else. A prompt that shifts tone on a handful of borderline cases, without technically failing any of them, is exactly the kind of change a reviewer needs to look at directly, using the diff the CI job already produced rather than re-running the whole set by hand.
+
+Set the tolerance deliberately, and write down why. Zero regressions allowed sounds safest, but a golden set with a few genuinely ambiguous cases will occasionally flip one by chance even when nothing meaningful changed, and a gate that can never pass on a bad day just gets bypassed the first time someone's in a hurry. A small tolerance - one case, reviewed by a human before merge rather than auto-blocked - is usually the more honest number than zero, because it matches what the set can actually promise.
+
+None of this catches a category of input your golden set never had in it in the first place - a new language, a longer conversation, a use case that didn't exist when you built the set. That's a real gap, and it's the reason a golden set alone was never meant to be the whole story; *Offline evals and online evals* covers the second half, watching live traffic after a change ships instead of only before. What this lesson buys you is confidence about the traffic you already know you have, checked automatically, every time, instead of whenever someone remembers.

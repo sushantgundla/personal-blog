@@ -50,6 +50,16 @@
   --ln-prompt: #4a72c4;
   --ln-rag: #3e8c5e;
   --ln-agents: #cb881d;
+  /* --- The fifth and sixth inks -------------------------------
+     Measured, not eyeballed: full method and numbers in
+     DESIGN.md's "Adding new inks". Azure clears the sRGB gamut's
+     one open hole (the cyan run from hue 190° to 240° cannot
+     reach C* 32 at any usable lightness — real ceiling, not a
+     guess) by sitting just past it at 245°, 39° from navy. Rose
+     sits in the 130° gap between rag and navy on the wheel, at
+     347°, 47° from red. */
+  --ln-evals: #00aae0;
+  --ln-pipelines: #c02985;
 
   /* --- Marks, ground and ink -------------------------------- */
   --ln-mark: #f2efe9; /* you-are-here ring, terminus fill */
@@ -110,6 +120,8 @@
   --ln-prompt: #2b4c8c;
   --ln-rag: #2e6b47;
   --ln-agents: #ab6f06;
+  --ln-evals: #0080aa;
+  --ln-pipelines: #820056;
   --ln-mark: #12100e;
   --ln-ground: #f7f5f1;
   --ln-ink: #191714;
@@ -154,6 +166,16 @@
 .learn-root[data-line='agents'],
 .learn-root [data-line='agents'] {
   --ln-line: var(--ln-agents);
+}
+
+.learn-root[data-line='evals'],
+.learn-root [data-line='evals'] {
+  --ln-line: var(--ln-evals);
+}
+
+.learn-root[data-line='pipelines'],
+.learn-root [data-line='pipelines'] {
+  --ln-line: var(--ln-pipelines);
 }
 
 /* ============================================================

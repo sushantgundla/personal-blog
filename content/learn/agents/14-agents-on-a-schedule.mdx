@@ -1,0 +1,121 @@
+---
+title: "When nobody is watching"
+subtitle: "A synchronous agent has a human to ask when something's wrong. A scheduled one has to decide everything in advance, because nobody is there to ask."
+part: 3
+minutes: 8
+why: "A reconciliation agent runs at 2am, an upstream API rate-limits it partway through the run, and the run finishes — no exception, no error, `stop_reason` looks normal. Nobody notices until the ledger is visibly wrong twelve hours later. Nothing alerted, because nothing raised. The run just did less than it should have, silently, on a schedule, with no one there to see it happen. *Letting an agent touch the real world* assumes someone can approve the risky step. *Reading a trace after it breaks* assumes someone goes looking. A cron-triggered or event-triggered agent breaks both assumptions at once, and needs different guardrails because of it."
+wins:
+  - "Decide, in code, in advance, which actions a scheduled run may never take — there is no one online to approve an exception."
+  - "Treat 'ran and returned no exception' as meaningless on its own — check what the run actually produced against the world."
+  - "Write a heartbeat for every scheduled run, so a run that never happened is as visible as one that failed."
+  - "Give every side-effecting tool call an idempotency key — schedule and event triggers redeliver."
+  - "Take a lock on the run's time window so two redelivered triggers can't execute the same work twice."
+quiz:
+  - q: "*Letting an agent touch the real world*'s human-approval gate assumes someone is online to approve an irreversible action. What replaces it for a 2am scheduled run?"
+    options: ["Nothing — scheduled runs should skip the gate entirely", "A decision made in code, in advance, about which actions this run is simply never allowed to take, plus an async approval queue for the rest", "A shorter timeout so the run finishes before anyone would need to check it"]
+    answer: 1
+    explain: "You can't summon a human at 2am, so the gate has to move earlier — into what the run is permitted to do at all, decided before it ever runs."
+  - q: "A scheduled agent runs, returns normally, and raises no exception. Why might that still be a failure?"
+    options: ["Because 'ran and returned' says nothing about whether it produced the right outcome, or any outcome, in the world", "It can't be a failure if nothing raised, by definition", "Because scheduled agents always fail silently on purpose"]
+    answer: 0
+    explain: "Absence is the distinctive failure mode here — a run can be technically successful and functionally useless, and only an outcome check against the real world catches that."
+  - q: "What does a heartbeat check catch that an error alert doesn't?"
+    options: ["Slow tool calls", "A run that never happened at all — no error to alert on, because nothing ran", "Malformed JSON in a tool response"]
+    answer: 1
+    explain: "An error alert needs something to fire on. A missing run raises nothing, which is exactly what a heartbeat is built to notice instead."
+  - q: "Why does a scheduled agent need idempotency keys on its side-effecting tool calls more urgently than a synchronous one?"
+    options: ["Scheduled tool calls are slower on average", "Cron and event triggers commonly redeliver at-least-once, so the same run can start twice for the same trigger", "Idempotency keys are only needed when a human approves an action"]
+    answer: 1
+    explain: "At-least-once delivery is the norm for schedulers and event systems, so a redelivered trigger without an idempotency key means the side effect happens twice."
+  - q: "Two redelivered triggers fire for the same scheduled window. What stops them from both executing the reconciliation?"
+    options: ["A distributed lock keyed to the run's time window, so the second trigger finds the window already claimed", "Running both and taking whichever result finishes first", "Nothing needed — the model will notice it already ran"]
+    answer: 0
+    explain: "The model has no memory of the other trigger's run. Only a lock external to the model — keyed on the window, not the trigger — prevents a concurrent double-execution."
+deeper:
+  - { label: "TianPan — Proactive Agents: Event-Driven and Scheduled Automation for Background AI", href: "https://tianpan.co/blog/2026-04-16-proactive-agents-event-driven-scheduled-automation" }
+  - { label: "dev.to — The Complete Guide to AI Agent Cron Jobs and Scheduling", href: "https://dev.to/toji_openclaw_fd3ff67586a/the-complete-guide-to-ai-agent-cron-jobs-and-scheduling-2c3f" }
+  - { label: "MindStudio — How to Build an AI Agent That Runs While You Sleep", href: "https://www.mindstudio.ai/blog/ai-agent-runs-while-you-sleep-scheduled-automations-claude" }
+---
+
+Every agent in this course so far has had an implicit audience: someone runs it, watches it, or reads its trace afterward. A scheduled agent — triggered by a cron entry or an event, not a request — has none of that by default. This lesson is what changes when the answer to "who's watching" is nobody.
+
+## 1. The human-gate assumption breaks first
+
+*Letting an agent touch the real world* sorts every tool into read, reversible write, and irreversible, and puts a human approval gate in front of the last category. That design assumes the gate has someone to interrupt — a person online, watching a queue, able to say yes or no in real time. A run that fires at 2am off a cron schedule has no such person. If the gate is a blocking prompt waiting for approval, the run just hangs until a human happens to notice, which for a scheduled job might be hours.
+
+The fix is not to remove the gate. It's to move the decision earlier, into two separate buckets you set in code before the run ever executes:
+
+- **Actions this run may simply never take, unattended.** If an action is irreversible and consequential enough to need a human gate in the interactive case, a scheduled run doesn't get to take it just because no one's around to say no. Some actions are correctly "never, unattended" full stop — the schedule doesn't earn an exception, it earns a queue.
+- **Actions that get queued for async approval before anything real happens.** The run reaches the point where the gate in *Letting an agent touch the real world* would fire, and instead of blocking, it writes the proposed action somewhere a human reviews it later, and stops there for that action. The run can still complete and report what it *would* do; it just doesn't do the irreversible part without a person eventually signing off.
+
+| | Interactive agent | Scheduled agent |
+|---|---|---|
+| Who approves an irreversible action | A person, in the moment, blocking the run | Decided in advance which actions are unattended-never; the rest go to an async approval queue |
+| How a failure is noticed | Someone is watching the session | Only what you instrument catches it — see section 2 |
+| What "done" means | The person watching agrees it's done | A heartbeat plus an outcome check, because no one is there to agree |
+| Retry / redelivery risk | Low — a person retries deliberately | High — schedulers and event buses redeliver at-least-once by default |
+| A stuck run | Someone notices the terminal hasn't moved | Needs its own liveness check — nothing else will notice |
+
+> An interactive agent's worst call is bounded by what a human catches before it lands. A scheduled agent's worst call is bounded only by what you decided, in advance, it was never allowed to do.
+
+## 2. Absence is the failure mode, not an error
+
+This is the part that catches people, because monitoring is normally built around errors, and this failure mode doesn't produce one. A scheduled agent can satisfy every technical measure of success — it ran, it returned, `stop_reason` says it finished normally, nothing raised — while producing nothing, or the wrong thing, or a partial version of the job because an upstream dependency was slow or rate-limited it halfway through. *Reading a trace after it breaks* assumes a run that finished and gave a visibly wrong answer someone noticed. This is worse: nothing about the run's own telemetry looks wrong, because the run itself doesn't know it did less than it should have.
+
+Two separate checks catch two separate versions of this, and you need both:
+
+**A heartbeat.** Did this run even happen at all? A cron entry that silently stopped firing — because a deploy broke the scheduler, because a config change removed the job, because the container it lived in didn't come back up — produces no error anywhere, because there's no process left to raise one. The fix is boring and necessary: on every successful run, write a timestamp somewhere with an alert if it goes stale. This has to live outside the agent, because a dead scheduler can't be relied on to report its own death.
+
+**An outcome check.** Did the run produce what a run at this trigger should? This reuses the termination-condition thinking from *Planning a run, and knowing when to stop* — instead of checking whether the *agent* thinks it's done, check the world it was supposed to affect. If the job is "reconcile today's transactions," the check is "does today's transaction count look like a normal day's," not "did the agent return without an exception." A rate-limited partial run passes the second and fails the first, which is exactly the case that matters.
+
+In code, that's two separate checks bracketing the run: before returning, compare `result.records_processed` against a floor for what a normal window produces and raise if it's short, rather than trusting that a clean return means a complete one; then, only after that check passes, write a timestamp to a durable heartbeat store keyed by job name, so a separate monitor can alert the moment that timestamp goes stale. Neither check replaces the other. The heartbeat catches the scheduler that stopped firing entirely; the outcome check catches the scheduler that fired but got a degraded run out of it. A monitor watching only `stop_reason` catches neither. The full wrapper below folds both checks in alongside the locking from section 3, since in practice they belong on the same function.
+
+## 3. Idempotency stops being optional
+
+*When a tool call goes wrong* already told you to give side-effecting tool calls an idempotency key so a retry doesn't double-charge or double-send. For a scheduled or event-triggered agent, that's no longer a defensive nicety — it's load-bearing, because the trigger mechanism itself is built to redeliver.
+
+Cron schedulers and event buses generally guarantee **at-least-once** delivery, not exactly-once. A message queue that thinks a job didn't acknowledge in time will redeliver it. A cron entry that overlaps with a slow previous run can fire again before the first one finished. Either way, your agent can be asked to do the identical unit of work twice, concurrently or in close succession, with no signal in the trigger itself that says "this already ran."
+
+Two guards, doing different jobs:
+
+- **An idempotency key on every side-effecting call**, keyed to the logical unit of work — not the trigger, the *work*. "Reconcile 2026-09-09" gets one key regardless of how many times a trigger fires for that date. The tool checks the key before acting and no-ops on a repeat.
+- **A lock on the run's time window**, so two redelivered triggers can't both start executing at once. The idempotency key protects each individual tool call; the lock protects the run as a whole from starting twice concurrently, which matters because two concurrent runs can each pass their own individual idempotency checks while still doing the same work in parallel before either one's keys are recorded.
+
+```python
+import time
+import uuid
+
+LOCK_STORE = {}       # a real deployment uses a database row or a distributed lock
+HEARTBEAT_STORE = {}  # a real deployment writes this somewhere durable
+LOCK_TTL_SECONDS = 3600
+
+def acquire_window_lock(job_name, window_key):
+    """True if this call claimed the window, False if another run already holds it."""
+    existing = LOCK_STORE.get((job_name, window_key))
+    if existing and time.time() - existing < LOCK_TTL_SECONDS:
+        return False
+    LOCK_STORE[(job_name, window_key)] = time.time()
+    return True
+
+def run_scheduled_agent(job_name, window_key, run_fn, expected_min_records):
+    if not acquire_window_lock(job_name, window_key):
+        return None  # another trigger for this exact window is already in flight — skip it
+
+    run_id = str(uuid.uuid4())
+    result = run_fn(window_key)
+
+    # Outcome check: did this run actually move the needle, not just finish.
+    if result.records_processed < expected_min_records:
+        raise RuntimeError(
+            f"{job_name} run {run_id} processed {result.records_processed} records, "
+            f"expected at least {expected_min_records} — likely a partial run, not a real 0-record day."
+        )
+
+    # Heartbeat: proves this run happened at all, for a monitor that alerts on staleness.
+    HEARTBEAT_STORE[job_name] = {"run_id": run_id, "completed_at": time.time()}
+    return result
+```
+
+The TTL on the lock matters as much as the lock itself: a lock with no expiry turns one crashed run into a permanently stuck window that never gets retried by anything, trading a double-execution risk for a silent-never-runs-again risk — not an improvement.
+
+Put the three pieces together — a gate decided in advance rather than asked for in the moment, a heartbeat and an outcome check standing in for the human who isn't watching, and idempotency plus a window lock standing in for the human who isn't retrying by hand — and a scheduled agent stops depending on someone happening to notice. That's the whole difference this lesson is about: everything the earlier lessons let a person catch in the moment, this one has to catch in code, because at 2am there's no one there to catch it.

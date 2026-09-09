@@ -1,0 +1,114 @@
+---
+title: "One document, five copies"
+subtitle: "Canonical sources and near-duplicate detection, for the corpus that grew by pulling from everywhere at once."
+part: 1
+minutes: 7
+why: "A support bot cites a refund policy that was superseded eight months ago. The support lead is furious - the current policy has been on the intranet for months. Nobody lied to the pipeline. The old policy document never left the wiki space that also feeds the index, a near-identical copy of it sits in a shared drive from when someone exported it for a meeting, and nothing in the pipeline ever compared the two well enough to notice they were the same policy at different ages. *From source system to corpus* gets content out of every system it lives in. The moment you extract from more than one system, you inherit this problem for free: the same real-world fact, saved in five places, none of them marked as the one that matters."
+wins:
+  - "Assume duplicates exist the moment you pull from more than one source system."
+  - "Use exact content hashing for identical text, and MinHash for near-identical text."
+  - "Pick a canonical source deliberately - do not let 'whichever indexed first' decide it."
+  - "Set a Jaccard threshold by looking at real near-duplicate pairs, not by guessing a number."
+  - "When you find a duplicate, mark the loser as superseded - do not just leave both live."
+quiz:
+  - q: "Why does pulling from more than one source system make duplicates likely, not just possible?"
+    options: ["Embedding models produce near-identical vectors for unrelated text", "The same document tends to get copied, exported or restated across systems - a wiki, a drive, a slide deck - as people share it", "Vector databases store every document twice by default"]
+    answer: 1
+    explain: "Documents travel. Someone exports a wiki page to a slide, pastes a policy into an email, or copies a doc into a new space - all of it ends up back in your corpus as a near-identical copy of something you already have."
+  - q: "Two chunks are byte-for-byte identical except for a timestamp in a footer. What is the right tool?"
+    options: ["A cross-encoder reranker", "An exact content hash - it will differ because of the footer, so this is actually a job for near-duplicate detection", "The embedding model's similarity score"]
+    answer: 1
+    explain: "A hash changes with a single byte, so a differing footer defeats it even though the documents are effectively the same. That is exactly the gap MinHash and Jaccard similarity are for - the fingerprint of shared content largely wins by ignoring the whole document."
+  - q: "What does MinHash actually approximate?"
+    options: ["The cosine similarity between two embedding vectors", "The Jaccard similarity between two sets of shingles, without comparing every shingle directly", "The exact edit distance between two strings"]
+    answer: 1
+    explain: "MinHash is a compact sketch of a set. Comparing two sketches estimates how much the underlying sets overlap - the Jaccard similarity - far more cheaply than comparing every element."
+  - q: "You find two versions of the same policy with a Jaccard similarity of 0.92. What should happen next?"
+    options: ["Delete both and ask someone to rewrite the policy", "Decide which one is canonical, mark the other as superseded, and record why", "Average their embeddings into one vector"]
+    answer: 1
+    explain: "Detection only tells you two things overlap heavily. A human or a rule still has to decide which one is the source of truth - a high score is not itself an answer."
+  - q: "Your near-duplicate detector is set to a Jaccard threshold of 0.5. What is the likely symptom?"
+    options: ["It misses real near-duplicates because the bar is too high", "It flags loosely related documents that merely share a topic as duplicates, because the bar is too low", "It runs out of memory"]
+    answer: 1
+    explain: "A low threshold treats moderate overlap as duplication. Two documents that both discuss the same policy area, without being the same document, will get caught by a threshold that loose."
+deeper:
+  - { label: "nelhage.com - finding near-duplicates with Jaccard similarity and MinHash", href: "https://blog.nelhage.com/post/fuzzy-dedup/" }
+  - { label: "datasketch - documentation", href: "https://ekzhu.com/datasketch/documentation.html" }
+  - { label: "Wikipedia - MinHash", href: "https://en.wikipedia.org/wiki/MinHash" }
+  - { label: "Wikipedia - Jaccard index", href: "https://en.wikipedia.org/wiki/Jaccard_index" }
+---
+
+Pull from one source system and duplicates are rare - people mostly do not save the same document twice in the same wiki. Pull from four, the way *From source system to corpus* just showed you how to do, and duplicates stop being rare. They become the default state of the corpus, because that is what happens to documents once they leave one system and start getting copied, exported and restated across several.
+
+## 1. Same content, different address
+
+A near-duplicate is not a bug in one system. It is the ordinary result of how people actually work with documents once more than one place can hold them.
+
+| How the copy gets made | Where it ends up | Why it is dangerous |
+|---|---|---|
+| Someone exports a wiki page to a slide deck for a meeting | Shared drive, alongside the wiki | The slide freezes the policy at export time and never updates again |
+| A policy gets revised and saved as `refund-policy-v2-FINAL.docx` | Same folder as the original | Both files still say "refund policy" and both still index |
+| A support answer gets pasted into a new ticket macro | Helpdesk knowledge base | The macro drifts from the source document the moment either one is edited |
+| A page gets copied into a new wiki space during a reorg | Old and new wiki spaces | The old space is never actually archived, so both stay live and both extract |
+
+None of this is a data-quality failure by any one team - every one of these is a completely normal way to use a wiki, a drive, or a helpdesk. It becomes a retrieval failure only because the pipeline treats every extracted document as equally current and equally authoritative, with nothing checking whether it has seen most of this text somewhere else already.
+
+## 2. Exact match is cheap, near-duplicate is the real problem
+
+Two documents can be identical, in which case a **content hash** - the same `content_hash` field *From source system to corpus* computed at extraction - catches it instantly: same hash, same text, keep one. That case is rare and easy.
+
+The common case is near-identical: same policy, one paragraph reworded, a date changed, a footer added. A single byte of difference defeats a hash completely, even though a human would call the two documents the same thing. This is what **Jaccard similarity** measures instead: treat each document as a set of overlapping word chunks ("shingles"), and compare how much the two sets overlap, ignoring exact byte position entirely.
+
+Comparing every pair of documents in a large corpus this way does not scale - a corpus of ten thousand documents has fifty million pairs. **MinHash** solves that: it compresses each document's shingle set into a small, fixed-size sketch such that comparing two sketches approximates their Jaccard similarity, and an **LSH (locality-sensitive hashing) index** on top of the sketches lets you ask "what else looks like this?" without comparing against everything.
+
+```python
+from datasketch import MinHash, MinHashLSH
+
+def shingles(text: str, k: int = 5) -> set[str]:
+    words = text.lower().split()
+    return {" ".join(words[i:i + k]) for i in range(len(words) - k + 1)}
+
+def make_minhash(text: str, num_perm: int = 128) -> MinHash:
+    m = MinHash(num_perm=num_perm)
+    for shingle in shingles(text):
+        m.update(shingle.encode("utf8"))
+    return m
+
+# threshold is the Jaccard similarity above which two documents count as duplicates
+lsh = MinHashLSH(threshold=0.85, num_perm=128)
+
+documents = {
+    "wiki-4471": "Refunds are accepted within 30 days of purchase, with a receipt.",
+    "drive-9902": "Refunds are accepted within 30 days of purchase, provided a receipt is shown.",
+    "helpdesk-1120": "Our shipping policy covers most countries within five business days.",
+}
+
+for doc_id, text in documents.items():
+    lsh.insert(doc_id, make_minhash(text))
+
+near_dupes = lsh.query(make_minhash(documents["wiki-4471"]))
+print(near_dupes)  # ["wiki-4471", "drive-9902"] - the shipping policy scores too low to match
+```
+
+The `threshold` argument is the whole judgment call in this lesson, compressed into one number. Set it too high and genuine near-duplicates slip through unflagged; set it too low and documents that merely share a topic get treated as copies of each other. There is no correct default - only a number you check against real pairs from your own corpus before you trust it.
+
+`k`, the shingle length, is the other knob and it is worth getting right before threshold-tuning even starts. Shingles of one or two words catch almost nothing useful - "the" and "policy" overlap between any two documents about policy at all. Shingles of five to eight words are specific enough that two documents only share many of them if they actually share sentences, which is the property you want a duplicate detector to key on. Push `k` too high, past a full sentence, and a single reworded clause breaks every shingle that touches it, which pushes real near-duplicates below your threshold for the wrong reason - not because they differ, but because your shingle is now brittle to a rewrite.
+
+> A hash tells you two documents are identical. Jaccard similarity tells you how much they overlap. Neither one tells you which of them is the truth.
+
+## 3. Finding a duplicate is not the same as fixing it
+
+Detection is the easy half. `lsh.query` hands you a cluster of documents that all say roughly the same thing - it says nothing about which one is right, current, or safe to keep serving.
+
+That decision needs a rule, made once, applied consistently:
+
+| Signal | What it suggests |
+|---|---|
+| Most recently modified | Often, but not always, the current version |
+| Lives in the system of record for that document type (policy in the policy wiki, not a slide export) | Usually the right canonical source |
+| Highest-permission or narrowest-audience copy | Often the draft, not the published version - check before trusting this alone |
+| Referenced by other current documents | A weak but useful signal that it is the one people actually point to |
+
+Once you pick a canonical document, the losing copies do not simply disappear from a live corpus by being ignored - they need to be marked, not silently dropped, so that whoever indexed them a second time by mistake next month gets stopped before it happens again. *The schema you wish you had written on day one* is where that marking lives as a field, and *Deleting is a feature*, later in this course, is where the marked copy actually stops being retrievable rather than merely labelled. Detection without either of those is a report nobody acts on.
+
+Do not aim for full automation on the canonical decision itself. Recency and source-of-record are strong enough signals to auto-resolve the obvious majority of clusters - a slide export dated eight months after the wiki page it came from is not a hard call. What is worth a human is the genuinely ambiguous cluster: two documents edited the same week in two different systems, neither one clearly the source. Route those to a person instead of guessing, and log the decision next to the documents it was made about. The next time the same two systems disagree, that log is the only thing that tells you whether this is a new conflict or the same one resurfacing because nobody actually fixed the upstream duplication.

@@ -1,0 +1,114 @@
+---
+title: "Why models hallucinate"
+subtitle: "Not a bug you patch — it's what generation does when guessing scores better than admitting doubt."
+part: 1
+minutes: 7
+why: "You asked for a citation, a version number, a person's job title. The answer came back clean, specific, and confident — and wrong. Not vague-wrong. Specifically and fluently wrong, in exactly the shape a correct answer would have taken. *What a model is made of* warned you it can be 'confidently wrong about one fact' and moved on. This lesson stays: why a model that does not know the answer still produces one, and why that is not a defect anyone forgot to fix."
+wins:
+  - "Know there is no internal doubt signal the model consults before answering — refusing is a learned behaviour, not a default."
+  - "Expect fluency and correctness to be uncorrelated — a wrong answer reads exactly like a right one."
+  - "Do not expect a bigger model, alone, to fix a hallucination rate — it is not a capacity problem."
+  - "Ask for a claim to be checked against a source, rather than trusting the tone it was stated in."
+  - "Treat 'I don't know' as something you have to prompt for or reward, never as the model's default move."
+quiz:
+  - q: "Why doesn't a model just say 'I don't know' when it isn't sure?"
+    options: ["It has a confidence score internally but is trained to hide it", "Refusing to answer is one continuation among many competing for probability, not a separate mode the model checks first", "The training data never contained the phrase 'I don't know'"]
+    answer: 1
+    explain: "There is no step where the model consults its confidence and decides to refuse. Every next token, including a refusal, is scored the same way a guess is."
+  - q: "In one sentence, what did Kalai et al. (OpenAI, 2025) show about why models hallucinate?"
+    options: ["Standard training and evaluation reward a confident guess over an honest admission of uncertainty, so guessing wins on average", "Hallucination only happens in models trained on unfiltered web text", "Larger context windows cause more hallucination because the model gets confused by irrelevant text"]
+    answer: 0
+    explain: "Their result is about incentives, not data quality or context length — grading schemes that mark 'I don't know' as wrong push the model toward guessing."
+  - q: "Retrieval-augmented generation reduces hallucination. Why doesn't that make this lesson redundant?"
+    options: ["RAG is only a UI pattern and has no effect on the model's output", "RAG gives the model something to point at; it doesn't change what the model does when nothing was retrieved or the retrieved text doesn't cover the question", "This lesson and RAG's grounding lesson teach the identical fix"]
+    answer: 1
+    explain: "*Citations and grounding* fixes the case where a passage exists. This lesson is about the mechanic underneath — what happens with no passage to check against at all."
+  - q: "A reasoning model spends several paragraphs working through a problem before answering. Does that eliminate hallucination?"
+    options: ["Yes, because reasoning steps are always independently verified as they're written", "No — the incentive problem sits in how the final answer is scored, not in how many tokens led up to it", "Yes, because reasoning models never guess, they only report facts they already retrieved"]
+    answer: 1
+    explain: "More steps can catch some errors, but the mechanism in this lesson lives at the level of what gets rewarded, and a long derivation can end in a confident, fluent, wrong final line exactly as easily as a short one."
+  - q: "A 'calibration' eval measures..."
+    options: ["Whether the model's stated confidence matches how often it's actually right", "How fast the model responds under load", "Whether the model's output is grammatically correct"]
+    answer: 0
+    explain: "Calibration is about the gap between how sure a model sounds and how often it's correct — which is precisely the gap this lesson says training incentives widen."
+deeper:
+  - { label: "Kalai, Nachum, Vempala, Zhang — Why Language Models Hallucinate (OpenAI, 2025)", href: "https://arxiv.org/abs/2509.04664" }
+  - { label: "TruthfulQA — measuring how models mimic human falsehoods", href: "https://arxiv.org/abs/2109.07958" }
+  - { label: "Anthropic — reduce hallucinations", href: "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" }
+  - { label: "Kadavath et al. — Language Models (Mostly) Know What They Know", href: "https://arxiv.org/abs/2207.05221" }
+---
+
+## 1. There is no "I don't know" token
+
+Every answer a model gives, right or wrong, comes out of the same machine: a forward pass ends in a distribution over the next token, and something gets sampled. *Sampling, and the knobs providers are taking away* covered the mechanics of that step. What matters here is what is missing from it — there is no separate check the model runs first, no internal dial it reads that says "I am 40% sure" before deciding whether to answer or demur.
+
+Refusing to answer is not a special mode sitting outside generation. It's a sequence of tokens — "I'm not certain," "I don't have reliable information on that" — and those tokens have to win the same competition every other continuation wins: highest probability, given everything the model has seen. A refusal only comes out if it happens to score higher than a specific, confident, wrong answer. Most of the time, for most models, it doesn't.
+
+Think about why. A confident wrong answer and a confident right answer are produced by the identical process — the model has learned that certain question shapes are followed by certain answer shapes, and it produces the shape. "What year was X founded" is reliably followed by a year. If the model has seen the real year during training, it produces that year. If it hasn't, or has seen conflicting years, it still produces *a* year, because the shape of the continuation — a confident four-digit number — was never conditioned on whether the model actually knew it.
+
+> A wrong answer and a right one come off the same production line. The model isn't lying and it isn't guessing in a way it could tell you about — it's doing the one thing it does, which is continue the text.
+
+This is the part worth sitting with before the fix-shaped thinking kicks in: there is nothing to patch here, because nothing is broken. The model is doing exactly what it was built to do. The question is why that produces confident nonsense as often as it does.
+
+## 2. Training rewards a good guess over an honest shrug
+
+Kalai, Nachum, Vempala, and Zhang, in a 2025 OpenAI paper, gave this an actual mechanism instead of a shrug of their own. Their argument has two parts, and both matter.
+
+**Part one** is about pretraining. A model learns the statistics of its training text. Some facts appear often and consistently — the model converges on them reliably. Other facts appear once, or inconsistently, or not at all — a person's exact birthdate, an obscure paper's page count, a small company's founding year. For that second category, there is nothing in the data that reliably picks out the right token over a plausible wrong one. The paper shows this is close to an unavoidable consequence of training on next-token prediction over data that contains facts stated once: the generation error rate on a fact is bounded below by roughly double the error rate you'd get if you were just classifying "is this specific claim true or false." Generation is a strictly harder problem than verification, and no amount of training scale removes that gap for facts that are sparse in the data.
+
+**Part two** is the sharper one, and it's about evaluation, not pretraining. Once a model exists, it gets graded — on benchmarks, on human preference ratings, on the metrics a lab optimizes against. Nearly all of those grading schemes work like a multiple-choice exam with no penalty for a wrong guess: a right answer scores full marks, a wrong answer and an admitted "I don't know" score the same zero. Under that scoring, guessing is never worse than abstaining, and it's sometimes better. A model — or a training process shaping a model's behavior toward higher eval scores — that has any nonzero chance of guessing right does strictly better on average by always guessing than by ever admitting doubt.
+
+| What people assume causes it | What the mechanism actually is |
+|---|---|
+| The model is lying or being deceptive | There is no internal distinction, at generation time, between a fact it knows solidly and a guess |
+| It's a bug that better data will fix | Pretraining error on sparse facts is a structural floor, not a data-cleaning problem |
+| A bigger, smarter model won't do this | Model scale doesn't touch the evaluation incentive — a bigger model graded the same way still learns that guessing beats abstaining |
+| It only happens on obscure trivia | It happens on any fact the training and eval process didn't specifically reward the model for admitting doubt about |
+
+Put the two parts together: pretraining guarantees the model will sometimes not really know a fact, and the standard evaluation regime guarantees that "not really knowing" gets rendered as a confident guess rather than a flagged uncertainty, because a confident guess is the higher-scoring move under how these systems get graded. Hallucination, on this account, isn't a glitch that slipped through testing. It's what the testing rewards.
+
+```python
+import anthropic
+from collections import Counter
+
+client = anthropic.Anthropic()
+
+# A fact obscure enough that the model may not have seen it reliably.
+question = "What was the exact attendance figure at the 1987 IEEE conference on parallel computing?"
+
+answers = []
+for _ in range(5):
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=60,
+        messages=[{"role": "user", "content": question}],
+    )
+    answers.append(resp.content[0].text.strip())
+
+for a in answers:
+    print(a)
+
+print("\nDistinct answers:", len(set(answers)))
+# A stable, made-up number across all five runs would look identical in tone
+# to a genuinely known fact repeated five times — fluency tells you nothing.
+# Disagreement across runs is one of the only external signals you get.
+```
+
+Run something like this on a fact you can independently check, and you'll usually see one of two shapes: the same confident wrong number every time (the model converged hard on a bad pattern) or a different confident wrong number each time (there was nothing solid to converge on at all). Neither shape announces itself in the text. The prose reads the same either way — this is the uncorrelated-signals point from the wins list, and it's the reason you can't eyeball your way out of this.
+
+## 3. What actually reduces it, and what doesn't
+
+Two moves that don't work, because they attack the wrong layer:
+
+**A bigger model.** Scale helps with facts that are well-represented in training data — it doesn't touch the evaluation incentive that rewards guessing over abstaining on facts that aren't. A larger model hallucinates less on common knowledge and can still hallucinate confidently on anything sparse, for the identical reason a smaller one does.
+
+**Lower temperature.** *Sampling, and the knobs providers are taking away* explained what temperature actually rescales — the shape of the distribution over tokens the model was already going to produce. It doesn't change which fact the model believes, because there is no separate belief store underneath the distribution to correct. A wrong answer at temperature 0 is just a more deterministic wrong answer.
+
+What does help, none of it total:
+
+- **Self-consistency.** Sample several times and check agreement, the way the code above does. This doesn't fix the underlying incentive, but it gives you an external signal — disagreement across samples — that the tone of any single answer can't provide.
+- **Ask for verification, not just an answer.** A prompt that asks the model to state a claim *and* say whether it can point to a specific supporting source tends to surface hedging that a plain "answer the question" prompt suppresses, because you've changed what a good answer looks like, not just asked more nicely.
+- **Grounding, when you have something to ground against.** If there's a document that should contain the answer, *Citations and grounding* is the actual fix — require a citation, verify the quoted span really appears in the cited chunk. That closes the gap for a different reason than anything in this lesson: it's not making the model more honest, it's giving you a mechanical check that doesn't rely on the model's honesty at all.
+- **Explicitly rewarding "I don't know."** If you control any fine-tuning or evaluation of the model's outputs, score an honest abstention above a wrong guess. This is the only move that touches the actual mechanism from section 2 — it changes the incentive rather than working around it.
+
+The practical shape of this lesson is a subtraction: stop trusting tone as evidence, since fluency was never a proxy for truth — only for "this continuation was likely," and a wrong answer can be exactly as likely-looking as a right one. When you have a document to check against, check against it. When you don't, sample more than once and look for disagreement. Neither is a full fix, because there isn't one — this is what the model does, not a state it can be talked out of.

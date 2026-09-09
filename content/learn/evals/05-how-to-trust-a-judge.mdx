@@ -1,0 +1,111 @@
+---
+title: "How to trust a judge"
+subtitle: "A judge is a model too, and it needs its own report card before you trust its scores."
+part: 2
+minutes: 7
+why: "Your LLM judge has been scoring every release for two months, and every release looks fine - high 8s and 9s, nothing to worry about. Then a complaint lands on an answer the judge scored 9 out of 10, and a human reads it in ten seconds and calls it wrong. Nobody had ever checked whether the judge's opinion matched a human's on even one example. You didn't build a second opinion. You built a rubber stamp that talks like a reviewer. This lesson closes that gap: calibrating a judge against real human labels, knowing the two biases that break its scores first, and treating the judge as a component you monitor, not a fact you accept."
+wins:
+  - "Build a small human-labeled set before you trust a single judge score."
+  - "Measure agreement between judge and human labels, not just eyeball a few."
+  - "Swap the order of the two answers you show the judge, every time."
+  - "Judge with a model from a different family than the one that generated the answer."
+  - "Recalibrate the judge on a schedule, not once at launch and never again."
+quiz:
+  - q: "A judge scores every release 8 or above for two months straight. What does that actually tell you?"
+    options: ["The system is genuinely getting better every release", "Nothing on its own - you need to know how often the judge agrees with a human", "The judge's rubric is well calibrated"]
+    answer: 1
+    explain: "A high score is meaningless until you know the judge tracks a human on cases you already know the answer to."
+  - q: "You show a judge two answers to compare. What's the cheapest way to catch position bias?"
+    options: ["Ask the judge to explain its reasoning in more detail", "Run the comparison twice with the two answers swapped", "Use a longer rubric"]
+    answer: 1
+    explain: "Position bias shows up as a preference for whichever slot an answer lands in; swapping order and checking whether the verdict flips is the direct test."
+  - q: "A judge keeps favoring the longer of two answers, even when the shorter one is more correct. This is..."
+    options: ["A sign the rubric is too strict", "Verbosity bias - judges systematically over-reward length", "Expected, since longer answers usually cover more"]
+    answer: 1
+    explain: "Verbosity bias is well documented: length correlates with a judge's score even when it shouldn't. A correct answer can be short."
+  - q: "Why is grading a model's output with that same model a risky setup?"
+    options: ["It's slower than using a different model", "Self-preference bias - a model tends to rate output in its own style favorably", "It requires two API keys instead of one"]
+    answer: 1
+    explain: "A judge from the same family as the generator tends to favor answers that sound like its own, which inflates the score without improving the answer."
+  - q: "You calibrated a judge against human labels three months ago and never checked again. What's the risk?"
+    options: ["None - calibration doesn't change once it's done", "The judge's behavior can drift as its provider updates the underlying model, silently", "Judges only need calibration once per project, by convention"]
+    answer: 1
+    explain: "The judge is a model like any other; a provider-side update can shift its behavior with no changelog you'll see, so recheck it on a schedule."
+deeper:
+  - { label: "FutureAGI - LLM-as-judge best practices: calibration, bias, cost", href: "https://futureagi.com/blog/llm-as-judge-best-practices-2026/" }
+  - { label: "DeepEval - LLM-as-a-judge, evaluation techniques and practices", href: "https://deepeval.com/blog/llm-as-a-judge" }
+  - { label: "Wang et al. - Large Language Models are not Fair Evaluators", href: "https://arxiv.org/abs/2305.17926" }
+  - { label: "Anthropic - develop tests, empirical evaluations", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
+---
+
+*Deterministic checks and LLM-as-judge* told you when judgment genuinely needs a model instead of a regex. This lesson is about the model you just decided to trust. A judge is not a special kind of code that happens to be reliable because it's a language model - it's a language model, with the same failure modes as the thing it's grading. It can be confidently wrong. It has never had a human check its work unless you made that happen.
+
+## 1. Grade the judge before it grades you
+
+Calibration means one thing: does the judge agree with a human on cases where you already know the right answer? You already have the raw material for this. The gold set from *Building an eval set from your own traffic* - real inputs, expert-written edge cases, the incidents you turned into permanent test cases - is also the set you use to score the judge itself. Have a human label a batch of outputs pass or fail, or better vs. worse. Run the same batch through the judge. Compare.
+
+The comparison that matters is agreement, not "the judge got most of them right." Two graders can each be individually reasonable and still disagree with each other constantly, which is exactly what a raw percentage hides. **Cohen's kappa** is the standard tool here: it measures agreement between two raters while subtracting out the agreement you'd expect from chance alone. A kappa near zero means the judge is barely better than a coin flip next to your human; a kappa above roughly 0.6 is the conventional line for "trustworthy enough to lean on," though where exactly you set that bar depends on how much a wrong judgment costs you.
+
+That last part matters more than the number. A judge that passes something a human would reject - a **false positive** - is the dangerous direction, because it creates confidence in output nobody actually checked. A judge that fails something a human would accept is annoying but safe: it just means a human looks at one more case than strictly necessary. If you're grading anything where a wrong pass reaches a user unsupervised, weight your calibration set and your threshold toward catching false positives specifically, not just toward a good overall kappa.
+
+None of this needs to be elaborate to be worth doing. A hundred labeled cases and an afternoon spent reading the judge's verdicts next to a human's is enough to know whether you're looking at a genuine second opinion or a system that agrees with itself. The mistake is skipping the step entirely because the judge's scores looked plausible - plausible is not the same claim as calibrated, and only one of those two is checkable.
+
+> An unvalidated judge is not a second opinion. It's a guess that never admits doubt.
+
+## 2. The two biases that show up first
+
+Once a judge is broadly calibrated, two specific failure modes account for most of the gap between its score and a human's. Both are structural - they come from how the judge reads the input, not from a bad rubric.
+
+| Bias | How it shows up | The fix |
+|---|---|---|
+| Position bias | The judge favors whichever answer it saw first (or second), regardless of content | Randomize or swap the order across comparisons; if the verdict flips with the answers, the judge was reading position, not quality |
+| Verbosity bias | Longer answers score higher even when they say less that's actually correct | Name it explicitly in the rubric ("length is not a merit"); include short-correct vs. long-wrong pairs in your calibration set so you'd notice if the judge got this wrong |
+| Self-preference bias | A judge favors output in a style close to its own, including output the same model family generated | Judge with a model from a different family than the generator - grading Claude's output with Claude, or GPT's with GPT, builds a mirror, not a judge |
+
+Position bias is the easiest to test and the easiest to miss, because a single run of your eval set never shows it to you - you'd need the same pair scored twice, in both orders, to see the verdict move. That's worth building into the harness itself rather than treating as a one-off audit.
+
+```python
+from itertools import product
+
+from anthropic import Anthropic
+from sklearn.metrics import cohen_kappa_score
+
+client = Anthropic()
+
+def judge_pair(question: str, answer_a: str, answer_b: str) -> str:
+    """Returns 'A' or 'B' - whichever the judge prefers."""
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=5,
+        system="Answer with exactly one letter: A or B. Judge on correctness only.",
+        messages=[{"role": "user", "content":
+            f"Question: {question}\n\nA: {answer_a}\n\nB: {answer_b}\n\nWhich is better?"}],
+    )
+    return resp.content[0].text.strip()[0]
+
+def check_position_bias(cases: list[dict]) -> float:
+    """Fraction of cases where swapping order flips the verdict."""
+    flips = 0
+    for case in cases:
+        first = judge_pair(case["question"], case["answer_a"], case["answer_b"])
+        second = judge_pair(case["question"], case["answer_b"], case["answer_a"])
+        # second run swapped the slots, so a stable judge should give the opposite letter
+        if first == second:
+            flips += 1
+    return flips / len(cases)
+
+# Separately: how well does the judge track a human, on labeled cases?
+human_labels = [1, 0, 1, 1, 0, 1, 0, 0]     # 1 = human said "pass"
+judge_labels = [1, 0, 1, 0, 0, 1, 0, 1]     # judge's verdict on the same cases
+print(f"agreement (kappa): {cohen_kappa_score(human_labels, judge_labels):.2f}")
+```
+
+A `check_position_bias` result well above zero means the judge is, at least sometimes, voting for a slot instead of an answer. A kappa printed at the bottom below your threshold means don't ship decisions on this judge's word yet - go fix the rubric or swap the judge model, then recalibrate.
+
+## 3. Keeping a judge honest over time
+
+Calibration is not a box you tick once at launch. Two things change under a judge without you touching anything: the provider updates the model behind the API name, and your product drifts into cases your original gold set never covered. Both mean a judge that was trustworthy in January can be wrong by June with no error message telling you so.
+
+The practical response is boring on purpose: freeze the judge's model version and settings for the duration of any single comparison you care about, so a score difference is about your change and not about the judge changing underneath it. Then recalibrate against the gold set on a schedule - monthly is a reasonable default - and again immediately after anything that might have shifted its behavior: a provider model update, a rubric edit, a big change in what your product handles. Alert on the kappa the same way you'd alert on any other metric that quietly slipping past a threshold; a judge you stopped checking is a judge you're trusting on faith, and faith is exactly what a gold set exists to replace.
+
+Once the judge itself is something you trust, the next question is what to do with a human reviewer's time now that most of the grading doesn't need one - which is where *Pairwise comparison and human review that scales* picks up.

@@ -12,9 +12,9 @@ badge and percentage.
 
 **OWN-WORLD.** A printed signalling diagram on near-black. Strokes at 90° and
 45° only, never a curve. Uniform tick pitch along a line. Hollow bone-white
-interchange rings, solid capsule termini. Four transit inks — deep red, navy,
-forest, amber — one per course, at printed-ink saturation rather than screen
-neon.
+interchange rings, solid capsule termini. Six transit inks — deep red, navy,
+forest, amber, azure, rose — one per course, at printed-ink saturation rather
+than screen neon.
 Archivo in signage caps for every label and heading; Inter for the reading
 column alone; JetBrains Mono confined to code and tabular numerals. No cards, no
 shadows, no glass, no gradient, no rounded containers.
@@ -42,18 +42,20 @@ Scoped under `.learn-root`. Every value below is a local token defined in
 | `--ln-prompt` | `#4A72C4` | `#2B4C8C` | The Prompt Engineering line |
 | `--ln-rag` | `#3E8C5E` | `#2E6B47` | The RAG line |
 | `--ln-agents` | `#CB881D` | `#AB6F06` | The Agents and Tool Use line |
+| `--ln-evals` | `#00AAE0` | `#0080AA` | The Evals and Observability line |
+| `--ln-pipelines` | `#C02985` | `#820056` | The Data Pipelines line |
 | `--ln-mark` | `#F2EFE9` | `#12100E` | You-are-here ring, terminus fill |
 | `--ln-ground` | `#12100E` | `#F7F5F1` | Page ground |
 | `--ln-ink` | `#EDE9E2` | `#191714` | Body text |
 | `--ln-ink-quiet` | `#9A948B` | `#6B655C` | Labels, meta, secondary |
 | `--ln-rule` | `#2A2725` | `#DDD8D0` | Hairlines, zone divisions |
 
-Strategy: **full palette, four named roles.** Line colour is structural, never
+Strategy: **full palette, six named roles.** Line colour is structural, never
 decorative — it appears in the diagram layer, in the lesson's position strip, and
 in the one rule under the lesson title. It never colours body text, never fills a
 background region, and never appears in the reading column.
 
-**Adding a fifth ink.** A new line colour has to clear three bars, measured, not
+**Adding a new ink.** A new line colour has to clear three bars, measured, not
 argued:
 
 1. **Family.** Chroma inside the range the existing inks already occupy (C\* 32
@@ -62,17 +64,60 @@ argued:
 2. **Ground.** At least 3:1 against `--ln-ground` in **both** themes. It carries
    no text — it is a 6px stroke and a 3px `.rule-line` — so 4.5:1 is not the bar,
    but a stroke a reader has to hunt for is a failed line.
-3. **Colour blindness.** Simulate protanopia and deuteranopia, then measure ΔE00
-   against every existing ink in both themes. The floor is the worst pair already
-   shipped: deep red against forest, which sits at 9.2. Anything that scores
-   below that is not a fourth colour, it is a fifth name for one of the first
-   three. Blue-violet fails this — it collapses into `--ln-prompt`.
+3. **Colour blindness.** Simulate protanopia and deuteranopia (Machado,
+   Oliveira & Fitzgibbon 2009, full severity), then measure ΔE00 against every
+   existing ink, in the *same* theme, under both simulations. The floor is the
+   worst pair already shipped: deep red against forest, light theme, protanopia,
+   which sits at 9.2. Anything that scores below that is not a new colour, it is
+   a new name for one already on the map.
 
 Amber cleared all three at ΔE00 ≥ 12.7 in the worst case (deuteranopia, against
-deep red, light theme). It is also why the palette will not stretch much further:
-the hues that survive a red/green/blue/amber set are close to exhausted, and the
-next course may have to earn its identity from the diagram's shape rather than a
-new ink.
+deep red, light theme), and the note here used to say the palette was close to
+exhausted. That was a guess, not a measurement. When Evals and Observability and
+Data Pipelines needed lines of their own, the hue wheel got swept properly —
+every 5°, both themes, both simulations, gamut-mapped in CIELAB rather than
+picked by eye — and the guess was wrong in both directions.
+
+**What the sweep found.** One near-miss worth naming, and two real inks:
+
+- **Hue 190°–240° (true cyan through sky-blue) looked closed and isn't — it's
+  the wrong register.** At the lightness a first pass tries (dark theme up to
+  L 65, light theme up to L 48, matching where the other five inks live), no
+  hue in that band reaches C\* 32. Stretching the search further, it does clear
+  all three bars: at L 75 dark / L 58 light it reaches C\* 40–45 with ΔE00 in
+  the low-to-mid twenties against every existing ink — the best numbers of any
+  hue tested. But L 75 on a 6px stroke is not a printed ink at that saturation,
+  it's a screen neon, the exact register this section's OWN-WORLD rule exists
+  to keep out, and the light value's contrast sits at a bare 3.0–3.1:1, thinner
+  than anything shipped. Rejected on register, not on the numbers — a case
+  where the three bars are necessary but not sufficient.
+- **Azure (`--ln-evals`)** sits at 245°, just past that band, at lightnesses in
+  line with the other five (dark L 65, light L 50): dark `#00AAE0` (C\* 41.2,
+  contrast 7.1:1), light `#0080AA` (C\* 33.6, contrast 4.1:1). Its worst ΔE00 is
+  14.3 (deuteranopia, against navy, light theme) — 39° of hue from navy, the
+  nearest existing line. The light value's chroma margin above the floor (1.6)
+  is thinner than the other five, but no thinner than rag's own light value
+  already is (C\* 32.2, a 0.2 margin) — a precedent already shipped, not a new
+  risk.
+- **Rose (`--ln-pipelines`)** sits at 347°, in the 110° gap between navy and
+  red: dark `#C02985` (C\* 66.8, contrast 3.5:1), light `#820056` (C\* 55.0,
+  contrast 9.3:1). Worst ΔE00 is 11.6 (protanopia, against navy, light theme),
+  47° of hue from red, the nearest existing line. Its dark contrast, 3.5:1, is
+  the same margin deep red's own dark value already carries (3.6:1).
+- The two new inks read apart from each other too: worst ΔE00 between them is
+  20.0 (deuteranopia, dark theme) — over double the floor.
+- The apparent hole between navy and red (280°–360°, blue-violet through
+  magenta) is mostly not a hole: most of it clears all three bars. It is
+  excluded anyway wherever the candidate hue sits within about 35° of navy or
+  red's own hue, even when a lightness gap alone pushes its ΔE00 over the
+  floor — a paler or darker version of an existing line is a shade of that
+  line, not a new one, whatever the number says.
+
+Six is not a wall either. The sweep found the 250°–320° run and the 335°–360°
+run both clear all three bars almost end to end — azure and rose used one hue
+apiece out of each, not the whole run — and the 190°–240° band is a register
+choice away from opening too. But the next ink still needs its own sweep, not
+an inherited guess about what's left.
 
 Dark is the default. The scene decided it: an engineer at a laptop with an editor
 open beside this, often at night, and a signalling diagram lives on a dark panel.
