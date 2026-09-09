@@ -40,7 +40,7 @@ deeper:
 
 ## 1. The gap between the question and the corpus
 
-Lesson 03 chunked your documents and lesson 02 picked the model that embeds them. Both of those improve the corpus side of the match. This lesson is the other side.
+*Chunking* chunked your documents and *Choosing an embedding model* picked the model that embeds them. Both of those improve the corpus side of the match. This lesson is the other side.
 
 A retriever compares one string to a corpus. If that string is a poor description of what the user wants, no amount of index tuning helps. And user queries are poor descriptions surprisingly often, in four specific ways.
 
@@ -67,11 +67,11 @@ Cheap version, no model needed: a synonym dictionary and an acronym table for yo
 
 ### Decomposition
 
-Split a multi-part question into one query per part, retrieve for each, then merge the results - RRF from lesson 07 works fine as the merge.
+Split a multi-part question into one query per part, retrieve for each, then merge the results - RRF from *Hybrid search* works fine as the merge.
 
 Use it when the question contains "and", "versus", "difference between", or two distinct nouns from different parts of your docs. The reason is mechanical: your chunks were split by topic, so a chunk covering both halves of a comparison usually does not exist. One search returns one side of it and the model answers half the question with total confidence.
 
-The cost is more than latency. Three sub-queries at ten chunks each is thirty chunks in your prompt, so either you rerank down (lesson 08) or you pay for the context.
+The cost is more than latency. Three sub-queries at ten chunks each is thirty chunks in your prompt, so either you rerank down (*Reranking*) or you pay for the context.
 
 ### HyDE
 
@@ -146,4 +146,4 @@ Three habits that contain drift:
 - **Log both.** Store the original and the rewrite side by side. When someone reports a bad answer, the first thing you want to see is what you actually searched for.
 - **Instruct against invention.** Tell the rewriter to preserve every entity, date, number and constraint from the original, and to add nothing not implied by the conversation.
 
-And measure it. Rewriting is exactly the kind of change that feels like an improvement and sometimes is not. Lesson 10 is how you find out.
+And measure it. Rewriting is exactly the kind of change that feels like an improvement and sometimes is not. *Measuring retrieval* is how you find out.

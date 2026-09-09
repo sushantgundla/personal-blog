@@ -38,11 +38,11 @@ deeper:
   - { label: "SPDX — the licence identifier list", href: "https://spdx.org/licenses/" }
 ---
 
-Lessons 04 and 05 covered the big three providers and what you pay them. This lesson covers the other option: downloading the model and running it yourself. Before the mechanics of that, which is lesson 08, you need to know what you are actually downloading and what you are allowed to do with it. Those two questions are where most of the confusion lives.
+*The big three, and what actually differs* and *What you actually pay for* covered the big three providers and what you pay them. This lesson covers the other option: downloading the model and running it yourself. Before the mechanics of that, which is *Running a model yourself*, you need to know what you are actually downloading and what you are allowed to do with it. Those two questions are where most of the confusion lives.
 
 ## 1. Open means the weights, and nothing else is promised
 
-A model, from lesson 01, is a very large pile of numbers. Those numbers are the **weights**. When a lab says a model is open, what they mean, almost always, is that you can download that file.
+A model, from *What a model is made of*, is a very large pile of numbers. Those numbers are the **weights**. When a lab says a model is open, what they mean, almost always, is that you can download that file.
 
 That is genuinely useful and it is much less than open source normally means.
 
@@ -95,15 +95,15 @@ Neither side wins. They trade different things, and which trade suits you depend
 |---|---|---|
 | Peak quality | The frontier lives here first | Trails it, by a gap that keeps closing |
 | Ops burden | None. It is someone else's pager | Yours: GPUs, drivers, serving, upgrades, on-call |
-| Capacity planning | None. Rate limits instead (lesson 06) | Entirely yours — you size for peak and pay for idle |
+| Capacity planning | None. Rate limits instead (*Rate limits and reliability*) | Entirely yours — you size for peak and pay for idle |
 | Cost shape | Per token. Zero at zero traffic, linear upward | Per GPU-hour. Flat, whether busy or idle |
 | Data residency | Data leaves your network | Runs in your VPC, your datacentre, or air-gapped |
-| Model stability | The provider can deprecate it (lesson 10) | The file on your disk is yours forever |
+| Model stability | The provider can deprecate it (*Switching models safely*) | The file on your disk is yours forever |
 | Fine-tuning | Limited to what the provider offers | Full access — LoRA, full fine-tune, anything |
 | Control of behaviour | The provider's refusal and safety layer | Yours, with the responsibility that brings |
 
 On the quality gap, be careful about how you hold it. The frontier is closed, and on the hardest work — long multi-step reasoning, tricky code, unusual languages, careful tool use — the difference is real and you will feel it. On ordinary production work — classify this ticket, extract these fields, summarise this call, answer from this document — the gap is far smaller, and often small enough not to matter. Most of what teams actually ship is the second kind.
 
-Any specific number you read about that gap is a number about two specific model versions on one specific day, and it will be wrong within months. The stable version of the advice is: check the current public comparisons to build a shortlist, then decide with your own twenty cases. That is lesson 09.
+Any specific number you read about that gap is a number about two specific model versions on one specific day, and it will be wrong within months. The stable version of the advice is: check the current public comparisons to build a shortlist, then decide with your own twenty cases. That is *Picking a model*.
 
-The last thing to notice is that this is not an exclusive choice. A common and boring architecture is open weights handling the routine majority in your own infrastructure, escalating to a closed frontier model for the hard remainder. You get most of the cost and residency benefit, and you keep the ceiling. Lesson 09 shows the routing that makes it work.
+The last thing to notice is that this is not an exclusive choice. A common and boring architecture is open weights handling the routine majority in your own infrastructure, escalating to a closed frontier model for the hard remainder. You get most of the cost and residency benefit, and you keep the ceiling. *Picking a model* shows the routing that makes it work.

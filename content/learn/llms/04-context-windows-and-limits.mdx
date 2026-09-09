@@ -66,7 +66,7 @@ Moving to a larger window costs you five things, and buys you one.
 
 **Latency goes up before generation even starts.** Time-to-first-token is mostly the model reading your input. A very long prompt shows the user a blank screen for a noticeably long time.
 
-**Attention work grows with the square of the length.** That is lesson 1 of this course. Serving tricks blunt it, but the direction holds.
+**Attention work grows with the square of the length.** That is *What a model is made of*, earlier in this course. Serving tricks blunt it, but the direction holds.
 
 **Position matters, and the middle is the weakest position.** With a lot of context, models retrieve information placed near the beginning or the end more reliably than the same information placed halfway through. This was named *lost in the middle* by Liu and colleagues in 2023, and while newer models handle it far better, the effect has not gone away. A fact you buried in chunk 14 of 30 is the fact most likely to be missed.
 

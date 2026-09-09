@@ -66,7 +66,7 @@ Two more things worth internalising. Within one family, the small model and the 
 
 **Lever two: a smaller model.** Most requests in a real app are easy: classify, route, extract fields, rewrite a sentence, decide whether something needs escalating. Those do not need the frontier model. Send them to the small one in the same family and keep the expensive model for the requests that genuinely need it. A router is a modest amount of complexity and often removes most of the bill. Prove it with a test set per route before you ship, so you are trading cost for measured quality rather than hoping.
 
-**Lever three: prompt caching.** If a long prefix repeats across requests, cache it. It cuts latency as well as cost, and it takes an afternoon. The rules that make it work are in lesson 3.
+**Lever three: prompt caching.** If a long prefix repeats across requests, cache it. It cuts latency as well as cost, and it takes an afternoon. The rules that make it work are in *Context windows and their limits*.
 
 **And the one that is not a lever but a seatbelt:** `max_tokens`. Cap the output on every call. It is one line on the expensive side of the meter, and it turns an unbounded worst case into a bounded one.
 

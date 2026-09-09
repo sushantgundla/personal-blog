@@ -48,9 +48,9 @@ Three families of question run straight into that.
 
 **Aggregation.** "How many contracts expire this quarter." "What is the average deal size." "Which region files the most complaints." These need every record, and a computation over them. Retrieval hands you five. The model then answers from those five, in a confident tone, and the number is wrong. Worse, it is wrong in a way that looks fine - "based on the contracts I found, three expire this quarter" is a true statement about your retrieval and a false answer to the question.
 
-This is a database query. If your data is in a database, write SQL. If it is in documents, extract the fields you need into a table at index time and query that - dates, amounts, parties, statuses. The metadata work from lesson 06 is exactly this, and it is the difference between counting and guessing.
+This is a database query. If your data is in a database, write SQL. If it is in documents, extract the fields you need into a table at index time and query that - dates, amounts, parties, statuses. The metadata work from *Metadata and filtering* is exactly this, and it is the difference between counting and guessing.
 
-**The whole document.** "Summarise this report." "What changed between v2 and v3 of this contract." "Does this policy contradict itself anywhere." Chunking, from lesson 03, is precisely the operation that destroys these. You cut the document into pieces so you could search it; now the question needs it whole, and retrieval hands back the pieces that scored highest, which for a summary is close to arbitrary.
+**The whole document.** "Summarise this report." "What changed between v2 and v3 of this contract." "Does this policy contradict itself anywhere." Chunking is precisely the operation that destroys these. You cut the document into pieces so you could search it; now the question needs it whole, and retrieval hands back the pieces that scored highest, which for a summary is close to arbitrary.
 
 **Structure and relationships.** "Which suppliers are affected if vendor X fails." "Who reports to the person who approved this." "Which services depend on this library." The answer is not in any single passage - it is in the links between records. Similarity between text does not encode those links. Even if every passage names one edge, retrieving five passages gives you five unconnected edges and no path.
 
@@ -130,7 +130,7 @@ for q in [
 # -> whole_doc  summarise the 2024 vendor agreement
 ```
 
-A few notes on running this for real. `max_tokens` is tiny because the output is one word. The `none` route matters as much as the others - a question your corpus does not cover should be refused, not retrieved for. And routing is itself a model call that can be wrong, so log every decision and put the misroutes into your eval set from lesson 10.
+A few notes on running this for real. `max_tokens` is tiny because the output is one word. The `none` route matters as much as the others - a question your corpus does not cover should be refused, not retrieved for. And routing is itself a model call that can be wrong, so log every decision and put the misroutes into your eval set from *Measuring retrieval*.
 
 You do not have to build all the branches on day one. Even a router with two routes - "this is a counting question, say I cannot do that" and "everything else, run RAG" - removes your most embarrassing failure mode for an hour of work.
 
@@ -141,6 +141,6 @@ Before building any retrieval pipeline, ask what shape the question is.
 - Does answering it need **every** record? Not RAG.
 - Does it need **one whole document**? Long context or map-reduce, not RAG.
 - Does it need **connections between records**? A graph or joins, not RAG.
-- Does the answer **sit in a passage somewhere**? RAG, and everything in lessons 01 to 11 applies.
+- Does the answer **sit in a passage somewhere**? RAG, and everything earlier in this course applies.
 
 That choice, made early, matters more than any tuning you do afterwards. A perfectly tuned retriever pointed at a counting question is still going to be wrong, and it will be wrong confidently, with citations.

@@ -86,7 +86,7 @@ Four rules around it:
 
 **Make repeats safe.** A connection that drops after the model answered is a real and regular event, and you cannot tell it apart from a request that never arrived. If the call has a side effect — sending an email, charging a card, writing a row — the safety has to live on your side: an idempotency key on the operation, and a write that is safe to repeat. Some APIs accept an idempotency key too, which helps, but your database is where the guarantee actually holds.
 
-**Have somewhere to fall back to.** Behind the adapter from lesson 4, a fallback chain costs very little:
+**Have somewhere to fall back to.** Behind the adapter from *The big three, and what actually differs*, a fallback chain costs very little:
 
 1. The same model through a different route or region.
 2. The smaller model in the same family — worse, but answering.

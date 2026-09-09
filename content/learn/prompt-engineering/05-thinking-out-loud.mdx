@@ -50,7 +50,7 @@ Two consequences fall out immediately, and both are practical.
 
 **The reasoning has to come before the answer.** Ask for the answer and then the explanation, and the answer token is generated with no working available, exactly as if you had never asked. Worse, everything after it is written to fit a conclusion already in the context. You get a justification, not reasoning. This ordering bug is common and it silently removes the whole benefit.
 
-**More tokens is the point.** "Take your time" and "be careful" produce no additional tokens, so they produce no additional computation — which is why lesson 1 puts them in the do-nothing pile. "List the constraints one per line, then answer" produces tokens. That is the difference between the two phrasings, and it is the only difference that matters.
+**More tokens is the point.** "Take your time" and "be careful" produce no additional tokens, so they produce no additional computation — which is why *Why prompts fail* puts them in the do-nothing pile. "List the constraints one per line, then answer" produces tokens. That is the difference between the two phrasings, and it is the only difference that matters.
 
 One honest caveat before you build on this. The written reasoning is not a reliable account of how the answer was produced. Turpin et al. (2023) showed models giving fluent step-by-step explanations that did not mention the feature actually driving the answer. So the working is genuinely extra computation, and genuinely useful for debugging, but it is not evidence.
 

@@ -1,0 +1,132 @@
+---
+title: "Let a model write the prompt"
+subtitle: "Turn the harness from *Versioning and testing prompts* into a search, and stop hand-editing by feel."
+part: 4
+minutes: 7
+why: "You built the twenty-case harness from *Versioning and testing prompts*, and it works exactly as advertised - it tells you whether an edit helped. So you change a sentence, the score goes from 17 to 18, you change another one, it drops to 16, and you are back to guessing, just with a number attached to the guess now. The harness was only ever a scoreboard. It never told you what to try next. This lesson is about making that part less manual too: showing a model the cases your prompt is failing and asking it to propose a fix, generating a few candidates instead of one, and letting your own harness - never the model's opinion of its own work - decide which one actually wins."
+wins:
+  - "Show the model your failing cases, not just the current prompt - a targeted repair beats a blind rewrite."
+  - "Generate several candidate prompts per round, never one - one draft proves as little as one example did in *Versioning and testing prompts*."
+  - "Score every candidate on the same harness before touching production, and never take the drafting model's word for which one is better."
+  - "Constrain what the rewrite is allowed to change, or you are no longer running a controlled experiment."
+  - "Hold a few cases back from the model that drafts prompts, so a win is real improvement and not memorising your set."
+quiz:
+  - q: "The harness from *Versioning and testing prompts* tells you..."
+    options: ["Whether an edit helped or hurt, but not what to try next", "The exact wording of the best possible prompt", "Whether the model is telling the truth"]
+    answer: 0
+    explain: "It is a scoreboard, not a generator - it grades whatever you hand it, and stops there."
+  - q: "The most useful thing to show a model asked to improve a prompt is..."
+    options: ["A generic instruction to make it better", "The prompt plus the specific cases it is currently failing, with the expected and actual output", "Nothing but the prompt - context might bias it"]
+    answer: 1
+    explain: "A targeted repair against real failures beats a blind rewrite, the same way *Retries and fallbacks*'s retry-with-the-error beats a blind retry."
+  - q: "Why generate three or five candidate prompts instead of one?"
+    options: ["Because one drafted prompt proves as little as one example did in *Versioning and testing prompts* - you need something to compare it against", "Because the API requires a minimum batch size for prompt generation", "Because a single candidate cannot be validated by a schema"]
+    answer: 0
+    explain: "One version, however confident it looks, is a single point on a distribution you just moved everywhere - exactly *Versioning and testing prompts*'s point about prompt edits in general."
+  - q: "Who decides which candidate prompt is actually better?"
+    options: ["The model that drafted the candidates, since it can compare them itself", "Your existing eval harness, scoring every candidate on the same cases", "Whichever candidate reads as more professional"]
+    answer: 1
+    explain: "The drafting model is not a neutral judge of its own work; the harness is the only measurement you have already trusted."
+  - q: "A new prompt scores 20/20 on your harness and worse on a small holdout set you kept back. That means..."
+    options: ["Ship it - a perfect score wins regardless", "It likely overfit to the specific twenty cases rather than genuinely improving", "The holdout set is broken and should be discarded"]
+    answer: 1
+    explain: "A prompt tuned until it matches your set's specifics, rather than the underlying task, is the classic overfitting failure - a holdout set is what catches it."
+deeper:
+  - { label: "Anthropic - generate a prompt", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompt-generator" }
+  - { label: "PromptHub - a complete guide to meta prompting", href: "https://www.prompthub.us/blog/a-complete-guide-to-meta-prompting" }
+  - { label: "Prompt Engineering a Prompt Engineer (Ye et al., 2023)", href: "https://arxiv.org/abs/2311.05661" }
+  - { label: "DSPy - Compiling Declarative LM Calls into Self-Improving Pipelines (Khattab et al., 2023)", href: "https://arxiv.org/abs/2310.03714" }
+---
+
+*Versioning and testing prompts* turned prompt edits into something measurable: twenty real cases, a pass count, a diff you can review. That was the whole point, and it works. What it does not do is tell you which word to change next. You still stare at three failing cases, guess at a rewrite, run the harness, and find out you were wrong - now with a number confirming it instead of a feeling. This lesson automates that last, most tedious step: drafting the next candidate.
+
+## 1. Show it the failures, not just the prompt
+
+Asking a model to "improve this prompt" cold produces exactly what you would expect from a vague request - *Why prompts fail*'s whole argument, one level up. The model has no idea which part is broken, so it polishes wording, adds a sentence about being thorough, and hands back something that reads better and scores the same.
+
+The fix is the one you already know from *Retries and fallbacks*: show it the error, not just the task. Instead of the prompt alone, hand the drafting call three things - the current prompt, a handful of cases it is currently failing, and for each one the input, the expected output, and what it actually produced. That is a narrower, easier question than "write a better prompt." It is closer to "here is specifically what is wrong, fix that," which is the same move that made repair retries work in *Retries and fallbacks*, aimed at the prompt itself instead of at one response.
+
+| | Hand-editing | Meta-prompting |
+|---|---|---|
+| What changes each round | Whatever line you personally suspect | Whatever the failing cases point at |
+| What the editor sees | The prompt, and your memory of what broke | The prompt, plus the actual failing cases and their expected output |
+| How the next edit is chosen | Intuition, refined by the last score | A model reading a batch of concrete misses |
+| Where it plateaus | When your intuition runs out of ideas | When the failing cases stop being informative |
+| Failure mode | Fixing the case you remember, breaking one you don't | Overfitting to exactly the cases it was shown |
+
+Neither column removes the harness. Both still need it, for the same reason - the row about intuition running out is really *Versioning and testing prompts*'s argument again: a person eyeballing one example is measuring almost nothing, and a model reading three failing cases is only slightly better informed unless something else checks its work.
+
+## 2. Generate several, and let the harness pick
+
+The single biggest mistake in this technique is asking for one rewrite and shipping whichever one comes back. That is the same trap as judging a prompt edit from one example - a single candidate is one point on a distribution, and you have no idea whether it is better everywhere or just better on the three cases it was shown.
+
+Ask for three to five candidates in one call, each making a different kind of change - one tightening the instructions, one adding an example from the failing cases, one restructuring the output contract. Then run every candidate through the exact same twenty-case harness from *Versioning and testing prompts*, unchanged, and compare pass counts directly. This is where the technique earns its keep: you are not trusting the drafting model's opinion of its own work, you are trusting the same measurement you already trusted for hand edits.
+
+> The model drafting the prompt is not the judge of the prompt. Your twenty cases are, every time.
+
+Two guardrails keep this from drifting into a wholesale rewrite that happens to score well by accident:
+
+- **Constrain what is allowed to change.** Tell the drafting model to keep the output schema, the system/user split, and the field names fixed, and only rewrite the instructions. Otherwise a "winning" candidate might have changed three unrelated things at once, and you are back to not knowing which change did the work - precisely the problem *Why prompts fail* opened the whole course with.
+- **Hold a few cases back.** Keep two or three cases out of what the drafting model ever sees, and score every candidate against them too. A candidate that aces the twenty cases it was shown and drops on the ones it was not is not improving at the task - it has learned the specifics of your set. That gap is the tell, and it is cheap to check for.
+
+```python
+import json
+from anthropic import Anthropic
+
+client = Anthropic()
+
+DRAFTER_SYSTEM = """You improve a prompt used for a specific task.
+You will be given the current prompt and cases it is currently failing.
+Propose 3 candidate rewrites that would fix these specific failures.
+Keep the output schema and the field names exactly as they are.
+Return one JSON array of 3 strings - the full replacement prompt text only."""
+
+def draft_candidates(current_prompt: str, failures: list[dict]) -> list[str]:
+    resp = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=2000,
+        system=DRAFTER_SYSTEM,
+        messages=[{
+            "role": "user",
+            "content": (
+                f"Current prompt:\n{current_prompt}\n\n"
+                f"Failing cases:\n{json.dumps(failures, indent=2)}"
+            ),
+        }],
+    )
+    return json.loads(resp.content[0].text)
+
+def score(prompt: str, cases: list[dict]) -> int:
+    # Reuses the exact runner and grader from the eval harness in Versioning and testing prompts.
+    return sum(run_case(prompt, c) == c["expected"] for c in cases)
+
+with open("evals/tickets.json") as f:
+    cases = json.load(f)
+holdout, working_set = cases[:3], cases[3:]          # never shown to the drafter
+
+with open("prompts/classify_ticket_current.txt") as f:
+    current = f.read()
+
+failing = [c for c in working_set if run_case(current, c) != c["expected"]]
+candidates = draft_candidates(current, failing[:5])   # a sample, not the whole list
+
+results = [(score(c, working_set) + score(c, holdout), c) for c in candidates]
+best_score, best_prompt = max(results, key=lambda r: r[0])
+print(f"current: {score(current, working_set) + score(current, holdout)}  best candidate: {best_score}")
+```
+
+`run_case` is the same function *Versioning and testing prompts* already built - nothing about the harness changes, only where the next candidate comes from. The holdout score sitting right next to the working-set score is the whole safeguard: a candidate that wins on one and loses on the other has not earned the swap.
+
+## 3. What it costs, and when hand-editing is still faster
+
+Be honest about the arithmetic before reaching for this. One drafting call, then every candidate run once against your full case set, is `1 + (candidates × cases)` model calls per round - five candidates against twenty-three cases is over a hundred calls to test one round of ideas. That is real money and real time, and it dwarfs the cost of typing a sentence yourself.
+
+It earns that cost back in specific situations, not by default:
+
+- **You are stuck, not starting.** You have made three or four hand edits, the score has not moved, and you are out of ideas for what to try next. That is exactly when a model reading the actual failing cases outperforms another guess from you.
+- **The failure set is large or unfamiliar.** Ten failing cases across a handful of distinct causes is more than a person reliably holds in their head at once; a model reading all ten in one pass does not have that limit.
+- **You are about to spend an afternoon iterating anyway.** If the cost of the search is smaller than the cost of the hours you would otherwise spend hand-tuning, automate the tuning.
+
+It is close to pure waste on a prompt that already passes cleanly, on a script nobody will touch again, or - this one matters - before *Versioning and testing prompts*'s harness exists at all. Meta-prompting has nothing to search against without a fixed set of cases and a grader; build that first, or you are just asking a model to guess at improvements and taking its word for it, which is the exact failure mode this whole lesson exists to avoid.
+
+The technique is not a replacement for understanding your own prompt. It is a way to generate more candidates, faster, once you already know how to tell a good one from a bad one - which is the harness, still doing the job *Versioning and testing prompts* gave it.

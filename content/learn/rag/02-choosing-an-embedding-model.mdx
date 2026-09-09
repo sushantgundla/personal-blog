@@ -95,7 +95,7 @@ for name, embed in candidates.items():        # candidates: {"model-a": fn, "mod
     print(f"{name:24} recall@5 = {recall_at_k(embed):.2f}")
 ```
 
-Read the result like an engineer. If two models are within a couple of points on 30 queries, that is noise — pick the cheaper or faster one and stop thinking about it. If everything scores below about 0.6, your problem is not the model. It is your chunking, and lesson 3 is where you should be.
+Read the result like an engineer. If two models are within a couple of points on 30 queries, that is noise — pick the cheaper or faster one and stop thinking about it. If everything scores below about 0.6, your problem is not the model. It is your chunking, and *Chunking* is where you should be.
 
 > Model choice is a shortlist from the leaderboard and a decision from your own data. Anyone who picked purely from a leaderboard has not measured their system.
 

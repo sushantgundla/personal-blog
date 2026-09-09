@@ -86,7 +86,7 @@ Worth being precise here, because the research is more interesting than the folk
 | A house style, tone, or level of formality | Yes | The only cheap way to transfer taste |
 | A classification with a fuzzy boundary | Yes, with near-misses | Boundaries are learned from cases, not definitions |
 | Simple, fully specifiable task ("return the ISO date") | No | A one-line rule is shorter and clearer |
-| A shape a schema can enforce | Usually no | A guarantee beats a demonstration — see lesson 6 |
+| A shape a schema can enforce | Usually no | A guarantee beats a demonstration — see *Output contracts* |
 | Long documents, tight token budget | Careful | Examples cost input tokens on every single call |
 | Highly varied inputs | Careful | Three examples cannot represent a wide distribution, and may narrow it |
 
@@ -94,7 +94,7 @@ That last row names a real failure. If your inputs vary a lot and your examples 
 
 The other failure is **copying content instead of form**. Examples are context like everything else, so the model can lift a name, a number or a fact straight out of one. The tell is an entity from your example appearing in a real output. Three fixes, in order of how well they work: keep examples short and obviously synthetic, vary them so no single detail dominates, and state the rule explicitly — "the examples show the format only; never reuse their content".
 
-On cost: examples are input tokens on every call, which sounds worse than it is. Put them in the stable system prefix (lesson 2) and prompt caching absorbs most of it. Examples pasted into the variable user turn get charged in full, every time — another reason the split matters.
+On cost: examples are input tokens on every call, which sounds worse than it is. Put them in the stable system prefix (*The system prompt and the user turn*) and prompt caching absorbs most of it. Examples pasted into the variable user turn get charged in full, every time — another reason the split matters.
 
 ```python
 from anthropic import Anthropic

@@ -40,7 +40,7 @@ deeper:
 
 ## 1. An id is a handle
 
-Lesson 05 showed the shape: put an id next to each passage, ask the model to cite it. This lesson is about making that hold up in production.
+The shape is simple: put an id next to each passage, ask the model to cite it. This lesson is about making that hold up in production.
 
 Start with the ids themselves, because a bad id makes everything downstream useless.
 
@@ -54,7 +54,7 @@ Start with the ids themselves, because a bad id makes everything downstream usel
 
 The test is simple: six months from now, someone pastes a cited id into a search box. Does it find the exact passage? If not, the citation is decoration.
 
-Store the id with the chunk at index time, alongside the metadata from lesson 06, and carry it through retrieval and reranking untouched. It should be the same string in your index, your prompt, your logs and your UI.
+Store the id with the chunk at index time, alongside the metadata from *Metadata and filtering*, and carry it through retrieval and reranking untouched. It should be the same string in your index, your prompt, your logs and your UI.
 
 The format in the prompt only needs to be unambiguous and easy to parse:
 
@@ -148,6 +148,6 @@ All of these pass the check:
 - The passage says refunds are available within fourteen days **for members**. The answer drops "for members" and cites the passage. Every quoted word is present.
 - Two passages each supply half a fact. Both citations verify. The combined claim appears in neither.
 - The passage is a heading or a table of contents entry that names the topic without stating anything. The quote is real; the support is not.
-- The passage is out of date. It says what the model claims. It has simply been superseded, which is a metadata problem from lesson 06, not a citation one.
+- The passage is out of date. It says what the model claims. It has simply been superseded, which is a metadata problem from *Metadata and filtering*, not a citation one.
 
-So what have you actually bought? You have eliminated the crudest and most common failure - text with no source at all - and you have made every remaining answer traceable to a passage a human can read in seconds. That is a large gain and it is not the same as correctness. Correctness still needs the evaluation from lesson 10, and for anything consequential it still needs a person.
+So what have you actually bought? You have eliminated the crudest and most common failure - text with no source at all - and you have made every remaining answer traceable to a passage a human can read in seconds. That is a large gain and it is not the same as correctness. Correctness still needs the evaluation from *Measuring retrieval*, and for anything consequential it still needs a person.

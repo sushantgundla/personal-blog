@@ -12,28 +12,30 @@ and `../DESIGN.md` is the visual contract any new course has to obey.
 
 | File | What it proposes | Verdict |
 |---|---|---|
-| `agents.md` | Agents and Tool Use — the loop, tool schemas, MCP, sandboxing | One course, 12 lessons |
+| `agents.md` | Agents and Tool Use — the loop, tool schemas, MCP, sandboxing | Shipped — 13 lessons in `content/learn/agents/` |
 | `evals.md` | Evaluating and Observing LLM Systems — eval sets, judges, tracing, drift | One course, 12 lessons |
 | `production.md` | Production — streaming, latency, caching, failover, cost as architecture | One course, 11 lessons |
 | `safety.md` | Securing LLM Systems — indirect injection, trust boundaries, PII, isolation | One course, 11 lessons |
 | `adaptation.md` | Multimodal, and Fine-Tuning | Two courses, 11 lessons each |
 | `gaps.md` | An audit of the three courses that already exist | Findings, not a course |
 
-## Build order
+**Agents and Tool Use has shipped** — all 13 lessons are live in
+`content/learn/agents/`. Two of the six proposals found it independently: a
+reader who finishes the other courses can prompt, retrieve and validate one
+call at a time, and nothing taught the loop that ties them together. It was
+also the most searched of the six. What follows is the order for what is
+still unbuilt.
 
-1. **Agents and Tool Use.** Two of the six found this independently: a reader who
-   finishes all three existing courses can prompt, retrieve and validate one call
-   at a time, and nothing teaches the loop that ties them together. It is also
-   the most searched of the six.
-2. **Evaluating and Observing.** Both `Versioning and testing prompts` and
+1. **Evaluating and Observing.** Both `Versioning and testing prompts` and
    `Measuring retrieval` already assume eval infrastructure the reader has not
    been shown how to build.
-3. **Production.** Everything about the call once real traffic hits it.
-4. **Multimodal.** Genuinely absent from all thirty-two lessons. Trim it first —
+2. **Production.** Everything about the call once real traffic hits it.
+3. **Multimodal.** Genuinely absent from every shipped lesson. Trim it first —
    three of its lessons duplicate ground the existing courses already hold.
-5. **Securing LLM Systems.** Real, but it collides with 1 and 3 more than any
-   other pair in the set. Resolve the overlap before writing a word of it.
-6. **Fine-Tuning.** Its own proposal calls it a literacy course. Most of this
+4. **Securing LLM Systems.** Real, but it collides with Agents and Tool Use and
+   Production more than any other pair in the set. Resolve the overlap before
+   writing a word of it.
+5. **Fine-Tuning.** Its own proposal calls it a literacy course. Most of this
    audience will never do it.
 
 ## Overlaps to resolve

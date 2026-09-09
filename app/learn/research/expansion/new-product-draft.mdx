@@ -1,0 +1,117 @@
+---
+title: "Streaming into a shape that isn't finished yet"
+subtitle: "A partial JSON fragment is not a smaller JSON object. It isn't JSON at all, until the block closes."
+part: 2
+minutes: 7
+why: "You wired up streaming so your form-fill UI would populate as the model wrote, and for one release it worked - fields appeared, one after another, exactly as promised. Then a user watched a date field flash 2024-01-0 for a few frames before settling on 2024-01-09, and someone else watched a summary field render a word that got silently replaced a moment later. Nothing crashed. The JSON was valid by the time the response finished. The bug lived in the gap between token and object: you were rendering fragments the model had not finished writing, and treating a string mid-sentence as a value already true. This lesson is about that gap - what actually arrives while a tool call streams, and the one rule that keeps a progressive UI honest."
+wins:
+  - "Treat a streamed tool input as text until the block closes, not as a shrinking JSON object."
+  - "Accumulate every partial_json fragment in arrival order; never parse a fragment on its own."
+  - "Guard the final parse - fine-grained streaming sends fragments unvalidated, and max_tokens can cut one off mid-value."
+  - "Never render a scalar before its closing token arrives, or the UI will show a value that is still being written."
+  - "Use a maintained partial-JSON parser for progressive rendering rather than hand-rolling one."
+quiz:
+  - q: "In a streamed tool_use block, what does the initial content_block_start event contain for the input field?"
+    options: ["The complete input, sent early for latency", "An empty object, input: {}, as a placeholder", "Nothing - the field is absent until the block closes"]
+    answer: 1
+    explain: "The empty object marks the slot in the content array. The real value arrives afterward as a series of delta fragments."
+  - q: "What should you do with a series of input_json_delta events for the same content block?"
+    options: ["Parse each partial_json fragment individually and merge the resulting objects", "Concatenate the partial_json strings in order, then parse once at content_block_stop", "Discard all but the last fragment, since it is the most complete"]
+    answer: 1
+    explain: "A fragment is a slice of text and can end mid-key or mid-string. Only the full concatenation is a candidate for parsing."
+  - q: "With eager_input_streaming enabled on a tool, what guarantee do you lose that standard buffered streaming gave you?"
+    options: ["The event order is no longer content_block_start, then delta, then stop", "The accumulated string is no longer guaranteed to be valid JSON at any point, including the end", "The tool can no longer accept an array-typed parameter"]
+    answer: 1
+    explain: "Standard streaming buffers and validates each parameter before sending it back. Fine-grained streaming skips that step, trading the guarantee for a lower time-to-first-fragment."
+  - q: "A date field is streaming in as a string: 2024-01-0, then a moment later 2024-01-09. Why did the shorter version appear at all?"
+    options: ["The model changed its answer mid-stream", "The renderer displayed the string value before its closing quote had arrived", "The API sent the field twice by mistake"]
+    answer: 1
+    explain: "A string is only finished once the closing quote token arrives. Anything shown before that is a true fragment, not a shorter true answer."
+  - q: "A response streaming a tool call stops with stop_reason: max_tokens partway through a long array parameter. What is the honest state of the accumulated input?"
+    options: ["Valid JSON, just missing some optional fields", "Possibly invalid or truncated JSON - you must check the stop reason and decide whether to retry or repair", "Automatically completed by the API before the stop event fires"]
+    answer: 1
+    explain: "A token-limit cutoff can end a parameter mid-value. The stop reason tells you this happened; nothing fills the gap for you."
+deeper:
+  - { label: "Anthropic - Fine-grained tool streaming", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/fine-grained-tool-streaming" }
+  - { label: "Anthropic - Streaming messages", href: "https://platform.claude.com/docs/en/build-with-claude/streaming" }
+  - { label: "st3w4r - openai-partial-stream", href: "https://github.com/st3w4r/openai-partial-stream" }
+  - { label: "itruf - PartialJSON", href: "https://github.com/itruf/PartialJSON" }
+  - { label: "MDN - Using server-sent events", href: "https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events" }
+---
+
+## 1. What actually arrives while a tool call streams
+
+When a model streams a response over server-sent events and that response includes a tool call, the tool's input does not arrive as one object. It arrives as three kinds of event, in order. First, `content_block_start` announces the block and, for a `tool_use` block, sets `input` to an empty object - `{}`. That is a placeholder marking the slot in the content array; it is not the beginning of the real value. Then a run of `content_block_delta` events arrives, each one of type `input_json_delta`, each carrying a string fragment in a field called `partial_json`. Finally `content_block_stop` closes the block.
+
+The type mismatch between the placeholder and the deltas is deliberate: `input` starts as an object, and the deltas that fill it in are strings. You are not receiving a JSON value that grows. You are receiving text, in order, that happens to be JSON once every fragment has arrived.
+
+| | What arrives | What it means |
+|---|---|---|
+| `content_block_start` | `input: {}` | A slot exists. Nothing has been written yet. |
+| `content_block_delta` (`input_json_delta`) | `partial_json: "..."` | One more slice of raw text. May end mid-key, mid-string, mid-number. |
+| `content_block_stop` | Nothing further | All fragments have arrived. Concatenate and parse now. |
+
+> A `partial_json` fragment is a string. It is not a smaller JSON object - it can end in the middle of a key, a quoted value, or a number, and there is no guarantee it lines up with any structural boundary at all.
+
+This is the mechanism behind the flashing date field. If your renderer treats each fragment as "the input so far" and tries to read a field out of it, it will sometimes read a string that is real but unfinished - `2024-01-0` is a completely valid partial read of a field that will end up saying `2024-01-09`. The API did not send a wrong answer twice. Your code read an answer before the answer was done.
+
+## 2. Buffered streaming and fine-grained streaming trade the same thing two ways
+
+Anthropic's API gives you two modes for a tool's input, and the difference is entirely about when validation happens. By default - `eager_input_streaming` unset or `false` - the server buffers and validates each parameter's value before it streams anything back to you. Nothing prints for a large parameter, such as a long array or a full document, until Claude has finished generating it. You get correctness for free: whatever text you receive, once fully buffered, has already been checked. You pay for that in time-to-first-byte on any parameter big enough to matter.
+
+Set `eager_input_streaming: true` on a tool and the server stops buffering that tool's input entirely. Fragments start arriving as soon as the model begins the parameter, and the fragments tend to be longer with fewer mid-word breaks, because there is no validation step holding them back. What you lose is the guarantee: the accumulated string might not be valid JSON, even at the end, and a response that stops for `stop_reason: max_tokens` can cut a parameter off mid-value. You are trading a correctness guarantee for a latency win, and the trade is per tool, not per request - you choose it on the tools where a large parameter is common enough to be worth the shorter wait.
+
+| | Standard (buffered) | Fine-grained (`eager_input_streaming: true`) |
+|---|---|---|
+| First fragment arrives | After the parameter is fully generated | As generation begins |
+| Fragment length | One validated chunk | Shorter, more frequent, unvalidated |
+| Guaranteed valid JSON at `content_block_stop` | Yes | No |
+| Can be cut mid-value by `max_tokens` | Same risk either way | Same risk either way |
+| Right for | Small or latency-insensitive parameters | Long documents, large arrays, code |
+
+Either way, the accumulation contract at your end is identical, which is worth knowing before you reach for an SDK helper that hides it. Initialize an empty string when the block starts, append every `partial_json` fragment as it arrives, and parse once, guarded, when the block stops:
+
+```python
+tool_inputs: dict[int, str] = {}  # content block index -> accumulated JSON text
+
+with client.messages.stream(
+    model="claude-opus-5",
+    max_tokens=1024,
+    tools=[{
+        "name": "fill_form",
+        "description": "Populate a structured intake form",
+        "eager_input_streaming": True,
+        "input_schema": FORM_SCHEMA,
+    }],
+    messages=[{"role": "user", "content": user_message}],
+) as stream:
+    for event in stream:
+        if event.type == "content_block_start" and event.content_block.type == "tool_use":
+            tool_inputs[event.index] = ""
+        elif event.type == "content_block_delta" and event.delta.type == "input_json_delta":
+            tool_inputs[event.index] += event.delta.partial_json
+            render_progress(event.index, tool_inputs[event.index])  # see section 3
+        elif event.type == "content_block_stop" and event.index in tool_inputs:
+            try:
+                form = json.loads(tool_inputs[event.index])
+            except json.JSONDecodeError:
+                form = None  # repair, retry, or surface INVALID_JSON - never guess
+```
+
+Nothing here parses a fragment on its own. `render_progress` gets called on every delta, but its job - covered next - is to decide what, if anything, is safe to show, not to treat the running string as a finished object.
+
+## 3. What a renderer is allowed to show
+
+The failure mode in the opening example was not the streaming - it was a renderer that read a field out of an unfinished string and displayed it as if it were the field's value. The fix is a rule, and it is the same rule regardless of which parser you use: **a scalar is not safe to render until its closing token has arrived.** A string is not done until you have seen its closing quote. A number is not done until the next character is a delimiter - a comma, a closing brace, or a closing bracket - because `12` streaming toward `128` looks exactly like a finished `12` until that next character shows up. An array element is not done until the value before its comma is complete, and the array itself can still grow.
+
+This is exactly the class of bug a general-purpose JSON parser will not catch for you, because a general-purpose parser is built to reject or accept a complete document, not to tell you which of its already-parsed fields are provisional and which are final. A partial-JSON repair library - the kind used by both `st3w4r/openai-partial-stream` and `itruf/PartialJSON` - closes open strings and open brackets speculatively so you always have *something* parseable to inspect, but "parseable" and "finished" are different claims, and your renderer has to keep asking the second question even when the first one is satisfied.
+
+| Fragment state | Safe to render? |
+|---|---|
+| Object key seen, value not yet closed | No - the value may still change shape |
+| String value, closing quote not yet seen | No - text after this point still belongs to the same value |
+| Number, next character not yet seen | No - a further digit changes the value |
+| Array element, followed by `,` or `]` | Yes - that element is final |
+| Whole object, followed by `content_block_stop` | Yes, once the guarded parse succeeds |
+
+Two habits fall out of this. First, use a maintained repair library instead of writing one: correctly tracking open strings, escaped quotes inside them, and open brackets at arbitrary nesting depth is exactly the kind of code that looks finished after your test cases pass and breaks on the first payload that nests two levels deeper than you tried. Second, treat `content_block_stop` as the only moment a value graduates from "preview" to "true," and log the raw accumulated string whenever the guarded parse fails - a truncated `max_tokens` cutoff and a genuinely malformed model response look identical from the outside, and you cannot tell which one happened without the text that caused it.

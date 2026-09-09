@@ -38,7 +38,7 @@ deeper:
   - { label: "Anthropic — test and evaluate", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
 ---
 
-Lesson 09 was about choosing a model. This one is about the fact that you will choose again. Prices fall, better models ship, and providers retire the one you built on. The teams that handle this well are not the ones with the best model — they are the ones for whom changing model is boring.
+*Picking a model* was about choosing a model. This one is about the fact that you will choose again. Prices fall, better models ship, and providers retire the one you built on. The teams that handle this well are not the ones with the best model — they are the ones for whom changing model is boring.
 
 ## 1. Your prompt is partly tuned to one model's quirks
 
@@ -55,7 +55,7 @@ Here is what actually differs between models, all of which your prompt has absor
 | Tool-calling shape | Different argument-schema handling, different eagerness to call at all, parallel calls where you expected one |
 | Structured output support | Strict schema modes, JSON modes and plain prompting all behave differently, and only some are guaranteed |
 | System prompt weight | One model treats the system prompt as near-law, another treats it as background |
-| Reasoning models | Some prompt techniques help ordinary models and do nothing, or actively hurt, on a reasoning model (lesson 02) |
+| Reasoning models | Some prompt techniques help ordinary models and do nothing, or actively hurt, on a reasoning model (*Base, instruct, and reasoning models*) |
 
 None of these is a bug in either model. They are personalities, and you fitted your prompt to one of them.
 
@@ -63,7 +63,7 @@ The conclusion is short and worth taping to the wall: **a model swap is a re-tes
 
 ## 2. The migration recipe
 
-This takes an afternoon if you already have the twenty cases from lesson 09, and a week if you do not — which is itself the argument for having them.
+This takes an afternoon if you already have the twenty cases from *Picking a model*, and a week if you do not — which is itself the argument for having them.
 
 1. **Freeze the eval set.** Do not edit cases while comparing; you need one fixed ruler.
 2. **Run both models on it.** Same inputs, same settings, same everything except the model id.
@@ -81,7 +81,7 @@ One more thing that survives every migration: keep a small set of cases that che
 
 The engineering half of this is small, and doing it before you need it is the whole trick.
 
-**One adapter module.** Every call goes through one function. Model id, base URL and default parameters come from config. No provider SDK type escapes into the rest of your app. When most providers speak the OpenAI request shape, the adapter is genuinely a few lines — and as lesson 08 showed, a locally served open-weight model answers on the same shape too.
+**One adapter module.** Every call goes through one function. Model id, base URL and default parameters come from config. No provider SDK type escapes into the rest of your app. When most providers speak the OpenAI request shape, the adapter is genuinely a few lines — and as *Running a model yourself* showed, a locally served open-weight model answers on the same shape too.
 
 ```python
 # pip install openai

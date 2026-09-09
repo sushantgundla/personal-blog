@@ -48,7 +48,7 @@ point of view, rather than assembled as vendor documentation.
 
 - Next.js 14 App Router, TypeScript strict, Tailwind v3. Content is MDX read
   from `content/learn/` at build time by `lib/learn.ts`; every page is static.
-- Four courses, forty-four lessons. Structure per course: a `course.json` with
+- Four courses, forty-eight lessons. Structure per course: a `course.json` with
   named parts, then numbered lesson files.
 - Each lesson has a fixed anatomy: part, course, minutes, title, subtitle, a
   "why this, for you" opener, three numbered sections of prose with comparison
@@ -75,7 +75,7 @@ point of view, rather than assembled as vendor documentation.
 
 ## Evidence on Hand
 
-- Forty-four written lessons in `content/learn/`, all real, all the author's.
+- Forty-eight written lessons in `content/learn/`, all real, all the author's.
 - No testimonials, no student numbers, no completion statistics, no logos, no
   press. None of these may be invented or implied.
 - No photography or illustration assets exist for this site today.

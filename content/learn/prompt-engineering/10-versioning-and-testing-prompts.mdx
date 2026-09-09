@@ -51,7 +51,7 @@ A prompt determines what your system does. That is the definition of code, whate
 
 The habit to break is editing the live prompt in a vendor dashboard. It feels faster and it is a genuine trap: there is no diff, no review, no history, no rollback, and no connection between the change and the incident three days later. If your team needs to change behaviour without a deploy, that is a config and feature-flag problem, and the flag should still point at a prompt that lives in the repo.
 
-While you are moving it, take the chance to keep the stable part stable. From lesson 2, the durable rules live in the system prompt; that is the part worth naming, versioning and caching. The per-call specifics stay in the user turn and never need a version at all.
+While you are moving it, take the chance to keep the stable part stable. From *The system prompt and the user turn*, the durable rules live in the system prompt; that is the part worth naming, versioning and caching. The per-call specifics stay in the user turn and never need a version at all.
 
 > A prompt edit is a deploy. Review it in a diff, not in a dashboard.
 

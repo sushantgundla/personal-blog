@@ -1,0 +1,128 @@
+---
+title: "Parsing documents before you chunk them"
+subtitle: "The step chunking assumes already happened - turning a scanned page, a multi-column PDF, or a table into text worth splitting."
+part: 1
+minutes: 8
+why: "You pointed your chunker at a folder of PDFs and it ran without complaining. Retrieval came back wrong in three specific ways: a sentence from the left column glued to one from the right, a pricing table flattened into a line of bare numbers with no headers, and a scanned invoice that produced no text at all. You spent two days tuning chunk size and swapping embedding models. None of it helped, because the input was already wrong before your chunker ever saw it. This lesson is the step before *Chunking* - what to feed the chunker so it has something worth splitting."
+wins:
+  - "Read the raw extracted text before blaming chunking or the embedding model."
+  - "Match the tool to the document: plain extraction, layout-aware parsing, OCR or a vision model."
+  - "Convert every table to markdown or JSON before it reaches the chunker."
+  - "Keep the page number and block type on every piece of extracted text."
+  - "Treat garbled input as a parsing bug, not a retrieval bug - no downstream tuning fixes it."
+quiz:
+  - q: "A two-column PDF page extracts as one interleaved paragraph, half of one column then half of the other. Why?"
+    options: ["The embedding model cannot handle multi-column text", "A basic extractor reads glyphs in the order they were drawn on the page, not the order a person reads them", "The PDF file is corrupted"]
+    answer: 1
+    explain: "A PDF stores positioned glyphs, not reading order. Reading order has to be inferred, and a naive extractor infers it badly across columns."
+  - q: "A pricing table gets flattened into one line of extracted text. What is actually lost?"
+    options: ["Nothing important - the numbers are all still present in the text", "Which number belongs to which row and column, so a chunk full of digits cannot say what any of them mean", "The chunk becomes too long for the embedding model to accept"]
+    answer: 1
+    explain: "A table's meaning lives in its grid. Flatten the grid and you keep the digits but lose the relationships that made them a table."
+  - q: "When should you reach for OCR rather than a layout-aware parser?"
+    options: ["Whenever the document contains a table", "When the page is a scan or a photograph with no real text layer underneath it to extract", "Whenever the document has more than one column"]
+    answer: 1
+    explain: "A layout-aware parser reorganises text that already exists. OCR is the step before that, turning pixels into text in the first place."
+  - q: "Retrieval on your corpus looks bad. What should you check before touching chunk size or the embedding model?"
+    options: ["Read fifty of the raw chunks your parser actually produced", "Switch to a larger, more expensive embedding model and compare", "Increase the overlap between chunks"]
+    answer: 0
+    explain: "Chunking and embedding both operate on whatever the parser handed them. If that text was already wrong, tuning either one is wasted effort."
+  - q: "What is the honest cost of sending a page image to a vision-capable model instead of a dedicated parsing library?"
+    options: ["Nothing - it is the same price and speed as calling a parsing library", "A generation call per page, which is slower and pricier than a library, in exchange for handling layouts a library gets wrong", "It only works on pages with a single paragraph of text"]
+    answer: 1
+    explain: "A parsing library is a local function call. A vision model is a model call - real latency and real cost - bought back with tolerance for messy layouts."
+deeper:
+  - { label: "Unstructured - document parsing docs", href: "https://docs.unstructured.io/" }
+  - { label: "LlamaParse - documentation", href: "https://docs.llamaindex.ai/en/stable/llama_cloud/llama_parse/" }
+  - { label: "PyMuPDF - documentation", href: "https://pymupdf.readthedocs.io/" }
+  - { label: "Anthropic - PDF support", href: "https://platform.claude.com/docs/en/build-with-claude/pdf-support" }
+---
+
+*Chunking*, next, will tell you to split on headings and paragraphs, and will warn in passing that "PDFs love to emit column-shuffled text." This lesson is what happens before that warning matters: getting text out of a document in the first place, in a shape your chunker can trust. Skip this step and every later lesson in this course is tuning a pipeline that was fed garbage on day one.
+
+## 1. What a naive parser throws away
+
+Open any PDF library, call its default text extraction function, and it will hand you a string without complaint. That string is not the document. It is whatever order the glyphs happened to be drawn on the page, and a PDF does not store reading order - it stores positions. Working out that the left column comes before the right one, that a footnote is not part of the main paragraph, or that a page header is not a new sentence, is an inference the format never makes for you.
+
+On a single column of plain prose, the inference is trivial and every extractor gets it right. On anything else, it starts failing in specific, predictable ways.
+
+| What the document has | What a naive extractor produces | Why |
+|---|---|---|
+| Two or more columns | Text interleaved mid-sentence between columns | Extraction follows drawing order, not reading order |
+| A table | A flat run of numbers with no row or column boundaries | Cell positions are geometry, not text structure |
+| A repeated header or footer | The same fragment injected into the middle of paragraphs, once per page | The extractor cannot tell a page furniture element from body text |
+| A scanned page | Nothing, or a handful of stray characters | There is no text layer at all - only pixels |
+| A slide or an infographic | Fragments in an order that matches nothing | Layout carries the meaning; text alone does not |
+
+None of these are edge cases if your corpus is real-world documents. Contracts have footers. Financial reports have tables on every page. Support tickets get exported with screenshots. If your source documents are clean single-column text you can skip most of this lesson - but check that assumption before you assume it.
+
+> A chunk can only be as good as the text it was cut from. If the parser already lost the table, no chunk size and no embedding model fixes it.
+
+## 2. Matching the tool to the document
+
+There is no single parser that is always right, because the documents are not always the same shape. Think of it as four tiers, and pick the cheapest one that actually works on what you have.
+
+**Plain text extraction** is the baseline every PDF library gives you for free. It is fine, genuinely fine, for clean single-column text with no tables worth keeping - a lot of internal wikis and plain reports fall here. Do not reach for anything fancier until you have looked at the output and found it wanting.
+
+**Layout-aware parsing** is the step up. Libraries like Unstructured and LlamaParse, and PyMuPDF used carefully, detect the actual blocks on a page - a title, a paragraph, a list item, a table - and reconstruct reading order across columns instead of following draw order. They typically hand back structured elements rather than one long string, which is exactly what you want feeding into the heading-aware chunker in *Chunking*, next.
+
+**OCR** solves a different problem: there is no text at all, only an image of text. A scanned invoice, a photographed whiteboard, a fax that got exported as a PDF of pixels - none of these have anything for a text extractor to extract. OCR reads the pixels and produces text, at which point you are back to needing a layout-aware pass on top of it, because OCR alone still does not know a table from a paragraph.
+
+**Vision-model page reading** skips the pipeline and sends the page image itself to a model that can see layout and text together. It is the most expensive tier - a real model call per page - and the most tolerant of genuinely messy layouts: a form with fields scattered across the page, a slide with a chart and three text boxes, a table with merged cells that would confuse a rule-based parser.
+
+| | Handles scanned pages | Preserves table structure | Reading order on columns | Cost | Best for |
+|---|---|---|---|---|---|
+| Plain text extraction | No | No | Poor | Free, instant | Clean single-column text |
+| Layout-aware parser | No (needs OCR first) | Yes, usually | Good | A parsing library call | Structured PDFs, reports, contracts |
+| OCR | Yes | No, on its own | Poor, on its own | A per-page OCR call | Scans and photographs |
+| Vision-model page reading | Yes | Yes | Yes | A generation call per page | Irregular layouts, forms, mixed content |
+
+Most real pipelines end up using more than one tier: OCR to get text off a scan, then a layout-aware pass on the result, and a vision model reserved for the pages that still come out wrong. Measure which pages fail before deciding you need the expensive tier everywhere.
+
+## 3. Tables, and knowing when parsing is the problem
+
+Tables deserve their own paragraph because flattening one is the single most damaging thing a naive parser does. A paragraph that loses its formatting is still mostly readable. A table that loses its grid produces a run of numbers that looks exactly as confident as real data and means nothing - a chunk saying "14 30 90 250 500" with no header row is worse than no chunk at all, because it will retrieve, get pasted into a prompt, and get summarised as if it were true.
+
+The fix is not clever: convert every table to markdown or JSON before it reaches the chunker, so each value stays attached to its row and column label. A layout-aware parser or a vision model can both produce this directly; a plain text extractor cannot, which is exactly why tables are where the cheap tier fails first.
+
+```python
+import base64
+import anthropic
+
+client = anthropic.Anthropic()
+
+with open("scanned-invoice.pdf", "rb") as f:
+    pdf_data = base64.standard_b64encode(f.read()).decode()
+
+message = client.messages.create(
+    model="claude-sonnet-5",
+    max_tokens=1024,
+    messages=[{
+        "role": "user",
+        "content": [
+            {
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": "application/pdf",
+                    "data": pdf_data,
+                },
+            },
+            {
+                "type": "text",
+                "text": (
+                    "Extract every table on this page as a markdown table. "
+                    "Keep each column header attached to its values - do not "
+                    "flatten rows into plain text."
+                ),
+            },
+        ],
+    }],
+)
+
+print(message.content[0].text)
+```
+
+This is the vision-model tier from section 2, made concrete: one page in, one markdown table out, headers intact. It costs a generation call per page, which is real money at volume - reserve it for the pages a cheaper parser gets wrong, not as your default for every document.
+
+Keep this diagnostic habit for the rest of the course: before you touch chunk size, the embedding model, or the reranker, read fifty of the actual chunks your parser produced. If a number is in the wrong place, a table has no headers, or a paragraph starts mid-sentence with words from a different column, that is a parsing bug. No amount of retrieval tuning downstream will ever see the version of the document that was correct - it only ever sees what the parser handed over. Fix it at the source, and the rest of this course starts working on text worth searching.

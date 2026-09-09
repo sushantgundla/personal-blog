@@ -41,7 +41,7 @@ deeper:
 
 ## 1. Two memories, two problems
 
-Lesson 6 was about one task, one user, one window. The worst thing that happens there is that the run forgets and redoes work, and when the run ends the mess goes with it.
+*What the loop remembers within one run* was about one task, one user, one window. The worst thing that happens there is that the run forgets and redoes work, and when the run ends the mess goes with it.
 
 Everything changes when a write outlives the run that made it.
 
@@ -95,7 +95,7 @@ Where the instruction comes from and how it gets into a model's context is the *
 Which leads to the practical framing. Do not think of this as a security feature bolted onto memory. Think of it as hygiene, and the checks fall out of that:
 
 - **Classify by source at write time.** A fact the user typed and a fact scraped from a page are not the same class. Refuse the second outright, or store it labelled, and make sure the label is still attached when the agent reads it back.
-- **Validate in the handler, not in the prompt.** Your write path is the choke point every operation passes through. Path validation first - lesson 9's resolve-then-check, unchanged, because `/memories/../../secrets.env` is a real request your handler will receive. Then a size cap, then a schema, then the source rule.
+- **Validate in the handler, not in the prompt.** Your write path is the choke point every operation passes through. Path validation first - *Letting an agent touch the real world*'s resolve-then-check, unchanged, because `/memories/../../secrets.env` is a real request your handler will receive. Then a size cap, then a schema, then the source rule.
 - **Keep the store human-readable.** Plain files, plain sentences. If a store is a pile of embeddings, nobody can look at it and notice a line that should not be there.
 - **Ship a delete path.** The user must be able to see what the agent believes about them and remove it. This is a product requirement before it is a security one.
 - **Log and diff every write.** Attach the run id. When behaviour changes for no apparent reason, the diff of the store is the first place to look, and without the log you will be reading model outputs and guessing.
@@ -118,7 +118,7 @@ def resolve(user_id: str, path: str) -> Path:
         raise ValueError("path must start with /memories")
     root = (MEMORY_ROOT / user_id).resolve()
     target = (root / path.removeprefix("/memories").lstrip("/")).resolve()
-    target.relative_to(root)          # lesson 9's guard: resolve, then check
+    target.relative_to(root)          # same guard as the real-world tool lesson: resolve, then check
     return target
 
 def write(user_id: str, path: str, text: str, source: str, run_id: str) -> str:

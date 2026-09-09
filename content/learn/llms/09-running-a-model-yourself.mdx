@@ -38,7 +38,7 @@ deeper:
   - { label: "LM Studio", href: "https://lmstudio.ai" }
 ---
 
-Lesson 07 said open weights buy you residency, stability and the freedom to fine-tune. This lesson is the bill for those things. None of it is hard, but it is all arithmetic, and the arithmetic is unforgiving in a way that per-token API pricing is not.
+*Open weights vs closed APIs* said open weights buy you residency, stability and the freedom to fine-tune. This lesson is the bill for those things. None of it is hard, but it is all arithmetic, and the arithmetic is unforgiving in a way that per-token API pricing is not.
 
 ## 1. VRAM is the wall you hit first
 
@@ -79,7 +79,7 @@ Formats you will see named: **GGUF** (the format llama.cpp and Ollama use, built
 
 > A quantised large model usually beats a full-precision small model at the same memory budget. Usually. That word is why you re-run your eval after quantising, not before.
 
-The failure mode to watch for is that quantisation damage is uneven. Casual chat holds up well. Long chains of reasoning, exact arithmetic, strict JSON, and precise instruction-following degrade first — the very things you probably built a checker around. So quantise, then run the twenty cases from lesson 09, then decide.
+The failure mode to watch for is that quantisation damage is uneven. Casual chat holds up well. Long chains of reasoning, exact arithmetic, strict JSON, and precise instruction-following degrade first — the very things you probably built a checker around. So quantise, then run the twenty cases from *Picking a model*, then decide.
 
 ```bash
 # Try a model on your own machine. No account, no key, no network after the pull.
@@ -91,7 +91,7 @@ ollama run gemma3:4b "In two sentences, why does VRAM cap which model I can run?
 curl -s http://localhost:11434/v1/models
 ```
 
-That last line matters more than it looks. Because the endpoint speaks the OpenAI shape, the client code you already wrote points at it by changing one URL. Lesson 10 builds on exactly that.
+That last line matters more than it looks. Because the endpoint speaks the OpenAI shape, the client code you already wrote points at it by changing one URL. *Switching models safely* builds on exactly that.
 
 ## 3. The tool ladder, and the arithmetic that decides
 
@@ -113,4 +113,4 @@ Run it as a division: monthly API bill ÷ monthly cost of the smallest GPU box t
 
 **Clearly right:** data legally cannot leave your network. Steady, high, predictable volume. A fine-tuned model that is your actual product. A requirement that the model never changes. Air-gapped or on-prem deployment.
 
-**Probably a hobby:** spiky traffic. Modest volume. A small team with no one to carry the pager. And any case where you want the frontier, because as lesson 07 said, the frontier is not downloadable.
+**Probably a hobby:** spiky traffic. Modest volume. A small team with no one to carry the pager. And any case where you want the frontier, because as *Open weights vs closed APIs* said, the frontier is not downloadable.

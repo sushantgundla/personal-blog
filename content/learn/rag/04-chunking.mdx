@@ -35,7 +35,6 @@ deeper:
   - { label: "Anthropic — contextual retrieval", href: "https://www.anthropic.com/news/contextual-retrieval" }
   - { label: "LangChain — documentation", href: "https://python.langchain.com/docs/" }
   - { label: "LlamaIndex — documentation", href: "https://docs.llamaindex.ai/" }
-  - { label: "Unstructured — document parsing docs", href: "https://docs.unstructured.io/" }
 ---
 
 You do not retrieve documents. You retrieve chunks. Whatever your chunker produces is the complete set of things your system can ever return, so a fact that got cut in half is a fact your system cannot answer about, no matter how good the model downstream is.
@@ -124,8 +123,8 @@ The two forces in section 1 do not actually have to be resolved in one number. *
 
 Small-to-big costs you one `parent_id` column and one fetch. It is worth trying early.
 
-Now the size question, which you should stop debating and start measuring. You already have the labelled set from lesson 2 — 30 real queries, each with the chunk that should come back. Chunk your corpus three ways, index each, and score recall@5 for each. An afternoon of work, and it settles the question for your corpus permanently.
+Now the size question, which you should stop debating and start measuring. You already have the labelled set from *Choosing an embedding model* — 30 real queries, each with the chunk that should come back. Chunk your corpus three ways, index each, and score recall@5 for each. An afternoon of work, and it settles the question for your corpus permanently.
 
 One caveat about that measurement: when you re-chunk, your chunk ids change, so label by **document and passage** rather than by chunk id. "Query 7 should retrieve something from `refunds.md` covering the 30-day window" survives a re-chunk; "query 7 should retrieve `doc-14#2`" does not.
 
-If recall is poor across all three sizes, size is not your problem. Look at whether your parser is producing garbage — PDFs in particular love to emit column-shuffled text, page headers in the middle of sentences, and tables flattened into unreadable runs. Retrieval cannot recover from text that was already wrong when it arrived, and it is worth reading fifty of your chunks with your own eyes before blaming anything downstream.
+If recall is poor across all three sizes, size is not your problem. Look at whether your parser is producing garbage — the failure modes and the fix are *Parsing documents before you chunk them*, earlier in this course. Retrieval cannot recover from text that was already wrong when it arrived.

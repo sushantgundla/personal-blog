@@ -40,7 +40,7 @@ deeper:
 
 ## 1. What embeddings are built to lose
 
-Lesson 01 said an embedding is a point in space where nearby means similar in meaning. That is the whole value and it is also the whole problem.
+*What an embedding really is* said an embedding is a point in space where nearby means similar in meaning. That is the whole value and it is also the whole problem.
 
 To place "the refund window is fourteen days" near "how long do I have to get my money back", the model has to throw away the exact words. It keeps the gist. That is a feature when the user paraphrases, and a bug when the user types something whose gist is nothing.
 
@@ -115,7 +115,7 @@ for doc_id, score in rrf([vector_hits, keyword_hits])[:3]:
 # doc-2  0.0161   only one system found it
 ```
 
-What `k` does: a larger `k` flattens the curve, so the gap between rank 1 and rank 10 shrinks and agreement across lists matters more. 60 is the value from the original paper and it is a fine place to start. Tune it only after you have the measurement from lesson 10.
+What `k` does: a larger `k` flattens the curve, so the gap between rank 1 and rank 10 shrinks and agreement across lists matters more. 60 is the value from the original paper and it is a fine place to start. Tune it only after you have the measurement from *Measuring retrieval*.
 
 **Weighted score blending** is the alternative: normalise both score sets and compute `w * dense + (1 - w) * sparse`. It can beat RRF when you have an eval set to tune `w` on and your score distributions are stable. It also breaks quietly when the corpus grows and the distributions shift. Start with RRF; move to weights only if measurement says you gained something.
 
@@ -136,4 +136,4 @@ Hybrid is a clear win when your corpus is full of names that only appear in it: 
 
 It helps less when the corpus is prose about general topics and users ask in general language - marketing pages, essays, a book. There, the vocabulary overlaps between users and documents anyway, and dense retrieval already handles it.
 
-There is one honest caveat. Hybrid usually improves recall, and lesson 10 is where you check whether it improved yours. Do not take the improvement on faith because a blog post reported a number on a benchmark that is not your corpus.
+There is one honest caveat. Hybrid usually improves recall, and *Measuring retrieval* is where you check whether it improved yours. Do not take the improvement on faith because a blog post reported a number on a benchmark that is not your corpus.
