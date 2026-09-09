@@ -39,7 +39,7 @@ deeper:
   - { label: "Firecracker — microVMs", href: "https://firecracker-microvm.github.io/" }
 ---
 
-Lesson 8 handed you a clean way to expose tools and was explicit that it does nothing about what those tools can reach. This is that lesson. It is defensive throughout: the goal is not to make the agent incapable of a bad decision, which is not on offer, but to make a bad decision boring.
+*One protocol instead of forty integrations* handed you a clean way to expose tools and was explicit that it does nothing about what those tools can reach. This is that lesson. It is defensive throughout: the goal is not to make the agent incapable of a bad decision, which is not on offer, but to make a bad decision boring.
 
 One connection to make before anything else. The **Prompt Engineering** course has a lesson called *Prompt injection* about text arriving in your context window that the model treats as an instruction. **Injection is where the instruction comes from. This lesson is about what it can reach once it lands.** They are two halves of one problem and neither half is sufficient alone — a perfectly filtered input pipeline still ends at a tool with your credentials, and a perfectly sandboxed tool still gets called for the wrong reasons. Read both.
 
@@ -128,6 +128,6 @@ For the human gate itself, two rules decide whether it works:
 - **Show the resolved arguments, not the intent.** "Delete `/Users/you/Projects/client-work`" is a prompt someone stops at. "The agent would like to clean up some files" is a prompt everyone approves.
 - **Spend the interruptions.** Confirmation fatigue is real and it is the failure mode of over-gating: ask on every call and people learn to click yes without reading, which is worse than not asking. Gate the irreversible bucket and nothing else.
 
-Then log everything, whether or not it was gated. For each tool call: the name, the arguments as they were finally resolved, which agent run it belonged to, what came back, and what it changed. You want this before you need it, because the question you will eventually have to answer is "what did it touch" — and lesson 12 is about reading exactly that trace after a run goes wrong.
+Then log everything, whether or not it was gated. For each tool call: the name, the arguments as they were finally resolved, which agent run it belonged to, what came back, and what it changed. You want this before you need it, because the question you will eventually have to answer is "what did it touch" — and *Reading a trace after it breaks* is about reading exactly that trace after a run goes wrong.
 
 Last, run the injection lesson's three-ingredient test over the tools you just sorted into buckets. It takes a minute and it is the cheapest design review there is. That lesson tells you when the combination is dangerous; the table at the top of this one tells you which of the three you can most cheaply take away, and which tools you would have to re-shape to do it.

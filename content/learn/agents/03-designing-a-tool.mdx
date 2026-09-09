@@ -71,7 +71,7 @@ Then narrow the values inside the shape. A `string` is an invitation; an `enum` 
 
 Every row on the left becomes a normalising function in your code that grows a branch each time production surprises you. Readers of the **Prompt Engineering** course have met this argument in *Output contracts*; it applies with more force here, because in a loop a bad argument is not one failed response, it is a wasted step, a confusing result and a model that now has to recover from its own mistake with the mistake still sitting in its context.
 
-Which is the right place to mark the seam between the two courses. Prompt Engineering's *Validating what comes back* and *Retries and fallbacks* are about *one prompt call*: did this single response satisfy the contract, and is this single call worth sending again. This course treats the same words as properties of *a running loop* — a schema that has to hold on step nine as well as step one, and an error string that becomes the model's next input rather than your exception handler's problem. Read those two for the single call. Lesson 5 here is the loop version.
+Which is the right place to mark the seam between the two courses. Prompt Engineering's *Validating what comes back* and *Retries and fallbacks* are about *one prompt call*: did this single response satisfy the contract, and is this single call worth sending again. This course treats the same words as properties of *a running loop* — a schema that has to hold on step nine as well as step one, and an error string that becomes the model's next input rather than your exception handler's problem. Read those two for the single call. *When a tool call goes wrong*, here, is the loop version.
 
 > A schema constrains what the model can say. A description decides what it will try to say. You need both, and only one of them is enforced.
 
@@ -102,7 +102,7 @@ The instinct is one tool per endpoint. It is the wrong instinct, and it degrades
 
 The move is consolidation. Replace `get_customer_by_id`, `list_transactions` and `list_notes` with one `get_customer_context` that returns the three things together, because an agent that wants one of them almost always wants all three. Replace `create_pr`, `review_pr` and `merge_pr` with one `pull_request` tool taking an `action` enum. Anthropic's guidance is to build a few thoughtful tools for high-impact workflows rather than wrapping every endpoint, and OpenAI's is a soft ceiling of fewer than twenty functions available at the start of a turn. Both providers now offer a tool-search mechanism for genuinely large libraries — a way to load definitions on demand instead of paying for all of them on every step. Reach for that when you have hundreds, not as an excuse to keep thirty.
 
-Consolidation has a limit. Do not merge tools with different blast radii. A read and a write behind one `action` parameter means you cannot put a permission gate on the dangerous half without gating the safe one too, which is a problem lesson 9 will make you regret.
+Consolidation has a limit. Do not merge tools with different blast radii. A read and a write behind one `action` parameter means you cannot put a permission gate on the dangerous half without gating the safe one too, which is a problem *Letting an agent touch the real world* will make you regret.
 
 Last piece, and the one most often skipped: the result is not a return value, it is the model's next input. Return the fields needed for the next decision and drop the rest — semantic names and stable identifiers over internal UUIDs and MIME types. Paginate or truncate long results and say in the truncated result what to do to get more. And make errors instructive: `"No order found for A-91422. Order IDs look like ORD-00012345. Try search_orders with the customer email."` gives the model a next move. `Error 422` gives it nothing, so it guesses.
 
@@ -142,6 +142,6 @@ def run_refund(args: dict) -> str:
     return f"Refunded {refund.amount} to charge {refund.charge}. Refund ID {refund.id}."
 ```
 
-One more boundary. A tool result is text from outside your system, and text from outside your system can carry instructions. That is *Prompt injection* in the Prompt Engineering course, and lesson 9 here is about limiting what an injected instruction can reach. Neither is a schema problem, so neither belongs in this lesson — but write your tools knowing the results are untrusted.
+One more boundary. A tool result is text from outside your system, and text from outside your system can carry instructions. That is *Prompt injection* in the Prompt Engineering course, and *Letting an agent touch the real world*, here, is about limiting what an injected instruction can reach. Neither is a schema problem, so neither belongs in this lesson — but write your tools knowing the results are untrusted.
 
 That closes Part 1. You have a loop, a model that picks tools for reasons you can now see, and tools built so the first call is usually the right one. Part 2 is about what happens when the loop keeps going.

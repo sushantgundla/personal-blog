@@ -44,7 +44,7 @@ This is the one topic in the course where the honest summary is: nobody has solv
 
 The model sees one flat sequence of tokens and cannot tell your instructions from text that arrived in the data.
 
-That is the whole thing. Lesson 1 made the point in a friendly way — the model reads a pile of tokens and predicts what comes next. Here is the unfriendly consequence. The `system` parameter is not a protected channel. It has more influence, because models are trained to weight it heavily, but influence is not enforcement. Everything in the context window is competing on the same field.
+That is the whole thing. *Why prompts fail* made the point in a friendly way — the model reads a pile of tokens and predicts what comes next. Here is the unfriendly consequence. The `system` parameter is not a protected channel. It has more influence, because models are trained to weight it heavily, but influence is not enforcement. Everything in the context window is competing on the same field.
 
 So the rule to carry around is: **any text your application did not write is a possible instruction.** That includes a document a user uploaded, a page you fetched, the body of an email, a row from a database somebody else can write to, a code comment, a tool result, a filename, alt text on an image, and the transcript of a previous conversation.
 
@@ -84,7 +84,7 @@ The same goes for filtering for suspicious phrases. There are unlimited ways to 
 What holds up is architectural, and none of it is in the prompt.
 
 - **Delimit and label untrusted content.** Wrap it in unambiguous tags — `<untrusted_document>` — and say in the system prompt that anything inside is data, never instruction. This is worth doing even though it is not a guarantee: it removes the ambiguity about where your data ends, which is where the accidental cases come from.
-- **Treat model output as untrusted input.** The output has been influenced by the input, so it may be carrying the payload. If it feeds a shell command, a SQL query, a URL, an HTML page or another tool call, validate it there with the same suspicion you would apply to a form field. Lesson 7's boundary validation is a security control, not only a correctness one.
+- **Treat model output as untrusted input.** The output has been influenced by the input, so it may be carrying the payload. If it feeds a shell command, a SQL query, a URL, an HTML page or another tool call, validate it there with the same suspicion you would apply to a form field. *Validating what comes back*'s boundary validation is a security control, not only a correctness one.
 - **Do not give the model a tool that can do serious damage.** This is the strongest lever you have and it is the one people skip, because building the powerful tool feels like the product. If the agent does not need `delete_all`, do not write `delete_all`. Prefer narrow tools — `refund_order(order_id)` with a cap — over broad ones — `run_sql(query)`.
 - **Least privilege on every credential the agent can reach.** Read-only where read-only is enough. Scoped to one user's data, not the whole table. Short-lived tokens. Assume that anything the agent can technically do, an attacker's text can eventually ask it to do.
 - **Human confirmation on the irreversible step.** Sending money, sending mail outside the organisation, deleting, publishing. Show the actual action and the actual recipient, and require a click. Confirmation fatigue is real, so spend the interruptions on the few actions that deserve one.

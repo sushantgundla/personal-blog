@@ -57,7 +57,7 @@ Three things degrade these scores further:
 - **Saturation.** Once every strong model scores in the nineties on a test, the remaining differences are noise, and vendors move to a harder test. A one-point gap is not a decision.
 - **Self-reported harnesses.** Vendors report their own numbers, on their own prompts and settings. Reproducing them is genuinely hard.
 
-Use them anyway, for the one job they are good at: cutting a list of twelve candidate models down to three that are plausibly in the right class for your task, along with the constraints that lessons 05 and 06 covered — price, context window, rate limits, latency, region. Then close the tab.
+Use them anyway, for the one job they are good at: cutting a list of twelve candidate models down to three that are plausibly in the right class for your task, along with the constraints that *What you actually pay for* and *Rate limits and reliability* covered — price, context window, rate limits, latency, region. Then close the tab.
 
 ## 2. Twenty cases of your own decide it
 
@@ -73,7 +73,7 @@ The build is small on purpose:
 
 > Twenty real cases from your own traffic will tell you more in an afternoon than every leaderboard on the internet, and they keep being true after the leaderboards change.
 
-Keep the set. It is the artefact that makes lesson 10 possible: when a model is deprecated or a cheaper one appears, you already own the thing that answers whether to switch.
+Keep the set. It is the artefact that makes *Switching models safely* possible: when a model is deprecated or a cheaper one appears, you already own the thing that answers whether to switch.
 
 ## 3. Cost, latency, quality — and the routing pattern
 
@@ -94,7 +94,7 @@ Then a table by task type, as a starting point to test rather than a conclusion:
 | Summarising, rewriting, tone | A mid-tier model | Quality is visible to a human but the task is not hard |
 | Code generation and review | A strong model | Small models produce code that looks right and is not |
 | Multi-step agents and tool use | The strongest one with reliable tool calling | Errors compound across steps, so per-step accuracy dominates |
-| Long-document question answering | Judge by context window and recall over long inputs, not general score | The constraint here is lesson 03, not raw capability |
+| Long-document question answering | Judge by context window and recall over long inputs, not general score | The constraint here is *Context windows and their limits*, not raw capability |
 | Bulk offline processing | The cheapest model that passes, on a batch endpoint | Nobody is waiting, so cost is the only axis |
 
 **The routing pattern** is how you stop choosing. Send everything to a small cheap model first. Escalate to the big one only when a signal you can actually compute says the cheap answer is not good enough. Typical signals: the output failed a schema or business-rule validator, the model reported low confidence when asked for one, an input-length or complexity score crossed a threshold, or the request came from a tier that pays for the better answer.

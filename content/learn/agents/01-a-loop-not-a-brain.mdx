@@ -58,7 +58,7 @@ Here is the entire loop, with nothing hidden:
 import anthropic
 
 client = anthropic.Anthropic()
-TOOLS = [...]          # your tool definitions - lesson 3 is about writing these
+TOOLS = [...]          # your tool definitions - *Designing a tool a model can actually use* is about writing these
 messages = [{"role": "user", "content": "How many open bugs are assigned to me?"}]
 
 for step in range(10):                       # a step budget, not optimism
@@ -86,7 +86,7 @@ else:
     raise RuntimeError("step budget exhausted")  # the harness decided it is finished
 ```
 
-Read the two comments on the terminations. One is the model saying it is done. One is you saying it is done whether or not the model agrees. Both belong in every real loop, and lesson 4 is about the awkward fact that only the second one is dependable.
+Read the two comments on the terminations. One is the model saying it is done. One is you saying it is done whether or not the model agrees. Both belong in every real loop, and *Planning a run, and knowing when to stop* is about the awkward fact that only the second one is dependable.
 
 That is the whole machine. No planner object, no state machine, no memory system. Those are things people bolt on afterwards, and each of them is worth understanding on its own — which is what the rest of this course is.
 
@@ -128,7 +128,7 @@ Look at orchestrator–workers, because that is the one people mislabel. A model
 What you give up the moment the model picks the path:
 
 - **A known step count.** A run can take three steps or thirty on inputs that look the same to you.
-- **A cost ceiling.** Every step re-sends the whole growing transcript. Lesson 11 is entirely about the bill this produces.
+- **A cost ceiling.** Every step re-sends the whole growing transcript. *Why the bill exploded* is entirely about the bill this produces.
 - **A latency ceiling.** Each step is a full round trip, and they are serial by nature.
 - **A reproducible failure.** Two runs of the same input can fail in two different places.
 - **Easy tests.** You can assert on a branch. Asserting on a trajectory is a much harder problem.

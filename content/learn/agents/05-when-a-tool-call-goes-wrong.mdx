@@ -79,7 +79,7 @@ Note the third row. Those failures carry no information a language model can use
 
 **Try a different route.** This is the move the single-call lesson cannot make. `get_user(id)` returns 404, and `search_users(email)` might not. A step failed; the plan still has options. For the model to take one, your error has to say the door is closed - `No user with that id. Do not retry; try search_users.` - or it will knock again.
 
-**Stop and say so.** Partial result, the step that failed, the error. Lesson 4's `budget_exhausted` outcome and this one are siblings: both are honest endings, and both beat an invented answer.
+**Stop and say so.** Partial result, the step that failed, the error. *Planning a run, and knowing when to stop*'s `budget_exhausted` outcome and this one are siblings: both are honest endings, and both beat an invented answer.
 
 The fifth move is the one in the opener, and it is never correct: continue as though the call had worked.
 

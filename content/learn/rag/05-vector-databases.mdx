@@ -49,8 +49,8 @@ Strip the marketing off and a vector store is four things stacked together.
 | Layer | What it does | Could you build it? |
 |---|---|---|
 | Similarity scoring | Dot product or cosine over float arrays | Yes — one line of numpy |
-| An index | Finds near neighbours without scanning everything (lesson 5) | Not well, and not quickly |
-| Metadata and filtering | Store fields beside each vector, filter on them during search (lesson 6) | Yes, badly; the interaction with the index is the hard part |
+| An index | Finds near neighbours without scanning everything (*Indexes and the trade you are making*) | Not well, and not quickly |
+| Metadata and filtering | Store fields beside each vector, filter on them during search (*Metadata and filtering*) | Yes, badly; the interaction with the index is the hard part |
 | Database chores | Persistence, updates, deletes, backups, replication, access control | Yes, and you will regret it |
 
 Rows one and three you can do yourself. Rows two and four are the actual product. Notice that neither of them matters at small scale: with 10,000 vectors you do not need an index, and with a corpus you rebuild from source in five minutes you do not need durability.
@@ -63,7 +63,7 @@ That is why the honest advice is a ladder, not a recommendation.
 
 Stop being embarrassed about this rung. Most internal tools never need to leave it.
 
-**Rung two: pgvector.** If your application data is already in Postgres — and for most teams it is — this is the natural next step. `pgvector` adds a `vector` column type and the index types from lesson 5. Vectors live in the same database as your users, documents and permissions, which means filters and joins against your own tables are just SQL, and an update to a document and its vector happens in one transaction. Nothing to operate that you were not already operating.
+**Rung two: pgvector.** If your application data is already in Postgres — and for most teams it is — this is the natural next step. `pgvector` adds a `vector` column type and the index types from *Indexes and the trade you are making*. Vectors live in the same database as your users, documents and permissions, which means filters and joins against your own tables are just SQL, and an update to a document and its vector happens in one transaction. Nothing to operate that you were not already operating.
 
 ```sql
 -- pgvector: schema, index, and a filtered nearest-neighbour query
@@ -89,7 +89,7 @@ ORDER BY embedding <=> $1
 LIMIT 5;
 ```
 
-Note `vector(1024)` — the dimension is fixed in the schema. Changing embedding model means an `ALTER TABLE` and a full re-embed, which is exactly the migration lesson 2 warned about, now written down in DDL.
+Note `vector(1024)` — the dimension is fixed in the schema. Changing embedding model means an `ALTER TABLE` and a full re-embed, which is exactly the migration *Choosing an embedding model* warned about, now written down in DDL.
 
 **Rung three: a dedicated store.** Qdrant, Weaviate, Milvus and Chroma self-hosted; Pinecone and the managed offerings from the others if you would rather not run it. You climb here for reasons you can state: tens of millions of vectors, sustained write throughput, filtering behaviour Postgres struggles with, sharding, or a team that wants the ops handled.
 
@@ -112,8 +112,8 @@ The signals that you have genuinely outgrown a rung are specific, and none of th
 - Search latency at your real corpus size exceeds your budget, measured, not guessed.
 - Vectors no longer fit comfortably in the memory of the machine you have.
 - You need concurrent writes and deletes without rebuilding an index.
-- You need filtering that your current rung does badly — lesson 6 is where that gets specific.
+- You need filtering that your current rung does badly — *Metadata and filtering* is where that gets specific.
 
-Whatever rung you are on, keep the interface thin. One module exposing `search(query, k, filters) -> list[Chunk]` and one exposing `upsert(chunks)`. Everything else in your codebase talks to those two functions and knows nothing about the store behind them. Then climbing a rung is one file, an afternoon, and a re-index — instead of a rewrite. This is the same discipline as putting the embedding call behind one function in lesson 2, and it pays off for the same reason: the parts of a retrieval system that change are the parts you should have wrapped.
+Whatever rung you are on, keep the interface thin. One module exposing `search(query, k, filters) -> list[Chunk]` and one exposing `upsert(chunks)`. Everything else in your codebase talks to those two functions and knows nothing about the store behind them. Then climbing a rung is one file, an afternoon, and a re-index — instead of a rewrite. This is the same discipline as putting the embedding call behind one function in *Choosing an embedding model*, and it pays off for the same reason: the parts of a retrieval system that change are the parts you should have wrapped.
 
 > Adding a vector database is an optimisation. Do it when a measurement tells you to, and pick the rung that matches your corpus rather than the one that matches your ambitions.

@@ -1,0 +1,184 @@
+---
+title: "Execution as Verification"
+subtitle: "A generated query can be perfectly grammatical and completely wrong. Only running it tells you which."
+part: 2
+minutes: 7
+why: "A model was asked how many orders shipped last week. It wrote a query, joined orders to shipments, and returned 3,842. The real number was 961. Nothing errored. The query was valid SQL, it ran in nine milliseconds, and it went straight into a report that reached a VP before anyone noticed the join had fanned out - one order counted four times because it had four shipment rows. This is the failure mode structured data adds that RAG never had: the wrong answer looks exactly like the right one, because both of them run. This lesson is about the checks that sit between generation and trust, and why 'it didn't error' is the weakest one you have."
+wins:
+  - "Treat 'it ran without an error' as the weakest possible check, not the finish line."
+  - "Catch schema and syntax mistakes before they touch real data, with a dry run or a parse-only pass."
+  - "Watch for row-count and shape drift - the classic sign of a wrong join, not a wrong keyword."
+  - "Turn a database error into a repair hint the model can act on, not a message a user has to decode."
+  - "Cap retries and fall back to a human or a fixed query when the second attempt still fails."
+quiz:
+  - q: "A generated SQL query runs with no error and returns a number. What does that actually tell you?"
+    options: ["The query is syntactically valid and executed - nothing about whether the logic is right", "The query is guaranteed to answer the right question", "The query used the correct join for the question"]
+    answer: 0
+    explain: "Execution success only means the database accepted the query. It says nothing about whether the joins, filters, or grouping match what was actually asked."
+  - q: "Why does a one-to-many join silently inflate a count?"
+    options: ["The database rounds counts up when tables are large", "Each row on the 'one' side is counted once per matching row on the 'many' side, so the total multiplies", "SQL caches the previous query's result by mistake"]
+    answer: 1
+    explain: "Join one order to four shipment rows and you get four output rows for that order. Count them and you have quadrupled that order, with no error anywhere."
+  - q: "What does a dry run or an EXPLAIN pass check, without touching real data?"
+    options: ["Whether the business logic is correct", "Whether the tables and columns referenced exist and the query parses", "Whether the answer will make sense to a business user"]
+    answer: 1
+    explain: "A dry run validates structure - real tables, real columns, valid syntax - before a single row is read. It cannot judge whether the logic answers the actual question."
+  - q: "Why send the model a repair hint instead of the raw database error?"
+    options: ["Raw errors must be hidden for legal reasons", "A specific hint like 'column revenue does not exist on orders; did you mean orders.total?' gives the model something to act on", "Raw errors are always too long to fit in context"]
+    answer: 1
+    explain: "A generic driver error rarely tells the model what to fix. A repair hint names the exact problem, so the next attempt is a correction, not a second guess."
+  - q: "A generated query fails twice after two repair attempts. What's the honest move?"
+    options: ["Try a third time with the same prompt", "Stop, and fall back to a human-reviewed query or a fixed, pre-approved one", "Lower the temperature and hope"]
+    answer: 1
+    explain: "Two failed repairs is a signal the model can't solve this one, not a coin to flip again. Cap retries and hand off."
+deeper:
+  - { label: "colrows - Text-to-SQL Accuracy in Enterprise Environments", href: "https://colrows.com/blogs/text-to-sql-accuracy-cliff/" }
+  - { label: "dpriver - SQL Semantic Validation for LLM-Generated Queries", href: "https://www.dpriver.com/blog/sql-semantic-validation-for-llm-generated-queries/" }
+  - { label: "sqlglot - a no-dependency SQL parser and validator", href: "https://github.com/tobymao/sqlglot" }
+  - { label: "PostgreSQL - EXPLAIN", href: "https://www.postgresql.org/docs/current/sql-explain.html" }
+---
+
+## 1. Three different questions, and only one gets asked
+
+"Did the query run?" is the question everyone checks, because the database
+answers it for free - an error or a result set, nothing in between. But it
+is the least useful of three questions you actually need answered before you
+trust an LLM-generated query, and the other two require you to go looking.
+
+| Question | Who answers it | What it actually catches |
+|---|---|---|
+| Did it run? | The database, automatically | Syntax errors, missing tables, permission failures |
+| Did it run *correctly*? | Nobody, unless you check | Wrong joins, wrong filters, wrong grouping |
+| Does the answer make sense? | A human who knows the domain | Numbers that are structurally impossible or absurd |
+
+The shipping bug in the opener passed the first check instantly and never
+reached the second or third. That is the shape of nearly every text-to-SQL
+failure that does real damage: not a crash, a *fluent* wrong answer. A
+crash gets noticed the same afternoon. A number that is plausible, round,
+and wrong gets noticed - if it ever is - after it has already been quoted
+in three other places.
+
+> A query that runs is not a query that's right. Execution failure is the
+> cheap bug to catch. Execution success on the wrong logic is the
+> expensive one.
+
+The rest of this lesson is about closing the gap between "did it run" and
+"did it run correctly," without requiring a human to read every query the
+model ever writes.
+
+## 2. Catching it before it touches real data
+
+The cheapest check costs nothing in latency or risk, because it never
+executes against real rows at all. A **dry run** - PostgreSQL's `EXPLAIN`
+without `ANALYZE`, or an equivalent in your database - asks the query
+planner to build an execution plan and hands it back without reading a
+single row. It confirms every table and column named in the query actually
+exists, that the syntax parses, and roughly what the plan will cost, all
+before anything touches production.
+
+You can get most of the same validation even earlier, entirely in Python,
+by parsing the query and checking its structure against your schema before
+it ever reaches the database:
+
+```python
+import sqlglot
+from sqlglot import exp
+
+schema_columns = {
+    "orders": {"id", "customer_id", "total", "created_at"},
+    "shipments": {"id", "order_id", "shipped_at"},
+}
+
+def validate(sql: str) -> list[str]:
+    problems = []
+    tree = sqlglot.parse_one(sql, read="postgres")
+
+    for column in tree.find_all(exp.Column):
+        table = column.table
+        name = column.name
+        if table and table in schema_columns:
+            if name not in schema_columns[table]:
+                problems.append(f"{table}.{name} does not exist")
+
+    return problems
+
+bad_query = "SELECT o.revenue FROM orders o JOIN shipments s ON o.id = s.order_id"
+print(validate(bad_query))
+# ["o.revenue does not exist"]
+```
+
+This catches the hallucinated-column class of failure - a real and common
+one - before a single connection to the real database opens. It does not
+catch the fan-out bug from the opener, because `o.id = s.order_id` is a
+perfectly valid join; the mistake is in the shape of the result, not the
+syntax of the query. For that you need a different check: run the query
+against a read replica or a transaction you roll back, and compare the
+*shape* of the result against expectations - row count within a plausible
+range, no unexpected duplicate keys in what should be a one-row-per-entity
+result. A query that returns 3,842 rows for a question about "orders last
+week" when your order volume runs a few hundred a week is a shape problem,
+not a syntax problem, and only running it - carefully, against a
+sandbox or inside a rolled-back transaction - surfaces that.
+
+| Check | When it runs | Catches | Misses |
+|---|---|---|---|
+| Static parse (sqlglot) | Before any database call | Hallucinated tables/columns, syntax errors | Wrong joins, wrong logic |
+| Dry run (`EXPLAIN`) | Before touching real rows | Everything static parsing catches, plus planner-level errors | Same as above |
+| Sandboxed execution | Against a replica or rolled-back transaction | Row-count and shape anomalies, fan-out joins | Answers that are wrong but plausible-shaped |
+
+None of these three rows is sufficient alone, and no fourth row makes the
+problem disappear - a query can pass every mechanical check and still
+answer a subtly different question than the one asked. That last gap is
+what a human spot-check and a held-out set of known-answer queries are for,
+not something a validation pipeline closes by itself.
+
+It helps to say plainly why this failure shape is new to this course and
+not just RAG's problem again. RAG's failure mode is *retrieval* - the right
+chunk was never fetched, so the model answers from what it has, which is
+sometimes nothing at all. A missing chunk tends to produce a vague or
+hedged answer, which is at least a visible symptom. A wrong join produces a
+confident, specific, wrong number, with no hedge anywhere in the output,
+because the model has no way to know its own SQL fanned out - from where it
+sits, the query ran and a result came back. The failure is invisible at
+exactly the layer that would normally catch it.
+
+## 3. Turning a failure into a second try worth having
+
+When a check does fail, what you do with the failure matters as much as
+catching it. A raw database error - `column "revenue" does not exist` - is
+written for a human debugging by hand, not for a model trying again. Fed
+back verbatim, it often produces a second guess as wrong as the first,
+because the model has to work out what you meant on top of what it got
+wrong.
+
+A **repair hint** does that translation once, in code, so the model doesn't
+have to guess:
+
+| Raw error | Repair hint fed back to the model |
+|---|---|
+| `column "revenue" does not exist` | "Column `revenue` does not exist on `orders`. Available columns: `id`, `customer_id`, `total`, `created_at`. Did you mean `total`?" |
+| `relation "shipment" does not exist` | "Table `shipment` does not exist. Did you mean `shipments` (plural)?" |
+| Row count 3,842 vs. expected range 200-500 | "Result has far more rows than expected for this question - check whether a join is producing duplicate rows per entity." |
+
+This is the same pattern the reranking lesson used for retrieval: cheap
+stage first, targeted correction second. Here the cheap stage is the
+generated query and the correction is a repair hint, not a second search.
+It gets you one, maybe two, genuinely better attempts - not an unlimited
+number. Cap retries at two or three and route to a fallback after that: a
+fixed, pre-approved query if one exists for the intent, or a human, never a
+fourth silent guess. A pipeline that retries forever on a hard question is
+indistinguishable, from the outside, from one that eventually produces a
+confident, fluent, wrong answer - which is the exact failure this lesson
+opened with.
+
+Notice what the three layers add up to, in order: static parsing rejects
+the query that never should have been sent, a dry run rejects the query
+that would have failed against the real schema, sandboxed execution flags
+the query that runs but looks structurally wrong, and a repair hint gives
+the model one real chance to fix the specific thing that was wrong rather
+than guess again from scratch. Skip any one layer and the failure it would
+have caught doesn't disappear - it just moves downstream, to whichever
+layer is next, or past all of them into a report someone else has to
+un-trust after the fact. The fan-out query from the opener would have been
+caught at the third layer, if anyone had built one. It wasn't, so it
+reached a VP instead.

@@ -96,7 +96,7 @@ Answer 3 is the one you want. Every item it lists is a decision you left to a co
 
 **Step two: shrink the input.** If the restatement is right but the answer is still wrong, cut the context down to one small, clean example and re-run. If it now works, the problem was never capability. Your instruction was buried, and the fix is placement: document first and task last, clear delimiters around the data, and less pasted context rather than more.
 
-**Step three: only now, believe it is hard.** A task that fails on a tiny clean input, with an accurate restatement, and fails the same way on every attempt, is a task the model cannot do as posed. That is a real category — exact arithmetic on long numbers, anything needing information the model does not have, anything with five interacting sub-tasks. The fix is not a better sentence. It is decomposition (lesson 4), a tool, or code.
+**Step three: only now, believe it is hard.** A task that fails on a tiny clean input, with an accurate restatement, and fails the same way on every attempt, is a task the model cannot do as posed. That is a real category — exact arithmetic on long numbers, anything needing information the model does not have, anything with five interacting sub-tasks. The fix is not a better sentence. It is decomposition (*Decomposition*), a tool, or code.
 
 | You observed | Test | If the test passes |
 |---|---|---|
@@ -126,6 +126,6 @@ Two honest notes, because this area is thick with folklore.
 
 **Role prompting is a habit, not a proven accuracy lever.** "You are an expert X" reliably changes vocabulary, register and how technical the answer gets, and that is genuinely useful when you care how it sounds. Claims that it makes the model *right* more often are weak and depend heavily on the task. Use it for tone. Do not use it instead of specifying the output.
 
-**"Take your time" is not the same as chain-of-thought.** Asking for step-by-step reasoning does work, for a mechanical reason covered in lesson 5 — the model gets more tokens to compute in. "Take your time" produces no extra tokens, so it produces no extra computation. The phrasing is similar; the effect is not.
+**"Take your time" is not the same as chain-of-thought.** Asking for step-by-step reasoning does work, for a mechanical reason covered in *Thinking out loud* — the model gets more tokens to compute in. "Take your time" produces no extra tokens, so it produces no extra computation. The phrasing is similar; the effect is not.
 
 The next lesson goes at placement — which half of the request your instruction should live in, and why that changes how much weight it carries.

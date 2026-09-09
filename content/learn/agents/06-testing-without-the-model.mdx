@@ -1,0 +1,118 @@
+---
+title: "Testing an agent without the model in the loop"
+subtitle: "The model's wording never repeats exactly twice. The loop around it is ordinary code, and ordinary code can be pinned down and checked."
+part: 2
+minutes: 7
+why: "You fixed the bug: the loop retried a failed tool call forever instead of giving up after three tries, the way *When a tool call goes wrong* said it should. You wanted a test for it, so you wrote one that called the real model with the real failing tool and asserted on what came back. It passed. It passed the next five times you ran it, too. The sixth time it failed, on a run that used different words for the exact same decision, and you could not tell whether a red build meant you had broken something or the model had just phrased itself differently that day. Nothing about the fix was wrong. The mistake was testing the one part of the loop nobody can pin down, instead of the part your code actually owns."
+wins:
+  - "Separate what the model decides from what your code decides, and test only the second one without a live call."
+  - "Record a real run once, replay it as a fixture, and assert on the tool-call sequence, not the exact wording."
+  - "Fail a replay test loudly when it hits a call nobody recorded, instead of silently going live."
+  - "Turn every field bug into a permanent recorded fixture before you close the ticket."
+  - "Save live-model runs for the few things a fixture cannot check, and run those on a schedule, not on every commit."
+quiz:
+  - q: "Why does a test that calls the real model on every run make a bad CI check?"
+    options: ["It is slower than mocking, and nothing else about it is a problem", "The model's exact wording varies run to run, so the same code and the same input can pass one run and fail the next", "The API blocks automated calls from a test runner"]
+    answer: 1
+    explain: "A test that can flip with no code change tells you nothing about whether you broke anything - it tells you the model phrased itself differently today."
+  - q: "In a recorded replay test, what should the assertion check?"
+    options: ["The exact text of the model's final answer, word for word", "The sequence of tool calls it made, their names and their arguments", "The number of tokens the response used"]
+    answer: 1
+    explain: "The tool-call sequence is what your loop actually depends on. The prose around it is free to vary without the test caring."
+  - q: "A replay test hits a tool call that was never recorded in its fixture. What should happen?"
+    options: ["Fall through to a live call so the test still completes", "Fail immediately and name the unrecorded call", "Skip that step and keep going with the rest of the fixture"]
+    answer: 1
+    explain: "Falling through to a live call hides the exact thing you were testing for, and quietly turns a five-second test into a slow, billed one."
+  - q: "You just fixed a bug where the loop retried a failed call forever. What is the most valuable thing to add before closing the ticket?"
+    options: ["A code comment explaining the fix", "A recorded fixture of exactly this failure, replayed as a permanent test", "A line in the changelog"]
+    answer: 1
+    explain: "A comment can drift out of date with the code around it. A fixture is the bug itself, preserved, and it fails again the moment anyone reintroduces it."
+  - q: "Where does a genuinely fuzzy check, like 'is this summary good', belong?"
+    options: ["In the same mocked unit test as the tool-call logic, so it runs on every commit", "In a probabilistic check run several times with a pass threshold, kept separate from the deterministic suite", "Nowhere - fuzzy output cannot be tested"]
+    answer: 1
+    explain: "Quality judgment is a different kind of test with a different failure mode. Mixing it into a deterministic suite makes an unrelated flake block a build that would otherwise pass."
+deeper:
+  - { label: "TianPan - Deterministic replay for debugging non-deterministic agents", href: "https://tianpan.co/blog/2026-04-12-deterministic-replay-debugging-non-deterministic-ai-agents" }
+  - { label: "Angie Jones - A test pyramid for AI agents", href: "https://angiejones.tech/test-pyramid-for-ai-agents/" }
+  - { label: "Confident AI - Testing tool calling, regressions and failure handling", href: "https://www.confident-ai.com/knowledge-base/guides/ai-agent-testing" }
+  - { label: "vcrpy - recording and replaying HTTP interactions", href: "https://vcrpy.readthedocs.io/en/latest/usage.html" }
+  - { label: "Python - unittest.mock", href: "https://docs.python.org/3/library/unittest.mock.html" }
+---
+
+Every other lesson in this course assumes you can run the loop and watch what happens. That gets expensive and slow the moment you want to run it fifty times a day, on every commit, and it gets actively misleading the moment you try to use it as a pass/fail gate. This lesson is about the part of testing an agent that people skip because the model in the middle looks untestable - and about the much larger part that was never untestable in the first place.
+
+## 1. What your code owns, and what the model owns
+
+Split the loop from *A loop, not a brain* into two columns before you write a single test.
+
+| The model owns | Your code owns |
+|---|---|
+| The exact wording of a response | Whether a `tool_use` block gets executed at all |
+| Which of two equally valid tools it reaches for | The schema check on the arguments it sends |
+| How it phrases an error back to a user | Whether a failed call gets retried, rewritten, or given up on |
+| Whether it decides it is "done" this token or the next | Whether the harness accepts that or overrides it |
+| The gist of a summary | The step budget, the token budget, the stuck-loop detector |
+
+The right column is *Designing a tool a model can actually use*'s schemas, *Planning a run, and knowing when to stop*'s budgets and `finish` tool, and *When a tool call goes wrong*'s retry classification, all over again - and every one of them is a plain function or a plain branch. None of it needs a model to run. A budget check is `if step > MAX_STEPS`. A repeat-call detector is a tuple comparison. The retry ladder from *When a tool call goes wrong* is a dictionary lookup on an exception type. You can hit every line of that logic with an ordinary unit test, feeding it a fake `tool_use` block and a fake error, and never once send a request anywhere.
+
+The mistake in the opener was treating the whole loop as one untestable object because one piece of it - the left column - genuinely is. It is not. The four moving parts from *A loop, not a brain* are a model, tool definitions, an executor, and a loop, and only the first one is a black box. The other three are code you wrote, and code you wrote is exactly what a test suite is for.
+
+> You cannot make the model's output repeat exactly. You can make everything your code does with that output repeat exactly, and that is what you test.
+
+## 2. Freeze a real run, then replay it
+
+Unit tests on the harness logic catch most of it, but they need a `tool_use` block to feed in, and writing those by hand drifts from what a real model actually sends. The fix used across agent testing write-ups in 2026 is the same one HTTP testing has used for years under the name "cassette recording": call the real model once, save exactly what came back, and replay that recording instead of the network call on every later run.
+
+Record a handful of real runs - the happy path, the tool that returns empty, the one that trips your retry ladder - as fixture files: the request that went out, and the full response, tool calls included, that came back. In a test, swap your live client for a stub that reads from the fixture instead of the network. Your executor, your budget check, and your retry logic run exactly as they would in production, against a response that is now frozen forever.
+
+What you assert on matters as much as the recording itself. Three levels, in order of how much they tell you:
+
+| Assertion level | What it checks | Catches |
+|---|---|---|
+| Tool selection | The trace contains a call to the right tool for this input | Wrong tool, or no call when one was needed |
+| Argument validity | The arguments match the schema, and their values trace back to the input rather than being invented | A malformed call, or a hallucinated field |
+| Trajectory | The ordered sequence of calls reaches the goal without a detour or a repeat | The stuck-loop and redundant-call failures from *Planning a run, and knowing when to stop* and *Why the bill exploded* |
+
+None of those is "does the final sentence match this string." That assertion breaks on a harmless rewording and misses a genuine bug that happens to produce similar-looking prose, which is the worst combination a test can have.
+
+```python
+from unittest.mock import MagicMock
+
+class RecordedClient:
+    """Replays a fixture instead of calling the API. Fails loudly on
+    anything the fixture never saw - it should never fall through to
+    a live call, which would hide the bug and bill you for it."""
+
+    def __init__(self, fixture: list[dict]):
+        self._responses = iter(fixture)
+
+    def messages_create(self, **kwargs) -> MagicMock:
+        try:
+            recorded = next(self._responses)
+        except StopIteration:
+            raise AssertionError("loop asked for a step the fixture never recorded")
+        resp = MagicMock()
+        resp.stop_reason = recorded["stop_reason"]
+        resp.content = recorded["content"]      # includes any tool_use blocks
+        return resp
+
+
+def test_retries_then_gives_up(agent_fixture):
+    client = RecordedClient(agent_fixture["invalid_args_three_times"])
+    result = run_loop(client, tools=FIXTURE_TOOLS, task="refund order A-91422")
+
+    calls = [c for c in result["trace"] if c["kind"] == "tool"]
+    assert [c["name"] for c in calls] == ["refund_charge"] * 3   # trajectory
+    assert result["outcome"] == "stopped_talking"                # gave up, did not loop forever
+    assert "invalid arguments" in result["trace"][-1]["output"]  # the error the model actually saw
+```
+
+`RecordedClient` is the whole trick. It has the same shape your real client call has, so `run_loop` cannot tell the difference, and it raises the moment the loop does something the fixture never anticipated - which is usually the first sign the fix you shipped changed behaviour nobody meant to change.
+
+## 3. What a fixture can never tell you
+
+A recorded fixture answers one question well: given this exact input, does the harness still behave the way it did when you recorded it. It cannot tell you whether the harness behaves correctly on an input nobody has recorded yet, and it will not warn you when it goes stale - a tool schema change that makes last month's recorded arguments invalid will pass every replay test right up until a real run hits it, because the fixture never re-validates itself against the current schema. Re-run and re-record fixtures whenever the tools they exercise change, the same way you would re-run a snapshot test after a deliberate UI change.
+
+Two things sit outside what replay testing can do, and both belong somewhere else rather than being bolted onto this technique. Judging whether an answer is actually *good* - not just structurally right, but a good summary, a well-reasoned recommendation - is a quality question, not a determinism question, and it wants the judging and scoring machinery an evaluation course builds, not a mocked unit test. And a model that must genuinely choose between two equally valid tools on a given input is not a bug to fix; running that case several times and asserting a pass rate rather than a single verdict is the honest way to test it, and belongs in a separate, clearly-labelled probabilistic suite so one flaky case never blocks a build the deterministic suite would otherwise pass.
+
+The practice worth keeping from all of this is small and pays for itself immediately: every time a bug like the opener's shows up in production, the fix is not finished until the exact failing exchange is captured as a fixture and wired into the deterministic suite. That fixture is not a test you wrote to feel thorough. It is the bug, preserved exactly as it happened, and it will fail again the day someone reintroduces it - which is a far cheaper way to find out than a user does.

@@ -67,7 +67,7 @@ Set the eval up so it runs on retrieval alone - queries in, ranked chunk ids out
 
 **recall@k** is the share of queries whose correct chunk appears anywhere in the top k. It matters most because it is a hard ceiling: if the answer is not in the k chunks you paste into the prompt, the model cannot produce it. Recall@5 of 0.6 means four questions in ten are unanswerable before the model is called. No prompt fixes those.
 
-**MRR** - mean reciprocal rank - averages `1 / rank of the first relevant chunk` across queries. First place scores 1.0, third place scores 0.33, missing scores 0. It tells you about ordering, which is the thing reranking from lesson 08 is supposed to improve. If recall@50 is high but MRR is low, you have a ranking problem and a reranker is the fix. If recall@50 is low, ranking is not your problem.
+**MRR** - mean reciprocal rank - averages `1 / rank of the first relevant chunk` across queries. First place scores 1.0, third place scores 0.33, missing scores 0. It tells you about ordering, which is the thing reranking from *Reranking* is supposed to improve. If recall@50 is high but MRR is low, you have a ranking problem and a reranker is the fix. If recall@50 is low, ranking is not your problem.
 
 **nDCG@k** - normalised discounted cumulative gain - is for when relevance is graded rather than binary. Some chunks fully answer the question, some give useful context, some are noise. nDCG assigns each a gain, discounts it by how far down it appeared, and divides by the best possible ordering so the number lands between 0 and 1. It is the standard metric in the IR literature and in benchmarks like BEIR, so you will meet it. It also needs graded labels, which is more annotation work. Binary labels and recall@k plus MRR will serve most teams fine.
 
@@ -116,7 +116,7 @@ Measure at the k you actually send to the model, and at the k your first stage r
 | recall@n where n is your rerank candidate count | Whether the reranker has the answer to find |
 | recall@1 | How often you nail it outright - a useful vanity check, not a target |
 
-The gap between those first two numbers is your reranker's opportunity. If recall@50 is 0.94 and recall@5 is 0.71, there are twenty-three questions in a hundred where the answer is in the candidate pile and not in the prompt. That gap is exactly what lesson 08 is for.
+The gap between those first two numbers is your reranker's opportunity. If recall@50 is 0.94 and recall@5 is 0.71, there are twenty-three questions in a hundred where the answer is in the candidate pile and not in the prompt. That gap is exactly what *Reranking* is for.
 
 ## 3. Test the halves separately
 

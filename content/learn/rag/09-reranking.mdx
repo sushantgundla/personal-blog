@@ -3,7 +3,7 @@ title: "Reranking"
 subtitle: "Retrieve fifty candidates cheaply, then have a slower model read query and passage together and pick the best five."
 part: 3
 minutes: 7
-why: "You printed the chunks your search returned, the way lesson 05 told you to, and the answer was in there - at position eleven. You only sent five to the model. So retrieval technically worked and your app still got it wrong. This is the single most common shape of RAG failure, and it has a fix that takes an afternoon: retrieve wide, then rerank narrow. This lesson explains why a reranker sees something your embeddings structurally cannot, what it costs in latency and money, and how to pick the candidate count."
+why: "You printed the chunks your search returned, the way *Vector databases* told you to, and the answer was in there - at position eleven. You only sent five to the model. So retrieval technically worked and your app still got it wrong. This is the single most common shape of RAG failure, and it has a fix that takes an afternoon: retrieve wide, then rerank narrow. This lesson explains why a reranker sees something your embeddings structurally cannot, what it costs in latency and money, and how to pick the candidate count."
 wins:
   - "Split retrieval into a wide cheap stage and a narrow accurate stage."
   - "Explain a cross-encoder as one that reads query and passage together, so they can interact."
@@ -51,7 +51,7 @@ Every serious search system is built in two stages, and they have opposite jobs.
 | Method | Vector search, BM25, hybrid | Cross-encoder or an LLM |
 | Failure you accept | Bad ordering | Cannot recover what stage one missed |
 
-Read the last row twice. The reranker can only reorder what it is given. If the answer chunk was not in the fifty candidates, reranking does nothing at all. Stage one is still the one that decides your ceiling - which is why lesson 07's hybrid search comes before this lesson, not after.
+Read the last row twice. The reranker can only reorder what it is given. If the answer chunk was not in the fifty candidates, reranking does nothing at all. Stage one is still the one that decides your ceiling - which is why *Hybrid search* comes before this lesson, not after.
 
 > Retrieval decides what is possible. Reranking decides what is on top. You need both, in that order.
 
@@ -123,13 +123,13 @@ Call it `n` for candidates in, `k` for chunks out. `k` is set by your prompt bud
 | 100 to 200 | Diminishing returns for most corpora, noticeably slower |
 | 1000+ | Almost never worth it outside offline batch work |
 
-The right way to pick it is measurement, not a rule. Compute recall@n for your first stage across your eval set from lesson 10. The point where recall@n stops climbing is the point where extra candidates only add cost - if recall@50 is 0.94 and recall@200 is 0.95, you are paying four times as much for one extra question in a hundred.
+The right way to pick it is measurement, not a rule. Compute recall@n for your first stage across your eval set from *Measuring retrieval*. The point where recall@n stops climbing is the point where extra candidates only add cost - if recall@50 is 0.94 and recall@200 is 0.95, you are paying four times as much for one extra question in a hundred.
 
 ### Where it pays most
 
 - **Long or verbose documents.** Chunk embeddings average away detail, so many chunks look alike. The reranker reads the actual text.
 - **Ambiguous queries.** Short questions produce weak, undifferentiated similarity signals.
 - **Near-duplicate corpora.** Twelve versions of the same policy, or the same answer restated across many support articles. First-stage scores land within a hair of each other, so the ordering is close to arbitrary. This is where reranking helps most.
-- **After hybrid search.** Fusion from lesson 07 gives you a merged candidate list with good recall and rough ordering. The reranker is exactly the tool for fixing rough ordering.
+- **After hybrid search.** Fusion from *Hybrid search* gives you a merged candidate list with good recall and rough ordering. The reranker is exactly the tool for fixing rough ordering.
 
 Where it helps least: small corpora of short, clearly distinct documents, and single-identifier lookups where BM25 already put the right answer first.
