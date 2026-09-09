@@ -1,0 +1,912 @@
+/* ============================================================
+   THE PLATE — v1, the anatomy
+
+   One stylesheet for one sheet. page.tsx and both drawing
+   components import this file, because the whole interaction is
+   a :has() rule that has to name a class on the page shell and a
+   class inside the SVG in the same selector — split across two
+   modules, those would be two different hashed names.
+
+   The object: a draughting plate. A cold graphite sheet dropped
+   on the section's warm hall ground, double-framed, ruled into a
+   title strip, a drawing field, a legend and a notes band. It
+   inherits --ln-gutter, --ln-ease and the five course inks from
+   learn.css; everything else is its own.
+
+   The one idea in the colour: the drawing rests in graphite and
+   has no colour at all. Colour is the answer to a question —
+   hover or focus one of the five stages and that stage alone
+   takes its course's ink while the rest of the machine steps
+   back. So the ink means "this part is that course", which is
+   the whole argument of the page, instead of meaning nothing.
+
+   Colour never carries it alone. Every stage also carries a
+   number on the drawing and the same number in the legend, and
+   the legend is fully readable with no interaction at all.
+   ============================================================ */
+
+.sheetWrap {
+  width: 100%;
+  padding-inline: var(--ln-gutter);
+}
+
+/* ============================================================
+   1. The sheet
+   ============================================================ */
+
+.plate {
+  /* --- Surfaces ---------------------------------------------
+     Cold, because the hall is warm. --ln-ground is #12100E, a
+     warm near-black; the sheet is a blue-grey graphite, so it
+     reads as a separate material laid on the page rather than
+     as a darker patch of it. */
+  --pl-sheet: #0d1013;
+  --pl-frame: #1b2126;
+  --pl-rule: #232a30;
+  --pl-grid: rgba(216, 221, 225, 0.035);
+
+  /* --- Lines and lettering ----------------------------------
+     --pl-line 13.9:1 on the sheet, --pl-quiet 6.2:1. */
+  --pl-line: #d8dde1;
+  --pl-quiet: #8b959d;
+  /* The struck-out candidates. Weaker than a kept one by a long way, but it
+     carries real meaning, so it is not down at --pl-faint's 2.2:1. 4.3:1
+     dark, 3.2:1 light, both above the 3:1 a graphic object needs. */
+  --pl-weak: #6f7a82;
+  --pl-faint: #4e585f;
+
+  /* The live request, and the sheet's one warm value.
+     It is fair to ask what question it answers, since the rule
+     here is that colour answers a question and nothing else. It
+     answers "which of these lines is the request, right now" —
+     the only question the drawing cannot answer standing still.
+     It is deliberately NOT on the ink ramp: it is --primary from
+     app/globals.css, the site's own accent, moved off the amber
+     of --ln-agents so a travelling spark can never be mistaken
+     for the tool loop lighting up. Light takes a darker shade of
+     the same hue to clear 4:1 on the whiteprint. */
+  --pl-spark: #ff6b2b;
+
+  /* Set per stage group. --pl-stroke is graphite at rest and the
+     course's own ink while that stage is held; --pl-anno is the
+     annotation, which only steps up in weight. */
+  --pl-stroke: var(--pl-line);
+  --pl-anno: var(--pl-quiet);
+
+  /* Nothing crosses a drawing border. The content is inset by exactly the
+     amount the inner frame is, so every rule in the sheet terminates on that
+     frame instead of running through it. */
+  --pl-inset: clamp(10px, 1vw, 18px);
+
+  position: relative;
+  padding: var(--pl-inset);
+  border: 1px solid var(--pl-frame);
+  background: var(--pl-sheet);
+  color: var(--pl-line);
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+}
+
+/* The inner frame. A draughting sheet is bordered twice: the cut
+   edge and the drawing border inside it. */
+.plate::before {
+  content: '';
+  position: absolute;
+  inset: var(--pl-inset);
+  border: 1px solid var(--pl-rule);
+  pointer-events: none;
+}
+
+/* The printed sheet. next-themes puts .light on <html>, so this
+   swaps values only and no rule below knows which mode it is
+   in. Light is a whiteprint, not cream paper: the same cold
+   drawing, positive instead of negative.
+   --pl-line 14.7:1 on the sheet, --pl-quiet 5.9:1. */
+:global(.light) .plate {
+  --pl-sheet: #e6eaec;
+  --pl-frame: #c3ccd1;
+  --pl-rule: #c9d2d6;
+  --pl-grid: rgba(23, 26, 29, 0.05);
+  --pl-line: #171a1d;
+  --pl-quiet: #4f585f;
+  --pl-weak: #79848b;
+  --pl-faint: #97a1a8;
+  --pl-spark: #c2410c;
+}
+
+/* ============================================================
+   2. The title strip
+   The sheet's header row, ruled into cells: what the drawing is
+   called, what figure it is, how to read its three line weights,
+   and what the catalogue behind it adds up to.
+   ============================================================ */
+
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-bottom: 1px solid var(--pl-rule);
+}
+
+.stripCell {
+  padding: clamp(1rem, 2.2vw, 1.6rem) clamp(1rem, 2.2vw, 1.75rem);
+}
+
+.stripCell + .stripCell {
+  border-top: 1px solid var(--pl-rule);
+}
+
+@media (min-width: 62rem) {
+  .strip {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.15fr) auto;
+  }
+
+  .stripCell + .stripCell {
+    border-top: none;
+    border-left: 1px solid var(--pl-rule);
+  }
+}
+
+.h1 {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: clamp(2.1rem, 1.2rem + 4vw, 4.4rem);
+  line-height: 0.98;
+  letter-spacing: -0.005em;
+  color: var(--pl-line);
+  text-wrap: balance;
+}
+
+/* The one line of new copy the ideology needs: it says what the
+   drawing under it is for, so nobody has to guess. */
+.thesis {
+  margin-top: 0.7rem;
+  font-family: inherit;
+  font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.0625rem);
+  line-height: 1.5;
+  color: var(--pl-quiet);
+  text-wrap: pretty;
+}
+
+.figLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pl-line);
+  text-wrap: balance;
+}
+
+/* How to read the drawing. Three weights, three meanings, said
+   once so the reader is never decoding by guess. */
+.notation {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.notationRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--pl-quiet);
+}
+
+/* The key is three little drawings, not three CSS borders. A CSS
+   `2px dotted` puts a dot every 4px; the plate's dotted is round-capped
+   at stroke 2 with a 0.5/7 dash, which is a different rhythm entirely,
+   and a key that does not match the line it keys is the one thing a
+   draughting plate may never get wrong. The viewBox is 60 units wide in
+   a 44px box, so these render at about the same scale the drawing does
+   and the dashes come out the same length on screen. */
+.keyLine {
+  flex: none;
+  width: 2.75rem;
+  height: 0.5rem;
+  overflow: visible;
+}
+
+/* The quantities cell. In a title block the numbers are the second
+   largest thing on the sheet after its name, and they hang at the foot
+   of their cell; three 12px mono lines floating at the top of a tall
+   empty box is not a title block, it is a caption. Every figure here is
+   summed from the lessons on disk in page.tsx; none is written. */
+.stripFigures {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.tally {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: baseline;
+  column-gap: 0.55rem;
+  row-gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.tallyFig {
+  font-family: var(--ln-num), monospace;
+  font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.6rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+  color: var(--pl-line);
+}
+
+.tallyKey {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+
+/* ============================================================
+   3. The drawing field
+   Ruled paper under the machine. The grid is a texture at 3.5%,
+   not a layout: nothing snaps to it.
+   ============================================================ */
+
+.drawing {
+  padding: clamp(1rem, 2.5vw, 2.25rem) clamp(0.5rem, 2vw, 1.75rem);
+  border-bottom: 1px solid var(--pl-rule);
+  background-image: repeating-linear-gradient(
+      to right,
+      var(--pl-grid) 0 1px,
+      transparent 1px 40px
+    ),
+    repeating-linear-gradient(to bottom, var(--pl-grid) 0 1px, transparent 1px 40px);
+  background-position: center;
+}
+
+/* Both drawings are in the DOM and one is shown. They are
+   aria-hidden either way — the ordered description in page.tsx
+   is what a screen reader gets, and it says the same things in
+   the same order. */
+.wide,
+.narrow {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The ceiling exists so a 2500px window does not turn the plate into a
+   metre of diagram with the legend off screen. It is deliberately high:
+   at 60vh the drawing letterboxed inside its own field and .lab dropped
+   to 10.4px, which is a notation you guess at rather than read. A plate
+   is allowed to be taller than one screen. The cap is on the drawing's
+   height and never on the sheet's width — the sheet always runs the
+   full window. */
+.wide {
+  max-height: clamp(24rem, 72vh, 44rem);
+}
+
+.narrow {
+  display: none;
+}
+
+@media (max-width: 61.9375rem) {
+  .wide {
+    display: none;
+  }
+
+  /* Capped, because .narrow is a 360 x 1060 drawing and 100% of a
+     991px window renders it about 852 x 2509 — two and a half screens
+     of diagram before the legend. The bare grid either side of it at
+     that width is a sheet margin, which is what a plate has. */
+  .narrow {
+    display: block;
+    max-width: 26rem;
+    margin-inline: auto;
+    max-height: none;
+  }
+}
+
+/* ============================================================
+   4. The drawing's own vocabulary
+   Three weights that carry meaning, and three that are just
+   drawing. Everything strokes var(--pl-stroke), so one custom
+   property on a group swings the whole stage into its ink.
+   ============================================================ */
+
+.flow,
+.thin,
+.hair,
+.cond,
+.obs {
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+/* Solid: the request travels here. */
+.flow {
+  stroke: var(--pl-stroke);
+  stroke-width: 2.5;
+}
+
+.thin {
+  stroke: var(--pl-stroke);
+  stroke-width: 1.5;
+}
+
+/* The lattice inside the model. Fine enough to read as mass
+   rather than as lines you are meant to count. */
+.hair {
+  stroke: var(--pl-faint);
+  stroke-width: 0.75;
+}
+
+/* Dashed: only happens when the model decides to call a tool. */
+.cond {
+  stroke: var(--pl-stroke);
+  stroke-width: 2.5;
+  stroke-dasharray: 10 8;
+}
+
+/* Dotted: watches, carries nothing. */
+.obs {
+  stroke: var(--pl-stroke);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 0.5 7;
+}
+
+.head,
+.dot {
+  fill: var(--pl-stroke);
+  stroke: none;
+}
+
+/* A retrieved candidate the reranker kept. The heavier of the two
+   weights in the fan. */
+.kept {
+  fill: none;
+  stroke: var(--pl-stroke);
+  stroke-width: 1.75;
+}
+
+/* A candidate the reranker threw away. Struck through and drawn at
+   the faint weight — never dashed, because dashed is already spoken
+   for on this plate and means "only if the model calls a tool". */
+.dropped {
+  fill: none;
+  stroke: var(--pl-weak);
+  stroke-width: 1.25;
+}
+
+/* The layers. The only filled shapes on the plate, because the
+   model is the one part of the machine that is solid. */
+.plate6 {
+  fill: var(--pl-stroke);
+  stroke: none;
+}
+
+.lab {
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--pl-anno);
+}
+
+/* The invisible target. fill: transparent rather than none, or
+   the group would only be hoverable on the strokes themselves. */
+.hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.stage,
+.spine,
+.callout {
+  transition: opacity 200ms var(--ln-ease);
+}
+
+/* The reveal is the page's one interaction, and half of it used to jump:
+   opacity faded over 200ms while --pl-stroke swapped to the course ink in
+   a single frame. Custom properties do not transition, but the stroke and
+   fill they resolve to do. */
+.flow,
+.thin,
+.cond,
+.obs,
+.head,
+.dot,
+.kept,
+.plate6,
+.lab {
+  transition: stroke 200ms var(--ln-ease), fill 200ms var(--ln-ease);
+}
+
+/* ============================================================
+   5. Callouts
+   A numbered ring, a leader, a dot on the part it names. The
+   same five numbers head the five legend entries below.
+   ============================================================ */
+
+.callouts {
+  --pl-stroke: var(--pl-quiet);
+  pointer-events: none;
+}
+
+/* Inked at rest, on every device. The reveal is what ties a part of the
+   machine to a course, and on a touch screen it never fires — so without
+   this the argument of the page is invisible to a reader on a phone, and
+   PRODUCT.md says that is a normal reader here. A media query cannot fix
+   it: `hover: hover` is reported by an iPad with a keyboard and by a
+   touchscreen laptop, which is exactly where it would need to be right.
+
+   Rings only. Five inked rings is a legend; five inked stages at rest is
+   the transit map this drawing replaced. The numeral inside stays at
+   --pl-line, because amber sits at 3.4:1 on the light sheet — fine for a
+   1.25px ring, short of the 4.5:1 a 14px numeral needs. */
+.ring {
+  fill: none;
+  stroke: var(--ln-line);
+  stroke-width: 1.25;
+}
+
+.lead {
+  fill: none;
+  stroke: var(--pl-quiet);
+  stroke-width: 1;
+}
+
+.num,
+.numN {
+  font-family: var(--ln-num), monospace;
+  font-weight: 700;
+  fill: var(--pl-line);
+}
+
+.num {
+  font-size: 19px;
+}
+
+.numN {
+  font-size: 15px;
+}
+
+/* ============================================================
+   6. The one authored moment
+   One request runs the machine once on load and is gone. Three
+   sparks on three paths, timed against each other: the retrieved
+   passages reach the junction as the request does, and the tool
+   result comes back after the model has run.
+
+   Each path carries pathLength="1", so the dash arithmetic is in
+   fractions of the path rather than user units and the same two
+   keyframes drive paths of very different lengths. The gap is 2,
+   which is longer than the path, so exactly one spark is ever on
+   a path and the resting offset of 1 leaves none.
+   ============================================================ */
+
+.sparks {
+  pointer-events: none;
+}
+
+.spark {
+  --pl-d: 0.06;
+  fill: none;
+  stroke: var(--pl-spark);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: var(--pl-d) 2;
+  stroke-dashoffset: 1;
+  animation: pl-run var(--pl-dur, 2.5s) cubic-bezier(0.33, 0, 0.3, 1) var(--pl-delay, 0s) 1 both;
+}
+
+@keyframes pl-run {
+  from {
+    stroke-dashoffset: calc(2 + var(--pl-d));
+  }
+  to {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* The needle settles on its reading as the request finishes —
+   the last beat of the same moment, not a second effect. */
+.needle,
+.needleN {
+  stroke-linecap: round;
+  transform-box: view-box;
+  animation: pl-swing 800ms cubic-bezier(0.16, 1, 0.3, 1) 2.75s 1 both;
+}
+
+.needle {
+  transform-origin: 1290px 530px;
+}
+
+.needleN {
+  transform-origin: 180px 1010px;
+}
+
+@keyframes pl-swing {
+  from {
+    transform: rotate(-62deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+/* ============================================================
+   7. Holding a stage
+   The reveal. Hovering or focusing either half of a pair — the
+   legend entry or the part of the drawing — steps everything
+   else back and swings that stage into its course's ink.
+
+   :has() correlates the two halves because both carry the same
+   data-line value, which is also what learn.css reads to
+   resolve --ln-line. One attribute does three jobs.
+
+   The stages go a long way back: a ghost machine reads perfectly
+   well on graphite, and the reveal gets the theatre. The spine
+   and the callouts go half as far, so the held part never floats
+   free of the machine it belongs to.
+
+   What is deliberately NOT dimmed is the legend's reading
+   matter. Fading four blocks of real prose to light a fifth is
+   hostile, and at the opacity the stages take, .role and .sub
+   would fail 4.5:1 in both themes. Only the ink swatch fades and
+   the ring steps back — the two marks whose whole job is to
+   point at the drawing.
+   ============================================================ */
+
+.plate:has([data-line]:is(:hover, :focus-visible)) .stage {
+  opacity: 0.16;
+}
+
+.plate:has([data-line]:is(:hover, :focus-visible)) .spine,
+.plate:has([data-line]:is(:hover, :focus-visible)) .callout {
+  opacity: 0.5;
+}
+
+/* The held stage's own number stays lit while the other four step back —
+   the number is the tie between the drawing and the legend, and it is the
+   one thing that must not fade at the moment the reader is using it. */
+.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .callout[data-line='prompt-engineering'],
+.plate:has([data-line='rag']:is(:hover, :focus-visible)) .callout[data-line='rag'],
+.plate:has([data-line='llms']:is(:hover, :focus-visible)) .callout[data-line='llms'],
+.plate:has([data-line='agents']:is(:hover, :focus-visible)) .callout[data-line='agents'],
+.plate:has([data-line='evals']:is(:hover, :focus-visible)) .callout[data-line='evals'] {
+  opacity: 1;
+}
+
+.plate:has([data-line]:is(:hover, :focus-visible)) .swatch {
+  opacity: 0.22;
+}
+
+.plate:has([data-line]:is(:hover, :focus-visible)) .calloutN {
+  border-color: var(--pl-faint);
+}
+
+.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .stage[data-line='prompt-engineering'],
+.plate:has([data-line='rag']:is(:hover, :focus-visible)) .stage[data-line='rag'],
+.plate:has([data-line='llms']:is(:hover, :focus-visible)) .stage[data-line='llms'],
+.plate:has([data-line='agents']:is(:hover, :focus-visible)) .stage[data-line='agents'],
+.plate:has([data-line='evals']:is(:hover, :focus-visible)) .stage[data-line='evals'] {
+  opacity: 1;
+  --pl-stroke: var(--ln-line);
+  /* The strokes take the ink; the annotation only steps up to full
+     graphite. Amber on the light sheet is 3.4:1 — fine for a 2.5px
+     stroke, short of 4.5:1 for a 15px label, and every ink would have
+     to be re-measured for text to make an exception here. */
+  --pl-anno: var(--pl-line);
+}
+
+/* The echo in the legend: the ink that has just arrived on the drawing
+   runs the full width of its own cell, rule to rule. Stopping at the
+   cell padding left the gesture half finished. */
+.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .cell[data-line='prompt-engineering'] .swatch,
+.plate:has([data-line='rag']:is(:hover, :focus-visible)) .cell[data-line='rag'] .swatch,
+.plate:has([data-line='llms']:is(:hover, :focus-visible)) .cell[data-line='llms'] .swatch,
+.plate:has([data-line='agents']:is(:hover, :focus-visible)) .cell[data-line='agents'] .swatch,
+.plate:has([data-line='evals']:is(:hover, :focus-visible)) .cell[data-line='evals'] .swatch {
+  opacity: 1;
+  width: calc(100% + 2 * var(--pl-cell-pad-x));
+}
+
+.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .cell[data-line='prompt-engineering'] .calloutN,
+.plate:has([data-line='rag']:is(:hover, :focus-visible)) .cell[data-line='rag'] .calloutN,
+.plate:has([data-line='llms']:is(:hover, :focus-visible)) .cell[data-line='llms'] .calloutN,
+.plate:has([data-line='agents']:is(:hover, :focus-visible)) .cell[data-line='agents'] .calloutN,
+.plate:has([data-line='evals']:is(:hover, :focus-visible)) .cell[data-line='evals'] .calloutN {
+  border-color: var(--ln-line);
+}
+
+/* ============================================================
+   8. The legend
+   Five cells across the foot of the drawing, split by the same
+   hairline the sheet is ruled with. Not five cards: no fill, no
+   radius, no box, and the number at the head of each is the
+   number on the drawing above it.
+   ============================================================ */
+
+.legend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  list-style: none;
+}
+
+@media (min-width: 62rem) {
+  .legend {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.cell {
+  --pl-cell-pad-x: clamp(1rem, 1.8vw, 1.35rem);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: clamp(1rem, 1.9vw, 1.4rem) var(--pl-cell-pad-x) clamp(1.15rem, 2.2vw, 1.5rem);
+  border-top: 1px solid var(--pl-rule);
+}
+
+@media (min-width: 62rem) {
+  .cell {
+    border-top: none;
+  }
+
+  /* Ruled by position in the grid, not by document order: a course the
+     drawing does not cover yet wraps onto a second row, and it needs a
+     rule above it and none down its left. */
+  .cell:not(:nth-child(5n + 1)) {
+    border-left: 1px solid var(--pl-rule);
+  }
+
+  .cell:nth-child(n + 6) {
+    border-top: 1px solid var(--pl-rule);
+  }
+}
+
+/* The course's ink, at rest, in the one place it belongs when
+   nothing is held: above its own number. It starts flush with the
+   rule to its left, like a tab on a drawing sheet, so growing it
+   only ever has to move one edge. */
+.swatch {
+  margin-inline-start: calc(-1 * var(--pl-cell-pad-x));
+  width: calc(2.75rem + var(--pl-cell-pad-x));
+  height: 3px;
+  background: var(--ln-line);
+  transition: width 260ms var(--ln-ease), opacity 200ms var(--ln-ease);
+}
+
+.cellHead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.calloutN {
+  transition: border-color 200ms var(--ln-ease);
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid var(--ln-line);
+  border-radius: 50%;
+  font-family: var(--ln-num), monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--pl-line);
+}
+
+.part {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--pl-line);
+}
+
+/* The plate's own face, not Inter. Everything inside a drawing office is
+   lettered by the drawing office; Inter is kept for the two paragraphs in
+   the notes band, which are the owner's prose rather than the sheet's own
+   writing. Archivo Narrow is condensed, so .role and .sub both step up a
+   size to hold the same reading weight. */
+.role {
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--pl-line);
+  text-wrap: pretty;
+}
+
+.cellLink {
+  margin-top: 0.35rem;
+  display: inline;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  color: var(--pl-line);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--pl-faint);
+}
+
+.cellLink:hover {
+  text-decoration-color: var(--pl-line);
+}
+
+.cellLink:focus-visible {
+  outline: 2px solid var(--pl-line);
+  outline-offset: 3px;
+}
+
+/* The whole cell is the door. The drawing itself cannot be one — an SVG
+   <a> would bypass the router and reload the page — so the way into a
+   course is a cell-sized target rather than one underlined phrase
+   inside it. */
+.cellLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.arrow {
+  font-family: var(--ln-read);
+  white-space: nowrap;
+}
+
+.sub,
+.figs {
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--pl-quiet);
+  text-wrap: pretty;
+}
+
+/* A course FIG. 1 does not cover yet — see buildStages(). It has no
+   callout number, so it says so, rather than sitting in the legend
+   looking like a stage whose numeral failed to render. */
+.unmapped {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+
+/* Pushed to the foot of the cell so the five figures line up
+   across the legend whatever length the subtitles run to. It
+   never wraps: "12 lessons / 87 min" broken over two lines reads
+   as two facts rather than one. */
+.figs {
+  margin-top: auto;
+  padding-top: 0.6rem;
+  font-family: var(--ln-num), monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   9. The notes band
+   Where the owner's two paragraphs live. A sheet carries its
+   notes at the foot, under a rule, labelled — so the prose is
+   part of the drawing's apparatus rather than a page of text
+   with a picture stuck on top of it.
+   ============================================================ */
+
+.notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(1.25rem, 2.5vw, 2rem) clamp(1rem, 2.2vw, 1.75rem)
+    clamp(1.5rem, 3vw, 2.25rem);
+  border-top: 1px solid var(--pl-rule);
+}
+
+@media (min-width: 62rem) {
+  .notes {
+    grid-template-columns: auto minmax(0, 1.55fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.notesLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+  white-space: nowrap;
+}
+
+.note {
+  max-inline-size: 66ch;
+  font-family: var(--ln-read);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--pl-line);
+  text-wrap: pretty;
+}
+
+/* The third column stacks the two short notes. */
+.noteStack {
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+}
+
+.noteQuiet {
+  max-inline-size: 54ch;
+  font-family: var(--ln-read);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--pl-quiet);
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   10. The structure in words
+   The drawings are aria-hidden, so this carries the same
+   information in the same order for anyone who is not looking at
+   them. Off screen, never display: none — that would take it out
+   of the accessibility tree along with the picture.
+   ============================================================ */
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   11. Reduced motion
+   The request is removed outright rather than shortened. The
+   section's own reduced-motion block sets every animation to
+   0.01ms, which would fire the spark as a one-frame flash; this
+   takes it off the sheet instead, and the needle simply starts
+   at its reading.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .spark {
+    display: none;
+  }
+
+  .needle,
+  .needleN {
+    animation: none;
+    transform: none;
+  }
+
+  .stage,
+  .spine,
+  .callout,
+  .swatch,
+  .calloutN,
+  .flow,
+  .thin,
+  .cond,
+  .obs,
+  .head,
+  .dot,
+  .kept,
+  .plate6,
+  .lab {
+    transition: none;
+  }
+}
