@@ -17,13 +17,14 @@ Four lessons, one per existing course, drafted here and now live:
 |---|---|---|
 | Sampling, and the knobs providers are taking away | LLMs | new 02 |
 | Let a model write the prompt | Prompt Engineering | 11 |
-| Parsing documents before you chunk them | RAG | new 03 |
+| Parsing documents before you chunk them | RAG | 04 |
 | Testing an agent without the model in the loop | Agents and Tool Use | new 06 |
 
 ## What did not ship, and why
 
-Three new courses were found and specified in full. None of them can be built
-yet, for a reason that has nothing to do with their quality:
+Three new courses were found and specified in full. At the time this was
+written, none of them could be built, for a reason that had nothing to do with
+their quality:
 
 | File | Course | Lessons |
 |---|---|---|
@@ -32,12 +33,17 @@ yet, for a reason that has nothing to do with their quality:
 | `new-frontier.md` | LLMs Over Structured Data | 10 |
 
 `../../DESIGN.md` gives every course its own transit ink, and after amber there
-is no fifth hue that clears the rule written there. All three passes reached
-that conclusion independently, without being told the others had. The most
-useful suggestion came from the structured-data pass: that course is really
-RAG's sequel, so it could reuse RAG's ink and earn its identity from the
-diagram's shape instead. **That is an open design decision and nothing here
-should be built until it is made.**
+was no fifth hue that cleared the rule written there. All three passes reached
+that conclusion independently, without being told the others had. **That was
+an open design decision and nothing here was meant to be built until it was
+made.**
+
+Data Pipelines was built and shipped anyway, once a fifth and sixth ink were
+measured and cleared (`../../DESIGN.md`, "Adding a new ink"). It was pulled
+soon after: the course taught data engineering, not building with LLMs, which
+is a different remit from the rest of this site. Three of its twelve lessons
+were genuinely RAG's plumbing and were kept, moved into `content/learn/rag/`.
+`new-data.md` stays here as the original proposal.
 
 The strongest lesson from each of the three is drafted in full alongside its
 proposal — `new-data-draft.mdx`, `new-product-draft.mdx`,

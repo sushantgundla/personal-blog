@@ -12,8 +12,8 @@ badge and percentage.
 
 **OWN-WORLD.** A printed signalling diagram on near-black. Strokes at 90° and
 45° only, never a curve. Uniform tick pitch along a line. Hollow bone-white
-interchange rings, solid capsule termini. Six transit inks — deep red, navy,
-forest, amber, azure, rose — one per course, at printed-ink saturation rather
+interchange rings, solid capsule termini. Five transit inks — deep red, navy,
+forest, amber, azure — one per course, at printed-ink saturation rather
 than screen neon.
 Archivo in signage caps for every label and heading; Inter for the reading
 column alone; JetBrains Mono confined to code and tabular numerals. No cards, no
@@ -43,14 +43,13 @@ Scoped under `.learn-root`. Every value below is a local token defined in
 | `--ln-rag` | `#3E8C5E` | `#2E6B47` | The RAG line |
 | `--ln-agents` | `#CB881D` | `#AB6F06` | The Agents and Tool Use line |
 | `--ln-evals` | `#00AAE0` | `#0080AA` | The Evals and Observability line |
-| `--ln-pipelines` | `#C02985` | `#820056` | The Data Pipelines line |
 | `--ln-mark` | `#F2EFE9` | `#12100E` | You-are-here ring, terminus fill |
 | `--ln-ground` | `#12100E` | `#F7F5F1` | Page ground |
 | `--ln-ink` | `#EDE9E2` | `#191714` | Body text |
 | `--ln-ink-quiet` | `#9A948B` | `#6B655C` | Labels, meta, secondary |
 | `--ln-rule` | `#2A2725` | `#DDD8D0` | Hairlines, zone divisions |
 
-Strategy: **full palette, six named roles.** Line colour is structural, never
+Strategy: **full palette, five named roles.** Line colour is structural, never
 decorative — it appears in the diagram layer, in the lesson's position strip, and
 in the one rule under the lesson title. It never colours body text, never fills a
 background region, and never appears in the reading column.
@@ -112,6 +111,11 @@ picked by eye — and the guess was wrong in both directions.
   red's own hue, even when a lightness gap alone pushes its ΔE00 over the
   floor — a paler or darker version of an existing line is a shade of that
   line, not a new one, whatever the number says.
+- Rose was measured, shipped as `--ln-pipelines`, and withdrawn when the Data
+  Pipelines course it coloured was pulled — not because it failed any bar
+  above. The measurement stands; there is simply no line using it now. Redo
+  the sweep before reusing 347° for a new course rather than assuming the
+  numbers above still describe an empty slot.
 
 Six is not a wall either. The sweep found the 250°–320° run and the 335°–360°
 run both clear all three bars almost end to end — azure and rose used one hue
