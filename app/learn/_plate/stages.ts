@@ -43,7 +43,11 @@ const STAGES: Stage[] = [
     id: 'prompt-engineering',
     n: 1,
     part: 'Prompt',
-    role: 'What you send in.',
+    // Both ends of the request. Four of this course's twelve lessons are
+    // about what comes back — output contracts, validating it, retries and
+    // fallbacks, sampling and voting — so the drawing hangs it on the outlet
+    // manifold as well as the inlet, and the role has to say so.
+    role: 'What you send in, and the shape you demand back.',
   },
   {
     id: 'rag',

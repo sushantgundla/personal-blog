@@ -107,6 +107,25 @@ which is also what `learn.css` reads to resolve `--ln-line`; the whole reveal
 is one `:has()` rule per course. One attribute does three jobs, and the index
 ships no JavaScript of its own.
 
+**One stage, two objects.** Stage 1 is the only stage that is not one thing.
+Prompt Engineering owns the inlet manifold *and* the outlet manifold, at
+opposite ends of the sheet, so holding it lights both while the machine
+between them goes dark. That is deliberate and it is the point: the two
+manifolds are the same shape reflected, and making them one course is the
+drawing saying **you write this end and you specify that end**.
+
+The output is not the model's. Four of that course's twelve lessons are about
+what comes back — `06-output-contracts`, `07-validating-what-comes-back`,
+`08-retries-and-fallbacks`, `12-sampling-and-voting` — while the LLMs course
+owns only how a token gets chosen, which is generation, and the stack of
+layers already carries that. So the shape of the answer is hung on the course
+that teaches it.
+
+The arrowheads at both ends stay on the spine, not on stage 1. The spine's job
+is the request travelling; a stage owns the object the request travels to.
+Stage 1's second object carries no callout ring, because there is one ring per
+stage and the ring belongs where the stage starts.
+
 **What is never dimmed.** The legend's reading matter. Fading four blocks of
 real prose to light a fifth is hostile, and at the opacity the stages take,
 `.role` and `.sub` would fail 4.5:1 in both themes. Only the ink swatch fades

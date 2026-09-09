@@ -150,7 +150,7 @@ export default function LearnAnatomyPage() {
                 The model either stops, or calls a tool. A tool result comes back round into
                 the context window and the loop runs again.
               </li>
-              <li>An answer comes out.</li>
+              <li>An answer comes out, in the shape the prompt asked for.</li>
               <li>
                 The output is tapped on the way past, traced and scored — and so is what
                 retrieval brought back.

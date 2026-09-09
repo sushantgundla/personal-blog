@@ -31,6 +31,9 @@ import s from './plate.module.css'
  *
  * Same three line weights and the same meanings: solid carries the request,
  * dashed only happens if the model calls a tool, dotted watches.
+ *
+ * Stage 1 owns both manifolds here too — the inlet at the top and the outlet
+ * at the foot. See the note in MachineWide.tsx for why.
  */
 export function MachineNarrow() {
   return (
@@ -54,15 +57,15 @@ export function MachineNarrow() {
         <path className={s.flow} d="M180 688V752" />
         <path className={s.flow} d="M180 766V788" />
 
+        {/* The request arriving. The manifold it arrives at is stage 1's
+            — see the note in MachineWide.tsx. */}
         <path className={s.head} d="M180 802L171.5 786H188.5Z" />
-        <path className={s.flow} d="M180 810L116 888M180 810L244 888" />
-        <path className={s.flow} d="M116 888H244" />
-        <path className={s.thin} d="M158 842H202M148 860H212M134 878H226" />
       </g>
 
-      {/* ---- 1. Prompt Engineering ------------------------------------ */}
+      {/* ---- 1. Prompt Engineering — both ends of the request --------- */}
       <g className={s.stage} data-line="prompt-engineering">
         <rect className={s.hit} x="80" y="30" width="200" height="190" />
+        <rect className={s.hit} x="110" y="806" width="140" height="90" />
 
         <path className={s.flow} d="M116 40H244" />
         <path className={s.flow} d="M116 40L180 118M244 40L180 118" />
@@ -72,6 +75,11 @@ export function MachineNarrow() {
           className={s.thin}
           d="M162 134H198M162 143H198M162 152H198M162 161H198M162 170H198M162 179H198M162 188H198M162 197H198M162 206H198"
         />
+
+        {/* The outlet manifold — the inlet's shape, reflected. */}
+        <path className={s.flow} d="M180 810L116 888M180 810L244 888" />
+        <path className={s.flow} d="M116 888H244" />
+        <path className={s.thin} d="M158 842H202M148 860H212M134 878H226" />
       </g>
 
       {/* ---- 2. RAG --------------------------------------------------- */}

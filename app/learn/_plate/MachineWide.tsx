@@ -14,13 +14,19 @@ import s from './plate.module.css'
  *   the stack            the model — layers, with attention across each one
  *   the diamond          stop, or call a tool
  *   the loop above       out to a tool and back into the junction
- *   the outlet manifold  an answer comes out
+ *   the outlet manifold  an answer comes out, in the shape asked for
  *   the gauge            the output is tapped, traced and scored
  *
  * Three line weights, and each means something. Solid carries the request.
  * Dashed happens only when the model decides to call a tool. Dotted watches
  * and carries nothing — the trace tap does not move the answer along. The
  * title strip states all three, so the notation is readable, not guessed.
+ *
+ * Stage 1 owns both manifolds. Prompt Engineering teaches the shape of the
+ * answer as well as the shape of the question, so the drawing hangs the
+ * course on both ends of the request; the arrowheads at each end stay on
+ * the spine, because the spine is the request travelling and a stage is the
+ * object it travels to.
  *
  * The drawing rests in one graphite, and colour is the answer to a
  * question: hover or focus a stage and that stage alone takes its course's
@@ -70,19 +76,25 @@ export function MachineWide() {
           Context window
         </text>
 
-        {/* Out. Arrowhead, then the manifold opening on the answer. */}
+        {/* The request arriving. The manifold it arrives at belongs to
+            stage 1, the same way the inlet head here belongs to the spine
+            and the inlet manifold does not — the spine's job is the
+            request travelling, and a stage owns the object at the end. */}
         <path className={s.head} d="M1402 300L1386 291.5V308.5Z" />
-        <path className={s.flow} d="M1410 300L1544 242M1410 300L1544 358" />
-        <path className={s.flow} d="M1544 242V358" />
-        <path className={s.thin} d="M1472 282H1528M1472 300H1538M1472 318H1524" />
-        <text className={s.lab} x="1544" y="228" textAnchor="end">
-          Output
-        </text>
       </g>
 
-      {/* ---- 1. Prompt Engineering — what you send in ------------------ */}
+      {/* ---- 1. Prompt Engineering — both ends of the request ---------
+          The only stage that is two objects, at opposite ends of the sheet.
+          Four of this course's twelve lessons are about what comes back —
+          output contracts, validating it, retries and fallbacks, sampling
+          and voting — so the shape of the answer is a prompt concern, not
+          the model's. The model owns how a token gets chosen; the stack of
+          layers already carries that. The two manifolds are mirror shapes
+          and holding stage 1 lights both: you write this end, you specify
+          that end. */}
       <g className={s.stage} data-line="prompt-engineering">
         <rect className={s.hit} x="44" y="200" width="396" height="180" />
+        <rect className={s.hit} x="1404" y="210" width="148" height="158" />
 
         {/* The inlet manifold, and the prompt itself as lines of text. */}
         <path className={s.flow} d="M60 232V368" />
@@ -101,6 +113,15 @@ export function MachineWide() {
         </text>
         <text className={s.lab} x="424" y="266" textAnchor="end">
           Tokens
+        </text>
+
+        {/* The outlet manifold, and the answer as lines of text — the
+            inlet's shape, reflected. */}
+        <path className={s.flow} d="M1410 300L1544 242M1410 300L1544 358" />
+        <path className={s.flow} d="M1544 242V358" />
+        <path className={s.thin} d="M1472 282H1528M1472 300H1538M1472 318H1524" />
+        <text className={s.lab} x="1544" y="228" textAnchor="end">
+          Output
         </text>
       </g>
 
