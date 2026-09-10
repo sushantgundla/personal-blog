@@ -50,6 +50,17 @@ The loop everyone draws has three steps. Reason, act, observe. It has four, and 
 | Observe | Your harness | You hand back a result that does not say what happened |
 | Decide whether to go again | **Usually nobody** | The run never ends |
 
+<Flow
+  caption="The loop as it actually runs. The fourth step is the one usually left to the model itself, which is exactly the step this lesson is about taking back."
+  steps={[
+    { label: 'Reason', note: 'The model plans the next step' },
+    { label: 'Act', note: 'Your harness runs the tool; the side effect is real' },
+    { label: 'Observe', note: 'Your harness hands back a result' },
+    { label: 'Decide whether to go again', note: 'Usually nobody', subject: true },
+  ]}
+  back={{ from: 4, to: 1, label: 'Round again, on stop_reason == "tool_use" alone' }}
+/>
+
 In most code the fourth step is a single line: keep going while `stop_reason == "tool_use"`. That line reads like plumbing. It is actually the whole termination policy, and it delegates the policy to the model.
 
 The model is not a bad judge of "am I done". It is an inconsistent one, in both directions. It stops early on a task that had three parts and it answered two. It carries on past a finished task because checking again is a reasonable-looking next step and nothing in its context says checking has a cost. Neither of those is a bug you fix in the prompt. They are the predictable result of having no condition that your own code can evaluate.
@@ -84,7 +95,53 @@ One stop reason is not an ending and gets misread as one. `pause_turn` means a s
 
 This is also the clean way to say what the difference is between the two kinds of stopping. **The model deciding it is done is a claim. The harness deciding is a fact.** A `finish` call is the model's claim in a shape you can test - so test it. If `finish` says the file was written and the file is not there, reject the claim, hand back what you found, and let the run continue. That is a far better use of the remaining budget than trusting a sentence.
 
+<Compare caption="The same word, 'done', earned two different ways. Only one of them is something your code can check before it believes it.">
+  <Panel label="Claim" title="The model calls finish">
+
+It has decided the task is complete, and says so in a shape you can validate - is the answer non-empty, does the file it claims to have written exist. A claim you did not check is still just a claim.
+
+  </Panel>
+  <Panel label="Fact" title="The harness checks the world">
+
+A budget enforced in code, or a condition tested against the world outside the loop - the file exists, the test passes. It cannot be satisfied by a model that only thinks it is finished.
+
+  </Panel>
+</Compare>
+
 **Progress.** The cheapest useful detector: the same tool name with the same arguments twice in a row. Nothing in the world changed between those two calls, so the second result will match the first, and the model is about to read it and do the same thing again. Two identical calls is a warning; three is a loop. Some harnesses instead hash the last few tool results and stop when they stop changing. Either works. Doing nothing does not.
+
+<Steps
+  caption="One tool, called three times with the same arguments, traced against the repeats counter in the code above. The run is not stuck after the first repeat — it returns 'stuck' on the third identical call. The call itself is an illustration; the repeat count is what the harness actually tracks."
+  steps={[
+    {
+      label: 'Call 1',
+      title: 'A new call',
+      body: 'The model calls a tool. There is nothing before it to compare it against yet.',
+      facts: [
+        { label: 'tool call', value: 'search("refund policy")' },
+        { label: 'repeats', value: '0' },
+      ],
+    },
+    {
+      label: 'Call 2',
+      title: 'The same call again',
+      body: 'Same tool, same arguments as last time. Nothing in the world changed between the two calls, so the result will match too.',
+      facts: [
+        { label: 'tool call', value: 'search("refund policy")' },
+        { label: 'repeats', value: '1 — a warning' },
+      ],
+    },
+    {
+      label: 'Call 3',
+      title: 'The same call, a third time',
+      body: 'The harness returns "stuck" here rather than spending more budget standing still.',
+      facts: [
+        { label: 'tool call', value: 'search("refund policy")' },
+        { label: 'repeats', value: '2 — stuck' },
+      ],
+    },
+  ]}
+/>
 
 Now the part that gets skipped. **What happens at the ceiling is a design decision, and the wrong answers are both common.**
 

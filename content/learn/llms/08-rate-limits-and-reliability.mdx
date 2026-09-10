@@ -69,6 +69,38 @@ The move that saves you most of this pain is **proactive throttling**. Providers
 
 The backoff itself is **exponential with full jitter**. Wait roughly `base * 2**attempt`, and then pick a random duration between zero and that. The exponential part is what everyone implements. The jitter is the part people leave out, and it is the part that matters: without it, every client that failed at the same moment retries at the same moment, and you have faithfully rebuilt the spike you were recovering from. That is a thundering herd, and it is how a short blip becomes a long incident.
 
+<Flow
+  caption="The decision behind the status table above. Most outcomes end the loop immediately — only the retryable ones earn a backoff and another attempt, and even those are capped rather than open-ended."
+  steps={[
+    { label: 'Request sent' },
+    {
+      label: 'Response status',
+      subject: true,
+      branch: [
+        '400 / 401 / 403 — never retry, fix the request',
+        '429 / 500 / 503 / 529 — retry after a backoff',
+        'Timeout or reset — retry only if the call is safe to repeat',
+      ],
+    },
+    { label: 'Exponential backoff, full jitter', note: 'Wait a random duration between zero and the ceiling' },
+  ]}
+  back={{ from: 3, to: 1, label: 'Try again, until the attempt cap or the total wait cap is hit' }}
+/>
+
+<Dial
+  caption="The wait ceiling from the retry loop's own formula, min(60.0, 2.0 ** attempt), attempt by attempt. The actual wait is still random.uniform(0, ceiling), so two clients on the same attempt still land at different moments."
+  name="attempt"
+  min={0}
+  max={6}
+  step={1}
+  start={0}
+  bands={[
+    { at: 0, label: 'First retry', outcome: 'Ceiling is min(60, 2**0) — one second.' },
+    { at: 3, label: 'A few attempts in', outcome: 'Ceiling is min(60, 2**3) — eight seconds.' },
+    { at: 6, label: 'Capped', outcome: '2**6 is 64, but the ceiling stopped climbing at 60 — the min(60.0, ...) in the code.', note: 'Past here, more attempts spend the retry budget without buying more patience.' },
+  ]}
+/>
+
 Four rules around it:
 
 - **Honour `retry-after` when the response carries it.** The provider knows more than your formula does.
@@ -83,6 +115,19 @@ Four rules around it:
 **Set an explicit timeout.** Default client timeouts can be generous. A long prompt with a long answer and extended thinking can legitimately take minutes, so one global ten-second timeout will break real work — but a request that hangs forever is worse than one that fails fast, because it holds a connection and a user. Set a per-request timeout that matches the work that request is doing.
 
 **Stream long answers.** Streaming does not make generation faster; the same tokens take the same time. What it changes is that the user sees words after a second instead of a blank screen for forty, which is the entire difference between "thinking" and "broken". It also lets you abort early when the user navigates away, and it avoids the HTTP-level timeouts that long non-streaming requests run into — which is why some providers require streaming above a certain expected output length.
+
+<Compare caption="The same answer, delivered two ways. The total generation time is identical — what changes is when the user sees anything at all, and what a dropped connection costs you.">
+  <Panel label="Without streaming" title="Wait for the whole answer">
+
+The connection sits open for the entire generation. The user watches a blank screen until the last token is ready, and a long answer risks the HTTP-level timeout that streaming exists to avoid.
+
+  </Panel>
+  <Panel label="With streaming" title="Words arrive as they're produced">
+
+The first tokens appear after about a second instead of forty. The user can watch it "thinking" instead of wondering if it broke, and you can abort the call cleanly the moment they navigate away.
+
+  </Panel>
+</Compare>
 
 **Make repeats safe.** A connection that drops after the model answered is a real and regular event, and you cannot tell it apart from a request that never arrived. If the call has a side effect — sending an email, charging a card, writing a row — the safety has to live on your side: an idempotency key on the operation, and a write that is safe to repeat. Some APIs accept an idempotency key too, which helps, but your database is where the guarantee actually holds.
 

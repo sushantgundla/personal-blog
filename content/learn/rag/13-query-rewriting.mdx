@@ -73,6 +73,16 @@ Use it when the question contains "and", "versus", "difference between", or two 
 
 The cost is more than latency. Three sub-queries at ten chunks each is thirty chunks in your prompt, so either you rerank down (*Reranking*) or you pay for the context.
 
+<Flow
+  caption="One question, several retrievals. The split happens because chunks were written per topic, so a single search over a comparison question usually returns only one side of it."
+  steps={[
+    { label: 'Multi-part question', note: '"How does refund differ from exchange?"' },
+    { label: 'Split into one query per part', note: 'refund policy, exchange policy' },
+    { label: 'Retrieve for each query separately', note: 'Chunks split by topic rarely cover both halves' },
+    { label: 'Merge the results', subject: true, note: 'RRF, the same merge as Hybrid search' },
+  ]}
+/>
+
 ### HyDE
 
 **HyDE** stands for Hypothetical Document Embeddings. Have the model write a plausible answer to the question, then embed and search with *that* instead of the question.
@@ -80,6 +90,16 @@ The cost is more than latency. Three sub-queries at ten chunks each is thirty ch
 The reason it works is a shape mismatch. Your corpus is made of statements. Your queries are questions. "Why is my build slow?" and "Build times increase when the dependency cache is invalidated on every run." are about the same thing, but as text they look quite different - different length, different grammar, different vocabulary. A hypothetical answer looks like a passage, so it lands nearer to real passages in the vector space.
 
 The model does not need to be right. It needs to guess the right vocabulary and register. Even a factually wrong hypothetical answer usually pulls the query into the right neighbourhood, which is all retrieval needs.
+
+<Flow
+  caption="The shape mismatch, closed in three steps. Embedding the hypothetical answer instead of the question is the entire trick — the model does not need to get the answer right."
+  steps={[
+    { label: 'The question', note: '"Why is my build slow?"' },
+    { label: 'Model writes a hypothetical answer', note: 'Plausible, not necessarily correct' },
+    { label: 'Embed the hypothetical answer', note: 'It reads like a passage, not a question' },
+    { label: 'Search with that embedding', subject: true, note: 'Lands nearer the real passages' },
+  ]}
+/>
 
 HyDE costs a full generation call before you have searched anything, so it is the most expensive of the four. It pays on corpora where questions and passages are genuinely dissimilar - technical documentation, research papers, dense reference material. It pays much less on FAQ-shaped corpora, where the corpus is already made of questions.
 
@@ -117,6 +137,19 @@ message = client.messages.create(
 print(message.content[0].text)
 # -> "same-day delivery in Manchester"
 ```
+
+<Compare caption="The same follow-up, searched two ways. The raw message carries no meaning outside the conversation; the rewrite carries all of it, resolved into words the retriever can match.">
+  <Panel label="Naive" title="Search the follow-up as typed">
+
+"what about the second one?" is perfectly clear to a human reading the thread and empty as a search string — its embedding points at nothing in particular, so retrieval returns near-noise.
+
+  </Panel>
+  <Panel label="What to do" title="Search the rewritten query">
+
+"same-day delivery in Manchester" resolves the pronoun and the reference before the string ever reaches the retriever, so it lands where a normal query would.
+
+  </Panel>
+</Compare>
 
 Two details. The instruction to return an already-standalone query unchanged stops the model from mangling good queries, which is the common failure here. And `max_tokens` is small on purpose - a search query is a few words, and a low cap makes it hard for the model to start explaining itself.
 

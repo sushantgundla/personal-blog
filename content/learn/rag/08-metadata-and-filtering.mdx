@@ -54,6 +54,19 @@ Post-filtering is the trap, and it is easy to fall into because it is the natura
 
 The fix is to express the filter as part of the query so the store handles it. In SQL that is simply a `WHERE` clause next to the `ORDER BY` on distance. In a dedicated store it is the filter argument in the search call. Either way the store, not your application, decides how to combine the constraint with the index.
 
+<Compare caption="Same constraint, two different places to apply it. Only the query on the right guarantees the k you asked for — post-filtering fails silently, with no error telling you the count came back short.">
+  <Panel label="Naive" title="Post-filter: search, then discard">
+
+Ask the store for the top k, then throw away rows that fail the constraint in your own code. The store already picked its k without knowing the constraint exists, so anything the filter removes afterwards is simply gone.
+
+  </Panel>
+  <Panel label="What to do" title="Pre-filter or filtered search: constrain first">
+
+Push the constraint into the query itself, next to the `ORDER BY`. The store decides how to combine it with the index, and the count you asked for is the count you get.
+
+  </Panel>
+</Compare>
+
 That combination is genuinely hard, which is worth knowing so the behaviour does not surprise you. An HNSW graph was built over every vector, so a narrow filter means the walk keeps arriving at nodes it must reject. Stores handle this differently: some maintain filterable index structures, some detect a selective filter and fall back to an exact scan over the matching subset — which is the right answer, because a few thousand rows do not need an index. In Postgres, a `WHERE tenant_id = $1` that matches a small fraction of rows will often be served better by a plain index scan plus exact distance than by HNSW, and the planner may or may not choose well. Check with `EXPLAIN ANALYZE` on real data rather than assuming.
 
 ```sql
@@ -82,6 +95,22 @@ LIMIT 10;
 
 The second query is a starting point, not a formula to copy blindly. The half-life and the 0.15 weight are yours to set, and the only way to set them is to try a couple of values against real queries.
 
+<Dial
+  caption="The decay term from the query above, felt as a knob. The bands are illustrative — the half-life and the 0.15 weight are yours to tune against real queries, not fixed here."
+  name="chunk age"
+  min={0}
+  max={730}
+  step={10}
+  start={0}
+  unit="days"
+  bands={[
+    { at: 0, label: 'Fresh', outcome: 'No decay penalty yet — similarity alone decides the ranking.' },
+    { at: 90, label: 'A few months old', outcome: 'The penalty has grown enough that a fresher, slightly weaker match can start to outrank it.' },
+    { at: 180, label: 'Around the curve above', outcome: 'Well past the early climb — an old chunk needs a clear similarity edge to still win.' },
+    { at: 365, label: 'A year old', outcome: 'Close to the full 0.15 penalty — only a chunk that is clearly the best match survives being this old.' },
+  ]}
+/>
+
 ## 2. Permissions are not a preference
 
 Everything above is about quality. This part is about not having an incident.
@@ -89,6 +118,22 @@ Everything above is about quality. This part is about not having an incident.
 If a chunk is retrieved, it is exposed. It goes into the context window, the model reads it, and the answer can quote it, paraphrase it or leak it — and even if the answer is clean, the retrieved chunks are usually logged, traced, and shown in a citations panel. There is no step after retrieval that makes an unauthorised chunk safe.
 
 So: **the permission filter is part of the retrieval query, enforced by the store.** Not a line in the system prompt. Not a check on the generated answer. Not a hope that the model behaves. A prompt instruction is a suggestion to a probabilistic system; a `WHERE` clause is a constraint.
+
+<Flow
+  caption="What happens after a chunk is retrieved. Nothing downstream can undo it — the enforcement branch has to be decided before the query runs, not after."
+  steps={[
+    { label: 'Retrieval query runs', note: 'Against the store, with whatever constraints it was given' },
+    {
+      label: 'The permission check',
+      subject: true,
+      branch: [
+        'Enforced by the store — only permitted chunks come back',
+        'Left to a prompt instruction — the chunk comes back regardless',
+      ],
+    },
+    { label: 'Whatever comes back is exposed', note: 'In the context window, usually logged, and often shown in a citations panel' },
+  ]}
+/>
 
 | Where the check lives | Is it a control? |
 |---|---|

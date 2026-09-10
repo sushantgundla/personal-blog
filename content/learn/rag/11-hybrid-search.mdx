@@ -91,6 +91,22 @@ The obvious idea - add the scores - does not work, and it is worth being precise
 
 **Reciprocal Rank Fusion** dodges the problem by ignoring the scores entirely. For each system, a document at position `r` contributes `1 / (k + r)`, with `k` conventionally 60. Add up the contributions across systems and sort. That is the whole method.
 
+<Flow
+  caption="One query becomes two ranked lists, and Reciprocal Rank Fusion is the only place they meet - it works on rank position alone, so the two systems' scores never have to be made comparable."
+  steps={[
+    { label: 'The query', note: 'One string, sent to both indexes' },
+    {
+      label: 'Two ranked lists come back',
+      branch: [
+        'Vector index - nearest neighbours by meaning',
+        'Keyword index - BM25 on exact terms',
+      ],
+    },
+    { label: 'Reciprocal Rank Fusion', note: '1/(k + rank), added from each list', subject: true },
+    { label: 'One merged ranked list' },
+  ]}
+/>
+
 The behaviour it gives you is exactly what you want. Being ranked highly by both systems beats being ranked first by one and missed by the other. Position 1 in one list scores `1/61 = 0.0164`; position 5 in both lists scores `2/65 = 0.0308`, nearly double. Agreement wins.
 
 ```python
@@ -115,7 +131,45 @@ for doc_id, score in rrf([vector_hits, keyword_hits])[:3]:
 # doc-2  0.0161   only one system found it
 ```
 
+<Bars
+  caption="The three scores the worked example above actually returns. doc-9 and doc-4 are ranked highly by both systems and pull well ahead of doc-2, which only one system found."
+  axis="RRF score, k = 60"
+  bars={[
+    { label: 'doc-9', value: 0.0325, note: 'Ranked 1st and 2nd', subject: true },
+    { label: 'doc-4', value: 0.032, note: 'Ranked 4th and 1st' },
+    { label: 'doc-2', value: 0.0161, note: 'Only one system found it' },
+  ]}
+/>
+
 What `k` does: a larger `k` flattens the curve, so the gap between rank 1 and rank 10 shrinks and agreement across lists matters more. 60 is the value from the original paper and it is a fine place to start. Tune it only after you have the measurement from *Measuring retrieval*.
+
+<Dial
+  caption="The one knob RRF has. Push it low and a single system's confidence can win; push it high and only agreement between both systems counts. 60, the value from the original paper, sits well into the flat part."
+  name="k"
+  min={1}
+  max={200}
+  step={1}
+  start={60}
+  bands={[
+    {
+      at: 1,
+      label: 'Steep',
+      outcome: 'The gap between rank 1 and rank 10 is large - a document ranked first by one system can outscore one ranked well by both.',
+      note: 'Rewards a single system\'s confidence over agreement between the two.',
+    },
+    {
+      at: 60,
+      label: 'Default',
+      outcome: 'The value from the original paper, and a fine place to start before you have measured anything.',
+    },
+    {
+      at: 150,
+      label: 'Flatter',
+      outcome: 'The gap between rank 1 and rank 10 shrinks further, and agreement across both lists matters more than either one\'s exact position.',
+      note: 'Tune only after Measuring retrieval says you gained something.',
+    },
+  ]}
+/>
 
 **Weighted score blending** is the alternative: normalise both score sets and compute `w * dense + (1 - w) * sparse`. It can beat RRF when you have an eval set to tune `w` on and your score distributions are stable. It also breaks quietly when the corpus grows and the distributions shift. Start with RRF; move to weights only if measurement says you gained something.
 

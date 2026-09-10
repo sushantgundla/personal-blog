@@ -67,6 +67,19 @@ There is a second reason to keep rules out of the user turn, separate from cachi
 
 > Anything you would be annoyed to see change between calls belongs in the system prompt.
 
+<Compare caption="The same request, assembled two ways. Splitting by role does not just look tidier — it changes what survives a long conversation and what the provider can cache.">
+  <Panel label="Naive" title="One user message doing everything">
+
+Rules, examples, the pasted document and the actual question all arrive in the same block, in whatever order they were typed. Nothing in it is fixed, so nothing in it is cacheable, and a user's own words sit right beside your rules with no signal that one outranks the other.
+
+  </Panel>
+  <Panel label="What to do" title="Split rules from data">
+
+Everything true on every call — role, rules, format, examples — goes in the system prompt, at the front, unchanged. Everything that varies — the document, the question — goes in the user turn. The stable half can be cached, and the model's own training treats the split as operator instruction versus request.
+
+  </Panel>
+</Compare>
+
 ## 2. The stable half is the half you stop paying for
 
 Prompt caching lets the provider reuse the work it already did on a prefix of your request. The match is on an **exact prefix** — same tokens, same order, from the very start. That single detail decides your whole layout.
@@ -104,6 +117,25 @@ print(resp.content[0].text)
 print(resp.usage)  # cache_creation_input_tokens, then cache_read_input_tokens
 ```
 
+<Anatomy
+  caption="What the model actually reads: the system prompt first, byte-identical on every call, then the user turn, different every time. The cache can only reuse the part before the first byte that changes."
+  label="One assembled request"
+  parts={[
+    {
+      text: 'You write release notes for a developer tool.\nOne line per user-visible change. Plain past tense. No bullets, no headings.',
+      name: 'System prompt',
+      note: 'Same bytes on every call — the cacheable prefix',
+      subject: true,
+    },
+    { text: '\n\n' },
+    {
+      text: 'fix(auth): correct token expiry check',
+      name: 'User turn',
+      note: 'Different on every call — nothing after this point is cached',
+    },
+  ]}
+/>
+
 Two things worth knowing before you rely on this. There is a minimum length below which a prefix will not be cached, and it differs by model — check the caching docs rather than trusting a number you read somewhere. And the cache entry expires, so a low-traffic endpoint may miss most of the time. Read `usage` on real traffic instead of assuming; the two counters above tell you exactly what happened.
 
 ## 3. Multi-turn: the history argues back
@@ -120,6 +152,23 @@ Its own past replies are the strongest signal in the box. They are few-shot exam
 | Long chats drift in tone | Register is being set by accumulated history, not by your prompt | Pin the register in the system prompt, where it cannot scroll away |
 
 The fix in every row is the same underlying move, and it is the one thing chat interfaces train you out of: **the `messages` list is an array you construct, not a log you append to.** You are free to delete a superseded turn, rewrite a bad assistant reply into the answer you wanted, collapse ten turns into one summary message, or throw the history away and send the current state as a single fresh turn. None of that is cheating. It is the only place the conversation exists.
+
+<Flow
+  caption="The array is resent whole on every call, so a stale turn does not fall out of the conversation on its own — you have four ways to take it out before the next request goes."
+  steps={[
+    { label: 'Every turn, resent in full', note: 'The model re-reads its own past replies along with everything else' },
+    { label: 'A turn goes stale', note: 'Superseded, wrong, or setting an example you no longer want', subject: true },
+    {
+      label: 'Fixed before the next call',
+      branch: [
+        'Delete the superseded turn',
+        'Rewrite a bad assistant reply',
+        'Collapse old turns into one summary',
+        'Drop the history and start fresh',
+      ],
+    },
+  ]}
+/>
 
 One caution: editing history invalidates the cache from the edit point onward, and it can confuse the user if the visible transcript and the sent transcript disagree. Keep the two in sync, or keep the differences deliberate and small.
 

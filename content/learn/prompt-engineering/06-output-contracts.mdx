@@ -51,6 +51,16 @@ There are four rungs between "I would like JSON" and "this response cannot be th
 | **3. Schema in the prompt** | Paste the JSON Schema and say conform to it. | Names and types are unmistakable; generation is still free-running. | More tokens |
 | **4. Forced tool call** | Define a tool whose input schema is your shape, and require the model to call it. | Arguments come back matching the schema. Guaranteed, not requested. | A little setup |
 
+<Flow
+  caption="Four rungs, each one closer to a guarantee than a request. Only the last one removes the parser: the argument shape is what the model can produce, not merely what it was asked to produce."
+  steps={[
+    { label: 'Prose', note: '"Return JSON with the invoice number and total." Usually honoured, sometimes wrapped in a sentence or a code fence.' },
+    { label: 'One exact example', note: 'Show the literal object you want back. Keys, order, types and the empty case stop being ambiguous.' },
+    { label: 'Schema in the prompt', note: 'Paste the JSON Schema and say conform to it. Names and types are unmistakable, generation is still free-running.' },
+    { label: 'Forced tool call', note: 'Arguments come back matching the schema. Guaranteed, not requested.', subject: true },
+  ]}
+/>
+
 Most people stop at rung 1, get burned, and write a parser. Rung 2 is worth knowing about because it costs almost nothing and fixes most of the drift on a small task. Rung 4 is the one that deletes the parser.
 
 The caveat that matters more than any of this: **a guaranteed shape is not a guaranteed answer.** The schema says `invoice_total` is an integer. It does not say it is *the* integer on the invoice. Structure and truth are separate problems, and the schema only solves the first.
@@ -60,6 +70,8 @@ The caveat that matters more than any of this: **a guaranteed shape is not a gua
 Every free-text field is an invitation to a synonym. Declare `status` as a string and you will collect `paid`, `Paid`, `PAID`, `settled`, `payment received` and `Payment Received` — six spellings of one fact, and your `if status == "paid"` is wrong five times out of six.
 
 An enum of five values collapses all of that into one line. It also does something less obvious and more valuable: it forces you to decide what the categories actually are. That is usually where the real ambiguity was hiding, and the model was absorbing it silently.
+
+<Figure bare caption="Every row does the same move: an open string becomes something that cannot drift — an enum, a named unit, a defined null. The pattern carries past this table to any field with a finite set of honest answers.">
 
 | Weak field | The contract | What changed |
 |---|---|---|
@@ -71,6 +83,8 @@ An enum of five values collapses all of that into one line. It also does somethi
 | `items: array` | `items: array of {sku: string, qty: integer}, max 50` | Element shape declared, and a bound on the size |
 | `summary: string` | `summary: string, 1 sentence, max 25 words` | A countable target instead of a length the model picks |
 
+</Figure>
+
 The `confidence` row deserves its own note, because that field is on almost every first draft. Asking a model to score its own confidence feels rigorous and mostly is not — the number is generated the same way every other token is, and it is not calibrated against anything. A quote you can search the source document for is worth far more, because your code can verify it and a self-reported 0.87 can only be believed.
 
 ## 3. Name the fields, fix the order, define unknown
@@ -80,6 +94,24 @@ Three details carry most of the remaining weight.
 **Name them precisely.** `issue_date` and `due_date`, not `date`. The field name *is* an instruction, and it sits right where the model needs it. A rule of thumb that works: if you find yourself writing a sentence of prose explaining what a field means, the field has the wrong name. Rename it and delete the sentence.
 
 **Fix the order, and put evidence first.** Two payoffs. The dull one is that a stable key order makes diffing two runs trivial. The useful one is that the model generates left to right, so a field produced early is in the context when the later fields are produced. Put `evidence_quote` before `classification` and the label is generated with the quote already on the page — the same mechanism as *Thinking out loud*, wearing a different hat. Be honest about the size of the effect: the direction is a straightforward consequence of how generation works, but how much it helps is task-dependent. It costs you nothing to order the fields well, so do it, then measure whether it mattered.
+
+<Anatomy
+  caption="The field order from the invoice schema below. source_quote is declared first so it is already on the page, generated and in context, by the time the model produces the fields it is meant to support."
+  label="One response object, in declaration order"
+  parts={[
+    {
+      text: '{\n  "source_quote": "...",\n',
+      name: 'Evidence, declared first',
+      note: 'Generated before the fields it supports, so it sits in context when they are produced',
+      subject: true,
+    },
+    {
+      text: '  "invoice_number": "...",\n  "issue_date": "...",\n  "total_minor_units": ...,\n  "currency": "..."\n}',
+      name: 'The fields the evidence supports',
+      note: 'Come after, with the quote already on the page',
+    },
+  ]}
+/>
 
 **Define what unknown looks like.** This is the field that stops invention. A model asked for a notice period that is not in the contract will produce a plausible one, because plausible text is the only thing it makes. Give it a legitimate way to say nothing, and say when to use it:
 

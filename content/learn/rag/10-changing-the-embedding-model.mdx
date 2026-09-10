@@ -44,12 +44,16 @@ deeper:
 
 So when you re-point your embedding calls at a new model and leave the old vectors sitting in the same index, you don't get worse embeddings. You get numbers from two unrelated coordinate systems being compared as if they were one. The similarity function still runs and still returns a score - it just isn't measuring anything about meaning anymore for any query-document pair that crosses the model boundary.
 
+<Figure bare caption="Three of the four rows still return a correct answer, one accidentally. The failure signal row is the one to read twice: the mixed-model column never throws and never 404s, it just ranks wrong results with total confidence.">
+
 | | Same model throughout | Two models, one index |
 |---|---|---|
 | Old documents, old-model query | Correct | Correct, by accident |
 | Old documents, new-model query | N/A | Meaningless score, silently returned |
 | New documents, new-model query | Correct | Correct |
 | Failure signal | None needed | None at all - no error, just wrong ranking |
+
+</Figure>
 
 The last row is what makes this dangerous rather than merely annoying. A schema mismatch throws. A missing file 404s. A stale vector returns a plausible-looking, wrong answer, ranked with total confidence, and the only symptom is that search quality for older content quietly gets worse starting the day of the swap.
 
@@ -59,6 +63,19 @@ The last row is what makes this dangerous rather than merely annoying. A schema 
 
 Because you cannot mix models in one index, migrating means building a second index and moving the corpus into it - never rewriting vectors in place. The pattern has a name in the vector database world: blue-green migration, the same idea used for zero-downtime deploys generally, applied to an index instead of a service.
 
+<Compare caption="Overwriting vectors in place puts both coordinate systems in the same collection the moment the first write lands. A parallel index keeps the old one correct until the new one has actually been proven.">
+  <Panel label="Naive" title="Re-embed in place, overwriting each vector as you go">
+
+The collection holds vectors from two models from the first write onward, and every score between an old and a new vector is meaningless for as long as the backfill takes - which, on a real corpus, is not fast.
+
+  </Panel>
+  <Panel label="What to do" title="Build a parallel index and migrate behind an alias">
+
+The old index keeps serving correctly while the new one fills up and gets evaluated on its own. Traffic only moves once the new index has proven itself, and a bad cutover is just flipping the alias back.
+
+  </Panel>
+</Compare>
+
 The steps, in order:
 
 1. **Stand up a parallel index** configured for the new model's vector dimensions and settings. It starts empty.
@@ -67,6 +84,52 @@ The steps, in order:
 4. **Verify before cutting over.** Run your retrieval eval set (*Measuring retrieval* covers building one) against the new index and compare recall@k and MRR against the old index's numbers. A migration that quietly regresses quality is worse than the drift it was meant to fix.
 5. **Cut traffic over behind an alias**, not a hard-coded index name. Your application should query "current-index," and current-index should be a pointer you can move. This turns rollback into flipping the alias back, not re-running the whole migration in reverse.
 6. **Stop dual writes and retire the old index** once you have run confidently on the new one for long enough to trust it - a week of real traffic, not an hour of smoke tests.
+
+<Steps
+  caption="The same migration, four milestones in. Click through and watch where traffic actually reads from — it never moves until the new index has been filled and checked on its own."
+  steps={[
+    {
+      label: 'Dual writes on',
+      title: 'A second index starts filling',
+      body: 'The parallel index goes up empty, then every new or updated document is embedded with both models and written to both indexes. Skip this step and anything written during the migration is missing from whichever index finishes backfilling second.',
+      facts: [
+        { label: 'old index', value: 'serving all reads' },
+        { label: 'new index', value: 'receiving new writes only' },
+        { label: 'traffic reads from', value: 'old index' },
+      ],
+    },
+    {
+      label: 'Backfill',
+      title: 'The existing corpus is re-embedded',
+      body: 'The rest of the corpus is walked document by document and re-embedded into the new index — one embedding call per document, on the whole corpus, all at once.',
+      facts: [
+        { label: 'old index', value: 'serving all reads' },
+        { label: 'new index', value: 'filling with the re-embedded corpus' },
+        { label: 'traffic reads from', value: 'old index' },
+      ],
+    },
+    {
+      label: 'Verify',
+      title: 'The new index proves itself first',
+      body: 'The retrieval eval set runs against the new index, and recall@k and MRR are compared against the old index before a single real query touches it.',
+      facts: [
+        { label: 'old index', value: 'serving all reads' },
+        { label: 'new index', value: 'fully backfilled, under evaluation' },
+        { label: 'traffic reads from', value: 'old index' },
+      ],
+    },
+    {
+      label: 'Cutover',
+      title: 'Traffic moves behind an alias',
+      body: 'The application queries a pointer, not a hard-coded index name, so the flip is one config change and rollback is the same change in reverse. Dual writes stop and the old index is retired once the new one has run confidently for a while.',
+      facts: [
+        { label: 'old index', value: 'kept as fallback, then retired' },
+        { label: 'new index', value: 'serving all reads' },
+        { label: 'traffic reads from', value: 'new index, behind an alias' },
+      ],
+    },
+  ]}
+/>
 
 ```python
 # One document's migration record - what to track per vector so you can

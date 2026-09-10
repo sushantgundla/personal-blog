@@ -52,6 +52,22 @@ Engineers tend to have one bucket labelled "the model failed". That is too coars
 
 The practical point: **only the first kind is worth retrying.** If you treat all three the same you will burn tokens re-asking a question the model already answered wrongly with total consistency.
 
+<Flow
+  caption="The only branch worth spending another call on is the first one — the other two will come back exactly as wrong, with the same prompt, however many times you ask."
+  steps={[
+    { label: 'A response comes back', note: 'Parsed, or an attempt was made to' },
+    {
+      label: 'Which kind of wrong is it',
+      subject: true,
+      branch: [
+        'Malformed — retry, this is usually fixable',
+        'Well-formed but wrong — do not retry; fix the prompt or the examples instead',
+        'Well-formed but fabricated — reject the response and check the source',
+      ],
+    },
+  ]}
+/>
+
 Truncation deserves a note, because it is the malformed case people misdiagnose most often. If `max_tokens` cuts the response mid-object, you get a parse error that looks like the model ignoring the contract. Check the stop reason before you blame the prompt.
 
 ## 2. Validate at the boundary, exactly like an HTTP body
@@ -77,6 +93,21 @@ The id check is where the abstraction leaks in a useful way. A schema describes 
 When the answer is supposed to come from a document you supplied — a contract, a support thread, a retrieved chunk — you have a check available that is unusually strong: make the model quote, then verify the quote.
 
 Ask for the exact supporting span as a field. Then, in code, search for that span in the source text. If it is not there, the response is fabricated, no matter how good it reads. This is a substring search. It is free, and it catches the failure that is hardest to spot by eye.
+
+<Flow
+  caption="The check itself, reduced to what actually runs: ask for the span, then search for it. Nothing about how good the writing sounds enters into it."
+  steps={[
+    { label: 'Ask for the exact quote', note: 'A field on the response, not a paraphrase' },
+    {
+      label: 'Search the source text for it',
+      subject: true,
+      branch: [
+        'Found — the answer is grounded, keep it',
+        'Not found — reject it, no matter how good it reads',
+      ],
+    },
+  ]}
+/>
 
 Two things make it work in practice:
 
@@ -128,6 +159,48 @@ def extract(text: str) -> Ticket:
 
 print(extract("Charged twice in March. Give this to priya, it is blocking payroll."))
 ```
+
+<Steps
+  caption="Four responses that would sail through a bare type check, one at a time. Same two fields each time — what arrived, and which check actually caught it."
+  steps={[
+    {
+      label: 'urgency: 11',
+      title: 'Out of range',
+      body: 'The field is documented as one to five. The range constraint inside Ticket is the only thing standing between a typo and a row your on-call engineer trusts.',
+      facts: [
+        { label: 'value', value: 'urgency = 11' },
+        { label: 'caught by', value: 'the range check inside Ticket' },
+      ],
+    },
+    {
+      label: 'owner: "dave"',
+      title: 'Fabricated id',
+      body: 'Valid string, right type, and nobody called Dave works here. Only a lookup against OWNERS can know that.',
+      facts: [
+        { label: 'value', value: 'owner = "dave"' },
+        { label: 'caught by', value: 'ticket.owner not in OWNERS' },
+      ],
+    },
+    {
+      label: 'quote: invented',
+      title: 'Not in the source',
+      body: 'Plausible, well-formed, and absent from the text it is supposed to summarise. A substring search is free and catches it outright.',
+      facts: [
+        { label: 'value', value: 'quote not in text' },
+        { label: 'caught by', value: 'ticket.quote not in text' },
+      ],
+    },
+    {
+      label: 'Any of the above',
+      title: 'Logged before it raises',
+      body: 'The except block writes the raw output next to the input that produced it, so the failure is something you can actually look at later rather than an input that works fine when you retry it.',
+      facts: [
+        { label: 'value', value: 'the raw dict, unparsed' },
+        { label: 'caught by', value: 'log.exception(..., extra={"raw_output": raw})' },
+      ],
+    },
+  ]}
+/>
 
 Four checks, in order of cost: types, then range, then a set lookup, then a substring search. None of them needs another model call, and together they catch most of what a schema alone lets through.
 

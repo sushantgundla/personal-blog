@@ -44,11 +44,15 @@ An instruction can lose to everything else in the box — the pasted document, t
 
 Every prompt failure is one of these.
 
+<Figure bare caption="The three causes produce the same symptom, a wrong answer, and diverge only in the middle column — which is why the fix always starts with naming which one you have, not with rewriting the prompt.">
+
 | Cause | What it looks like | The fix |
 |---|---|---|
 | **Ambiguous** — you and the model read the instruction differently | The output is confident and well-formed, and answers a slightly different question. The shape changes between runs. | Describe the output, not the intent. |
 | **Buried** — your instruction is competing with a wall of context | Works on a short input, falls apart on a long one. The model mirrors the pasted text's own formatting. | Move it, delimit it, or cut the context. |
 | **Beyond the model** — the task is genuinely too hard as posed | Fails the same way every time, on a tiny clean input, however you word it. | Split it, give it a tool, or do that part in code. |
+
+</Figure>
 
 Most people reach straight for the third. "The model can't do this" is a comfortable conclusion — it ends the debugging. It is also wrong most of the time, because the first cause is enormously more common and looks exactly like incompetence from the outside.
 
@@ -98,6 +102,39 @@ Answer 3 is the one you want. Every item it lists is a decision you left to a co
 
 **Step three: only now, believe it is hard.** A task that fails on a tiny clean input, with an accurate restatement, and fails the same way on every attempt, is a task the model cannot do as posed. That is a real category — exact arithmetic on long numbers, anything needing information the model does not have, anything with five interacting sub-tasks. The fix is not a better sentence. It is decomposition (*Decomposition*), a tool, or code.
 
+<Steps
+  caption="The same order, one step at a time. Click through and watch what you're testing and what a failure there means change at every step — the expensive conclusion is reached only once the first two tests have passed."
+  steps={[
+    {
+      label: 'Restate',
+      title: 'Ask it to restate the task',
+      body: 'Before it does the work, ask what it thinks the work is, and what could be read more than one way.',
+      facts: [
+        { label: 'you test', value: 'the restatement' },
+        { label: 'a failure here means', value: 'ambiguous — describe the output' },
+      ],
+    },
+    {
+      label: 'Shrink',
+      title: 'Re-run on a small, clean input',
+      body: 'The restatement was right, but the answer is still wrong. Cut the context down to one small, clean example and re-run.',
+      facts: [
+        { label: 'you test', value: 'a tiny clean input' },
+        { label: 'a failure here means', value: 'buried — fix placement and delimiters' },
+      ],
+    },
+    {
+      label: 'Believe it',
+      title: 'Only now, believe it is hard',
+      body: 'Fails the same way every time, on a tiny clean input, with an accurate restatement, however you word it.',
+      facts: [
+        { label: 'you test', value: 'nothing left to test' },
+        { label: 'the conclusion', value: 'genuinely hard — split it or use a tool' },
+      ],
+    },
+  ]}
+/>
+
 | You observed | Test | If the test passes |
 |---|---|---|
 | Inconsistent shape across runs | Ask it to restate the task | Ambiguity — specify the output |
@@ -121,6 +158,19 @@ The rule: **if an instruction does not change what the output contains, it does 
 | Take your time and think it through. | Before answering, list the constraints one per line, then give the answer. | Turned "thinking" into tokens that actually get produced. |
 | Be thorough — do not miss anything. | Cover all five sections, in document order, one paragraph each. | A countable target replaced a feeling. |
 | You are an expert contract lawyer. | Cite the clause number for every claim. If no clause supports it, write `not in the document`. | Replaced a costume with a rule you can verify. |
+
+<Compare caption="The same instruction, rewritten so the output is checkable instead of implied. The rewrite does not ask for more effort — it names an artefact the model can actually produce.">
+  <Panel label="Weak" title="Please be very careful and accurate.">
+
+Reads as pressure. It does not describe anything different for the model to produce, so there is nothing for the instruction to change.
+
+  </Panel>
+  <Panel label="Rewrite" title="Quote the exact sentence each value came from. If you cannot quote it, return null for that field.">
+
+Care becomes a visible artefact you can check. The model either produces the quote or admits it cannot, and both are checkable.
+
+  </Panel>
+</Compare>
 
 Two honest notes, because this area is thick with folklore.
 

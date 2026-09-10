@@ -65,6 +65,18 @@ Two things make this less useful than it looks. First, closed providers mostly d
 
 Before any arithmetic can happen, your text has to become numbers. A **tokenizer** cuts the string into chunks called **tokens** and looks each chunk up in a fixed vocabulary to get an integer. That list of integers is what the model receives. It never sees your string. The answer comes back the same way in reverse: the model picks a number, the tokenizer turns it back into a chunk of text.
 
+<Flow
+  caption="The round trip a request actually makes. The model in the middle never sees your words — only the integers the tokenizer hands it — and the same lookup runs in reverse to turn its answer back into text."
+  steps={[
+    { label: 'Your text', note: 'A string, not yet visible to the model as words' },
+    { label: 'Tokenizer', note: 'Cuts the string into chunks and looks each one up in a fixed vocabulary' },
+    { label: 'Integers', note: 'The only thing the model actually receives', subject: true },
+    { label: 'The model', note: 'Reads and predicts entirely in these numbers' },
+    { label: 'Tokenizer, in reverse', note: 'Turns the predicted numbers back into text' },
+    { label: 'Your answer' },
+  ]}
+/>
+
 A token is usually a few characters. Sometimes it is a whole common word, more often it is a fragment of a longer one. The cuts are not where a reader would put them:
 
 | What you write | How it tends to split |
@@ -93,6 +105,16 @@ Now count the comparisons. Every token against every other token, so `n` tokens 
 
 > Attention compares every token with every other token. Double the prompt, and you roughly quadruple that part of the work.
 
+<Bars
+  caption="The pair count from the rule above, plotted at 1x, 2x and 4x an illustrative prompt length. The figures are the squares the rule predicts, not a measurement — the caveats below explain why real latency lands short of this curve."
+  axis="Attention pairs, relative to a 1x prompt"
+  bars={[
+    { label: '1x tokens', value: 1 },
+    { label: '2x tokens', value: 4 },
+    { label: '4x tokens', value: 16, subject: true },
+  ]}
+/>
+
 Two honest caveats, because you will measure this and it will not be a clean curve. The per-token network in each block grows linearly, not quadratically, and it dominates at short lengths. And serving stacks fight the quadratic hard — cached keys and values, batching, attention kernels written for the hardware. Real latency lands somewhere between linear and quadratic. But it is never flat, and the direction never reverses.
 
 The practical consequences:
@@ -108,6 +130,17 @@ Almost everything you like or dislike about a model was decided in one of two st
 **Pre-training.** Read an enormous pile of text, predict the next token, adjust the weights when wrong, repeat for trillions of tokens. This takes months on thousands of accelerators and burns most of the money. What comes out is a **base model**: it has absorbed grammar, facts, code, reasoning patterns and style, and it can do exactly one thing — continue text.
 
 **Post-training.** Much smaller, much cheaper, and it decides nearly everything you interact with. Two stages inside it: supervised fine-tuning on written demonstrations of good answers, then preference tuning, where people (or another model working from written rules) rank candidate answers and the weights move toward the preferred one. This is where instruction following, tone, refusals, formatting habits, and tool use come from.
+
+<Flow
+  caption="The two stages in order. Pre-training spends months producing a base model that can only continue text; post-training's two steps inside it are what actually teach it to follow an instruction, refuse, or call a tool."
+  steps={[
+    { label: 'Pre-training', note: 'Predict the next token, over trillions of tokens' },
+    { label: 'Base model', note: 'Continues text. Follows no instructions yet' },
+    { label: 'Supervised fine-tuning', note: 'Trained on written demonstrations of good answers' },
+    { label: 'Preference tuning', note: 'Candidate answers ranked; weights move toward the preferred one', subject: true },
+    { label: 'The model you call', note: 'Instruction following, tone, refusals, tool use — decided here' },
+  ]}
+/>
 
 | | Pre-training | Post-training |
 |---|---|---|

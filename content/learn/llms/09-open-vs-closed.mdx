@@ -55,11 +55,26 @@ That is genuinely useful and it is much less than open source normally means.
 
 In software terms it is closer to being handed a binary you are allowed to modify than being handed source. You can run it, quantise it, fine-tune it and serve it. You cannot rebuild it from scratch, and you cannot audit what went into it.
 
+<Compare caption="What people hear when a model is called open, against what the table above actually hands you. The gap is the whole reason the lesson insists on the second phrase.">
+  <Panel label="Assumed" title="Open source">
+
+The training data, the training code, and the compute to reproduce the run. Something you could audit line by line and rebuild from scratch.
+
+  </Panel>
+  <Panel label="Actual" title="Open weights">
+
+A weights file, the architecture and config to load it, a tokenizer, and a model card. You can run it, quantise it, fine-tune it, and serve it — you cannot audit what went into it or rebuild it.
+
+  </Panel>
+</Compare>
+
 The right phrase is **open weights**. Say that and you will never mislead anyone, including yourself. A few genuinely open efforts do publish data and code as well, and they say so loudly, because it is rare.
 
 ## 2. The licence is the file you have to read
 
 There is no single open model licence. There is a spectrum, and where a model sits on it decides whether you can build a business on it.
+
+<Figure bare caption="Four tiers, from a licence that asks nothing of you to one that restricts who you may serve. Reading the row is not a substitute for reading the licence text it describes.">
 
 | Where it sits | Typical terms | What it means for you |
 |---|---|---|
@@ -67,6 +82,8 @@ There is no single open model licence. There is a spectrum, and where a model si
 | Open weights with conditions — vendor community licences | Commercial use allowed, plus attached rules: acceptable-use policy, attribution or naming requirements, sometimes a scale threshold above which you must ask | Usable, but legal should read it, and you need to know which rules you are agreeing to |
 | Non-commercial or research-only — CC-BY-NC and similar | Free to experiment, not to sell | Fine for a prototype, fatal if it reaches production unnoticed |
 | Weights available, restricted | Download permitted, redistribution or hosting-as-a-service restricted | Check specifically whether you may serve it to third parties |
+
+</Figure>
 
 Four clauses are worth finding by name every time:
 
@@ -90,6 +107,18 @@ That gives you the declared identifier, which is the start. For anything with co
 ## 3. The honest trade
 
 Neither side wins. They trade different things, and which trade suits you depends on facts about your product, not about the models.
+
+<Plot
+  caption="Two of the eight rows below, plotted against each other: ops burden and control over data and behaviour move together, from the provider's side to yours. The table spells out what that buys and costs on the other six."
+  xAxis="Who carries the ops burden"
+  xEnds={["None — the provider's problem", "Yours — GPUs, serving, on-call"]}
+  yAxis="Who controls data and behaviour"
+  yEnds={["The provider does", "You do"]}
+  points={[
+    { label: 'Closed API', x: 8, y: 10 },
+    { label: 'Open weights', x: 92, y: 92, subject: true },
+  ]}
+/>
 
 | | Closed API | Open weights |
 |---|---|---|

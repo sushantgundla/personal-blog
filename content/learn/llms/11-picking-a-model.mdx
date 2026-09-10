@@ -59,6 +59,16 @@ Three things degrade these scores further:
 
 Use them anyway, for the one job they are good at: cutting a list of twelve candidate models down to three that are plausibly in the right class for your task, along with the constraints that *What you actually pay for* and *Rate limits and reliability* covered — price, context window, rate limits, latency, region. Then close the tab.
 
+<Flow
+  caption="Where a leaderboard's job ends. Benchmarks and the constraints from earlier lessons only narrow the field — they do not pick a winner, which is what the next section is for."
+  steps={[
+    { label: 'A dozen candidates', note: 'Whatever made your shortlist' },
+    { label: 'Public benchmarks', note: 'Cut for general capability in roughly the right class' },
+    { label: 'Price, context, rate limits', note: 'The constraints earlier lessons covered' },
+    { label: 'Three candidates', note: 'The tab closes here', subject: true },
+  ]}
+/>
+
 ## 2. Twenty cases of your own decide it
 
 The prompt-engineering course builds one of these in *Versioning and testing prompts*. It is the same tool pointed at a different question: there you use an eval to tell whether your prompt edit helped, here to tell which model to buy.
@@ -99,7 +109,26 @@ Then a table by task type, as a starting point to test rather than a conclusion:
 
 **The routing pattern** is how you stop choosing. Send everything to a small cheap model first. Escalate to the big one only when a signal you can actually compute says the cheap answer is not good enough. Typical signals: the output failed a schema or business-rule validator, the model reported low confidence when asked for one, an input-length or complexity score crossed a threshold, or the request came from a tier that pays for the better answer.
 
+<Flow
+  caption="The routing pattern in one drawing. Every request starts at the cheap model, and only a signal you can actually compute — never a guess, never which model the user asked for — sends it on to the strong one."
+  steps={[
+    { label: 'Request arrives', note: 'Every request, not just the hard ones' },
+    { label: 'Small, cheap model answers first', note: 'The default path for the easy majority' },
+    {
+      label: 'A measurable signal',
+      subject: true,
+      branch: [
+        'Passed validation, confidence high — ship it',
+        'Failed validation, low confidence, or over a threshold — escalate',
+      ],
+    },
+    { label: 'Strong model', note: 'Only pays for what the cheap model could not handle' },
+  ]}
+/>
+
 The economics work because in most real workloads the easy majority is a large majority. The proportion that stays cheap varies a lot by task, so measure yours rather than trusting anyone's percentage, including a number in a lesson.
+
+<Figure bare caption="The pattern from the drawing above, as code. classify() is the cheap model and the strong model, called with the same function; route() is the whole decision, and confident is the measurable signal that decides which one answers.">
 
 ```python
 # pip install openai
@@ -135,5 +164,7 @@ def route(text: str) -> dict:
 
 print(route("I was charged twice for the same invoice last Tuesday."))
 ```
+
+</Figure>
 
 Log which model served each request. Without that line you cannot tell whether the escalation rate is 5 percent or 60, and the whole point of routing is that number.

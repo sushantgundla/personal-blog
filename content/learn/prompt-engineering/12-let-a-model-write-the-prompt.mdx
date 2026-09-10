@@ -46,6 +46,8 @@ Asking a model to "improve this prompt" cold produces exactly what you would exp
 
 The fix is the one you already know from *Retries and fallbacks*: show it the error, not just the task. Instead of the prompt alone, hand the drafting call three things - the current prompt, a handful of cases it is currently failing, and for each one the input, the expected output, and what it actually produced. That is a narrower, easier question than "write a better prompt." It is closer to "here is specifically what is wrong, fix that," which is the same move that made repair retries work in *Retries and fallbacks*, aimed at the prompt itself instead of at one response.
 
+<Figure bare caption="Hand-editing and meta-prompting differ in where the next idea comes from, not in whether a harness still has to grade it - the last row is the same trade in miniature: fixing the case you remember can break one you don't, and fixing the cases a model was shown can mean overfitting to them.">
+
 | | Hand-editing | Meta-prompting |
 |---|---|---|
 | What changes each round | Whatever line you personally suspect | Whatever the failing cases point at |
@@ -54,6 +56,8 @@ The fix is the one you already know from *Retries and fallbacks*: show it the er
 | Where it plateaus | When your intuition runs out of ideas | When the failing cases stop being informative |
 | Failure mode | Fixing the case you remember, breaking one you don't | Overfitting to exactly the cases it was shown |
 
+</Figure>
+
 Neither column removes the harness. Both still need it, for the same reason - the row about intuition running out is really *Versioning and testing prompts*'s argument again: a person eyeballing one example is measuring almost nothing, and a model reading three failing cases is only slightly better informed unless something else checks its work.
 
 ## 2. Generate several, and let the harness pick
@@ -61,6 +65,16 @@ Neither column removes the harness. Both still need it, for the same reason - th
 The single biggest mistake in this technique is asking for one rewrite and shipping whichever one comes back. That is the same trap as judging a prompt edit from one example - a single candidate is one point on a distribution, and you have no idea whether it is better everywhere or just better on the three cases it was shown.
 
 Ask for three to five candidates in one call, each making a different kind of change - one tightening the instructions, one adding an example from the failing cases, one restructuring the output contract. Then run every candidate through the exact same twenty-case harness from *Versioning and testing prompts*, unchanged, and compare pass counts directly. This is where the technique earns its keep: you are not trusting the drafting model's opinion of its own work, you are trusting the same measurement you already trusted for hand edits.
+
+<Flow
+  caption="The loop this lesson adds on top of the harness from Versioning and testing prompts: a model proposes several rewrites, and the same scoring - never the drafting model's own opinion - decides which one, if any, replaces the current prompt."
+  steps={[
+    { label: 'Current prompt + failing cases', note: 'The specific misses, with expected and actual output' },
+    { label: 'Draft 3-5 candidates', note: 'Each making a different kind of change' },
+    { label: 'Score every candidate', subject: true, note: 'The same harness, unchanged, including cases the drafter never saw' },
+    { label: 'Highest combined score wins', note: 'Or none of them do, and the current prompt stays' },
+  ]}
+/>
 
 > The model drafting the prompt is not the judge of the prompt. Your twenty cases are, every time.
 
@@ -117,9 +131,59 @@ print(f"current: {score(current, working_set) + score(current, holdout)}  best c
 
 `run_case` is the same function *Versioning and testing prompts* already built - nothing about the harness changes, only where the next candidate comes from. The holdout score sitting right next to the working-set score is the whole safeguard: a candidate that wins on one and loses on the other has not earned the swap.
 
+<Steps
+  caption="The script above, one stage at a time: the holdout stays out of the drafter's sight the whole way through, and only the combined score at the end decides which candidate, if any, wins."
+  steps={[
+    {
+      label: 'Split the cases',
+      title: 'Holdout set aside',
+      body: 'The case file splits into a working set the drafter is shown and a holdout it never sees.',
+      facts: [
+        { label: 'working_set', value: '20 cases' },
+        { label: 'holdout', value: '3 cases' },
+      ],
+    },
+    {
+      label: 'Find failures',
+      title: 'Run the current prompt',
+      body: 'The current prompt runs against the working set, and whatever it gets wrong becomes the material the drafter reads.',
+      facts: [
+        { label: 'failing[:5]', value: 'a sample, not the whole list' },
+      ],
+    },
+    {
+      label: 'Draft candidates',
+      title: 'One call, three rewrites',
+      body: 'The drafting call sees the current prompt and its failures, and returns three candidate rewrites in one response.',
+      facts: [
+        { label: 'candidates', value: '3' },
+      ],
+    },
+    {
+      label: 'Score both sets',
+      title: 'Working set and holdout',
+      body: 'Every candidate is scored against the working set it was shown and the holdout it was not, and the two totals together decide the winner.',
+      facts: [
+        { label: 'scored against', value: 'working_set + holdout' },
+      ],
+    },
+  ]}
+/>
+
 ## 3. What it costs, and when hand-editing is still faster
 
 Be honest about the arithmetic before reaching for this. One drafting call, then every candidate run once against your full case set, is `1 + (candidates × cases)` model calls per round - five candidates against twenty-three cases is over a hundred calls to test one round of ideas. That is real money and real time, and it dwarfs the cost of typing a sentence yourself.
+
+<Scale
+  caption="One drafting call plus every candidate scored against the full case set, on a log scale. Five candidates against twenty-three cases is the '1 + (candidates x cases)' arithmetic from the paragraph above, not a separate estimate."
+  unit="model calls"
+  fromLabel="Typing the edit yourself"
+  toLabel="Five candidates, twenty-three cases"
+  marks={[
+    { at: 1, label: 'One hand edit' },
+    { at: 116, label: 'One meta-prompting round', subject: true, value: '~116 calls' },
+  ]}
+/>
 
 It earns that cost back in specific situations, not by default:
 

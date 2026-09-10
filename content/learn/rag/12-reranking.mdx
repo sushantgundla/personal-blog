@@ -55,6 +55,17 @@ Read the last row twice. The reranker can only reorder what it is given. If the 
 
 > Retrieval decides what is possible. Reranking decides what is on top. You need both, in that order.
 
+<Flow
+  caption="The two stages in order. Stage one has to cover the whole corpus cheaply, so it optimises for not missing the answer; stage two only ever sees what stage one handed it, so it cannot recover a candidate that never made the list."
+  steps={[
+    { label: 'The whole corpus', note: 'Millions of chunks' },
+    { label: 'Stage one: retrieve', note: 'Vector search, BM25, or hybrid - milliseconds, optimised for recall' },
+    { label: 'Candidates', note: '25 to 100', subject: true },
+    { label: 'Stage two: rerank', note: 'Cross-encoder or an LLM, optimised for precision at the top' },
+    { label: 'Top k to the model', note: 'Usually 3 to 10' },
+  ]}
+/>
+
 ## 2. Why the second pass sees more
 
 This is the mechanism, and once you see it the rest of the lesson is obvious.
@@ -123,7 +134,34 @@ Call it `n` for candidates in, `k` for chunks out. `k` is set by your prompt bud
 | 100 to 200 | Diminishing returns for most corpora, noticeably slower |
 | 1000+ | Almost never worth it outside offline batch work |
 
+<Dial
+  caption="n is the one knob in this lesson worth dragging: the same four regions from the table above, laid along the rail k stays fixed while n grows past it."
+  name="n (candidates reranked)"
+  min={5}
+  max={1000}
+  step={5}
+  start={50}
+  unit=" candidates"
+  bands={[
+    { at: 5, label: 'n = k', outcome: 'Pointless - nothing to reorder.', note: 'The reranker needs candidates to work with.' },
+    { at: 25, label: '25 to 50', outcome: 'The usual sweet spot, modest latency.' },
+    { at: 100, label: '100 to 200', outcome: 'Diminishing returns for most corpora, noticeably slower.' },
+    { at: 1000, label: '1000+', outcome: 'Almost never worth it outside offline batch work.' },
+  ]}
+/>
+
 The right way to pick it is measurement, not a rule. Compute recall@n for your first stage across your eval set from *Measuring retrieval*. The point where recall@n stops climbing is the point where extra candidates only add cost - if recall@50 is 0.94 and recall@200 is 0.95, you are paying four times as much for one extra question in a hundred.
+
+<Bars
+  caption="The point the paragraph above is making: recall barely moves between 50 and 200 candidates, so the extra cost buys almost nothing. The figures are the lesson's own worked example, not a measurement - count your own."
+  unit="%"
+  max={100}
+  axis="Recall@n on your own eval set"
+  bars={[
+    { label: 'Recall@50', value: 94, subject: true },
+    { label: 'Recall@200', value: 95, note: 'four times the candidates for one point of recall' },
+  ]}
+/>
 
 ### Where it pays most
 

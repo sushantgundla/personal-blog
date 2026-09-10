@@ -61,9 +61,25 @@ Two details make it work:
 
 > A blind retry asks the same question again. A retry with the error attached asks a different, easier one.
 
+<Flow
+  caption="The one loop this lesson relies on: a failure the model can see is a failure it can usually fix, and the retry differs from the first call only in what got appended to the conversation before it went out again."
+  steps={[
+    { label: 'Call the model', note: 'The conversation so far, plus whatever the last turn added' },
+    {
+      label: 'Validate the response',
+      subject: true,
+      branch: ['Passes — return it to the caller', "Fails — hold the validator's own error text"],
+    },
+    { label: 'Append the bad response and the error', note: 'Both go back in as turns, not summarised' },
+  ]}
+  back={{ from: 3, to: 1, label: 'Ask again — a narrower question than the first call' }}
+/>
+
 ## 2. What to retry, and how many times
 
 Retrying the wrong failure is worse than not retrying, because you pay for it and you still fail.
+
+<Figure bare caption="Nine kinds of failure, sorted by whether a second try can possibly go differently: everything transient or model-visible is worth retrying, and everything that describes the request itself is not.">
 
 | Failure | Retry? | Why |
 |---|---|---|
@@ -76,6 +92,8 @@ Retrying the wrong failure is worse than not retrying, because you pay for it an
 | 400 bad request | No | Something about the request is invalid; an identical retry fails identically |
 | 401 / 403 | No | Credentials or permissions. Retrying is noise |
 | Content refused by the model | No | Retrying a refusal is how you build a tool that begs |
+
+</Figure>
 
 **Cap the attempts at three total — the first try plus two repairs.** Two repairs catch nearly everything recoverable. A third failure on the same input is not bad luck; it means the prompt is asking for something the model is not reliably able to give, and no number of attempts fixes a design problem. Let it fail and go and look at the prompt.
 
@@ -141,6 +159,42 @@ def call_with_repair(messages, validate):
 
     raise RuntimeError("could not get a valid response in 3 attempts")
 ```
+
+<Steps
+  caption="The loop above, run through by hand: three attempts at most, and each failure adds exactly two turns to messages before the next call goes out."
+  steps={[
+    {
+      label: 'Attempt 0',
+      title: 'The first call',
+      body: 'resp comes back and validate(text) raises ValidationError. The bad response and the error both get appended as new turns.',
+      facts: [
+        { label: 'attempt', value: '0' },
+        { label: 'messages', value: 'as passed in' },
+        { label: 'on failure', value: 'append assistant + user, continue' },
+      ],
+    },
+    {
+      label: 'Attempt 1',
+      title: 'The first repair',
+      body: "The model sees its own bad answer and the validator's error in the same conversation. If it fails again, one repair is still left.",
+      facts: [
+        { label: 'attempt', value: '1' },
+        { label: 'messages', value: '+ bad answer + error' },
+        { label: 'on failure', value: 'append again, continue' },
+      ],
+    },
+    {
+      label: 'Attempt 2',
+      title: 'The last try',
+      body: 'attempt < MAX_ATTEMPTS - 1 is now false. A further ValidationError is not caught here — it falls through to the RuntimeError below the loop.',
+      facts: [
+        { label: 'attempt', value: '2' },
+        { label: 'messages', value: '+ bad answer + error' },
+        { label: 'on failure', value: 'RuntimeError: could not get a valid response' },
+      ],
+    },
+  ]}
+/>
 
 Note what the loop does not contain: no retry on a wrong answer, no unbounded attempts, no swallowed exception at the end. It either returns something your validator accepted, or it raises where somebody will notice.
 

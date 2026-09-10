@@ -63,6 +63,40 @@ That last row causes real outages. If you re-embed half your corpus with a new m
 
 Picture each embedding as an arrow from the origin out to its point. **Cosine similarity** is the cosine of the angle between two arrows. Pointing the same way scores 1, at right angles scores 0, opposite scores -1. In practice you will see roughly 0 to 0.3 for unrelated text and 0.8 upwards for near-duplicates, and the useful range is narrower than you expect — get used to reading your own scores rather than trusting a threshold you read somewhere.
 
+<Dial
+  caption="The full -1 to 1 scale, split into the bands you actually run into. The useful range is the narrow one the lesson describes: unrelated text under 0.3, near-duplicates at 0.8 and up, and a wide middle where you have to read your own scores rather than trust a threshold."
+  name="cosine similarity"
+  min={-1}
+  max={1}
+  step={0.05}
+  start={0.5}
+  bands={[
+    {
+      at: -1,
+      label: 'Opposite',
+      outcome: 'The theoretical floor — two arrows pointing in exactly opposite directions.',
+      note: 'Rare in real text; few pairs are ever this far apart.',
+    },
+    {
+      at: 0,
+      label: 'Unrelated',
+      outcome: 'Roughly where unrelated text lands in practice.',
+      note: 'Up to about 0.3.',
+    },
+    {
+      at: 0.3,
+      label: 'Related',
+      outcome: 'Somewhere between unrelated and a duplicate — the band with no fixed threshold.',
+      subject: true,
+    },
+    {
+      at: 0.8,
+      label: 'Near-duplicate',
+      outcome: 'Where near-duplicates land, 0.8 and upward.',
+    },
+  ]}
+/>
+
 The reason it is cosine and not straight-line distance is direction versus magnitude. Arrow length tends to track things you do not care about, like how long the text is or how emphatic it is. Angle tracks topic. A one-line answer and a three-page article on the same subject point the same way but sit at different distances from the origin, and cosine ignores exactly that difference.
 
 There is a catch worth knowing, because it saves you an argument. Most embedding APIs return **unit-length** vectors — already scaled so the arrow has length 1. On unit vectors, cosine similarity is just the dot product, one matrix multiply, no division. And Euclidean distance becomes a rearrangement of the same quantity, so it ranks results in exactly the same order. So:
@@ -113,8 +147,36 @@ Embeddings are strong on the thing keyword search cannot do: matching meaning ac
 | this does not ship to Canada | Wrong | Negation changes one small word and almost nothing in the vector. |
 | OK | Useless | Two characters of context match everything weakly. |
 
+<Plot
+  caption="Four of the pairs from the table above, placed by how much their wording overlaps and how much their meaning actually agrees. Paraphrase sits top-left — different words, same meaning — while negation and the invoice numbers sit at the opposite trap: wording that is nearly identical pointing at a meaning that is different or reversed. The placement is illustrative, not measured — the pattern is the point, not the coordinates."
+  divide
+  xAxis="How much the wording overlaps"
+  xEnds={['Different words', 'Same words']}
+  yAxis="How much the meaning actually agrees"
+  yEnds={['Opposite meaning', 'Same meaning']}
+  points={[
+    { label: 'Paraphrase: cancel vs terminate', x: 12, y: 90 },
+    { label: 'Related concept: indexing vs query performance', x: 28, y: 62 },
+    { label: 'Negation: ships to Canada vs does not', x: 82, y: 5, subject: true },
+    { label: 'Identifier: INV-4471 vs INV-4472', x: 96, y: 32 },
+  ]}
+/>
+
 None of these are fixable by picking a better model. They are properties of the approach. The fix is architectural: keep a keyword index alongside for identifiers, put dates and numbers in metadata columns you filter on, and never expect a vector to enforce a rule. Part 3 of this course builds that out.
 
 One more asymmetry, and it explains a frontmatter field you may have skipped. A question and the passage that answers it **do not look alike**. "What is the refund window?" shares little with "Requests submitted within 30 days of purchase are honoured in full." Retrieval models are trained on exactly that mismatch, and many of them expose it as two modes — an `input_type` of `query` or `document`, or a short prefix string you prepend. Same model, two jobs.
 
 Use them. Embedding your documents in query mode, or your queries in document mode, costs you real recall for no reason, and it fails silently: everything still returns results, they are just quietly worse. *Choosing an embedding model* comes back to this, because forgetting one half of the pair is one of the most common bugs in a working RAG system.
+
+<Compare caption="Same model, two jobs. Getting the pairing wrong is not an error you see — it is recall you lose without any signal that it happened.">
+  <Panel label="Correct" title="Query mode for the question, document mode for the passage">
+
+The model was trained on exactly this mismatch — a short question and a longer passage that does not read alike — so it places the two roles where they actually belong in the space.
+
+  </Panel>
+  <Panel label="Mismatched" title="One mode for both, or the wrong one for either">
+
+The request still returns results, and nothing in the response says anything is wrong. The recall lost is invisible, which is what makes forgetting one half of the pair one of the most common bugs in a working RAG system.
+
+  </Panel>
+</Compare>

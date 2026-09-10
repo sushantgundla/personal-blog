@@ -65,9 +65,24 @@ So the usual verification move — try it, looks better, ship — is measuring o
 
 That is also why you cannot test a prompt with an assertion on a single output the way you test a function. What you can do is measure the same set of cases before and after, and compare. The scale of that measurement can be tiny and still be enormously more useful than the one example.
 
+<Compare caption="The check that ships against the one that catches a regression. The naive move samples a single point on a distribution the edit just moved everywhere; the harness samples the same fixed set, twice, and compares.">
+  <Panel label="Naive" title="Try it, looks better, ship">
+
+One example, read by eye. The edit changed influence on every input the system will ever see, but the check sampled exactly one point on that.
+
+  </Panel>
+  <Panel label="What to do" title="Run the same set, before and after">
+
+The same cases, measured twice, compared. It is a tiny sample, but it is a sample of the distribution that actually moved — not a single point on it.
+
+  </Panel>
+</Compare>
+
 ## 3. The smallest harness that is worth having
 
 Twenty cases. That is the whole recommendation.
+
+<Figure bare caption="The six pieces of the smallest harness worth having. Real cases and a committed record do most of the work; the runner and the grader are the least of it.">
 
 | Piece | What it is | Notes |
 |---|---|---|
@@ -78,11 +93,40 @@ Twenty cases. That is the whole recommendation.
 | The grader | Exact match where you can, a substring or rule check where you cannot | Match the cheapest method that fits the task |
 | The record | The run output, committed to the repo | So the next change is a diff you can read |
 
+</Figure>
+
 Run it on every prompt change, before the review, and put the number in the pull request.
 
 One assumption not to build on: that a case gives the same answer every run. Turning the temperature down used to be how people suppressed that, and where you can still set it — OpenAI models, anything open-weight you run yourself — it is worth doing. Anthropic's current models do not accept `temperature` at all, so on those you cannot. It was never a guarantee either way. Which is fine, because a case that flips between two runs of an unchanged prompt is not noise to be filtered out; it is the harness telling you that case is genuinely borderline. Run that one a few times, then either fix the prompt or write the expected outcome as a rule both answers satisfy.
 
 The bar is **regression, not perfection**. You are not trying to get to twenty out of twenty; some of those cases may be genuinely hard, and a couple may be ambiguous enough that reasonable people disagree. What you need is that the number does not go down and that any case whose output changed gets looked at deliberately. Committing the run output is what makes that cheap: the reviewer sees exactly which three answers moved, instead of a score dropping from 17 to 16 with no idea where.
+
+<Steps
+  caption="The same twenty cases, run twice, with the committed record read between them. Watch the passed count and notice that reviewing the drop means reading three cases, not twenty."
+  steps={[
+    {
+      label: 'Before the edit',
+      title: 'The last run',
+      body: 'The harness runs against the prompt as it stands and the sorted, indented output is committed.',
+      facts: [{ label: 'passed', value: '17/20' }],
+    },
+    {
+      label: 'After the edit',
+      title: 'The next run',
+      body: 'One word changes in the prompt. The harness runs again on the same twenty cases.',
+      facts: [
+        { label: 'passed', value: '16/20' },
+        { label: 'answers that moved', value: '3' },
+      ],
+    },
+    {
+      label: 'Reviewed',
+      title: 'A diff, not a mystery',
+      body: 'The committed JSON shows exactly which three cases changed, so the reviewer reads three answers instead of guessing at twenty.',
+      facts: [{ label: 'looked at', value: '3 of 20' }],
+    },
+  ]}
+/>
 
 Everything here is the minimum version of an eval harness, sized so you have no excuse not to build it this week. A fuller one goes further — richer grading strategies, using a model as a judge, running the whole set in CI. Get the minimum running first; the rest is far easier to add than to start with.
 

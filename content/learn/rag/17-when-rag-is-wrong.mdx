@@ -58,6 +58,8 @@ This is a database query. If your data is in a database, write SQL. If it is in 
 
 ## 2. The alternatives
 
+<Figure bare caption="Seven shapes of question and the tool that actually answers each one. RAG is the right pick for exactly one row - notice how many of the others need something structurally different, not a better retriever.">
+
 | The question | Tool | Why |
 |---|---|---|
 | How many, what is the total, which is highest | SQL or an analytics query | Needs every row, and arithmetic |
@@ -68,6 +70,8 @@ This is a database query. If your data is in a database, write SQL. If it is in 
 | What does our policy say about X | RAG | A passage holds the answer |
 | Needs several dependent lookups | Agentic search | The next query depends on the last result |
 
+</Figure>
+
 **SQL.** The best move here is often a router: have a model classify the question and, for the aggregation ones, generate a query against a real schema rather than a prompt against passages. Text-to-SQL is a well-studied problem with its own benchmarks. It also gives you something RAG cannot - an exact answer, reproducible, with no similarity involved.
 
 **Full-text search.** If the user knows what they are looking for and can name it, you do not need embeddings at all. A search box over BM25 is faster, cheaper, and returns the document rather than a paraphrase of it. Not every text problem needs a model.
@@ -77,6 +81,20 @@ This is a database query. If your data is in a database, write SQL. If it is in 
 **Graphs.** Extract entities and relationships at index time, store them as nodes and edges, and traverse. Approaches like GraphRAG combine this with retrieval - use the graph for structure, the passages for wording. It is real work to build and maintain, so reach for it when relationship questions are the main thing your users ask, not as a default upgrade.
 
 **Agentic search.** Instead of one retrieval pass, let the model search, read what came back, and decide what to search for next. This is an agent loop - the model calls a tool, reads what came back, then decides on the next call - with search as the tool. It fits questions where you cannot write the right query up front because you do not yet know what you are looking for - "find the incident that caused this regression, then tell me who reviewed the fix". The price is several model calls and several searches per question, so latency and cost multiply, and the loop needs a hard step limit.
+
+<Flow
+  caption="The loop a single retrieval pass cannot do: the model reads what a search returned before deciding what to search for next, and a hard step limit is what stops it looping forever."
+  steps={[
+    { label: 'Model picks a query', note: 'The first one, or shaped by what the last search found' },
+    { label: 'Search runs', note: 'The same retrieval step as a single-shot RAG call' },
+    { label: 'Model reads what came back', subject: true, note: 'Decides whether that is enough to answer' },
+    {
+      label: 'Enough evidence?',
+      branch: ['Yes — answer, citing what was found', 'No — pick another query'],
+    },
+  ]}
+  back={{ from: 4, to: 1, label: 'Not enough yet — the next query depends on what this one found' }}
+/>
 
 ### Why fine-tuning is not a substitute
 
@@ -96,6 +114,25 @@ If the need is fresh, citable facts, fine-tuning gives you none of the three. It
 ## 3. Route the question first
 
 The practical version of this lesson is a classifier in front of your pipeline. Decide what kind of question you have, then send it to the tool that can answer it.
+
+<Flow
+  caption="The router picks one route before any retrieval runs. Refusing — the none route — is one of the four options, not an afterthought: a question the corpus does not cover should be told so, not answered from five weak passages."
+  steps={[
+    { label: 'One question arrives' },
+    {
+      label: 'A router picks one route',
+      note: 'One model call; the output is a single word',
+      subject: true,
+      branch: [
+        'sql — counts, totals, filters over structured fields',
+        'retrieval — what a document says about a topic',
+        'whole_doc — needs one named document, read end to end',
+        'none — not covered by our corpus',
+      ],
+    },
+    { label: 'The matching tool runs', note: 'SQL, RAG, long context, or a refusal' },
+  ]}
+/>
 
 ```python
 import anthropic

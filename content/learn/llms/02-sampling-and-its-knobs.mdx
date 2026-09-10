@@ -50,6 +50,22 @@ The simplest procedure is **greedy decoding**: always take the single highest-pr
 
 So real serving stacks sample from the distribution instead of always taking the top entry. That reintroduces a different problem: sampling from the *full* distribution means occasionally drawing one of the thousands of nearly-zero-probability tokens in the tail, which produces the kind of nonsense word that makes an answer look broken. The three knobs in the next section exist to manage that trade-off — enough randomness to avoid the loop, not so much that the tail gets drawn from.
 
+<Flow
+  caption="The path from one forward pass to one chosen token. Greedy always takes the top branch and loops on the safest word; sampling properly risks the tail, which is exactly what the three knobs in the next section are built to manage."
+  steps={[
+    { label: 'Forward pass', note: 'One logit per vocabulary entry' },
+    { label: 'Softmax', note: 'Turns the logits into probabilities that add up to one' },
+    {
+      label: 'Decision procedure',
+      subject: true,
+      branch: [
+        'Greedy — always the single highest-probability token',
+        'Sample properly — draw from the distribution, tail included',
+      ],
+    },
+  ]}
+/>
+
 ## 2. Three knobs on the same distribution
 
 All three act before or during sampling, and all three answer a version of the same question: how much of that probability list is fair game?
@@ -72,9 +88,52 @@ Here is the part that has changed recently enough that most write-ups on this to
 
 The reasoning is not arbitrary. A model that generates a long chain of intermediate steps before answering has been tuned, internally, for how that exploration should behave. A caller flattening or sharpening the distribution mid-chain — usually while trying to make the *final* answer more consistent — can quietly wreck the reasoning that produces it. Rather than let people do that to themselves by habit, the labs removed the option.
 
+<Dial
+  caption="One knob, four regions. None of them has anything to do with whether the answer is correct — they govern variety and fluency, and a wrong answer at a low temperature is just wrong the same way every time."
+  name="temperature"
+  min={0}
+  max={2}
+  step={0.1}
+  start={1}
+  bands={[
+    {
+      at: 0,
+      label: 'Greedy',
+      outcome: 'Always the single highest-probability token.',
+      note: 'Duller and more repetitive than sampling properly — the safest word, repeated, is a loop.',
+    },
+    {
+      at: 0.3,
+      label: 'Sharpened',
+      outcome: 'The distribution is squeezed toward its peak. Consistent, and never a guarantee of identical output.',
+    },
+    {
+      at: 0.9,
+      label: 'As trained',
+      outcome: 'The default, and the only value current Anthropic reasoning models accept.',
+    },
+    {
+      at: 1.3,
+      label: 'Flattened',
+      outcome: 'The tail becomes reachable and the answer starts drawing words that make it look broken.',
+    },
+  ]}
+/>
+
 It costs you less than it looks like, because the thing you were probably using it for — a guarantee of identical output — was never real. Temperature 0 has always been an approximation of determinism, not a guarantee of it. Floating-point arithmetic on a GPU is not strictly associative, and production serving batches your request together with other people's, so identical inputs can still land in slightly different numerical company from one call to the next. If your system depended on temperature 0 producing the same string forever, it was already depending on something no provider ever promised.
 
 So what do you reach for instead? For **consistency**, stop trying to suppress variation at the sampler and catch it downstream: validate the output against a schema, and treat a case that flips between two runs as a sign that prompt is genuinely ambiguous rather than noise to filter away. For **accuracy on a reasoning-shaped task**, use **self-consistency**: run the same prompt several times and keep the answer that shows up most often. It recovers much of what a cooler temperature used to buy on tasks with one right answer, without touching a knob that, on the model you are calling, may simply no longer exist.
+
+<Flow
+  caption="The shape of self-consistency: not a single call with a tuned knob, but several independent calls whose answers get tallied — the vote does the work the knob used to do."
+  steps={[
+    { label: 'Same prompt', note: 'Sent independently, no sampling knob touched' },
+    { label: 'One sample', note: 'A separate call each time' },
+    { label: 'Tally the answers', subject: true, note: 'Group the identical results together' },
+    { label: 'Keep the majority', note: 'The answer that recurs across runs' },
+  ]}
+  back={{ from: 2, to: 1, label: 'Run again, several times, before tallying' }}
+/>
 
 ```python
 from anthropic import Anthropic, APIStatusError

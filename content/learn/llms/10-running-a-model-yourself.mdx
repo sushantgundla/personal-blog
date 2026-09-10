@@ -56,6 +56,19 @@ The weights are the first claim on that memory, and their size is straightforwar
 
 Round those up. Do not plan to the last gigabyte.
 
+<Scale
+  caption="The same table, on a log rule. A 70B model at full precision and a 7B model at 4-bit sit two orders of magnitude apart, which is the whole reason quantisation exists."
+  unit="GB"
+  fromLabel="A 7B model, quantised"
+  toLabel="A 70B model, full precision"
+  marks={[
+    { at: 3.5, label: '7B, 4-bit' },
+    { at: 14, label: '7B, fp16', subject: true },
+    { at: 35, label: '70B, 4-bit' },
+    { at: 140, label: '70B, fp16' },
+  ]}
+/>
+
 Then there is the part people forget. Every request in flight holds a **KV cache** — the attention state for every token it has seen so far, kept so the model does not recompute the whole prompt for each new output token. It is not optional, and it grows with two things at once:
 
 **KV cache ≈ tokens in context × number of concurrent requests × a per-model constant**
@@ -63,6 +76,19 @@ Then there is the part people forget. Every request in flight holds a **KV cache
 So a card that comfortably holds the weights can still fall over when twenty users each have a 50,000-token conversation open. Long context and high concurrency are the same problem wearing different clothes, and they are why "it worked on my laptop with one chat window" tells you almost nothing about production.
 
 A workable planning rule: weights, plus 20 to 40 percent for activations and overhead, plus a KV budget you size from your real context length times your real concurrency. Measure the last one with a load test rather than guessing — your serving engine will report it.
+
+<Budget
+  caption="One worked example of sizing a card for a 7B model at fp16: the weights are the biggest claim, but overhead and the KV cache still have to fit before anything is left spare. The figures are an illustration, not a measurement — size your own from a load test."
+  totalLabel="A 24 GB card"
+  unit="GB"
+  total={24}
+  segments={[
+    { label: 'Weights', value: 14, note: 'fp16, ~2 bytes per parameter', subject: true },
+    { label: 'Activations and overhead', value: 4, note: '20 to 40 percent of the weights' },
+    { label: 'KV cache', value: 4, note: 'Grows with context length and concurrent requests' },
+    { label: 'Unspent headroom', value: 2, spare: true },
+  ]}
+/>
 
 ## 2. Quantisation is the lever, and it charges a fee
 
@@ -80,6 +106,23 @@ Formats you will see named: **GGUF** (the format llama.cpp and Ollama use, built
 > A quantised large model usually beats a full-precision small model at the same memory budget. Usually. That word is why you re-run your eval after quantising, not before.
 
 The failure mode to watch for is that quantisation damage is uneven. Casual chat holds up well. Long chains of reasoning, exact arithmetic, strict JSON, and precise instruction-following degrade first — the very things you probably built a checker around. So quantise, then run the twenty cases from *Picking a model*, then decide.
+
+<Flow
+  caption="The loop quantisation actually runs in. The step that gets skipped under time pressure is the third one, and it is the one that catches the degradation the first two steps cannot see."
+  steps={[
+    { label: 'Pick a level', note: '16-bit, 8-bit, 4-bit, or below' },
+    { label: 'Load it locally', note: 'Ollama, LM Studio, or your serving engine' },
+    {
+      label: 'Re-run your eval',
+      note: 'The twenty cases from Picking a model — reasoning, arithmetic, JSON, instruction-following',
+      subject: true,
+    },
+    {
+      label: 'Decide',
+      branch: ['Quality holds — ship it', 'Quality drops — try a higher precision or a smaller model'],
+    },
+  ]}
+/>
 
 ```bash
 # Try a model on your own machine. No account, no key, no network after the pull.
@@ -110,6 +153,33 @@ The middle rung deserves more attention than it gets. It gives you most of what 
 **And now the uncomfortable part.** An idle GPU costs exactly what a busy one costs. API pricing goes to zero overnight; your reserved card does not. So the comparison is not your peak-hour cost against the API. It is a full month of GPU, times the number of GPUs you need for redundancy — which is at least two, because one is not a production system — against a full month of API bill.
 
 Run it as a division: monthly API bill ÷ monthly cost of the smallest GPU box that fits your model, at current rates from your cloud's own pricing page. If the answer is under about 2 or 3, stop. The remaining margin will be eaten by the engineer-days spent on drivers, upgrades, capacity and the 3am page. Above that, the sums start working, and they get better the higher and steadier your volume is.
+
+<Dial
+  caption="Drag the ratio and watch which region you land in. Below about 2 to 3, the engineer-days spent on drivers, upgrades and the pager eat the margin the GPU was supposed to buy."
+  name="Monthly API bill ÷ monthly GPU cost"
+  min={0}
+  max={5}
+  step={0.5}
+  start={1}
+  bands={[
+    {
+      at: 0,
+      label: 'Under 1',
+      outcome: 'The API bill is smaller than a single GPU box costs on its own. Self-hosting cannot win here.',
+    },
+    {
+      at: 1,
+      label: '1 to 3',
+      outcome: 'The GPU is not yet paying for itself once you count the engineer-days on drivers, upgrades, capacity and the pager.',
+      note: 'Stop here.',
+    },
+    {
+      at: 3,
+      label: 'Above 3',
+      outcome: 'The sums start working, and they get better the higher and steadier your volume is.',
+    },
+  ]}
+/>
 
 **Clearly right:** data legally cannot leave your network. Steady, high, predictable volume. A fine-tuned model that is your actual product. A requirement that the model never changes. Air-gapped or on-prem deployment.
 

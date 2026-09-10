@@ -44,6 +44,8 @@ The basics of few-shot prompting are easy to state: two to five examples, includ
 
 Prose describing an output leaves gaps. You cannot see them, because you know what you meant. The model fills each gap with whatever is most likely, and "most likely" varies run to run.
 
+<Figure bare caption="Five ordinary instructions and the question each one leaves open. In every row the example does not describe the answer — it is the answer, so there is nothing left to interpret.">
+
 | You wrote in prose | What is still undecided | An example settles it by |
 |---|---|---|
 | Write a short, friendly reply. | How short. How friendly. Greeting? Sign-off? Name used? | Showing one, at the exact length and register. |
@@ -51,6 +53,8 @@ Prose describing an output leaves gaps. You cannot see them, because you know wh
 | Handle missing values sensibly. | Empty string, `null`, omit the key, or the word unknown? | Showing the missing case once, resolved. |
 | Keep the customer's own wording. | Verbatim including typos, or lightly cleaned? | Showing an input with a typo and the output that keeps it. |
 | Keep it neutral. | Neutral as in no adjectives, or as in no opinion? | Showing a sentence that hits the line you mean. |
+
+</Figure>
 
 That is the whole argument. A paragraph is a description of the target. An example is the target. Format, length, tone and edge-case handling get pinned simultaneously, and none of them are up for interpretation.
 
@@ -65,6 +69,19 @@ Pick for coverage instead:
 - **One boring middle.** The modal input, the one you see a hundred times a day. This anchors the default behaviour.
 - **One example per rule you actually care about.** The empty input. The one where the honest answer is unknown. The one where the right move is to refuse. If a rule matters and no example demonstrates it, it is a suggestion.
 - **One near-miss.** An input that looks like class A and is really class B. This is where the boundary lives, and it is the single highest-value example in the set. Nothing else teaches a boundary as fast.
+
+<Compare caption="The same five-example budget, spent two different ways. Coverage picks the near-miss on purpose, because that is where the boundary is actually learned.">
+  <Panel label="Naive" title="Five clean cases">
+
+Five inputs that all look like the demo went well — no typos, no missing fields, no ambiguity. The model learns that the clean case is the whole job, and is confidently wrong the first time production sends it something messier.
+
+  </Panel>
+  <Panel label="What to do" title="Picked for coverage">
+
+One boring middle to anchor the default. One example per rule that actually matters, including the empty input and the refusal case. And one near-miss — an input that looks like class A and is really class B — because nothing else teaches a boundary as fast.
+
+  </Panel>
+</Compare>
 
 Two more things that matter more than the count:
 
@@ -127,6 +144,31 @@ def note(commit: str) -> str:
 
 print(note("feat(export): add CSV option to the export dialog"))
 ```
+
+<Anatomy
+  caption="The three examples from the code above, with the job each one is doing named. Delete the middle pair and SKIP stops being a real option — it becomes a sentence in a system prompt with nothing behind it."
+  label="Three examples, three jobs"
+  parts={[
+    {
+      text: '"fix(auth): correct token expiry check (PROJ-412)" → "Fixed expired sessions not logging users out"',
+      name: 'The boring middle',
+      note: 'The modal case — anchors the default behaviour',
+    },
+    { text: '\n\n' },
+    {
+      text: '"chore: bump eslint to 9.2.0" → "SKIP"',
+      name: 'The SKIP edge',
+      note: 'The refusal case, demonstrated rather than just described',
+    },
+    { text: '\n\n' },
+    {
+      text: '"refactor(api): move rate limiter, raise limit to 200/min" → "Raised the API rate limit to 200 requests a minute"',
+      name: 'The near-miss',
+      note: 'Reads like an internal change but is user-visible — where the boundary actually gets learned',
+      subject: true,
+    },
+  ]}
+/>
 
 Three examples, three jobs. Delete the middle one and `SKIP` stops being a real option — it becomes a sentence in a system prompt that the examples never back up.
 
