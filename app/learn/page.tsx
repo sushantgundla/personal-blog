@@ -5,7 +5,7 @@ import { learnCanonical } from '@/lib/learn-domain'
 import { plateFace } from './_plate/font'
 import { MachineNarrow } from './_plate/MachineNarrow'
 import { MachineWide } from './_plate/MachineWide'
-import { buildStages, inWords } from './_plate/stages'
+import { buildStages, inWords, stageDoors, stageLabel } from './_plate/stages'
 import s from './_plate/plate.module.css'
 
 /**
@@ -41,6 +41,12 @@ export const metadata: Metadata = {
 export default function LearnAnatomyPage() {
   const courses = getAllCourses()
   const stages = buildStages(courses)
+
+  // The drawing's five parts are the five doors into the courses, so the
+  // hrefs and the accessible names are read off the same entries the legend
+  // is built from. A drawing that hard-coded either could send a reader
+  // somewhere the legend does not.
+  const doors = stageDoors(stages)
 
   // Every figure on this page is summed or measured from the lessons' own
   // frontmatter. PRODUCT.md forbids inventing a number anywhere on this site,
@@ -127,10 +133,11 @@ export default function LearnAnatomyPage() {
         </div>
 
         {/* ---- The drawing --------------------------------------------
-            Both plates are aria-hidden. The ordered description below is
-            what a screen reader gets instead, and it has to carry
-            everything the drawing carries — including the two facts the
-            drawing states in words rather than lines. */}
+            Every mark on both plates is aria-hidden, and the only things in
+            them a screen reader meets are the five stage links. The ordered
+            description below is what carries the structure instead, and it
+            has to carry everything the drawing carries — including the two
+            facts the drawing states in words rather than lines. */}
         <div className={s.drawing}>
           <div className={s.sr}>
             <h2>Figure 1: how one request moves through the machine</h2>
@@ -163,8 +170,8 @@ export default function LearnAnatomyPage() {
             </ol>
           </div>
 
-          <MachineWide />
-          <MachineNarrow />
+          <MachineWide doors={doors} />
+          <MachineNarrow doors={doors} />
         </div>
 
         {/* ---- The legend ---------------------------------------------
@@ -198,11 +205,7 @@ export default function LearnAnatomyPage() {
                 href={stage.href}
                 className={s.cellLink}
                 data-line={stage.id}
-                aria-label={
-                  stage.n === null
-                    ? `${stage.title} — not on the drawing. ${stage.lessons} lessons, ${stage.minutes} minutes.`
-                    : `${stage.title} — part ${stage.n} of the drawing, ${stage.part}. ${stage.lessons} lessons, ${stage.minutes} minutes.`
-                }
+                aria-label={stageLabel(stage)}
               >
                 {stage.title}
                 <span className={s.arrow} aria-hidden="true">

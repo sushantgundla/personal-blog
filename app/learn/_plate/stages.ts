@@ -149,3 +149,47 @@ export function buildStages(courses: Course[]): StageEntry[] {
 
   return [...drawn, ...undrawn]
 }
+
+/**
+ * What a screen reader hears at a way into a course.
+ *
+ * One function, because there are two ways in — the legend cell and the part
+ * of the machine on the drawing — and they lead to the same page. Hearing two
+ * different sentences for one destination is how a reader concludes there are
+ * ten courses.
+ */
+export function stageLabel(entry: StageEntry): string {
+  return entry.n === null
+    ? `${entry.title} — not on the drawing. ${entry.lessons} lessons, ${entry.minutes} minutes.`
+    : `${entry.title} — part ${entry.n} of the drawing, ${entry.part}. ${entry.lessons} lessons, ${entry.minutes} minutes.`
+}
+
+/** What a drawing needs to turn one of its parts into a door. */
+export interface StageDoor {
+  href: string
+  label: string
+}
+
+/**
+ * The five doors, keyed by stage id, for the two drawings to look up.
+ *
+ * The href is `/learn/<slug>` and nothing else. middleware.ts turns that into
+ * the right address on the subdomain; a drawing has no business knowing which
+ * host it is being read on.
+ *
+ * A course the drawing does not cover gets no door — there is no part of the
+ * machine to click. A part whose course has gone gets no door either, because
+ * buildStages() has already dropped it and this lookup misses.
+ */
+export type StageDoors = Record<string, StageDoor | undefined>
+
+export function stageDoors(entries: StageEntry[]): StageDoors {
+  const doors: StageDoors = {}
+
+  for (const entry of entries) {
+    if (entry.n === null) continue
+    doors[entry.id] = { href: entry.href, label: stageLabel(entry) }
+  }
+
+  return doors
+}

@@ -112,6 +112,16 @@ which is also what `learn.css` reads to resolve `--ln-line`; the whole reveal
 is one `:has()` rule per course. One attribute does three jobs, and the index
 ships no JavaScript of its own.
 
+**Focus, and the ring it draws.** Every part of the machine is a link into
+its course, so a keyboard reaches the drawing and not only the legend. The
+anchor carries the same `data-line` as the group it is in — a `:has()` rule
+matches the element that has focus, and that is the anchor — so tabbing onto
+a part lights it exactly as hovering it does. The focus ring is that part's
+own hit rect, stroked graphite at 1.5: a box ruled round a detail, which is
+what a drawing office does. Not a `outline` (WebKit does not paint one on an
+SVG element at all) and not a rounded glow. 1.5 is the thin weight already on
+the sheet; a focus ring may not introduce a fourth.
+
 **One stage, two objects.** Stage 1 is the only stage that is not one thing.
 Prompt Engineering owns the inlet manifold *and* the outlet manifold, at
 opposite ends of the sheet, so holding it lights both while the machine
@@ -337,8 +347,22 @@ without a number on the drawing.
 `MachineNarrow.tsx` (360 × 1060, running top to bottom) are two hand-authored
 drawings, not one scaled. The narrow one drops every fine annotation and keeps
 the five callouts, because at 360px the words crowd the parts they point at.
-Both are `aria-hidden`; the ordered description in `page.tsx` is what carries
-the structure instead.
+Every mark on both is `aria-hidden` and the ordered description in `page.tsx`
+carries the structure instead; the only things in either plate a screen reader
+meets are its five stage links.
+
+**Every part of the machine is a door.** The five stages are links into the
+five courses: `Stage.tsx` wraps each part's geometry in a `next/link` and
+carries its accessible name, so the wrapper and the label are written once and
+both plates stay the same object. The link wraps the whole part rather than
+only the invisible hit rects — a reader clicking the corpus or a layer is
+clicking the part, and it would be a strange machine whose gaps were the doors
+and whose lines were not. The geometry stays hand-authored in the two
+drawings; the href and the name are read off `content/learn/` like every other
+figure on this sheet, and the href is always `/learn/<slug>` because
+`middleware.ts` is what knows which host the page is being read on. A part
+whose course has gone is drawn and not clickable — `buildStages()` has already
+dropped it, so the lookup misses.
 
 ## The detail sheet — a course page
 
@@ -517,8 +541,9 @@ no badge, no streak, no celebration. Stored in `localStorage` under
 Two folders, because there are two surfaces.
 
 - `app/learn/_plate/` owns the index and nothing else: `MachineWide.tsx`,
-  `MachineNarrow.tsx`, `stages.ts`, `font.ts`, and one `plate.module.css` that
-  all three import. The stylesheet is single because the reveal is a `:has()`
+  `MachineNarrow.tsx`, `Stage.tsx` — the group, the link and the accessible
+  name that both drawings hang their five parts inside — `stages.ts`,
+  `font.ts`, and one `plate.module.css` that they all import. The stylesheet is single because the reveal is a `:has()`
   rule that has to name a class on the page shell and a class inside the SVG
   in the same selector; split across two modules those would be two different
   hashed names.
@@ -570,19 +595,29 @@ in an `aria-live` region and right/wrong marked by a glyph as well as colour.
 
 On the index:
 
-- Both drawings are `aria-hidden`. The equivalent is an ordered description in
-  `page.tsx`, off screen but never `display: none`, and it has to carry
-  everything the drawing carries **in the same order** — including the two
-  facts the drawing states in words rather than lines. When FIG. 1 changes,
-  that list changes with it.
+- Every mark on both drawings is `aria-hidden` and each `<svg>` is
+  `role="presentation"`, which says nothing itself and — unlike `aria-hidden`
+  — hides nothing inside it. The equivalent for the picture is an ordered
+  description in `page.tsx`, off screen but never `display: none`, and it has
+  to carry everything the drawing carries **in the same order**, including the
+  two facts the drawing states in words rather than lines. When FIG. 1
+  changes, that list changes with it.
 - The reveal fires from the keyboard as well as the pointer: the `:has()`
   rules match `:is(:hover, :focus-visible)`, so tabbing the legend walks the
-  machine.
-- The whole legend cell is the target, via `::after { position: absolute;
-  inset: 0 }` on the link. **The drawing itself is not clickable** — an SVG
-  `<a>` would bypass the router and reload the page — so the hover highlight
-  on a part of the machine is a highlight and nothing more, and every way into
-  a course is a cell-sized target in the legend.
+  machine, and so does tabbing the drawing.
+- **Both ways into a course are real links.** The whole legend cell is a
+  target, via `::after { position: absolute; inset: 0 }` on the link, and each
+  part of the machine is a target too. **What that costs:** a screen-reader
+  reader now meets the five courses twice, once in the drawing and once in the
+  legend. It is paid deliberately. The alternative was a focusable link inside
+  an `aria-hidden` subtree, which is a focus stop that announces nothing, and
+  the two sets of links say the same sentence about the same destination —
+  `stageLabel()` in `stages.ts` is the one place either name is written, so
+  they cannot drift into sounding like ten courses.
+- Only the plate you can see is reachable. Both are in the DOM and the other
+  is `display: none`, which takes its five links out of the tab order and out
+  of the accessibility tree. That is why neither is ever hidden by moving it
+  off screen or fading it to nothing.
 - The legend is `role="list"` with a visually hidden `<h2>`, because
   `list-style: none` costs the list its semantics in Safari and there was no
   heading between the h1 and the notes.
@@ -634,6 +669,15 @@ lost on a reason, not on taste.
   instead, where there is room for a sentence.
 - **Weight the legend columns** so the bigger courses get more room. Rejected:
   five equal columns; weighting would claim a ranking the page does not have.
+- **The drawing is a highlight and nothing more.** Held for as long as the
+  plate existed, on the reason that an SVG `<a>` would bypass the router and
+  reload the page. Reopened by the owner — *when we click the section inside
+  the analog diagram it should open the corresponding lesson* — and the reason
+  turned out to be false: Next's `linkClicked()` upper-cases `nodeName`
+  precisely because "anchors inside an svg have a lowercase nodeName", so a
+  `next/link` inside the drawing is a client navigation like any other. The
+  five parts are doors. What that cost is recorded in Accessibility, and it is
+  a real cost, not a free win.
 
 - **Every lesson as a callout on FIG. 2.** The literal reading of the detail
   ideology, and it does not survive contact with RAG: seventeen numbered rings

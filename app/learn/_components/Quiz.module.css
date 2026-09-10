@@ -8,6 +8,16 @@
    inset twice. No fill and no tint: nothing in this world has a
    background region.
 
+   The band's own top and bottom rules are drawn in quiet ink rather than
+   the --ln-rule hairline the rest of the page uses. At hairline weight
+   the whole thing read as one more stretch of body text and readers went
+   straight past it; a checkpoint has to be visibly bounded, and rule
+   weight is the only way to do that here without a fill.
+
+   Inside, each question is its own unit: a bar in the course's ink in
+   front of its number, and enough air either side that a reader scanning
+   the page can count the questions without reading them.
+
    Options are full-width rows separated by hairlines, not cards. Nothing
    is filled, nothing is rounded; the letter, the glyph and the colour
    together carry the result, so no one of them is the only signal.
@@ -24,10 +34,10 @@
   width: 100%;
   /* Deeper and PrevNext below carry their own top margin, so the band
      only spaces itself off the Wins block above it. */
-  margin-top: clamp(2.5rem, 6vw, 4rem);
-  padding-block: clamp(2rem, 5vw, 3.5rem);
-  border-top: 1px solid var(--ln-rule);
-  border-bottom: 1px solid var(--ln-rule);
+  margin-top: clamp(3rem, 7vw, 5rem);
+  padding-block: clamp(2.5rem, 6vw, 4rem);
+  border-top: 1px solid var(--ln-ink-quiet);
+  border-bottom: 1px solid var(--ln-ink-quiet);
 }
 
 /* Darker on the light theme, where the dark-mode green and red wash out
@@ -47,6 +57,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem 1.5rem;
+  padding-bottom: clamp(1.25rem, 3vw, 1.75rem);
+  border-bottom: 1px solid var(--ln-rule);
 }
 
 /* The heading. RECALL carries it at heading scale; NO SCROLLING BACK sits
@@ -72,37 +84,56 @@
 /* Doubled, so this beats .learn-root .sign on size without depending on
    which stylesheet the bundler puts last. */
 .headingLead.headingLead {
-  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-size: clamp(1.5rem, 3.2vw, 2.25rem);
   font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
   color: var(--ln-ink);
 }
 
 /* Every question is its own unit: a hairline above each one after the
    first, and the same space either side of it. Spacing and rules, never a
-   box. */
+   box. The gap is deliberately larger than anything inside a question, so
+   the break between two questions is the biggest space in the band. */
 .list {
   list-style: none;
-  margin-top: clamp(1.25rem, 3vw, 1.75rem);
+  margin-top: clamp(2rem, 4.5vw, 2.75rem);
   display: flex;
   flex-direction: column;
-  gap: clamp(1.5rem, 3.5vw, 2rem);
+  gap: clamp(2.25rem, 5vw, 3rem);
 }
 
 .list > li + li {
-  padding-top: clamp(1.5rem, 3.5vw, 2rem);
+  padding-top: clamp(2.25rem, 5vw, 3rem);
   border-top: 1px solid var(--ln-rule);
 }
 
-.qLabel {
-  margin-bottom: 0.5rem;
+/* The number of the question, with a short bar in the course's ink in
+   front of it — the mark that says a new question starts here, readable
+   before a word of it is. */
+.qLabel.qLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--ln-ink-quiet);
+  margin-bottom: 0.7rem;
+}
+
+.qLabel.qLabel::before {
+  content: '';
+  flex: none;
+  width: 1.75rem;
+  height: 2px;
+  background: var(--ln-line);
 }
 
 .qText {
-  font-size: clamp(1rem, 1.3vw, 1.125rem);
+  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
   font-weight: 600;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--ln-ink);
-  margin-bottom: 0.9rem;
+  margin-bottom: 1rem;
 }
 
 /* ---- The options ------------------------------------------------- */

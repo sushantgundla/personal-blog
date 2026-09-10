@@ -6,20 +6,36 @@
 /* A numbered section heading: "## 1. What the model actually is" renders
    as a section marker — the numeral, a hairline running out to the right
    edge of the measure, and the title on the line below. Font size, colour
-   and margins still come from .prose h2; this rule only adds the layout,
-   so the two never fight. */
+   and the margin above still come from .prose h2; this rule adds the
+   layout and the close of the section before it, so the two never fight.
+
+   A section start has to be findable without reading. Two things do that:
+   a rule across the full measure that closes the previous section, and a
+   long drop of air between it and the marker — together far more than the
+   space between any two paragraphs. The numeral then carries weight
+   instead of sitting at half size in quiet ink, and the second hairline,
+   the short one running right from it, is the marker's own. */
 .section {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
-  column-gap: 0.8em;
-  row-gap: 0.3em;
+  column-gap: 0.7em;
+  row-gap: 0.4em;
+  padding-top: clamp(1.5rem, 3.5vw, 2.25rem);
+  border-top: 1px solid var(--ln-rule);
+}
+
+/* Nothing to close off when the body opens on a section. */
+.section:first-child {
+  padding-top: 0;
+  border-top: none;
 }
 
 .n.n {
   grid-column: 1;
-  font-size: 0.55em;
-  color: var(--ln-ink-quiet);
+  font-size: 0.7em;
+  font-weight: 700;
+  color: var(--ln-ink);
 }
 
 .rule {

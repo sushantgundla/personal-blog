@@ -58,15 +58,22 @@ export default function LearnLayout({ children }: { children: React.ReactNode })
 
       <header className="learn-rail">
         <div className="learn-rail-inner">
-          <Link href="/" className="sign">
+          {/* The publication's name goes to the publication's front page,
+              not to the main site — a masthead is a way back to the index
+              you are inside, and the way out is on the right.
+              `/learn` and not `/`: on learn.sushantgundla.com middleware.ts
+              folds `/learn` back onto `/`, and on the main site and in dev
+              `/` is the blog's home, not this section's. One href, right on
+              every host. */}
+          <Link href="/learn" className="sign">
             Sushant Gundla / Learn
           </Link>
 
           {/* The right of the rail: how wide to read, then the way out. */}
           <div className="learn-rail-right">
             <ViewWidth />
-            <a href="https://sushantgundla.com" className="sign-quiet">
-              The site ↗
+            <a href="https://sushantgundla.com/about" className="sign-quiet">
+              About Sushant ↗
             </a>
           </div>
         </div>

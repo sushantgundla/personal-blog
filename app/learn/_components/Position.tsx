@@ -143,6 +143,13 @@ export function Position({ course, lesson, prev, next }: Props) {
             lesson should not have to scroll back to the foot of the page
             to carry on, and someone who landed here mid-line often wants
             the stop before this one first.
+
+            Two columns split by a hairline, not two labels sharing a row:
+            set flat on one line they read as a caption and get taken for
+            meta rather than for the way out of the page. The words are
+            unchanged — "Last stop:" is simply the label of its own link,
+            and the stop's name sits under it at signage size.
+
             PrevNext at the foot offers the same two destinations, so the
             two navs carry distinct aria-labels — "Nearby stops" here,
             "Lesson navigation" there — and a screen-reader user hears
@@ -150,13 +157,19 @@ export function Position({ course, lesson, prev, next }: Props) {
         {(prev || next) && (
           <nav className={styles.ends} aria-label="Nearby stops">
             {prev && (
-              <Link href={`/learn/${course.slug}/${prev.slug}`} className={`sign-quiet ${styles.end}`} rel="prev">
-                Last stop: {prev.title}
+              <Link href={`/learn/${course.slug}/${prev.slug}`} className={styles.end} rel="prev">
+                <span className="sign-quiet">Last stop:</span>
+                <span className={`sign ${styles.endName}`}>{prev.title}</span>
               </Link>
             )}
             {next && (
-              <Link href={`/learn/${course.slug}/${next.slug}`} className={`sign-quiet ${styles.end}`} rel="next">
-                Next stop: {next.title}
+              <Link
+                href={`/learn/${course.slug}/${next.slug}`}
+                className={`${styles.end} ${styles.endNext}`}
+                rel="next"
+              >
+                <span className="sign-quiet">Next stop:</span>
+                <span className={`sign ${styles.endName}`}>{next.title}</span>
               </Link>
             )}
           </nav>

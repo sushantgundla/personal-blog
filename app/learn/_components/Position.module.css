@@ -109,32 +109,98 @@
 }
 
 /* The stops either side, as real links: the line can be walked from here
-   without scrolling to PrevNext at the foot. Same signage-quiet voice as
-   the rest of the strip, and the same hover and focus as everything else
-   in the section — an instant step to --ln-mark, never a movement. */
+   without scrolling to PrevNext at the foot.
+
+   Two columns divided by a hairline, closed off from the meta row above
+   by one more. Each link is a block with real padding, so it is a target
+   a thumb can hit rather than a run of small caps — the two destinations
+   have to read as two controls, not as one more line of caption. Hover
+   and focus are the same as everything else in the section: an instant
+   step to --ln-mark, never a movement. */
 .ends {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 0.15rem;
+  border-top: 1px solid var(--ln-rule);
 }
 
-/* The :global(.learn-root) prefix is load-bearing: these links carry
-   .sign-quiet too, and `.learn-root a.sign-quiet:hover` in learn.css is
-   more specific than a doubled class on its own, so a plain `.end.end`
-   would never get the hover through. */
+/* The next side always sits in the second column, even when it is the
+   only one — at the first stop of a line there is no "last stop", and the
+   pair still has to read as a spread. */
+.endNext {
+  grid-column: 2;
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* The split, drawn on the second half only so it never lands on an
+   outside edge, and never at all when there is only one link. */
+.end + .end {
+  border-left: 1px solid var(--ln-rule);
+}
+
+/* The :global(.learn-root) prefix is load-bearing: the spans inside these
+   links carry .sign / .sign-quiet, and `.learn-root .sign` in learn.css
+   sets their colour, so an undoubled class here would never get the hover
+   through to them. */
 :global(.learn-root) a.end.end {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem clamp(0.7rem, 1.6vw, 1rem);
+  color: inherit;
   text-decoration: none;
 }
 
-:global(.learn-root) a.end.end:hover {
+:global(.learn-root) a.end.end:first-child {
+  padding-left: 0;
+}
+
+:global(.learn-root) a.end.end.endNext {
+  padding-right: 0;
+}
+
+/* The stop's own name, a step up from its label so the link has something
+   to grab hold of. */
+.endName.endName {
+  font-size: clamp(0.8125rem, 1.1vw, 0.9375rem);
+  color: var(--ln-ink);
+  text-wrap: balance;
+}
+
+:global(.learn-root) a.end.end:hover span {
   color: var(--ln-mark);
+}
+
+:global(.learn-root) a.end.end:hover .endName {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
 :global(.learn-root) a.end.end:focus-visible {
   outline: 2px solid var(--ln-mark);
-  outline-offset: 3px;
+  outline-offset: -2px;
+}
+
+@media (max-width: 34rem) {
+  .ends {
+    grid-template-columns: 1fr;
+  }
+
+  .endNext {
+    grid-column: 1;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .end + .end {
+    border-left: none;
+    border-top: 1px solid var(--ln-rule);
+  }
+
+  :global(.learn-root) a.end.end {
+    padding-inline: 0;
+  }
 }
 
 @media (max-width: 52rem) {

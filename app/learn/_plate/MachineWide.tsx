@@ -1,3 +1,5 @@
+import { Stage } from './Stage'
+import type { StageDoors } from './stages'
 import s from './plate.module.css'
 
 /**
@@ -34,6 +36,13 @@ import s from './plate.module.css'
  * in plate.module.css and runs on :has(); nothing here is a client
  * component and this page ships no JavaScript of its own.
  *
+ * Each of the five parts is also the door into its course — see Stage.tsx,
+ * which wraps the geometry below in the link and carries the accessible
+ * name. So the sheet is no longer aria-hidden: it is role="presentation",
+ * which says nothing itself and hides nothing inside it, every mark on it is
+ * aria-hidden, and the five links are the only things in it a screen reader
+ * meets. The ordered description in page.tsx still carries the structure.
+ *
  * Two things the drawing deliberately does not carry, because there is no
  * clear corridor for either and the empty parts of this sheet are earned:
  * that everything joined at the junction is counted in tokens, and that
@@ -45,21 +54,15 @@ import s from './plate.module.css'
  * from library shapes and it is not generated: every junction, arrowhead
  * and lattice line is placed.
  */
-export function MachineWide() {
+export function MachineWide({ doors }: { doors: StageDoors }) {
   return (
-    <svg
-      viewBox="0 0 1600 680"
-      className={s.wide}
-      aria-hidden="true"
-      focusable="false"
-      role="presentation"
-    >
+    <svg viewBox="0 0 1600 680" className={s.wide} focusable="false" role="presentation">
       {/* ---- The spine: the parts that belong to no single course ------
           The axis the request runs along, the junction where everything
           is assembled, and the answer leaving. These dim a little under a
           stage highlight rather than going all the way back, so the
           highlighted part never floats free of the machine. */}
-      <g className={s.spine}>
+      <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M200 300H502" />
         {/* Direction, stated at the inlet as well as the outlet — the two
             were 1200 units apart and only the far one said which way. */}
@@ -92,7 +95,7 @@ export function MachineWide() {
           layers already carries that. The two manifolds are mirror shapes
           and holding stage 1 lights both: you write this end, you specify
           that end. */}
-      <g className={s.stage} data-line="prompt-engineering">
+      <Stage id="prompt-engineering" doors={doors}>
         <rect className={s.hit} x="44" y="200" width="396" height="180" />
         <rect className={s.hit} x="1404" y="210" width="148" height="158" />
 
@@ -123,10 +126,10 @@ export function MachineWide() {
         <text className={s.lab} x="1544" y="228" textAnchor="end">
           Output
         </text>
-      </g>
+      </Stage>
 
       {/* ---- 2. RAG — what gets fetched and stuffed in beside it ------- */}
-      <g className={s.stage} data-line="rag">
+      <Stage id="rag" doors={doors}>
         <rect className={s.hit} x="444" y="330" width="176" height="310" />
 
         {/* Retrieval starts at the prompt. Without this the candidates
@@ -173,13 +176,13 @@ export function MachineWide() {
         <text className={s.lab} x="548" y="366">
           Top-k
         </text>
-      </g>
+      </Stage>
 
       {/* ---- 3. LLMs — the thing in the middle -------------------------
           The heaviest object on the plate, because it is the heaviest
           thing in the machine: a stack of layers with attention crossing
           between them, inside an enclosure with feet. */}
-      <g className={s.stage} data-line="llms">
+      <Stage id="llms" doors={doors}>
         <rect className={s.hit} x="646" y="156" width="350" height="316" />
 
         <path className={s.thin} d="M654 176V424M986 176V424" />
@@ -209,12 +212,12 @@ export function MachineWide() {
         <text className={s.lab} x="654" y="450">
           Attention within a layer
         </text>
-      </g>
+      </Stage>
 
       {/* ---- 4. Agents and Tool Use — the loop out and back ------------
           Everything in this group is dashed. The loop is the one path in
           the machine that only happens sometimes. */}
-      <g className={s.stage} data-line="agents">
+      <Stage id="agents" doors={doors}>
         <rect className={s.hit} x="1068" y="258" width="110" height="90" />
         <rect className={s.hit} x="520" y="88" width="660" height="62" />
 
@@ -237,12 +240,12 @@ export function MachineWide() {
         <text className={s.lab} x="1120" y="368" textAnchor="middle">
           Stop, or call
         </text>
-      </g>
+      </Stage>
 
       {/* ---- 5. Evals and Observability — was any of it any good ------
           A tap on the output line and a dial under it. The tap is dotted
           because it observes; it does not carry the answer anywhere. */}
-      <g className={s.stage} data-line="evals">
+      <Stage id="evals" doors={doors}>
         <rect className={s.hit} x="1274" y="284" width="34" height="180" />
         <rect className={s.hit} x="1206" y="462" width="170" height="112" />
 
@@ -267,7 +270,7 @@ export function MachineWide() {
         <text className={s.lab} x="1290" y="558" textAnchor="middle">
           Score
         </text>
-      </g>
+      </Stage>
 
       {/* ---- Callouts -------------------------------------------------
           A numbered ring and a leader to the part it names. The same five
@@ -277,7 +280,7 @@ export function MachineWide() {
           between a part of the machine and a course would be invisible to
           a reader on a phone. The numeral inside stays graphite; see the
           note on .ring in plate.module.css. */}
-      <g className={s.callouts}>
+      <g className={s.callouts} aria-hidden="true">
         <g className={s.callout} data-line="prompt-engineering">
           <path className={s.lead} d="M162 168L294 280" />
           <circle className={s.dot} cx="296" cy="282" r="3.5" />
@@ -330,7 +333,7 @@ export function MachineWide() {
           arrive at the junction as the request reaches it and the tool
           result comes back after the model has run. Removed entirely
           under prefers-reduced-motion. */}
-      <g className={s.sparks}>
+      <g className={s.sparks} aria-hidden="true">
         <path
           className={s.spark}
           d="M200 300H1386"
