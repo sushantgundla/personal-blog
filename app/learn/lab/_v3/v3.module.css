@@ -1,0 +1,1048 @@
+/* ============================================================
+   V3 — ONE COLUMN, NOTHING ELSE
+
+   The section's own principle is that prose is the product and
+   everything else serves the reading column or gets out of its
+   way. This candidate takes it literally: there is one column
+   from the top of the page to the bottom, and nothing — not the
+   position, not the quiz, not the navigation — ever leaves it.
+   There is no band, no strip, no full-width rule, no second
+   region. The <article> IS the column.
+
+   That removes every structural device a lesson page normally
+   leans on, so the whole page rests on three things instead:
+
+   1. A TYPE SCALE. One ratio (1.25) off the section's own body
+      ramp, seven steps, and every piece of type on the page is
+      on one of them. --v3-f1 is the only step above body used
+      by reading matter, and it always means the same thing:
+      this is a thing to hold on to. It carries the opening
+      paragraph, the five takeaways and the five questions —
+      the three surfaces a reader is meant to remember.
+
+   2. A SPACING SCALE. Six steps, also on the page's own ramp,
+      so that the size of a gap says what kind of break it is.
+      The largest gap on the page is the one before RECALL, and
+      it is nearly twice the largest section break.
+
+   3. THREE RULE WEIGHTS, each meaning one thing, the same way
+      the plate's three line weights do:
+        - a hairline in --ln-rule ....... an ordinary break
+        - a single rule in --ln-ink-quiet the page ends here
+        - a double rule in --ln-ink-quiet a checkpoint: stop
+      The double rule appears exactly once, around the quiz. It
+      is what replaces the full-width band as the thing that
+      makes a reader stop, and it means something precisely
+      because there is only one of it.
+
+   Course ink lands in exactly one place, as the brief allows:
+   the rule under the title. It is not a plain bar — it is the
+   lesson's own signalling line, ticks at uniform pitch and a
+   you-are-here ring, so the one mark that carries the colour
+   also carries the position. One mark, three jobs, in the
+   column.
+
+   Every colour is an --ln-* token from app/learn/learn.css. No
+   fills, no cards, no shadows, no radii, no gradients. Both
+   themes and both reading measures were reasoned through at
+   375 / 768 / 1440 / 2560.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   The column, and the two scales it carries.
+
+   Note what is NOT here: font-size. .measure's width is
+   min(--ln-measure, ...) and --ln-measure counts in `ch`, which
+   resolves against this element's own font size. Setting one
+   would quietly widen the column past every other candidate's
+   and make the lab comparison dishonest. Custom properties do
+   not affect `ch`, so the scale lives here and the sizes are
+   applied to the blocks inside.
+   ------------------------------------------------------------ */
+.column {
+  /* The section's own body ramp: 16px on a phone, 17px from
+     about 1200px up. Everything below is a multiple of it, so
+     the whole page breathes with the window as one system. */
+  --v3-base: clamp(1rem, 0.9375rem + 0.17vw, 1.0625rem);
+
+  /* Seven steps on a 1.25 ratio. */
+  --v3-f-1: calc(var(--v3-base) * 0.8); /* labels, figures, keys */
+  --v3-f0: var(--v3-base); /* body, the why, links */
+  --v3-f1: calc(var(--v3-base) * 1.25); /* opening para, takeaways, questions */
+  --v3-f2: calc(var(--v3-base) * 1.5625); /* section headings */
+  --v3-f3: calc(var(--v3-base) * 1.953); /* RECALL */
+  --v3-f4: calc(var(--v3-base) * 2.441); /* the title, floor */
+  --v3-f5: calc(var(--v3-base) * 3.052); /* the title, ceiling */
+
+  /* Six spacing steps, coarsely 1.5x apart. sp6 is used once. */
+  --v3-sp1: 0.45rem;
+  --v3-sp2: clamp(0.7rem, 1.6vw, 1rem);
+  --v3-sp3: clamp(1.2rem, 2.6vw, 1.75rem);
+  --v3-sp4: clamp(2rem, 4.5vw, 3rem);
+  --v3-sp5: clamp(3rem, 7vw, 4.5rem);
+  --v3-sp6: clamp(4.5rem, 11vw, 7.5rem);
+}
+
+/* ------------------------------------------------------------
+   1. The head — placing a cold reader in one glance
+
+   Four facts, in three lines, in two registers. Names on top
+   (the course, and the part of it), the lesson's own words in
+   the middle, figures at the foot (which stop, how long). The
+   reader never has to parse a sentence to find out where they
+   are: a name is lettered, a figure is set in mono, and the two
+   never mix.
+   ------------------------------------------------------------ */
+
+/* The masthead. Course at full ink because it is the name of
+   the publication this page belongs to; the part stepped back
+   because it qualifies it. They wrap to two lines on a phone
+   rather than shrinking — a sign is read at a glance or not at
+   all — and the hairline between them goes when they might. */
+.place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.9rem;
+}
+
+:global(.learn-root) a.course.course {
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :global(.learn-root) a.course.course:hover {
+    color: var(--ln-mark);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+:global(.learn-root) a.course.course:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
+}
+
+.sep {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 0.85em;
+  background: var(--ln-rule);
+}
+
+@media (max-width: 40rem) {
+  .sep {
+    display: none;
+  }
+}
+
+/* The title. Sentence case, tight tracking, balanced — at this
+   size the tracking is what makes Archivo read as display type.
+   The floor is f4 rather than something smaller because on a
+   phone this is the one thing that has to arrive first. */
+.title {
+  margin-top: var(--v3-sp2);
+  font-family: var(--ln-sign);
+  font-weight: 700;
+  font-size: clamp(var(--v3-f4), 5.5vw, var(--v3-f5));
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  color: var(--ln-ink);
+  text-wrap: balance;
+}
+
+/* One sentence, in the reading face, because it is a sentence. */
+.lede {
+  margin-top: var(--v3-sp2);
+  font-family: var(--ln-read);
+  font-size: var(--v3-f1);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ln-ink-quiet);
+  text-wrap: pretty;
+}
+
+/* ---- The line ----------------------------------------------
+   The rule under the title, and the only course ink on the
+   page. It is drawn rather than filled: the course's own
+   stroke, one tick per lesson at uniform pitch, solid for the
+   stops behind the reader and drawn back for the ones ahead,
+   with the you-are-here ring on this one.
+
+   The ring is centred on its tick, so at the first and last
+   stop half of it hangs outside the column. That is deliberate
+   and it is safe without clipping: .measure is
+   min(measure, 100% - 2*gutter), so the space either side of
+   the column is never less than --ln-gutter, and --ln-gutter's
+   floor is 1rem — larger than the 13px the ring can overhang.
+   Clipping is not used because the only element that could
+   carry it is the column itself, and that would also clip the
+   section numerals hanging in the margin further down. */
+.rail {
+  position: relative;
+  height: 44px;
+  margin-top: var(--v3-sp4);
+}
+
+.track {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The line's round caps and the two end ticks are centred on
+     x=0 and x=100, so half of each falls outside the viewBox.
+     Left to the UA stylesheet they render as square cuts and
+     1px ticks against everything else's 2px. */
+  overflow: visible;
+}
+
+.trackLine {
+  stroke: var(--ln-line);
+  stroke-width: var(--ln-w);
+}
+
+.tickRead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+}
+
+.tickAhead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+  opacity: 0.3;
+}
+
+.ringBox {
+  position: absolute;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.ring {
+  stroke: var(--ln-mark);
+  stroke-width: 2.5;
+}
+
+@media (max-width: 52rem) {
+  .rail {
+    height: 36px;
+  }
+
+  .ringBox {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* The figures the line is drawn from, read off it: which stop,
+   and how long. Tabular, at the two ends of the column, so the
+   pair is taken in without reading. */
+:global(.learn-root) .figures.figures {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.3rem 1.5rem;
+  margin-top: var(--v3-sp1);
+  font-size: var(--v3-f-1);
+  text-transform: uppercase;
+  color: var(--ln-ink-quiet);
+}
+
+/* ------------------------------------------------------------
+   2. The why — a note, not the article
+
+   One hairline above it and none below. The rule says a new
+   thing starts; the absence of a closing one is what lets the
+   lesson itself open on nothing but air, which is the whole
+   point of the first line below.
+   ------------------------------------------------------------ */
+.why {
+  margin-top: var(--v3-sp4);
+  padding-top: var(--v3-sp3);
+  border-top: 1px solid var(--ln-rule);
+}
+
+.whyText {
+  margin-top: var(--v3-sp2);
+  font-family: var(--ln-read);
+  font-size: var(--v3-f0);
+  line-height: 1.75;
+  color: var(--ln-ink);
+}
+
+/* The label above any block of apparatus. Left edge of the
+   column, always, so every block on the page starts at the same
+   x and the eye can run straight down it. */
+.label {
+  display: block;
+}
+
+/* ------------------------------------------------------------
+   3. The body
+
+   .prose in learn.css already carries this section's reading
+   typography — measure, leading, links, lists, code, the
+   scrolling code block — and it was tuned on these very
+   lessons. Re-deriving it here would be a different page in the
+   same clothes. What follows is only what this candidate
+   changes: the opening, the section markers, the sub-heads and
+   the tables.
+
+   Every selector is prefixed with :global(.learn-root) and
+   doubles .body, so it beats `.learn-root .prose x` (0,2,1)
+   without depending on which stylesheet the bundler puts last.
+   ------------------------------------------------------------ */
+.body {
+  margin-top: var(--v3-sp5);
+}
+
+/* THE FIRST LINE. After a head made entirely of rules, figures
+   and labels, the lesson itself begins on nothing at all: no
+   rule, no marker, no heading — just the largest run of reading
+   matter on the page, one step up the scale, leading opened to
+   match. It is the one paragraph a reader cannot mistake for
+   apparatus, and it is where the page stops announcing itself
+   and starts talking.
+
+   Two selectors because seventeen of the sixty-seven lessons on
+   disk open on a numbered section instead of a paragraph; in
+   those the opening is the first paragraph under it, and the
+   treatment has to follow. */
+:global(.learn-root) .body.body > p:first-child,
+:global(.learn-root) .body.body > .section:first-child + p {
+  font-size: var(--v3-f1);
+  line-height: 1.5;
+  margin-bottom: var(--v3-sp3);
+  color: var(--ln-ink);
+  text-wrap: pretty;
+}
+
+/* ---- A numbered section ------------------------------------
+   A hairline closing the section before it, a long drop of air,
+   and then the heading with its numeral hanging in the margin
+   beside it. The numeral is a figure, so it is set in mono; the
+   heading is lettering, so it is not.
+
+   Hanging it is what keeps the column's left edge perfectly
+   straight from the first word of the lesson to the last — the
+   prose, the takeaways, the questions and the headings all
+   start at the same x, and the only things outside that line
+   are numbers. Below 48rem there is no margin to hang into and
+   the numeral sits above the title instead, still flush left.
+
+   The hang is safe at every width it applies to: the space
+   either side of .measure is never less than --ln-gutter (the
+   min() guarantees it), --ln-gutter is 5vw from 20rem up, and
+   at 48rem that is 38px against roughly 27px of numeral and
+   gap. */
+:global(.learn-root) .body.body .section {
+  display: block;
+  font-size: var(--v3-f2);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-top: var(--v3-sp5);
+  margin-bottom: var(--v3-sp3);
+  padding-top: var(--v3-sp4);
+  border-top: 1px solid var(--ln-rule);
+  scroll-margin-top: 5rem;
+}
+
+/* Nothing to close off when the body opens on a section. */
+:global(.learn-root) .body.body > .section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+:global(.learn-root) .body.body .sectionN.sectionN {
+  display: block;
+  margin-bottom: var(--v3-sp1);
+  font-size: var(--v3-f0);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ln-ink-quiet);
+}
+
+:global(.learn-root) .body.body .sectionText {
+  display: block;
+  text-wrap: balance;
+}
+
+@media (min-width: 48rem) {
+  :global(.learn-root) .body.body .section {
+    position: relative;
+  }
+
+  /* An absolutely positioned child is placed against the padding box, so
+     the heading's own top padding — the air under the rule — has to be
+     added back or the numeral rides up onto the rule. 0.34em of the
+     numeral's own size is what lines its cap height up with the
+     heading's. */
+  :global(.learn-root) .body.body .sectionN.sectionN {
+    position: absolute;
+    top: calc(var(--v3-sp4) + 0.34em);
+    right: calc(100% + 1.1ch);
+    margin: 0;
+  }
+
+  /* The first section has no rule and no padding to add back. */
+  :global(.learn-root) .body.body > .section:first-child .sectionN.sectionN {
+    top: 0.34em;
+  }
+}
+
+/* A sub-head inside a section, one step down from the section
+   heading and one up from body — the same f1 the takeaways and
+   the questions use, in the signage face so it cannot be
+   mistaken for reading matter. */
+:global(.learn-root) .body.body h3 {
+  font-size: var(--v3-f1);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  margin-top: var(--v3-sp4);
+  margin-bottom: var(--v3-sp2);
+}
+
+/* ---- Tables ------------------------------------------------
+   A six-column comparison table is the one thing a 70ch column
+   genuinely cannot hold: at the narrow measure that is about
+   100px a column, which is four or five characters of a phrase
+   like "A parsing library call". The usual answer is to let it
+   scroll sideways, and readers do not scroll it.
+
+   So it stops being a table when it stops fitting. Each row
+   becomes a small block, each cell labelled with its own column
+   heading, still inside the column, still flush left. Nothing
+   is lost and nothing is hidden — the header row is only
+   visually hidden, so a screen reader still reads the table as
+   a table, and every element carries its explicit role so the
+   semantics survive the display change.
+
+   When it does fit, it is the table .prose already draws: a
+   rule under the head, a rule between rows, no boxes, no
+   stripes.
+
+   The threshold has to depend on how many columns there are, so
+   there are two: tables of two to four columns stack below
+   30rem of column (a phone, either measure), and tables of five
+   or more below 46rem — which is the narrow measure at every
+   window size, and not the wide one. A reader who switches the
+   rail to WIDE gets the real six-column table back. The two
+   blocks below are near-duplicates for exactly this reason: a
+   container query cannot read a custom property, so the two
+   thresholds cannot be one rule.
+
+   The query is unnamed on purpose: it resolves to the nearest ancestor
+   container, which is this wrapper and can only be this wrapper, and it
+   does not depend on how the CSS-module pipeline treats a
+   container-name. */
+.tableWrap {
+  container-type: inline-size;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ln-ink-quiet) transparent;
+}
+
+.tableWrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.tableWrap::-webkit-scrollbar-track {
+  background: none;
+  border-top: 1px solid var(--ln-rule);
+}
+
+.tableWrap::-webkit-scrollbar-thumb {
+  background: var(--ln-ink-quiet);
+  border-radius: 0;
+}
+
+:global(.learn-root) .tableWrap:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 2px;
+}
+
+/* .prose sets min-width: 34rem to force the scroll this design
+   replaces. The container query is what guarantees the width
+   now, so the floor goes. */
+:global(.learn-root) .body.body table.table {
+  width: 100%;
+  min-width: 0;
+}
+
+/* .prose keeps its column headings on one line, which is right when a
+   table is free to scroll and wrong here: a four-column table in a 38rem
+   column would be pushed into a sideways scroll by its headings alone,
+   and this design would rather set a heading over two lines than hand a
+   reader a scrollbar. */
+:global(.learn-root) .body.body .table thead th {
+  white-space: normal;
+}
+
+@container (max-width: 30rem) {
+  :global(.learn-root) .body.body table.fewCols {
+    display: block;
+    border-bottom: 1px solid var(--ln-rule);
+  }
+
+  :global(.learn-root) .body.body .fewCols thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  :global(.learn-root) .body.body .fewCols tbody {
+    display: block;
+  }
+
+  :global(.learn-root) .body.body .fewCols tbody tr {
+    display: block;
+    padding-block: var(--v3-sp3);
+    border-top: 1px solid var(--ln-rule);
+  }
+
+  :global(.learn-root) .body.body .fewCols tbody td {
+    display: block;
+    padding: 0;
+    border-top: none;
+    color: var(--ln-ink);
+  }
+
+  /* The first cell is the row's subject, so it opens the block —
+     the one place on this page a weight step does work a rule or a
+     space could not. */
+  :global(.learn-root) .body.body .fewCols tbody td:first-child {
+    font-weight: 600;
+  }
+
+  :global(.learn-root) .body.body .fewCols tbody td + td {
+    margin-top: var(--v3-sp2);
+  }
+
+  :global(.learn-root) .body.body .fewCols tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    font-family: var(--ln-sign);
+    font-size: var(--v3-f-1);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--ln-ink-quiet);
+  }
+
+  :global(.learn-root) .body.body .fewCols tbody td[data-label='']::before {
+    content: none;
+  }
+}
+
+@container (max-width: 46rem) {
+  :global(.learn-root) .body.body table.manyCols {
+    display: block;
+    border-bottom: 1px solid var(--ln-rule);
+  }
+
+  :global(.learn-root) .body.body .manyCols thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  :global(.learn-root) .body.body .manyCols tbody {
+    display: block;
+  }
+
+  :global(.learn-root) .body.body .manyCols tbody tr {
+    display: block;
+    padding-block: var(--v3-sp3);
+    border-top: 1px solid var(--ln-rule);
+  }
+
+  :global(.learn-root) .body.body .manyCols tbody td {
+    display: block;
+    padding: 0;
+    border-top: none;
+    color: var(--ln-ink);
+  }
+
+  /* The first cell is the row's subject, so it opens the block —
+     the one place on this page a weight step does work a rule or a
+     space could not. */
+  :global(.learn-root) .body.body .manyCols tbody td:first-child {
+    font-weight: 600;
+  }
+
+  :global(.learn-root) .body.body .manyCols tbody td + td {
+    margin-top: var(--v3-sp2);
+  }
+
+  :global(.learn-root) .body.body .manyCols tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    font-family: var(--ln-sign);
+    font-size: var(--v3-f-1);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--ln-ink-quiet);
+  }
+
+  :global(.learn-root) .body.body .manyCols tbody td[data-label='']::before {
+    content: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. What you take away
+
+   Five lines, one step up the scale, numerals in their own
+   narrow column so a wrapped line stays flush with the one
+   above it. No rules between them: they are one list, not five
+   blocks, and the hairline above the whole thing has already
+   said a new block began.
+   ------------------------------------------------------------ */
+.take {
+  margin-top: var(--v3-sp5);
+  padding-top: var(--v3-sp3);
+  border-top: 1px solid var(--ln-rule);
+}
+
+.takeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-top: var(--v3-sp3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--v3-sp3);
+}
+
+.takeItem {
+  display: grid;
+  grid-template-columns: 2.5ch 1fr;
+  column-gap: 1.1rem;
+  align-items: baseline;
+  font-family: var(--ln-read);
+  font-size: var(--v3-f1);
+  line-height: 1.5;
+  color: var(--ln-ink);
+}
+
+:global(.learn-root) .takeItem .takeN.takeN {
+  font-size: var(--v3-f-1);
+  color: var(--ln-ink-quiet);
+}
+
+/* ------------------------------------------------------------
+   5. RECALL — the checkpoint, with no band to announce it
+
+   Everything that makes a reader stop here is type and space:
+
+   - the largest gap on the page above it, half again the
+     largest section break;
+   - the page's only double rule, top and bottom, in full quiet
+     ink rather than the hairline everything else uses;
+   - RECALL set at f3, the largest lettering on the page after
+     the title itself, with the instruction under it;
+   - the counter opposite it, so the reader can see there are
+     five of these and how many are left.
+
+   Right and wrong carry no colour, deliberately. The two hexes
+   the old quiz defined are not --ln-* tokens and this section
+   does not own a green or a red outside the course inks, and a
+   course ink means "this part of the machine is that course" —
+   not "correct". So the answer is carried the way this
+   publication already carries a discarded candidate on the
+   plate: the wrong pick is struck through and stepped back to
+   quiet ink, the right one stays at full ink and steps up in
+   weight, both take a glyph, and both carry the verdict in a
+   word off screen. Four signals, none of them hue.
+   ------------------------------------------------------------ */
+.recall {
+  position: relative;
+  margin-top: var(--v3-sp6);
+  padding-block: var(--v3-sp5);
+  border-top: 1px solid var(--ln-ink-quiet);
+  border-bottom: 1px solid var(--ln-ink-quiet);
+}
+
+/* The second half of each double rule. Two pseudo-elements, not
+   a shadow and not a border on a wrapper: this world has no
+   shadows and no extra boxes. */
+.recall::before,
+.recall::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--ln-ink-quiet);
+}
+
+.recall::before {
+  top: 3px;
+}
+
+.recall::after {
+  bottom: 3px;
+}
+
+.recallHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--v3-sp2) 1.5rem;
+}
+
+.recallHeading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--v3-sp1);
+}
+
+:global(.learn-root) .recallHeading .recallLead.recallLead {
+  font-size: var(--v3-f3);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: var(--ln-ink);
+}
+
+:global(.learn-root) .counter.counter {
+  flex: none;
+  font-size: var(--v3-f-1);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ln-ink-quiet);
+}
+
+.questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-top: var(--v3-sp5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--v3-sp5);
+}
+
+/* The gap between two questions is bigger than anything inside
+   one, so the five can be counted without being read. */
+.questions > li + li {
+  padding-top: var(--v3-sp5);
+  border-top: 1px solid var(--ln-rule);
+}
+
+:global(.learn-root) .qLabel.qLabel {
+  display: block;
+  margin-bottom: var(--v3-sp1);
+  font-size: var(--v3-f-1);
+  color: var(--ln-ink-quiet);
+}
+
+.qText {
+  font-family: var(--ln-read);
+  font-size: var(--v3-f1);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ln-ink);
+  margin-bottom: var(--v3-sp3);
+  text-wrap: pretty;
+}
+
+.options {
+  border-top: 1px solid var(--ln-rule);
+}
+
+.option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.7rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--ln-rule);
+  background: none;
+  font: inherit;
+  font-family: var(--ln-read);
+  font-size: var(--v3-f0);
+  line-height: 1.6;
+  color: var(--ln-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Only where there is a real pointer, and only on a question
+   that can still be answered — an option already marked must
+   not look like it is offering anything. */
+@media (hover: hover) and (pointer: fine) {
+  .option[aria-disabled='false']:hover .optionLabel {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+  }
+
+  .option[aria-disabled='false']:hover .key.key {
+    color: var(--ln-ink);
+  }
+}
+
+/* The keyboard's half of the same thing, written out separately
+   and unconditionally: a reader with a Bluetooth keyboard and
+   no pointer still tabs through these. */
+:global(.learn-root) .option:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: -2px;
+}
+
+.option[aria-disabled='true'] {
+  cursor: default;
+}
+
+:global(.learn-root) .option .key.key {
+  flex: none;
+  width: 1.5ch;
+  font-size: var(--v3-f-1);
+  color: var(--ln-ink-quiet);
+}
+
+.optionLabel {
+  flex: 1;
+}
+
+/* ---- After the click ---------------------------------------- */
+
+.right {
+  color: var(--ln-ink);
+  font-weight: 600;
+}
+
+/* The pick that was dropped, drawn the way the plate draws a
+   retrieval candidate the reranker threw out. */
+.wrong {
+  color: var(--ln-ink-quiet);
+}
+
+.wrong .optionLabel {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.muted {
+  color: var(--ln-ink-quiet);
+}
+
+.mark {
+  flex: none;
+  padding-left: 0.6rem;
+}
+
+/* .num fixes its own colour, so the two marks on the right answer have to
+   be stepped up with the row rather than inheriting from it. */
+:global(.learn-root) .option.right .key.key,
+:global(.learn-root) .option.right .mark.mark {
+  color: var(--ln-ink);
+}
+
+/* The explanation. A hanging hairline rather than an indent, so
+   it is visibly a note on the question above rather than more
+   of the question. */
+.explain {
+  margin-top: var(--v3-sp2);
+  padding-left: 1rem;
+  border-left: 1px solid var(--ln-rule);
+  font-family: var(--ln-read);
+  font-size: var(--v3-f0);
+  line-height: 1.7;
+  color: var(--ln-ink-quiet);
+}
+
+/* Empty, it has to take up no room and stay in the
+   accessibility tree — it is a live region mounted ahead of the
+   text that will land in it. display: none removes it and
+   cancels exactly that. */
+.explain:empty {
+  margin-top: 0;
+  padding-left: 0;
+  border-left-width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+:global(.learn-root) .score.score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: var(--v3-sp4);
+  padding-top: var(--v3-sp3);
+  border-top: 1px solid var(--ln-rule);
+  font-size: var(--v3-f-1);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ln-ink-quiet);
+}
+
+:global(.learn-root) .score.score:empty {
+  margin-top: 0;
+  padding-top: 0;
+  border-top-width: 0;
+}
+
+.scoreValue {
+  font-size: var(--v3-f0);
+  font-weight: 700;
+  color: var(--ln-ink);
+}
+
+/* ------------------------------------------------------------
+   6. Go deeper
+
+   An exit from the page, so it is set quietly. Each row carries
+   the host it goes to, in mono at the right: a reader deciding
+   whether to spend a click wants to know whose page it is, and
+   the host is read off the href rather than written down.
+   ------------------------------------------------------------ */
+.deeper {
+  margin-top: var(--v3-sp5);
+  padding-top: var(--v3-sp3);
+  border-top: 1px solid var(--ln-rule);
+}
+
+.deeperList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-top: var(--v3-sp2);
+}
+
+.deeperRow + .deeperRow {
+  border-top: 1px solid var(--ln-rule);
+}
+
+.deeperLink {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.7rem;
+  font-family: var(--ln-read);
+  font-size: var(--v3-f0);
+  line-height: 1.6;
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .deeperLink:hover .deeperLabel {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+:global(.learn-root) .deeperLink:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 2px;
+}
+
+:global(.learn-root) .deeperLink .deeperHost.deeperHost {
+  flex: none;
+  font-size: var(--v3-f-1);
+  color: var(--ln-ink-quiet);
+}
+
+/* ------------------------------------------------------------
+   7. The line continuing
+
+   Two rows, both flush left, because this page has one left
+   edge and the last thing on it should not be the first thing
+   to break that. The rule above the pair is the page's single
+   quiet-ink rule: this is where the page ends.
+   ------------------------------------------------------------ */
+.ends {
+  display: block;
+  margin-top: var(--v3-sp5);
+  border-top: 1px solid var(--ln-ink-quiet);
+}
+
+.end {
+  display: block;
+  padding-block: var(--v3-sp3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.end + .end {
+  border-top: 1px solid var(--ln-rule);
+}
+
+:global(.learn-root) .end .endLabel.endLabel {
+  display: block;
+  margin-bottom: var(--v3-sp1);
+  color: var(--ln-ink-quiet);
+}
+
+:global(.learn-root) .end .endName.endName {
+  display: block;
+  font-size: var(--v3-f1);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--ln-ink);
+  text-wrap: balance;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .end:hover .endName {
+    text-decoration: underline;
+    text-underline-offset: 5px;
+    text-decoration-thickness: 1px;
+  }
+
+  .end:hover .endLabel {
+    color: var(--ln-ink);
+  }
+}
+
+:global(.learn-root) .end:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------
+   Off screen, in the tree. Never display: none — every one of
+   these is a word a screen reader has to reach.
+   ------------------------------------------------------------ */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

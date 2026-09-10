@@ -1,0 +1,330 @@
+/* Rail — the line, stood up.
+
+   The same four primitives the position strip draws, turned through
+   ninety degrees: a stroke in the course's ink with capsule termini, a
+   tick per stop at uniform pitch, and one you-are-here ring. Nothing is
+   filled, nothing is boxed, nothing is rounded except the capsule caps,
+   which are stroke-linecap and not a radius.
+
+   Two scales are stacked, not paired: the key at the top is the course,
+   the drawing below it is this lesson, and the two forty-five degree
+   strokes between them are the break that says so. Everything sits inside
+   one pinned column so the reader can always see where they are, which is
+   the whole argument for standing the line up in the first place.
+
+   Every colour is an --ln-* token from app/learn/learn.css. The ink is
+   structural — it is the line — and it never letters anything: the tags
+   beside the ticks are quiet ink, stepping to full ink on the stop being
+   read. */
+
+.rail {
+  grid-column: 2;
+  /* A grid item defaults to min-width: auto, and an annotation that
+     overruns would otherwise widen the track and take the width from the
+     prose. */
+  min-width: 0;
+}
+
+.pinned {
+  position: sticky;
+  top: var(--v2-top);
+  display: flex;
+  flex-direction: column;
+  /* svh, not vh or dvh: the smallest the viewport ever gets, so the
+     drawing never has to reflow as a phone's toolbars come and go and
+     never overruns the screen it is pinned to. */
+  height: calc(100vh - var(--v2-top) - 1.5rem);
+  height: calc(100svh - var(--v2-top) - 1.5rem);
+}
+
+/* ---- The spine ---------------------------------------------------- */
+
+/* Both spines: the line runs at 72% of the rail, leaving the annotation
+   its own column to the left and a clear gap to the reading column on the
+   right. The x in the two viewBoxes is the same 72, written there because
+   an SVG geometry attribute cannot read a custom property.
+
+   overflow is visible for the reason Position.module.css gives: a round
+   cap is centred on the end point, so half of each terminus falls outside
+   the viewBox and the UA stylesheet would cut it square. */
+.spine {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.keyStroke {
+  stroke: var(--ln-line);
+  stroke-width: 3;
+}
+
+.lineStroke {
+  stroke: var(--ln-line);
+  stroke-width: var(--ln-w);
+}
+
+/* ---- The key: the whole line, at course scale --------------------- */
+
+/* Its height is the course's own length — one pitch per stop — so a
+   seventeen-stop line is drawn longer than a nine-stop one. The pitch is
+   what is uniform, never the overall height. */
+.key {
+  position: relative;
+  flex: none;
+}
+
+.keyTick {
+  position: absolute;
+  left: 72%;
+  transform: translateX(-50%);
+  width: calc(var(--v2-pitch) * 0.6);
+  height: 2px;
+  background: var(--ln-mark);
+}
+
+/* Stops behind the reader are solid; the ones still ahead are drawn
+   back. Order carries this as much as fill does, so it never rests on
+   colour alone. */
+.read {
+  opacity: 1;
+}
+
+.ahead {
+  opacity: 0.35;
+}
+
+/* Sized against the pitch, the way the strip's ring is sized against its
+   own: wide enough to ring one stop and clear of the two either side. The
+   stroke is set high because the box is small and the viewBox is 48 —
+   what lands on screen is about 1.9px. */
+.keyRing {
+  position: absolute;
+  left: 72%;
+  width: calc(var(--v2-pitch) * 1.05);
+  height: calc(var(--v2-pitch) * 1.05);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.keyRingStroke {
+  stroke: var(--ln-mark);
+  stroke-width: 8;
+}
+
+/* The count under the key, hung on the same right edge as every other
+   annotation. Fine annotation: it goes when the drawing gets small, the
+   same way the narrow plate drops its labels. */
+:global(.learn-root) .count.count {
+  flex: none;
+  width: 72%;
+  margin-top: 0.55rem;
+  padding-right: 0.5rem;
+  font-size: 0.5625rem;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--ln-ink-quiet);
+}
+
+/* ---- The break: same line, larger scale below --------------------- */
+
+.break {
+  position: relative;
+  flex: none;
+  height: 1.6rem;
+}
+
+/* Two parallel strokes at forty-five degrees across where the line runs.
+   Ninety and forty-five are the only angles on a lesson's drawing. */
+.breakMark {
+  position: absolute;
+  left: 72%;
+  width: 0.8rem;
+  height: 1.5px;
+  background: var(--ln-line);
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.breakMark:first-child {
+  top: 40%;
+}
+
+.breakMark:last-child {
+  top: 68%;
+}
+
+/* ---- The detail: this stop, opened out ---------------------------- */
+
+.detail {
+  position: relative;
+  flex: 1;
+  min-height: 8rem;
+}
+
+/* A stop. The whole width of the rail is the target, so a thumb has
+   something to hit; the annotation is set against the line's own left
+   edge and the tick crosses the line at the row's centre. */
+.stop,
+.terminus {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 2rem;
+  padding-right: calc(28% + 0.5rem);
+  color: var(--ln-ink-quiet);
+  text-decoration: none;
+}
+
+.stop {
+  transform: translateY(-50%);
+}
+
+/* The termini are not centred on their cap: the cap sits at the very end
+   of the line, and half a label hanging past it would run into the break
+   above and off the pinned box below. The label starts level with the cap
+   instead. */
+.tTop {
+  top: 0;
+  align-items: flex-start;
+}
+
+.tEnd {
+  bottom: 0;
+  align-items: flex-end;
+}
+
+/* The tick and the ring are both capped as a fraction of the rail, so
+   neither can overrun into the reading column when the rail is at its
+   narrowest — one rule instead of a size per breakpoint. */
+.tick {
+  position: absolute;
+  top: 50%;
+  left: 72%;
+  width: min(1.25rem, 40%);
+  height: 2px;
+  transform: translate(-50%, -50%);
+  background: var(--ln-mark);
+}
+
+/* The numeral beside a section's tick is the same numeral its heading
+   prints in the column, which is the whole of the correlation between the
+   drawing and the page. */
+:global(.learn-root) .tag.tag {
+  font-size: 0.625rem;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+  color: inherit;
+}
+
+.word {
+  font-family: var(--ln-sign);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  text-align: right;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: inherit;
+}
+
+/* The stop being read: full ink, and aria-current says the same thing to
+   anyone not looking at the ring. */
+.stop[aria-current='true'] {
+  color: var(--ln-ink);
+}
+
+/* Hover is scoped to a real pointer, and focus is written out separately
+   and unconditionally, for the reason app/learn/DESIGN.md gives: a touch
+   browser synthesises hover on the first tap, and a phone with a keyboard
+   has focus and no fine pointer. They may not be folded into one list. */
+@media (hover: hover) and (pointer: fine) {
+  .stop:hover,
+  .terminus:hover {
+    color: var(--ln-mark);
+  }
+
+  .stop:hover .tick {
+    background: var(--ln-mark);
+  }
+}
+
+.stop:focus-visible,
+.terminus:focus-visible {
+  color: var(--ln-mark);
+}
+
+/* You are here, at lesson scale. The travel between stops is a state
+   change, like every hover in this section — not an entrance, and the
+   reduced-motion block in learn.css drops it with every other transition. */
+.ring {
+  position: absolute;
+  left: 72%;
+  width: min(2.25rem, 62%);
+  height: min(2.25rem, 62%);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  pointer-events: none;
+  transition: top 320ms var(--ln-ease);
+}
+
+.ringStroke {
+  stroke: var(--ln-mark);
+  stroke-width: 3;
+}
+
+/* ---- Off screen, in the tree -------------------------------------- */
+
+/* Every stop's real name. The tags on the drawing are aria-hidden, so
+   this is what a screen reader meets — never display: none. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Smaller ------------------------------------------------------ */
+
+/* Below the wide breakpoint the drawing loses its lettering rather than
+   shrinking it, the same trade MachineNarrow makes on the index: at this
+   width a word beside the line crowds the line it is pointing at. The
+   numerals stay, because they are one character and they are the link
+   back to the headings. Every name is still on the anchor, so nothing is
+   lost to a screen reader, and the foot of the page still carries both
+   neighbours in full. */
+@media (max-width: 61.9375rem) {
+  :global(.learn-root) .count.count {
+    display: none;
+  }
+
+  .word[data-word='true'] {
+    display: none;
+  }
+}
+
+/* A short window — a laptop in a small browser, or a phone on its side —
+   has no room for both scales pinned at once. The key is the one that can
+   go: the head of the reading column says which stop of how many in
+   words, and the detail is the drawing the reader is actually using. */
+@media (max-height: 34rem) {
+  .key,
+  .break {
+    display: none;
+  }
+
+  :global(.learn-root) .count.count {
+    display: none;
+  }
+}

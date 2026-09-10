@@ -1,0 +1,732 @@
+/* ============================================================
+   v5 — THE WORKSHEET
+
+   One stylesheet for one sheet; Lesson.tsx, Check.tsx, Track.tsx,
+   ReadMark.tsx and mdx.tsx all import it, because they are five
+   parts of a single ruled document and the alignment between
+   them is the design.
+
+   The object: the sheet an engineer has on the bench. A margin
+   column of figures read down, a hard vertical edge, numbered
+   work items hanging off it, and a check at the foot. Hairlines,
+   hanging indents, tabular numerals.
+
+   Ruled, never celled. The band rules stop at the vertical edge
+   instead of crossing it, so the page reads as ruled paper with
+   a margin rather than as a grid of boxes. Nothing here has a
+   fill, a radius, a shadow, a tint or a border on more than the
+   edges that carry meaning.
+
+   Every colour is an --ln-* token from app/learn/learn.css. The
+   right/wrong marking spends none at all — see .right/.wrong
+   near the foot for why.
+   ============================================================ */
+
+.sheet {
+  /* The margin column, and the space either side of the rule
+     that closes it. Both are column measurements, not a cap on
+     the page. */
+  --ws-fig: clamp(7.5rem, 11vw, 11rem);
+  --ws-gap: clamp(1rem, 2.2vw, 2rem);
+  /* The band rule above and below a work item. */
+  --ws-band: clamp(1.5rem, 3.4vw, 2.5rem);
+
+  /* Never a fixed pixel max-width: this is the same min() the
+     section's .measure uses, with the margin column and its two
+     gaps added on, so the work column is exactly --ln-measure
+     wherever there is room for it and the whole window minus
+     gutters wherever there is not. The reader's NARROW / WIDE
+     switch moves the sheet with it. */
+  width: min(
+    100% - 2 * var(--ln-gutter),
+    calc(var(--ln-measure) + var(--ws-fig) + 2 * var(--ws-gap) + 1px)
+  );
+  margin-inline: auto;
+  border-top: 1px solid var(--ln-ink-quiet);
+}
+
+/* ============================================================
+   1. The header row
+   What the document is, and where on the line it sits. It spans
+   both columns, because it is the title bar and not a work item.
+   ============================================================ */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 2rem;
+  padding-block: 0.85rem;
+  border-bottom: 1px solid var(--ln-rule);
+  /* The you-are-here ring is centred on its tick, so at the first
+     and last stop it hangs past the track. Clip rather than hide:
+     this must never put a horizontal scrollbar on the page. */
+  overflow-x: clip;
+}
+
+:global(.learn-root) .sheetName.sheetName {
+  flex: none;
+  color: var(--ln-ink);
+  letter-spacing: 0.12em;
+}
+
+/* ---- The signalling diagram, at instrument scale ------------ */
+
+.track {
+  position: relative;
+  flex: 1 1 14rem;
+  min-width: 0;
+  max-width: 26rem;
+  height: 40px;
+  /* The you-are-here ring is centred on its tick, so on the first
+     and last stop of a line half of it sits outside the track. The
+     inset is what keeps it on the sheet: without it the ring on
+     lesson 01 — the most-read page on any course — is clipped in
+     half against the sheet's edge on a phone. 1rem clears the
+     ring's painted radius of 12.25px. */
+  margin-inline: 1rem;
+}
+
+.trackSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The line's round caps and the two end ticks are centred on the
+     ends of the viewBox, so half of each falls outside it. Letting
+     the SVG paint past its viewport is what keeps the ticks at
+     uniform pitch and the termini capsule-shaped; .head clips the
+     overhang, and --ln-gutter is never below 1rem so it has room. */
+  overflow: visible;
+}
+
+.trackLine {
+  stroke: var(--ln-line);
+  stroke-width: var(--ln-w);
+}
+
+/* Stops behind the reader. */
+.tickRead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+}
+
+/* Stops still ahead — same stroke, drawn back. Order carries this
+   as much as weight does, so it never rests on colour. */
+.tickAhead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+  opacity: 0.3;
+}
+
+.ringBox {
+  position: absolute;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.ring {
+  stroke: var(--ln-mark);
+  stroke-width: 2.5;
+}
+
+/* ============================================================
+   2. The row
+   Every band of the sheet is one of these: the figures column on
+   the left, the work on the right, and the hairline between them
+   running unbroken from the header row to the foot.
+
+   Below 60rem there is no room for a margin column, so the row
+   becomes one column with the figures stacked above the work and
+   the band rules spanning the full sheet.
+   ============================================================ */
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: clamp(0.8rem, 2vw, 1.1rem);
+  padding-block: var(--ws-band);
+}
+
+/* Applied by hand rather than with a sibling selector, because
+   the check's rows live inside their own <ol> and a rule that
+   depended on adjacency would miss the first of them. */
+.ruled {
+  border-top: 1px solid var(--ln-rule);
+}
+
+@media (min-width: 60rem) {
+  .row {
+    grid-template-columns: var(--ws-fig) minmax(0, 1fr);
+    column-gap: var(--ws-gap);
+    row-gap: 0;
+    padding-block: 0;
+    border-top: none;
+  }
+
+  .figs,
+  .work {
+    padding-block: var(--ws-band);
+  }
+
+  /* The hard left edge. One border, repeated on every row, which
+     is what makes it look like a single rule ruled down the whole
+     sheet — the rows are flush, so there is no break in it. */
+  .work {
+    border-left: 1px solid var(--ln-rule);
+    padding-left: var(--ws-gap);
+  }
+
+  /* A band rule hangs off the margin instead of crossing it. */
+  .ruled {
+    border-top: none;
+  }
+
+  .ruled > .work {
+    border-top: 1px solid var(--ln-rule);
+  }
+
+  /* Keeps the figures level with the work beside them, since the
+     work cell is a border taller. */
+  .ruled > .figs {
+    border-top: 1px solid transparent;
+  }
+}
+
+/* ============================================================
+   3. The figures column
+   Quantities, read down, ruled into their own field. This is the
+   first thing a reader who arrived cold from a search result
+   meets, and it answers every question they have before they
+   decide to stay.
+   ============================================================ */
+
+.figList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.75rem;
+}
+
+.figItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.figLabel {
+  font-family: var(--ln-sign);
+  font-weight: 600;
+  font-size: 0.625rem;
+  line-height: 1.4;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ln-ink-quiet);
+}
+
+.figValue {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--ln-ink);
+}
+
+/* Doubled, so these beat `.learn-root .num` and `.learn-root .sign`
+   on colour and size without depending on which stylesheet the
+   bundler puts last. */
+:global(.learn-root) .figNum.figNum {
+  font-size: 0.8125rem;
+  color: var(--ln-ink);
+}
+
+:global(.learn-root) .partName.partName {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--ln-ink);
+}
+
+:global(.learn-root) .courseLink.courseLink {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+/* Focus is unconditional; hover is not. A touch browser
+   synthesises hover on the first tap, so an unscoped rule would
+   spend that tap lighting the link instead of following it. */
+:global(.learn-root) .courseLink.courseLink:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :global(.learn-root) .courseLink.courseLink:hover {
+    color: var(--ln-mark);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* The read mark, and the check's own boxes. The whole vocabulary
+   is one square: hollow means not yet, solid means done. It is
+   the same mark the course page's schedule uses for a read
+   lesson, and there is no third state — nothing on this sheet
+   marks a reader right or wrong in the margin. */
+.box {
+  flex: none;
+  align-self: center;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--ln-ink-quiet);
+}
+
+.box[data-done='true'] {
+  background: var(--ln-ink);
+  border-color: var(--ln-ink);
+}
+
+.figMark {
+  font-family: var(--ln-num);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--ln-ink);
+}
+
+/* On a sheet wide enough for a margin, the figures stop being a
+   row of meta and become a title block: one under another, ruled
+   apart, each label over its value. */
+@media (min-width: 60rem) {
+  .figList {
+    display: block;
+  }
+
+  .figItem {
+    padding-block: 0.55rem;
+  }
+
+  .figItem:first-child {
+    padding-top: 0;
+  }
+
+  .figItem + .figItem {
+    border-top: 1px solid var(--ln-rule);
+  }
+}
+
+/* ============================================================
+   4. The title block's work cell
+   ============================================================ */
+
+.title {
+  font-family: var(--ln-sign);
+  font-weight: 700;
+  /* Deliberately short of the section's 3.6rem display size. This
+     is the name of a job, printed at the head of the sheet that
+     does it, not a poster. */
+  font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--ln-ink);
+  text-wrap: balance;
+}
+
+.lede {
+  margin-top: 0.85rem;
+  font-family: var(--ln-read);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: 1.55;
+  color: var(--ln-ink-quiet);
+  text-wrap: pretty;
+}
+
+:global(.learn-root) .titleRule.titleRule {
+  margin-bottom: 0;
+  margin-top: clamp(1.1rem, 2.4vw, 1.5rem);
+}
+
+/* ============================================================
+   5. The statement of the problem
+   lesson.why, which is what is wrong with the reader's system
+   right now. Set above body size, because for somebody who
+   landed here from a search result it is the most important
+   thing on the sheet.
+   ============================================================ */
+
+:global(.learn-root) .whyLabel.whyLabel {
+  color: var(--ln-ink);
+}
+
+.whyText {
+  margin-top: 0.8rem;
+  font-family: var(--ln-read);
+  font-size: clamp(1.0625rem, 1.5vw, 1.1875rem);
+  line-height: 1.65;
+  color: var(--ln-ink);
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   6. A work item
+   The numeral is the author's own section number, hung in the
+   figures column. It is real structure — the sequence is the
+   order the lesson has to be worked through — and it is
+   aria-hidden, because the heading beside it still reads out
+   "1. A fixed-length list of floats".
+   ============================================================ */
+
+:global(.learn-root) .itemN.itemN {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ln-ink);
+}
+
+/* Beats `.learn-root .prose h2`, which is two classes and an
+   element, without depending on stylesheet order. */
+:global(.learn-root .prose) .itemHead.itemHead {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 1.1rem;
+  padding-top: 0;
+  border-top: none;
+  font-size: clamp(1.3rem, 2.3vw, 1.6rem);
+  line-height: 1.22;
+  text-wrap: balance;
+}
+
+/* ---- The prose, on this sheet ------------------------------- */
+
+/* Comparison tables are the workhorse of this writing and appear
+   in nearly every lesson, so on a ruled sheet they have to look
+   ruled rather than like a web table dropped into a document.
+   Everything else about them — the signage head row, the row
+   hairlines, the sideways scroll on a narrow screen — is already
+   .prose's, and is left alone.
+
+   The doubled class is what carries these past
+   `.learn-root .prose table`. */
+:global(.learn-root) .body.body table {
+  border-top: 1px solid var(--ln-ink-quiet);
+  border-bottom: 1px solid var(--ln-ink-quiet);
+}
+
+:global(.learn-root) .body.body thead th {
+  padding-top: 0.7em;
+}
+
+/* Column rules, so the comparison reads across as a ruled field.
+   Never on the first column, so the table's left edge stays flush
+   with the prose above it. */
+:global(.learn-root) .body.body td + td,
+:global(.learn-root) .body.body th + th {
+  border-left: 1px solid var(--ln-rule);
+}
+
+:global(.learn-root) .body.body tbody td {
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.learn-root) .body.body tbody tr:last-child td {
+  padding-bottom: 0.9em;
+}
+
+/* ============================================================
+   7. The summary of work
+   lesson.wins — what was done, in five lines. Numerals hang
+   against the margin rule; a hairline between each, no bullet
+   and no marker of any kind.
+   ============================================================ */
+
+.wins {
+  list-style: none;
+  margin-top: clamp(0.9rem, 2.2vw, 1.25rem);
+}
+
+.win {
+  display: grid;
+  grid-template-columns: 2.5ch minmax(0, 1fr);
+  column-gap: 1rem;
+  align-items: baseline;
+  padding-block: 0.7rem;
+  font-family: var(--ln-read);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.65;
+  color: var(--ln-ink);
+}
+
+.win + .win {
+  border-top: 1px solid var(--ln-rule);
+}
+
+:global(.learn-root) .winN.winN {
+  font-size: 0.8125rem;
+  color: var(--ln-ink-quiet);
+}
+
+/* ============================================================
+   8. The check
+   Five items, each verified or not yet. The band is bounded top
+   and bottom in quiet ink rather than the page's hairline — a
+   checkpoint has to be visibly closed off, and rule weight is
+   the only way to do that without a fill.
+
+   Nothing in here totals, ranks or celebrates. The one number
+   on the band is how many of the five have been answered.
+   ============================================================ */
+
+.check {
+  border-top: 1px solid var(--ln-ink-quiet);
+  border-bottom: 1px solid var(--ln-ink-quiet);
+}
+
+:global(.learn-root) .checkCount.checkCount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.5rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ln-ink-quiet);
+}
+
+.checkCountValue {
+  font-size: 1rem;
+  color: var(--ln-ink);
+}
+
+.checkHeading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+/* Doubled, so it beats `.learn-root .sign` on size. */
+:global(.learn-root) .checkHeadingLead.checkHeadingLead {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--ln-ink);
+}
+
+.checkList {
+  list-style: none;
+}
+
+:global(.learn-root) .checkItemLabel.checkItemLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ln-ink-quiet);
+}
+
+.qText {
+  font-family: var(--ln-read);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ln-ink);
+  margin-bottom: 0.9rem;
+  text-wrap: pretty;
+}
+
+/* ---- The options -------------------------------------------- */
+
+.options {
+  border-top: 1px solid var(--ln-rule);
+}
+
+.option {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.7rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--ln-rule);
+  background: none;
+  font-family: var(--ln-read);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ln-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The row's own rule, sitting exactly on top of the hairline at
+   its foot, in the course's ink. Always in the layout and always
+   the same height, so nothing moves when it is wanted; only its
+   opacity changes, instantly. */
+.option::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--ln-line);
+  opacity: 0;
+}
+
+/* Only where there is a real pointer, and only on a question that
+   can still be answered — an option that is already marked must
+   not look like it is offering anything. */
+@media (hover: hover) and (pointer: fine) {
+  .option[aria-disabled='false']:hover {
+    color: var(--ln-mark);
+  }
+
+  .option[aria-disabled='false']:hover::after {
+    opacity: 1;
+  }
+}
+
+/* The keyboard's version of the same thing, written separately
+   and unconditionally, because a reader with no fine pointer
+   still tabs through these. */
+.option:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: -2px;
+}
+
+.option[aria-disabled='false']:focus-visible::after {
+  opacity: 1;
+}
+
+/* Answered questions lock. The cursor says so; the row stays
+   fully readable and stays focusable, so it can be tabbed back
+   to and read again. */
+.option[aria-disabled='true'] {
+  cursor: default;
+}
+
+:global(.learn-root) .key.key {
+  flex: none;
+  width: 1.5ch;
+  color: var(--ln-ink-quiet);
+}
+
+.optionLabel {
+  flex: 1;
+}
+
+:global(.learn-root) .mark.mark {
+  flex: none;
+  padding-left: 0.6rem;
+  font-size: 1rem;
+  color: var(--ln-ink);
+}
+
+/* ---- After the click ----------------------------------------
+   No colour is spent here, and that is the decision, not an
+   omission. Every value on this sheet is an --ln-* token, and
+   the section defines no right/wrong pair; inventing one would
+   be a new ink measured against nothing. So the marking is
+   carried three ways instead, none of them hue: the glyph, the
+   weight of the type, and a word off screen for anyone not
+   looking at either.
+
+   The correct row also closes on a 2px rule in body ink rather
+   than the hairline every other row gets, so the answer is
+   findable by scanning as well as by reading. */
+
+.right {
+  font-weight: 600;
+  color: var(--ln-ink);
+}
+
+.right::after {
+  background: var(--ln-ink);
+  opacity: 1;
+}
+
+:global(.learn-root) .right .key.key {
+  color: var(--ln-ink);
+}
+
+.wrong {
+  color: var(--ln-ink);
+}
+
+/* Neither picked nor correct: still legible, pushed back so the
+   two marked rows carry the answer. */
+.muted {
+  color: var(--ln-ink-quiet);
+}
+
+:global(.learn-root) .muted .mark.mark {
+  color: var(--ln-ink-quiet);
+}
+
+/* ---- The explanation ----------------------------------------- */
+
+.explain {
+  margin-top: 0.85rem;
+  padding-left: 0.9rem;
+  border-left: 1px solid var(--ln-rule);
+  font-family: var(--ln-read);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--ln-ink-quiet);
+}
+
+/* Empty, the paragraph has to take up no room and still be in
+   the accessibility tree — it is a live region pre-mounted so
+   the explanation has somewhere to land. display: none and
+   visibility: hidden both remove it, which cancels the
+   pre-mounting outright. Collapsing the box instead leaves the
+   node exactly where the screen reader is watching. */
+.explain:empty {
+  margin-top: 0;
+  padding-left: 0;
+  border-left-width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ============================================================
+   9. The foot
+   ============================================================ */
+
+/* Deeper carries its own top rule and top margin, which would be
+   a second band rule inside a band that already has one. The
+   element selector is enough to outrank its own class. */
+.deeperSlot > section {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* PrevNext opens on a rule in quiet ink, which is exactly how
+   this sheet should close; only the gap above it is this page's
+   business. */
+.footSlot > nav {
+  margin-top: clamp(1.5rem, 3.2vw, 2.25rem);
+}
+
+/* ============================================================
+   10. Off screen, in the tree
+   Never display: none — every one of these is a word a screen
+   reader has to reach.
+   ============================================================ */
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
