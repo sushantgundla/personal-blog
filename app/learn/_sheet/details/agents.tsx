@@ -1,5 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react'
 import type { BayKey, Detail } from '../details'
+import { Bay, Spark } from '../details'
 import s from '../sheet.module.css'
 
 /**
@@ -46,28 +46,25 @@ import s from '../sheet.module.css'
  * the tool, the gate, the world and the trigger with nobody behind it.
  * Part 4 is running it at scale: more agents, the bill, the trace.
  *
- * Geometry is hand-authored in a 1200 x 460 viewBox. The ratio, 2.61:1,
- * sits inside the 2.5:1–2.9:1 band the sheet's margin is built around, and
- * the width matches the other four details, so a 15px label on this sheet
- * comes out the same physical size as a 15px label on any of them.
+ * Geometry is hand-authored in a 1200 x 460 viewBox. The width matches the
+ * other four details, so a 15px label on this sheet comes out the same
+ * physical size as a 15px label on any of them.
+ *
+ * The ratio is 2.61:1. That does not fit the first screen: measured, a
+ * 1440 x 800 laptop leaves 419px under the title strip for a drawing
+ * rendered 1216px wide, so the cutoff is 2.90:1 and this sheet misses it by
+ * 47px. It is the second-best of the five and all five miss — see the fold
+ * note in DESIGN.md. The fix is a flatter viewBox, not a height cap, which
+ * would letterbox the drawing and shrink its lettering with it.
  */
 
 /**
- * A bay: the objects belonging to one part of the course. A bay with no
- * part behind it falls back to the spine class — it is still drawn, because
- * the machine is true whether or not a course has a part about it, but it
- * takes no ink and never dims.
+ * The one helper this sheet still keeps to itself, and the reason is the
+ * radius: this drawing rings its callouts at 15 where the other four ring
+ * theirs at 17, because the loop crowds its numerals harder than any of
+ * them. Everything else — the bay, and the spark — is the shared one from
+ * ../details, so the bays here became doors when the bays there did.
  */
-function Bay({ k, i, children }: { k: BayKey; i: number; children: ReactNode }) {
-  const zone = k.zone(i)
-  return (
-    <g className={zone === undefined ? s.spine : s.bay} data-zone={zone}>
-      {children}
-    </g>
-  )
-}
-
-/** A numbered ring, a leader, and a dot on the thing it names. */
 function Callout({
   k,
   i,
@@ -87,7 +84,7 @@ function Callout({
   if (zone === undefined) return null
 
   return (
-    <g className={s.callout} data-zone={zone}>
+    <g className={s.callout} data-zone={zone} aria-hidden="true">
       <path className={s.lead} d={lead} />
       <circle className={s.dot} cx={dot[0]} cy={dot[1]} r={3.5} />
       <circle className={s.ring} cx={cx} cy={cy} r={15} />
@@ -98,35 +95,18 @@ function Callout({
   )
 }
 
-/** The one authored moment: a single request runs the detail once, on load. */
-function Spark({ d, dur, delay, len }: { d: string; dur: string; delay: string; len?: string }) {
-  return (
-    <g className={s.sparks}>
-      <path
-        className={s.spark}
-        d={d}
-        pathLength={1}
-        style={
-          { '--pl-dur': dur, '--pl-delay': delay, ...(len ? { '--pl-d': len } : {}) } as CSSProperties
-        }
-      />
-    </g>
-  )
-}
-
 function AgentsDetail({ k }: { k: BayKey }) {
   return (
     <svg
       viewBox="0 0 1200 460"
       className={s.detail}
-      aria-hidden="true"
       focusable="false"
       role="presentation"
     >
       {/* ---- The spine ------------------------------------------------
           The request arriving, the context window everything is assembled
           in, and the answer leaving. Belongs to no single part. */}
-      <g className={s.spine}>
+      <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M84 300H164" />
         <path className={s.head} d="M180 300L164 291.5V308.5Z" />
 

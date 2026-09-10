@@ -8,7 +8,7 @@ import { buildStages } from '../_plate/stages'
 import { KeyPlan } from '../_sheet/KeyPlan'
 import { Schedule } from '../_sheet/Schedule'
 import { getDetail, type BayKey } from '../_sheet/details'
-import { toZones } from '../_sheet/parts'
+import { toZones, zoneDoor } from '../_sheet/parts'
 import s from '../_sheet/sheet.module.css'
 
 /**
@@ -26,6 +26,11 @@ import s from '../_sheet/sheet.module.css'
  * not "every lesson is a callout" — seventeen callouts on one drawing is a
  * mess, four callouts with a schedule beneath each is a drawing, and it is
  * what a drawing office does when the general arrangement runs out of room.
+ *
+ * The bays are doors, the way FIG. 1's five parts are: click a part of the
+ * drawing and it opens that part's first lesson. So both figures behave the
+ * same way under the cursor, and a reader who learned on the index that the
+ * picture is the navigation does not have to unlearn it here.
  */
 
 interface Props {
@@ -74,10 +79,16 @@ export default function DetailSheetPage({ params }: Props) {
    * number the course's part carries on disk. A drawing bay with no part
    * behind it takes no ink; a part past the last bay gets a schedule column
    * with no ring and the words "Not on the detail".
+   *
+   * `door` is the third thing a bay needs and the reason it is here rather
+   * than in the drawings: the five details are pictures, and nothing in them
+   * should know an address. A bay opens its part's first lesson, and a part
+   * with no lessons yet opens nothing — see zoneDoor().
    */
   const bayKey: BayKey = {
     zone: (index) => (index < zones.length ? String(zones[index].n) : undefined),
     num: (index) => (index < zones.length ? String(zones[index].n) : undefined),
+    door: (index) => (index < zones.length ? zoneDoor(course.slug, zones[index]) : undefined),
   }
 
   const Drawing = detail?.Drawing
@@ -135,13 +146,24 @@ export default function DetailSheetPage({ params }: Props) {
         </div>
 
         {/* ---- The field: the detail, and the schedule beside it -------
-            The drawing is aria-hidden. The ordered list under it carries
-            the same structure in the same order — hidden beside the
-            drawing, and shown in its place on a narrow screen, where a
-            900-unit detail would be a smudge. */}
+            Every mark in the drawing is aria-hidden; its bays are links
+            into the parts they draw, and they are the only things in it a
+            screen reader meets. The ordered list under it carries the same
+            structure in the same order — hidden beside the drawing, and
+            shown in its place on a narrow screen, where a 900-unit detail
+            would be a smudge. */}
         <div className={s.field}>
           {detail ? (
             <div className={s.figure}>
+              {/* The drawing's bays are links, so they need a heading above
+                  them: without it a reader tabbing into the picture meets a
+                  run of links with nothing saying what they are part of. It
+                  is off screen, and it hides below 62rem with the drawing
+                  it heads — see .detailLabel in sheet.module.css. */}
+              <h2 className={s.detailLabel}>
+                Figure 2 — the parts of this course, as links to their lessons
+              </h2>
+
               {Drawing ? <Drawing k={bayKey} /> : null}
 
               <div className={s.stepsWrap}>

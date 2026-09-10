@@ -77,9 +77,17 @@ function Pre(props: ComponentProps<'pre'>) {
   return <pre tabIndex={0} {...props} />
 }
 
+/**
+ * A table, in a wrapper that scrolls sideways rather than widening the
+ * reading column. Same bargain as Pre above, and the same obligation: a
+ * region that scrolls has to be operable from the keyboard, so the wrapper
+ * takes tabIndex. It also takes a role and a name, because a focus stop
+ * that announces nothing is its own defect — a reader who tabs into it
+ * should hear that they have landed in a table they can scroll.
+ */
 function Table(props: ComponentProps<'table'>) {
   return (
-    <div className={styles.tableScroll}>
+    <div className={styles.tableScroll} tabIndex={0} role="region" aria-label="Table, scrolls sideways">
       <table {...props} />
     </div>
   )

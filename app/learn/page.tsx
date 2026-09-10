@@ -170,6 +170,16 @@ export default function LearnAnatomyPage() {
             </ol>
           </div>
 
+          {/* One heading for the drawing's own links, so a reader tabbing
+              into the picture is not met by five links with nothing saying
+              what they belong to. One and not two: both plates are in the
+              DOM and the one that is not shown is display: none, so exactly
+              one set of five links is ever in the accessibility tree, and a
+              second heading would announce a figure that is not there. */}
+          <h3 className={s.sr}>
+            The {inWords(drawn)} parts of Figure 1, as links to the courses that teach them
+          </h3>
+
           <MachineWide doors={doors} />
           <MachineNarrow doors={doors} />
         </div>

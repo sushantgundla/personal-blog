@@ -47,15 +47,14 @@ import s from '../sheet.module.css'
  *      three gauges: quality, latency and cost
  *
  * Geometry is hand-authored in a 1200 x 533 viewBox — the house width, and
- * taller than the other four, because a board of gauges needs a column to
- * hang in.
+ * the second tallest of the five, behind llms, because a board of gauges
+ * needs a column to hang in.
  */
 function EvalsDetail({ k }: { k: BayKey }) {
   return (
     <svg
       viewBox="0 0 1200 533"
       className={s.detail}
-      aria-hidden="true"
       focusable="false"
       role="presentation"
     >
@@ -65,7 +64,7 @@ function EvalsDetail({ k }: { k: BayKey }) {
           going through. Three taps hang off three different points, because
           evals do not only read the final answer, and all three run into
           one dotted bus. Nothing below that bus moves an answer anywhere. */}
-      <g className={s.spine}>
+      <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M40 61H1128" />
         <path className={s.head} d="M1149 61L1128 50V72Z" />
         <text className={s.lab} x="40" y="37">

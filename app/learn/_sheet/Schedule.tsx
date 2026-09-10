@@ -20,10 +20,10 @@ import s from './sheet.module.css'
  * on the longest course this site has.
  *
  * The one client component on the page, and only because read state lives in
- * localStorage. It is handed `Zone[]` rather than the `Course`, for the same
- * reason `toLineCourse` exists: a `Course` carries every lesson's full MDX
- * body, and anything passed across this boundary is serialised into the
- * page's payload.
+ * localStorage. It is handed `Zone[]` rather than the `Course`, and that is
+ * not a convenience: a `Course` carries every lesson's full MDX body, and
+ * anything passed across this boundary is serialised into the page's payload.
+ * `toZones()` in parts.ts cuts it down to what the schedule actually prints.
  */
 
 interface Props {

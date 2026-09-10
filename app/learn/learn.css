@@ -32,7 +32,8 @@
 
 /* ============================================================
    1. Tokens — printed transit inks on near-black
-   Nine colour roles, and nothing else. Line colour is
+   Ten colour roles and nothing else: five course inks, then
+   mark, ground, ink, quiet ink and rule. Line colour is
    structural: it appears in the diagram, in a lesson's position
    strip and in the one rule under a lesson title. It never
    colours body text and never fills a background.
@@ -50,14 +51,18 @@
   --ln-prompt: #4a72c4;
   --ln-rag: #3e8c5e;
   --ln-agents: #cb881d;
-  /* --- The fifth and sixth inks -------------------------------
+  /* --- The fifth ink -----------------------------------------
      Measured, not eyeballed: full method and numbers in
      DESIGN.md's "Adding new inks". Azure clears the sRGB gamut's
      one open hole (the cyan run from hue 190° to 240° cannot
      reach C* 32 at any usable lightness — real ceiling, not a
-     guess) by sitting just past it at 245°, 39° from navy. Rose
-     sits in the 130° gap between rag and navy on the wheel, at
-     347°, 47° from red. */
+     guess) by sitting just past it at 245°, 39° from navy.
+
+     A sixth, rose at 347°, was measured at the same time for a
+     Data Pipelines course that was pulled before it shipped. It
+     is not defined here and nothing reads it — DESIGN.md keeps
+     the workings, because the next ink after this one starts
+     from them. */
   --ln-evals: #00aae0;
 
   /* --- Marks, ground and ink -------------------------------- */
@@ -406,9 +411,16 @@
    Tailwind's preflight strip.
    ============================================================ */
 
+/* 16px on a phone, 17px from about 1200px up, and a real ramp in
+   between. The endpoints are the ones this rule always declared; the
+   middle term was `1.05vw`, which does not reach 16px until the window is
+   1524px wide, so the floor won every screen anyone reads on and the
+   clamp did nothing at all. A rem-plus-vw term is what makes it move:
+   the rem part sets where the ramp starts, the vw part how fast it
+   climbs. Because .measure counts in ch, the column widens with it. */
 .learn-root .prose {
   font-family: var(--ln-read);
-  font-size: clamp(1rem, 1.05vw, 1.0625rem);
+  font-size: clamp(1rem, 0.9375rem + 0.17vw, 1.0625rem);
   line-height: 1.75;
   color: var(--ln-ink);
 }
@@ -651,6 +663,12 @@
    block is a tab stop as well, so it can be scrolled from the
    keyboard and not only with a trackpad. */
 
+/* overflow-wrap: break-word, not `anywhere` and not word-break: a long
+   token only breaks once it will not fit the line on its own, so
+   `useState` stays whole and `/Users/you/Projects/client-work` — 31
+   characters, about 273px at this size, inside a list item with 266px to
+   work in on a 320px phone — breaks instead of running off the screen. No
+   hyphen is inserted at the break: a hyphen inside a path is a lie. */
 .learn-root .prose code {
   font-family: var(--ln-num);
   font-size: 0.875em;
@@ -659,6 +677,8 @@
   border-radius: 2px;
   background: none;
   color: var(--ln-ink);
+  overflow-wrap: break-word;
+  hyphens: none;
 }
 
 .learn-root .prose pre {

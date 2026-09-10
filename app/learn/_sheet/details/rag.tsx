@@ -38,10 +38,10 @@ import s from '../sheet.module.css'
  * carry the request, so it cannot be dotted, and dashed already means one
  * thing on this publication.
  *
- * Geometry is hand-authored in a 1200 x 520 viewBox — wider and taller
- * than the other four details, because this is the seventeen-lesson
- * course and it has the most to show. Nothing is assembled from library
- * shapes: every junction, tooth and lattice line is placed.
+ * Geometry is hand-authored in a 1200 x 520 viewBox — the house width, like
+ * all five, and the third tallest of them, because this is the
+ * seventeen-lesson course and it has a lot to show. Nothing is assembled
+ * from library shapes: every junction, tooth and lattice line is placed.
  */
 
 /** The index inside the store. Points with edges between them: the graph an
@@ -63,7 +63,6 @@ function RagDrawing({ k }: { k: BayKey }) {
     <svg
       viewBox="0 0 1200 520"
       className={s.detail}
-      aria-hidden="true"
       focusable="false"
       role="presentation"
     >
@@ -71,7 +70,7 @@ function RagDrawing({ k }: { k: BayKey }) {
           Everything a reader needs to place this sheet on FIG. 1. The
           request comes in bottom left as a question and leaves top right
           as a junction, which is the same junction FIG. 1 draws. */}
-      <g className={s.spine}>
+      <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M30 412H84" />
         <path className={s.head} d="M100 412L84 403.5V420.5Z" />
         <text className={s.lab} x="30" y="396">

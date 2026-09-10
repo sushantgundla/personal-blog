@@ -282,11 +282,13 @@ picked by eye — and the guess was wrong in both directions.
   the sweep before reusing 347° for a new course rather than assuming the
   numbers above still describe an empty slot.
 
-Six is not a wall either. The sweep found the 250°–320° run and the 335°–360°
-run both clear all three bars almost end to end — azure and rose used one hue
-apiece out of each, not the whole run — and the 190°–240° band is a register
-choice away from opening too. But the next ink still needs its own sweep, not
-an inherited guess about what's left.
+Five is not a wall either — and five is what `learn.css` defines today:
+`--ln-llms`, `--ln-prompt`, `--ln-rag`, `--ln-agents`, `--ln-evals`. The sweep
+found the 250°–320° run and the 335°–360° run both clear all three bars almost
+end to end — azure took one hue out of the first and rose, since withdrawn,
+one out of the second, neither of them the whole run — and the 190°–240° band
+is a register choice away from opening too. But the next ink still needs its
+own sweep, not an inherited guess about what's left.
 
 Dark is the default. The scene decided it: an engineer at a laptop with an editor
 open beside this, often at night, and a signalling diagram lives on a dark panel.
@@ -388,6 +390,15 @@ the machine. It lives in `app/learn/_sheet/`.
   stages are five courses; a detail's bays are one course's parts, so the same
   `:has()` reveal works one level down. Hold a bay or its schedule column and
   that part alone takes the course ink.
+- **The door** — every bay is also a link, into the first lesson of the part
+  it draws, exactly as every part of FIG. 1 is a link into its course. A bay
+  is a part and a part is several lessons, so there is no one lesson a bay
+  *is*; the first in reading order is where a reader who clicked that part was
+  going to start anyway. `Bay` in `details.tsx` owns the link, the hit rects
+  and the accessible name for all five drawings, and `zoneDoor()` in
+  `parts.ts` is the one place either the href or the name is written — the
+  five details are pictures, and nothing in them knows an address. At rest the
+  door paints nothing: the cursor and the focus box are the whole of it.
 - **The callout** — one numbered ring per bay, inked at rest for the same
   touch-screen reason FIG. 1's are, and the same numeral heads that part's
   schedule column. A callout with no part behind it is not drawn.
@@ -404,18 +415,23 @@ the machine. It lives in `app/learn/_sheet/`.
   not survive at 320 units, and what has to survive is the order of the parts.
 
 **More of the subject, not the same amount bigger.** That is what a detail at
-larger scale means on a real plate. FIG. 1 carries fifteen labelled features
-across the whole machine; each detail carries fourteen to twenty across one
-part of it, and every one is chosen by reading that course's lesson titles and
+larger scale means on a real plate. FIG. 1 spends its labels on the whole
+machine; each detail spends a comparable budget of them on one part of it —
+the densest of the five carries about twice what the sparsest does, and no
+count is written down here because counting them is `grep -c 's.lab'` on the
+drawing. Every one is chosen by reading that course's lesson titles and
 subtitles in `content/learn/<slug>/` — a reader who has taken the course
 should recognise its contents in the drawing.
 
 **What may not be invented here**, on top of everything FIG. 1 already rules
 out: a feature the course does not teach; a fourth line weight; a schedule
-column that claims a bay it has no ring on. A course whose parts have outrun
-the drawing gets a column with no ring and the words `Not on the detail`, and
-a course with no detail drawn at all gets the schedule alone and says so —
-the same visible failure `buildStages()` uses on the index.
+column that claims a bay it has no ring on; a door that leads nowhere. A
+course whose parts have outrun the drawing gets a column with no ring and the
+words `Not on the detail`; a named part with no lessons filed under it yet
+keeps its bay, drawn and unclickable, because a link that goes nowhere is
+worse than no link; a course with no detail drawn at all gets the schedule
+alone and says so — the same visible failure `buildStages()` uses on the
+index.
 
 **The layout is a stack, and that is load-bearing.** The drawing runs the full
 width at the top of the field and the schedule's columns hang beneath it. An
@@ -476,12 +492,19 @@ signage-caps label, and they belong to one line, not the whole page.
   - **FIG. 1, on the index.** `MachineWide` above `62rem`, `MachineNarrow`
     below `61.9375rem` — the two queries must not both match at `992px`, or
     the strip goes multi-column while the wide drawing is already hidden. The
-    wide plate is height-capped at `clamp(24rem, 72vh, 44rem)` so a 2500px
-    window does not turn it into a metre of diagram with the legend off
+    wide plate is **width**-capped at `min(100%, 100rem)` and centred, so a
+    2500px window does not turn it into a metre of diagram with the legend off
     screen; the narrow one is width-capped at `26rem` and centred, because
     100% of a 991px window renders a 360 × 1060 drawing at about 852 × 2509.
     Both caps are on the drawing. **Neither is ever on the sheet**, which runs
-    the full window at every size.
+    the full window at every size. **And neither is ever on a height** — see
+    FIG. 2 below for why, which is the same reason and was learnt twice: a
+    `max-height: clamp(24rem, 72vh, 44rem)` sat on `.wide` and letterboxed it
+    at 2560, rendering a 2276px field as a 1656px drawing with 310px of bare
+    grid either side and cutting `.lab` from 21.3px to 15.5px. 100rem is
+    1600px and the viewBox is 1600 units wide, so at the cap one unit is one
+    pixel and a 15-unit label letters at exactly 15px — a hair off FIG. 2's
+    15.2px, so the two sheets letter alike.
   - **FIG. 2, on a course page.** The sheet runs the full window; only the
     drawing has a ceiling, and it is on the **width**, `min(100%, 76rem)`,
     never on the height. Every drawing's viewBox is 1200 units wide and
@@ -491,9 +514,16 @@ signage-caps label, and they belong to one line, not the whole page.
     lettering — down by whatever the height was cut by. Measured, not
     argued: under a height cap the same label came out 12.6px on
     prompt-engineering and 9.6px on llms; under the width cap it is 15.2px
-    on both. The cost is the fold — a 1200 x 560 drawing is taller than the
-    room under the title strip on a 1440 x 800 laptop, and the fix for that
-    is a flatter viewBox, not a ceiling. Below `62rem` the drawing is not
+    on both. The cost is the fold, and it is **open**, so here is the
+    arithmetic rather than an impression. On a 1440 × 800 laptop the things
+    above the drawing come to 381px — the rail 45, `.learn-main`'s top
+    padding 80, the sheet inset 15, the title strip 226 and `.figure` 14 —
+    leaving 419px for a drawing rendered 1216px wide. So a viewBox fits whole
+    only at 2.90:1 or flatter, which is 1200 × 414, and **all five overrun**:
+    `llms` (1200 × 560) by 149px, `evals` (533) by 121px, `rag` (520) by
+    108px, `agents` (460) by 47px, `prompt-engineering` (428) by 15px. The
+    fix is a flatter viewBox — a redraw, not a ceiling, and not this pass.
+    Below `62rem` the drawing is not
     shown at all — a 1200-unit detail rendered into a 320px column letters its
     annotation at about five pixels, and a detail whose annotation cannot be
     read is a smudge rather than a detail. The phone gets the key plan, which
@@ -605,7 +635,10 @@ values are in Colour. Course identity is never carried by colour alone — a
 line carries its name in signage caps, a stage on FIG. 1 carries a numbered
 callout that the legend repeats, and read/unread ticks differ in fill, not
 hue. The quiz options are real buttons, operable by keyboard, with the result
-in an `aria-live` region and right/wrong marked by a glyph as well as colour.
+in an `aria-live` region. Right and wrong are **carried in text**, because the
+glyph that marks them is `aria-hidden` and a reader who is not looking at it
+would otherwise have colour alone. The glyph and the colour are the visible
+pair; the words are what reaches assistive technology.
 
 On the index:
 
@@ -637,13 +670,43 @@ On the index:
   `list-style: none` costs the list its semantics in Safari and there was no
   heading between the h1 and the notes.
 
-On a course page FIG. 2 is `aria-hidden`, and the equivalent is an ordered
-description of the drawing — off screen where the drawing is shown, and shown
-in the drawing's place below `62rem`. One node with two treatments, rather than
-two copies that can drift. Every way into a lesson is a row-sized link in the
-schedule, with the minutes and the read state in its accessible name, because
-the mark and the numeral beside the title are `aria-hidden`. Read and unread
-differ in fill, not hue.
+On a course page:
+
+- **FIG. 2's bays are doors too**, so the same trade the index made is made
+  here. Each of the five `<svg>`s is `role="presentation"` and none of them is
+  `aria-hidden`, because a focusable link inside an `aria-hidden` subtree is a
+  focus stop that announces nothing. Every mark, numeral, label and spark in
+  them is `aria-hidden` instead — by `Bay`, `Callout` and `Spark` in
+  `details.tsx`, and by `aria-hidden` on the spine group in each drawing — so
+  the bay links are the only things in the picture a screen reader meets.
+  **What that costs:** a reader now meets each part of the course twice, once
+  in the drawing and once as a schedule column. It is paid deliberately, and
+  `zoneLabel()` in `parts.ts` is the one place a bay's name is written, in the
+  order the schedule column already says it — the part's number and name, how
+  many lessons and how many minutes, then the one clause the column cannot
+  say, which is where the bay leads.
+- The reveal fires from the keyboard as well as the pointer, split the same
+  way as the index's, but it correlates on `:focus-within` rather than
+  `:focus-visible`: the thing that takes focus is the anchor, and `data-zone`
+  is on the bay around it.
+- The focus ring on a bay is the hit rects inked at `1.5` — the thin weight
+  already on the sheet, never a fourth one, never a glow or a radius — and it
+  stays graphite while the bay takes the course ink, so the box never
+  disappears into the part it is marking. It is the rects rather than an
+  `outline` because WebKit paints no outline on an SVG element at all.
+- The key plan is the other way back to FIG. 1, and the whole block — drawing
+  and caption — is the target rather than four words. It had a hover state and
+  no focus state; the ring is now its own already-transparent border, inked.
+  It and the `← Fig. 1` text link above it are two links to one page with two
+  different names, which is the point: one says where you are standing, the
+  other says where it goes.
+- The equivalent of the picture is an ordered description of the drawing — off
+  screen where the drawing is shown, and shown in the drawing's place below
+  `62rem`. One node with two treatments, rather than two copies that can
+  drift. Every way into a lesson is a row-sized link in the schedule, with the
+  minutes and the read state in its accessible name, because the mark and the
+  numeral beside the title are `aria-hidden`. Read and unread differ in fill,
+  not hue.
 
 On a lesson the diagram is decorative-plus-navigational: its links carry real
 text; the SVG itself is `aria-hidden` where a text list beside it already
@@ -713,6 +776,24 @@ lost on a reason, not on taste.
   already means "only if the model calls a tool", and a fourth meaning may not
   be added. They are drawn at the detail weight and named in words, which is
   the same trade the struck-out retrieval candidate already pays.
+- **A bay opens the part, not a lesson** — a `#part-3` anchor down to the
+  schedule column, or a filtered view of that part. Rejected on the owner's
+  own words, *the clicking on analog diagram to open lesson doesn't work
+  inside a course*: the ask is a lesson, and scrolling a reader forty lines
+  down the page they were already on is a worse answer than opening the thing
+  they clicked for. A bay opens its part's **first lesson in reading order** —
+  the lowest `order`, not the first on disk and not the first in the array,
+  because a renumbered lesson must move the door with it.
+- **Letting the five drawings write their own hrefs and labels.** The obvious
+  shape, since each already hand-authors its own geometry, and refused for the
+  reason `Stage.tsx` exists on the index: the five were written by five
+  different hands, and anything all five have to remember will drift into five
+  slightly different sentences about the same five destinations. `Bay` owns
+  the link; `zoneDoor()` owns the words. The same argument took `agents.tsx`'s
+  private copy of `Bay` away — it had drifted already, and a private `Bay`
+  would have been the one detail whose parts were still not doors. Its
+  `Callout` stays private, because that one is a real difference: it rings at
+  15 where the others ring at 17.
 
 `Line.tsx`, `Line.module.css` and `line-data.ts` are gone. They drew the old
 course page, nothing else imported them, and the `variant="network"` branch

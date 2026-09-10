@@ -23,8 +23,11 @@ import type { Course } from '@/lib/learn'
  * courses. That is a prompt to redraw FIG. 1, which is the correct failure.
  *
  * Plain data and pure functions, kept out of the drawing components so a
- * server page and a client one could both read it. Same reason
- * app/learn/_components/line-data.ts exists.
+ * server page and a client one could both read it. That is the rule on both
+ * sheets: across the client boundary Next replaces a module's exports with
+ * client-reference proxies, so anything both sides need has to live in a
+ * module that is neither. `_sheet/parts.ts` does the same job for FIG. 2,
+ * where `Schedule.tsx` is the client half.
  */
 
 export interface Stage {
