@@ -5,10 +5,11 @@
 
 ## Direction contract
 
-<!-- The index and the pages under it are two surfaces in one publication.
-     The index is a draughting plate; a course page and a lesson page keep the
-     signalling diagram, because a syllabus really is a line and a lesson
-     really does have a position on it. Both contracts are below. -->
+<!-- The index and the pages under it are one publication in three sheets.
+     The index is FIG. 1, the general arrangement. A course page is FIG. 2, a
+     detail of one part of it at larger scale. A lesson keeps the signalling
+     diagram, because a lesson really does have a position on a line. All
+     three contracts are below. -->
 
 **THESIS.** The index teaches you the shape of the system before it offers you
 anything. It is one drawing of one request — a prompt in, cut into tokens, a
@@ -16,10 +17,12 @@ query out to a corpus, retrieved passages joined at the context window, the
 model, a loop out to a tool and back, an answer out, a gauge on it — and the
 courses are not filed beside that drawing, they are the parts of it. It refuses
 the two pages this category always ships: the contents page, a list of courses
-with blurbs and a rule between them, and the marketing hero. Below the index,
-a course is a line and a lesson is a stop, and that surface goes on refusing
-the docs shell with its sidebar tree and the course product with its progress
-ring, badge and percentage.
+with blurbs and a rule between them, and the marketing hero. A course page
+carries the same argument one level down: it is FIG. 2, that course's own part
+of the machine blown up to fill the sheet, its parts drawn as the bays of the
+detail and its lessons scheduled underneath. A lesson is still a stop on a
+line. Both surfaces go on refusing the docs shell with its sidebar tree and
+the course product with its progress ring, badge and percentage.
 
 **OWN-WORLD.** A draughting plate. A cold blue-graphite sheet laid on the
 section's warm near-black hall, bordered twice with the content inset to the
@@ -29,10 +32,12 @@ hand-authored SVG in one graphite, with three line weights that each mean
 something. The five course inks are almost absent: five inked callout rings at
 rest, and one stage at a time while a reader holds it. Archivo Narrow letters
 the whole sheet; Inter is confined to the reading column and the owner's two
-note paragraphs; JetBrains Mono to figures and code. Below the index, the
-printed signalling diagram: strokes at 90° and 45° only, uniform tick pitch,
-bone-white interchange rings, solid capsule termini. No cards, no shadows, no
-glass, no gradient, no rounded containers, on either surface.
+note paragraphs; JetBrains Mono to figures and code. A course page is the same
+plate at a larger scale: same frame, same bands, same three weights, with a key
+plan in the title strip saying where on FIG. 1 the reader is standing. A lesson
+keeps the printed signalling diagram: strokes at 90° and 45° only, uniform tick
+pitch, a bone-white you-are-here ring, solid capsule termini. No cards, no
+shadows, no glass, no gradient, no rounded containers, on any of the three.
 
 **STORY.** Most readers land mid-lesson from a search result; the position
 strip tells them the line, the zone and the stops either side before they
@@ -49,8 +54,8 @@ right-hand cell. FIG. 1 fills the field beneath it, edge to edge. The legend is
 five cells across the foot of the drawing, numbered to the callouts. No hero,
 no card grid, no marketing copy anywhere.
 
-**FORM.** Draughting plate / signal-flow diagram, for the index. Transit /
-signalling diagram, for a course and a lesson — candidate 5 of 7 on the
+**FORM.** Draughting plate / signal-flow diagram, for the index and for a
+course. Transit / signalling diagram, for a lesson — candidate 5 of 7 on the
 grounded list, seed key `b9727618`.
 
 ## The three line weights
@@ -154,8 +159,8 @@ Scoped under `.learn-root`. Every value below is a local token defined in
 Strategy: **full palette, five named roles.** Course colour is structural,
 never decorative. It appears in exactly four places: the callout rings on
 FIG. 1 and one held stage, the ink swatch and numeral ring in a legend cell,
-the diagram on a course page, and the position strip plus the one rule under a
-lesson title. It never colours body text, never fills a background region, and
+the callout rings and one held bay on FIG. 2 with its schedule swatch, and the
+position strip plus the one rule under a lesson title. It never colours body text, never fills a background region, and
 never appears in the reading column.
 
 **The plate's own surface.** The index sheet does not use `--ln-ground`; it is
@@ -335,17 +340,72 @@ the five callouts, because at 360px the words crowd the parts they point at.
 Both are `aria-hidden`; the ordered description in `page.tsx` is what carries
 the structure instead.
 
-## Diagram primitives — a course and a lesson
+## The detail sheet — a course page
+
+FIG. 2. The same plate as the index, at a larger scale, showing one part of
+the machine. It lives in `app/learn/_sheet/`.
+
+- **The bay** — the objects on the drawing belonging to one part of the
+  course, carrying `data-zone` with that part's own number off disk. FIG. 1's
+  stages are five courses; a detail's bays are one course's parts, so the same
+  `:has()` reveal works one level down. Hold a bay or its schedule column and
+  that part alone takes the course ink.
+- **The callout** — one numbered ring per bay, inked at rest for the same
+  touch-screen reason FIG. 1's are, and the same numeral heads that part's
+  schedule column. A callout with no part behind it is not drawn.
+- **The schedule** — one column per part, ruled at the head with the ink
+  swatch sitting on that rule like a tab, and one row per lesson: a read mark,
+  the stop number, the title, the minutes, the subtitle in full. This is the
+  answer to a long course. Seventeen callouts on one drawing is a mess; four
+  callouts with a schedule under each is a drawing, and the parts bound the
+  column height for free, because a part is never the whole course.
+- **The key plan** — FIG. 1 reduced to its bones at `--pl-faint` with this
+  course's own part boxed in its ink, in the title strip, linking back. A real
+  detail sheet carries one so the reader can see where they are standing. It
+  is a reduction and not a copy: the annotation, the lattice and the sparks do
+  not survive at 320 units, and what has to survive is the order of the parts.
+
+**More of the subject, not the same amount bigger.** That is what a detail at
+larger scale means on a real plate. FIG. 1 carries fifteen labelled features
+across the whole machine; each detail carries fourteen to twenty across one
+part of it, and every one is chosen by reading that course's lesson titles and
+subtitles in `content/learn/<slug>/` — a reader who has taken the course
+should recognise its contents in the drawing.
+
+**What may not be invented here**, on top of everything FIG. 1 already rules
+out: a feature the course does not teach; a fourth line weight; a schedule
+column that claims a bay it has no ring on. A course whose parts have outrun
+the drawing gets a column with no ring and the words `Not on the detail`, and
+a course with no detail drawn at all gets the schedule alone and says so —
+the same visible failure `buildStages()` uses on the index.
+
+**The layout is a stack, and that is load-bearing.** The drawing runs the full
+width at the top of the field and the schedule's columns hang beneath it. An
+earlier build split the field into two columns above 100rem, drawing left and
+schedule right; on RAG's seventeen lessons the schedule made the row tall, the
+drawing's column stretched to match it, and the drawing sat centred with the
+top of the field showing nothing but bare grid. Grid rows size to their
+content, so a stack cannot do that at any lesson count. The drawing's height
+is capped so the whole of it stays above the fold at 1440 x 800, and every
+drawing is authored between 2.5:1 and 2.9:1 so the margin of bare grid either
+side of a capped drawing stays narrower than the drawing it frames.
+
+**One column per part, and never a written number.** The schedule is
+`repeat(auto-fit, minmax(min(13rem, 100%), 1fr))`, so three parts give three
+columns and five give five wherever there is room for five. `repeat(var(--n),
+…)` is not valid CSS — `repeat()` takes an integer, and a custom property in
+that slot makes the whole declaration invalid.
+
+## Diagram primitives — a lesson
 
 Four shapes, and nothing else may be invented. They live in
-`app/learn/_components/Line.tsx`.
+`app/learn/_components/Position.tsx`.
 
 - **Line** — a stroke of `--ln-w` (`6px` desktop, `4px` narrow) in the course ink.
 - **Tick** — a perpendicular stroke crossing the line at uniform pitch; one per
   lesson. Solid when read, hollow when not.
-- **Interchange** — a hollow `--ln-mark` ring where two lines cross. Drawn only
-  where a lesson genuinely cross-references another course. Never decorative,
-  and not drawn today, because no lesson records such a cross-reference.
+- **You-are-here ring** — a hollow `--ln-mark` ring on the tick for the lesson
+  being read. The one mark on the strip that is not uniform.
 - **Terminus** — a solid capsule cap at each end of a line.
 
 Elbows turn at 45°. Zone divisions are hairline `--ln-rule` verticals with a
@@ -355,9 +415,9 @@ signage-caps label, and they belong to one line, not the whole page.
 
 - **Never a fixed pixel max-width.** The reading column is
   `min(var(--ln-measure), 100% - 2 * var(--ln-gutter))` with `--ln-gutter:
-  clamp(1rem, 5vw, 6rem)`. A course page's diagram runs edge to edge inside
-  `.bleed`, and the index sheet takes the same gutter as padding. Grey bars
-  either side of the content are a defect in this project, on every surface.
+  clamp(1rem, 5vw, 6rem)`. The index and course sheets take that same gutter
+  as padding and run the full window inside it. Grey bars either side of the
+  content are a defect in this project, on every surface.
 - **The reader picks the measure.** `--ln-measure` is `70ch` by default and
   `104ch` when `<html>` carries `data-ln-width="wide"`. Both are character
   counts, so the rule above still holds and a phone still gets the whole
@@ -385,12 +445,16 @@ signage-caps label, and they belong to one line, not the whole page.
     100% of a 991px window renders a 360 × 1060 drawing at about 852 × 2509.
     Both caps are on the drawing. **Neither is ever on the sheet**, which runs
     the full window at every size.
-  - **One course's line, on its own page. Vertical at every width.** A syllabus
-    is a list, and each stop's label carries a whole sentence of subtitle. Across
-    the page those sentences had to be truncated to keep the row level, and a
-    subtitle cut to a third is worse than none. Down the page each stop owns a
-    row, every sentence is shown in full, and the label column stops at `60ch`
-    so the line length stays readable on a wide screen.
+  - **FIG. 2, on a course page.** The sheet runs the full window; only the
+    drawing has a ceiling, `clamp(15rem, 45vh, 32rem)`, which is what keeps
+    the whole of it above the fold at 1440 x 800 under the rail, the page's
+    own top padding and the title strip. Below `62rem` the drawing is not
+    shown at all — a 1200-unit detail rendered into a 320px column letters its
+    annotation at about five pixels, and a detail whose annotation cannot be
+    read is a smudge rather than a detail. The phone gets the key plan, which
+    is one shape and survives the reduction, and the drawing's own content in
+    words in its place. The schedule falls to one column and every lesson
+    keeps its subtitle in full.
 
 ## Motion
 
@@ -413,6 +477,11 @@ answers "which of these lines is the request, right now" — the one question a
 still drawing cannot. It is deliberately off the ink ramp: it is `--primary`
 from `app/globals.css`, the site's own accent, chosen partly so a travelling
 spark can never be mistaken for `--ln-agents` amber lighting up.
+
+**A course: one request runs the detail, once.** The same event FIG. 1 opens
+with, at the scale of one part: a single spark in `--pl-spark` travels the path
+through that course's own machinery on load, a dial settles as the last beat
+where the drawing has one, and then nothing moves again.
 
 **A lesson: the you-are-here ring** draws itself once on load,
 `stroke-dashoffset` over 600ms, exponential ease-out.
@@ -446,9 +515,15 @@ Two folders, because there are two surfaces.
   rule that has to name a class on the page shell and a class inside the SVG
   in the same selector; split across two modules those would be two different
   hashed names.
-- `app/learn/_components/` owns everything below the index. Any new element
-  there is built from the four primitives above. A stock card, a shadowed
-  panel or an icon tile inside this world is a lapse, not a shortcut.
+- `app/learn/_sheet/` owns a course page and nothing else: `details.tsx` with
+  the five drawings, `KeyPlan.tsx`, `Schedule.tsx`, `parts.ts`, and one
+  `sheet.module.css` they all import — single for the same reason
+  `plate.module.css` is. It restates the plate's five weights rather than
+  importing them, so a change to a course page can never reach into the index
+  by accident.
+- `app/learn/_components/` owns a lesson. Any new element there is built from
+  the four primitives above. A stock card, a shadowed panel or an icon tile
+  inside this world is a lapse, not a shortcut.
 
 **A sixth course must not vanish.** `stages.ts` maps five course slugs to the
 five parts of FIG. 1; this site has added a course twice this year and
@@ -505,8 +580,16 @@ On the index:
   `list-style: none` costs the list its semantics in Safari and there was no
   heading between the h1 and the notes.
 
-Below the index the diagram is decorative-plus-navigational: its links carry
-real text; the SVG itself is `aria-hidden` where a text list beside it already
+On a course page FIG. 2 is `aria-hidden`, and the equivalent is an ordered
+description of the drawing — off screen where the drawing is shown, and shown
+in the drawing's place below `62rem`. One node with two treatments, rather than
+two copies that can drift. Every way into a lesson is a row-sized link in the
+schedule, with the minutes and the read state in its accessible name, because
+the mark and the numeral beside the title are `aria-hidden`. Read and unread
+differ in fill, not hue.
+
+On a lesson the diagram is decorative-plus-navigational: its links carry real
+text; the SVG itself is `aria-hidden` where a text list beside it already
 conveys the same structure.
 
 ## Arguments already had
@@ -545,7 +628,17 @@ lost on a reason, not on taste.
 - **Weight the legend columns** so the bigger courses get more room. Rejected:
   five equal columns; weighting would claim a ranking the page does not have.
 
-One dead code path is knowingly left in place: `Line.tsx` still carries its
-`variant="network"` branch, which only the old index used. It is woven through
-the component's JSX and a media-query block in `Line.module.css`, and the five
-course pages that use `variant="full"` are the thing that must not break.
+- **Every lesson as a callout on FIG. 2.** The literal reading of the detail
+  ideology, and it does not survive contact with RAG: seventeen numbered rings
+  on one drawing is a cluttered mess, and shrinking the type to fit is not a
+  solution. The parts are the lever — bays and callouts for the parts, a
+  schedule for the lessons.
+- **Dashing the retry, the second search, and the re-test after a model swap.**
+  All three are conditional, and dashed is the obvious pen. Rejected: dashed
+  already means "only if the model calls a tool", and a fourth meaning may not
+  be added. They are drawn at the detail weight and named in words, which is
+  the same trade the struck-out retrieval candidate already pays.
+
+`Line.tsx`, `Line.module.css` and `line-data.ts` are gone. They drew the old
+course page, nothing else imported them, and the `variant="network"` branch
+that had been kept alive inside them went with the file.
