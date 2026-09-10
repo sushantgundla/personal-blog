@@ -7,8 +7,9 @@
 
 <!-- The index and the pages under it are one publication. The index is
      FIG. 1, the general arrangement. A course page is FIG. 2, a detail of
-     one part of it at larger scale. A lesson carries no drawing at all —
-     it is a printed spread, set on the plate's own sheet. All three
+     one part of it at larger scale. A lesson is a printed spread, set on
+     the plate's own sheet, and the figures on it are drawn in HTML and
+     CSS from a fixed kit rather than authored as plates. All three
      contracts are below. -->
 
 **THESIS.** The index teaches you the shape of the system before it offers you
@@ -20,11 +21,15 @@ the two pages this category always ships: the contents page, a list of courses
 with blurbs and a rule between them, and the marketing hero. A course page
 carries the same argument one level down: it is FIG. 2, that course's own part
 of the machine blown up to fill the sheet, its parts drawn as the bays of the
-detail and its lessons scheduled underneath. A lesson draws nothing: the
-drawings belong where they can be read at size, and a lesson states in a
-kicker and two figures what a diagram of it would have said. It is a magazine
-feature rather than a documentation page — one spread, a display serif, real
-air — printed on the same sheet the index is drawn on. Both surfaces go on
+detail and its lessons scheduled underneath. A lesson draws no plate: FIG. 1
+and FIG. 2 belong where they can be read at size, and a lesson states in a
+kicker and two numbers of type what a diagram of its position would have said.
+What it does draw is its own subject — a loop, a budget, a scale, a knob with
+regions along it — from one fixed kit, because a mechanism explained only in
+sentences is a mechanism the reader has to hold in their head. It is a
+magazine feature rather than a documentation page — one spread, a display
+serif, real air, figures using the margin the measure leaves — printed on the
+same sheet the index is drawn on. Both surfaces go on
 refusing the docs shell with its sidebar tree and the course product with its
 progress ring, badge and percentage.
 
@@ -39,10 +44,12 @@ the whole sheet; the owner's two note paragraphs are Inter; JetBrains Mono is
 for figures and code. A course page is the same plate at a larger scale: same
 frame, same bands, same three weights, with a key plan in the title strip
 saying where on FIG. 1 the reader is standing. A lesson is the same sheet with
-no drawing on it and its own lettering: Bodoni Moda over Newsreader, one
-spread, hairline rules, and the course's ink drawn heavy in four bands and
-nowhere else. No cards, no shadows, no glass, no gradient, no rounded
-containers, on any of the three.
+no plate on it and its own lettering: Bodoni Moda over Newsreader, one spread,
+hairline rules, and the course's ink drawn heavy in four bands and nowhere
+else. Its figures are hairlines, ink and type on that same sheet, so a drawing
+sitting in the reading matter is the drawing office's work and not a second
+world's. No cards, no shadows, no glass, no gradient, no rounded containers,
+on any of the three.
 
 **STORY.** Most readers land mid-lesson from a search result; the title block
 tells them the course, the part, how far through and how long before they
@@ -61,8 +68,8 @@ no card grid, no marketing copy anywhere.
 
 **FORM.** Draughting plate / signal-flow diagram, for the index and for a
 course. For a lesson: a printed spread on the plate's sheet — display serif,
-hairline rules, one column of reading with tables and code running wider than
-it.
+hairline rules, one column of reading with tables, code and figures running
+wider than it.
 
 ## The three line weights
 
@@ -341,7 +348,7 @@ are lettered by the drawing office; a lesson is typeset.
 | Signage | Archivo 600/700, caps, `letter-spacing: 0.04em` | The section's chrome and its 404 — `.sign`, `.sign-quiet`, `.learn-h1` in `learn.css`. Loaded in `app/layout.tsx`. |
 | Lesson display | Bodoni Moda 400/500, `opsz` axis, roman and italic | A lesson only: the h1, the standfirst, the section heads and their numerals, a takeaway lifted as a pull quote, a neighbour's title in the pager. Loaded by `app/learn/_lesson/font.ts` as `--lm-display`. |
 | Lesson reading | Newsreader 400/600, `opsz` axis, roman and italic | A lesson's reading column and everything set as a sentence on it. Same file, as `--lm-reading`. |
-| Numeric | JetBrains Mono, `font-variant-numeric: tabular-nums` | Every figure in the section, on all three surfaces — lesson numbers, minutes, quantities, hosts, code. Never as texture. |
+| Numeric | JetBrains Mono, `font-variant-numeric: tabular-nums` | Every number in the section, on all three surfaces — lesson numbers, minutes, quantities, hosts, code, and every value inside a lesson figure. Never as texture. |
 
 Inter is still the section's fallback reading face, in `--ln-read`, but nothing
 sets a paragraph in it any more except the owner's two note paragraphs at the
@@ -511,8 +518,10 @@ that slot makes the whole declaration invalid.
 
 ## The spread — a lesson
 
-**A lesson carries no drawing.** Nothing on it is an SVG, and nothing on it
-may become one. It is a printed spread, and it lives in `app/learn/_lesson/`.
+**A lesson carries no plate.** It is a printed spread, and it lives in
+`app/learn/_lesson/`. The section's two authored plates are FIG. 1 and FIG. 2;
+a lesson neither repeats one nor draws a third. What it does carry is figures
+of its own subject, which are a different object entirely — see below.
 
 **Two widths, and every block is one of them.**
 
@@ -533,9 +542,60 @@ the measure; four things do not, and take the whole spread instead: a section
 head, a table, a code block and a pull quote. They grow to the right, into the
 air the measure leaves. Squeezing a six-column comparison table into 70
 characters is how these end up unreadable, and it is the one structural idea
-in the layout. The `WHY THIS, FOR YOU` label uses the same margin from `60rem`
-up — the paragraph holds the measure and its label goes out beside it; below
-that width there is no margin to put it in, so it sits above the text.
+in the layout. A figure is the fifth thing that takes the spread, and the
+`<Anatomy>` key runs out into the margin beside its literal above `62rem`. The
+`WHY THIS, FOR YOU` label uses the same margin from `60rem` up — the paragraph
+holds the measure and its label goes out beside it; below that width there is
+no margin to put it in, so it sits above the text.
+
+**The figures, and what they are for.** Every lesson is expected to carry
+diagrams, tables or something the reader can work. A mechanism a reader can
+see and turn is a mechanism they keep; a mechanism carried only in sentences
+is one they have to hold in their head while reading the next sentence. The
+figures come from one fixed kit at `app/learn/_figures/`, bound into
+`lessonComponents` in `app/learn/_lesson/mdx.tsx`, so a lesson body writes
+`<Flow>`, `<Steps>`, `<Budget>`, `<Bars>`, `<Scale>`, `<Plot>`, `<Compare>`
+with `<Panel>`, `<Anatomy>`, `<Dial>` or `<Figure>` by name — no import line,
+no markup, no class, no colour. `app/learn/_figures/README.md` is the manual:
+which component says which idea, and when the honest answer is no figure. It
+is not repeated here. There are seventy-two lessons written by however many
+hands, and the only thing between this section and seventy-two websites is
+that every drawing on all of them comes out of that one file.
+
+**They are HTML and CSS, not SVG**, and that is the decision worth keeping.
+Both plates letter inside the picture and both pay for it: a viewBox is fixed,
+the type inside it scales with the rendered width, and FIG. 2 is not drawn at
+all below `62rem` because its annotation would letter at about five pixels.
+The plate's own answer is to author the drawing twice by hand, wide and
+narrow. A lesson figure cannot take that deal — it has to read on a 375px
+phone and on a 2560px monitor from **one** authored source, because the person
+filling in a `<Budget>` is writing a lesson and is not going to hand-author a
+narrow twin of it. So the type in a figure is the page's own type: it sets at
+the page's sizes at every width, it wraps, a screen reader reaches it, and a
+long label pushes the drawing around instead of overflowing it. The lines
+round it are CSS rules, which is what every other rule on the spread already
+is. SVG survives in exactly one place — the arrow between two nodes of a
+`<Flow>`, which carries no text, is 48 units wide and never changes size, and
+is therefore the one place the `--pl-spark` / `pathLength` idiom from the
+plate belongs.
+
+**No figure picks a colour**, and there is no prop that would let one. Every
+value resolves to the lesson's own `--lm-*` tokens, so no rule in
+`figures.module.css` knows which theme it is in and a figure changes mode when
+the sheet does, for free. Difference is carried by weight, position, hatch and
+the label, never by hue: five bars are one ink, six budget segments are one
+ink and four hatches, and the key under a `<Budget>` is drawn always rather
+than optionally. `--lm-spark` marks the one thing the figure is *about* — at
+most one `subject` in it — and nothing else in a figure is ever warm. Captions
+number themselves from a CSS counter in document order, so inserting a figure
+renumbers the rest and nobody writes `FIG. 3` by hand.
+
+**Two of them are operated,** which is new for this section: `<Dial>` is an
+`<input type="range">` with a real label and `<Steps>` is a row of `<button>`s,
+both keyboard-operable and both drawing a visible focus ring. They are the
+only client components in the kit: **a lesson carrying neither ships no
+JavaScript for its figures at all**, and the rest of the page is rendered on
+the server exactly as it was before the kit existed.
 
 **The four course bands.** `--ln-course` is drawn at `--ln-stroke` and nowhere
 else on the page: across the top of the sheet, closing the title block under
@@ -551,11 +611,13 @@ paragraph with the raised initial, the prose, `WHAT YOU TAKE AWAY` with the
 lead takeaway lifted as a pull quote, the recall band, `GO DEEPER`, and the
 pager: the lessons either side, named, as two ruled links.
 
-Why not draw any of it. A course's shape is drawn on the course page, at a
-size where the parts can be named and read. Repeating it on every lesson at
-strip height gives a reader a picture too small to learn anything from, in
+Why the position is not drawn. A course's shape is drawn on the course page,
+at a size where the parts can be named and read. Repeating it on every lesson
+at strip height gives a reader a picture too small to learn anything from, in
 place of a line of type they can read at a glance. The drawing that used to
 sit here was removed at the owner's instruction; see "Arguments already had".
+That rules out a picture of where the reader is standing, and it says nothing
+about the lesson's own subject, which is what the figures are for.
 
 ## Layout
 
@@ -628,23 +690,48 @@ sit here was removed at the owner's instruction; see "Arguments already had".
 
 ## Motion
 
-One authored moment per drawing, and neither is an entrance animation. **A
-lesson has one, and it is a reply, not an entrance:** an answered question's
-explanation rises 0.4rem as it arrives, 420ms on `--ln-ease`, and nothing else
-on the page ever moves. It had a different one once — a ring drawing itself in
-on the position strip — and that went with the drawing it belonged to. A page
-of type still does not need an entrance.
+One authored moment per drawing, running on a loop, and neither is an entrance
+animation. **A lesson's own moment is a reply, not an entrance:** an answered
+question's explanation rises 0.4rem as it arrives, 420ms on `--ln-ease`. A
+`<Flow>` runs a spark down its arrows once on load and then holds still.
+Nothing else on the page ever moves. A lesson had a different moment once — a
+ring drawing itself in on the position strip — and that went with the drawing
+it belonged to. A page of type still does not need an entrance.
 
-**The index: one request runs the machine, once.** Three sparks in
-`--pl-spark` travel three paths on load — the axis, the retrieval feed and the
-tool loop — timed against each other so the retrieved passages reach the
-context window as the request does and the tool result comes back after the
-model has run, and the gauge needle settles on its reading as the last beat of
-the same event. Then it is over and nothing moves again. Each path carries
-`pathLength="1"`, so the dash arithmetic is in fractions of the path and two
-keyframes drive paths of very different lengths; the gap is longer than the
-path, so exactly one spark is ever on a line and the resting offset leaves
-none.
+**The index: one request runs the machine, a beat of rest, then the next
+one.** Seven sparks in `--pl-spark` travel seven paths — the prompt in and cut
+into tokens, the query out to the corpus, the passages back up into the
+junction, the assembled context into the model, the model running, the tool
+loop out and back after the model has run because that is what the dashed
+weight means, and the answer out at the outlet — staged against each other so
+what a reader sees is one request making its way through and not a conveyor
+belt of dots, with the gauge needle settling on its reading as the last beat
+of the same event. The cycle is 7.5s and the request is running for 5.9s of
+it, so the sheet is working for most of the loop rather than sitting dead in
+it; the second and a half left over is the rest beat, and it is what keeps a
+drawing on a page somebody is reading a thing they can glance at and then
+ignore. The needle falls back to zero at the very end rather than snapping, so
+the next request has something to settle again — nothing on this sheet blinks.
+
+**Every spark shares that duration and differs only in phase**, and the phase
+is written into the dash pattern rather than into `animation-delay`. A delay
+is spent once while a duration repeats, so a delay would hold the ordering on
+the first lap and lose it on every lap after. One document timeline keeps
+seven sparks honest, with no JavaScript. Each path carries `pathLength="1"`,
+so the arithmetic is in fractions of the path and one pair of keyframes drives
+paths of very different lengths: the spark is `--pl-d` long and the waiting is
+done off the ends of the path where nothing is drawn, `--pl-lead` before the
+start and `--pl-trail` past the end. The gap is a whole path length longer
+than the run and both waits together, so exactly one spark is ever on a line,
+and at the one frame where the offset jumps back there is nothing on the sheet
+to see it happen. Linear on purpose: an ease would stretch the waits as well
+as the run, and a request travelling at a steady speed is the thing being
+drawn.
+
+**What the keyframes animate is a number, never the offset** — `--pl-o` on the
+plate, `--pl-t` on a detail, both `@property`-registered as `<number>`, and
+`stroke-dashoffset` reads it every frame. Animating the offset itself does not
+travel at all, and the reason is in "Arguments already had".
 
 `--pl-spark` is the sheet's only warm value, and it is fair to ask what
 question it answers when the rule is that colour answers a question. It
@@ -653,10 +740,19 @@ still drawing cannot. It is deliberately off the ink ramp: it is `--primary`
 from `app/globals.css`, the site's own accent, chosen partly so a moving
 spark can never be mistaken for `--ln-agents` amber lighting up.
 
-**A course: one request runs the detail, once.** The same event FIG. 1 opens
-with, at the scale of one part: a single spark in `--pl-spark` travels the path
-through that course's own machinery on load, a dial settles as the last beat
-where the drawing has one, and then nothing moves again.
+**A course: the same request, at the scale of one part, on its own loop.**
+Each of the five drawings names its own cycle on its `<svg>` and every spark on
+that sheet is timed against it — 7s on `prompt-engineering` and `llms`, 8s on
+`evals`, 10s on `rag` and `agents`, carrying three to five sparks each, with a
+dial settling as the last beat where the drawing has one and falling back
+through the rest beat so the next request has something to settle again. A
+spark that names no cycle gets its own `delay + dur` plus a two-second rest,
+so a call written when this ran once on load still reads correctly.
+
+**A conditional path is given twice the sheet's cycle**, so it fires on every
+other lap and lands in the same place in the cycle when it does: a retry, a
+second search, a failed call going round again. That is the whole of
+"sometimes", in CSS, with no fourth line weight and no second colour.
 
 Everything else is hover and focus. On the index those are 200ms fades on
 opacity, `stroke`, `fill` and `border-color`, so the ink and the dimming
@@ -664,9 +760,10 @@ arrive together; elsewhere they are instant colour and weight changes.
 
 `prefers-reduced-motion` removes the sparks with `display: none` rather than
 shortening them — the section-wide block in `learn.css` sets every animation
-to `0.01ms`, which would fire a spark as a one-frame flash — puts the needle
-at its reading, and drops every transition. On a lesson the same block leaves
-an explanation simply already there.
+to `0.01ms`, which on a loop would fire every spark as a one-frame flash, over
+and over — puts the needle at its reading, and drops every transition. On a
+lesson the same block leaves an explanation simply already there and takes a
+`<Flow>`'s spark off the arrows.
 
 No scroll reveals. The previous build staggered every card in on scroll; that is
 removed, and `Reveal` is not used in this section.
@@ -680,7 +777,7 @@ no percentage, no bar, no ring, no badge, no streak, no celebration. Stored in `
 
 ## Components
 
-Three folders, because there are three surfaces.
+Three folders, because there are three surfaces, and two more that they share.
 
 - `app/learn/_plate/` owns the index and nothing else: `MachineWide.tsx`,
   `MachineNarrow.tsx`, `Stage.tsx` — the group, the link and the accessible
@@ -695,19 +792,32 @@ Three folders, because there are three surfaces.
   `plate.module.css` is. It restates the plate's five weights rather than
   importing them, so a change to a course page can never reach into the index
   by accident.
-- `app/learn/_lesson/` owns a lesson and owns no drawing: `Lesson.tsx` (the
+- `app/learn/_lesson/` owns a lesson and owns no plate: `Lesson.tsx` (the
   spread, and everything on it that is not the body or the quiz), `Recall.tsx`
-  (the checkpoint, the one client component on the page), `mdx.tsx` (the four
-  elements of a lesson body that are design rather than markdown), `font.ts`
-  and one `lesson.module.css` they all import. `app/learn/[course]/[lesson]/
-  page.tsx` owns everything above the design — the params, the metadata, the
-  neighbours and the MDX pipeline — and hands the rendered body down as
-  children. A stock card, a shadowed panel, an icon tile or a new diagram
-  inside this world is a lapse, not a shortcut.
-- `app/learn/_components/` is what all three share, and it is two files:
-  `ViewWidth.tsx`, the rail's reading-width switch, and `useProgress.ts`, the
-  `localStorage` store the recall band writes and a course page's schedule
-  reads.
+  (the checkpoint), `mdx.tsx` (the four elements of a lesson body that are
+  design rather than markdown, and the ten names of the figure kit bound into
+  the same component map), `font.ts` and one `lesson.module.css` they all
+  import. `app/learn/[course]/[lesson]/page.tsx` owns everything above the
+  design — the params, the metadata, the neighbours and the MDX pipeline — and
+  hands the rendered body down as children. A stock card, a shadowed panel, an
+  icon tile, or a figure hand-rolled outside the kit, is a lapse, not a
+  shortcut.
+- `app/learn/_figures/` owns the drawings inside a lesson body and nothing
+  else: the ten components, `format.ts`, `index.ts`, the manual in
+  `README.md`, and one `figures.module.css` they all import. Every selector in
+  it is prefixed `.fig`, and that is load-bearing rather than tidy: a figure
+  sits inside `.prose`, and `.prose p`, `.prose ul`, `.prose li` and
+  `.prose ul > li::before` are each a class plus a type, so a single class
+  loses to every one of them. Two things follow. A list inside a figure is an
+  `<ol>`, never a `<ul>`, because `<ul>` is the one `.prose` paints an em rule
+  in front of; and no `<p>` is used inside a figure at all, so `.prose p`'s
+  bottom margin never lands on a label row. `<Panel>` is the exception, since
+  its contents *are* markdown prose and are meant to keep the page's own list
+  and paragraph treatment.
+- `app/learn/_components/` is what all three surfaces share, and it is three
+  files: `ViewWidth.tsx`, the rail's reading-width switch, `ThemeChoice.tsx`,
+  the rail's light/dark switch, and `useProgress.ts`, the `localStorage` store
+  the recall band writes and a course page's schedule reads.
 
 **A sixth course must not vanish.** `stages.ts` maps five course slugs to the
 five parts of FIG. 1; this site has added a course twice this year and
@@ -722,12 +832,20 @@ prompt to redraw FIG. 1, which is the correct failure.
 minutes, the per-lesson range, the totals — is summed or measured from the
 lessons' own frontmatter at build time.
 
-Two additions worth naming:
+Three additions worth naming:
 
 - **Segmented pair** (`ViewWidth`) — two buttons in the signage voice split by
   one hairline, the setting in force at full `--ln-ink` and the other at
   `--ln-ink-quiet`. No fill, no pill, no radius, no border round the group. It
   is the same read/unread distinction the schedule's read marks use.
+- **The theme switch** (`ThemeChoice`) — one control rather than a pair: a
+  hairline track, a solid block that slides between its two ends, and one word
+  naming the mode in force. It is a `role="switch"` with `aria-checked`, so a
+  reader meets one setting and not two things to choose between; a rectangle
+  and not a pill, with nothing above a 2px radius on it; and the mode is
+  named rather than implied by a sun, because light here is the whiteprint and
+  not a lesser mode. `next-themes` owns the storage and the blocking script,
+  which is the one difference from `ViewWidth`.
 - **Checkpoint head** — `RECALL` at heading size with `NO SCROLLING BACK`
   beside it a step down, over a heavy course rule. The instruction is what
   makes retrieval practice work, so it is set as an instruction and not as
@@ -833,9 +951,17 @@ On a course page:
   numeral beside the title are `aria-hidden`. Read and unread differ in fill,
   not hue.
 
-On a lesson there is nothing to describe: no drawing, no `aria-hidden`
-subtree, no off-screen equivalent. Everything the title block says is readable
-text. The two things on the page that scroll sideways — a code block and a
+On a lesson there is no plate to describe: no `aria-hidden` picture and no
+off-screen equivalent of one. Everything the title block says is readable
+text, and a figure describes itself. Its caption is its accessible name, which
+is why the caption states what the drawing shows or found rather than naming
+it, and has to make sense read on its own. `<Budget>`, `<Bars>` and `<Scale>`
+build a spoken list of their own values without being asked. `<Plot>` is not
+drawn at all below `44rem` — it becomes a ruled list of the same facts, which
+is also what a screen reader gets at every width. The two operable figures are
+real controls: `<Dial>` is an `<input type="range">` with a label and
+`<Steps>` is a row of buttons, both reachable from the keyboard, both drawing
+a visible focus ring. The two things on the page that scroll sideways — a code block and a
 table — are both tab stops, because a region that scrolls has to be reachable
 from a keyboard. The table's wrapper is a named `role="region"`, since an
 empty div announces nothing; the code block is a `<pre>` and announces the
@@ -946,6 +1072,38 @@ lost on a reason, not on taste.
   candidate directories in the tree are a maintenance cost the moment one of
   them ships. **Do not reopen the lesson's form without building the
   alternative on real content first** — that is the part that decided it.
+
+- **"A lesson carries no drawing", as a rule of the whole surface.** Held
+  while the spread was being built, and held on the plates' own reason: a
+  drawing has to be read at size, and a course's shape at strip height on
+  every lesson is a picture too small to learn anything from. **Overturned by
+  the owner** — every lesson is to carry diagrams, tables or something the
+  reader can work, because that is what makes the learning land rather than
+  wash past. The reason it was held was never wrong; it was about the wrong
+  subject. A lesson still draws no plate and still draws no picture of where
+  the reader is standing. What it draws is its own mechanism, from one kit, in
+  the page's own type. The part of the old rule that did **not** survive is
+  "nothing on it is an SVG": see "The figures" above for what replaced it and
+  why almost none of the replacement is one either.
+
+- **The spark animation had never actually worked.** Both
+  `plate.module.css` and `sheet.module.css` animated `stroke-dashoffset`
+  between two `calc()` values built out of unregistered custom properties.
+  `stroke-dashoffset` is a `<length-percentage>`, and an unregistered custom
+  property is still an unresolved token stream at computed-value time, so the
+  two endpoints were not interpolatable and the browser fell back to discrete:
+  one flip at the 50% mark, never a travelling dash. The dash pattern still
+  rendered and the spark still sat somewhere plausible, which is exactly why
+  it survived unnoticed — it read as a brief flash rather than as a bug, and a
+  screenshot cannot tell the difference. The fix is a `@property`-registered
+  `<number>` that the keyframes animate between two literal values, with
+  `stroke-dashoffset` derived from it: `--pl-o` in the plate, `--pl-t` in the
+  sheet. **The diagnostic is the part worth keeping**, because nothing else
+  will tell you: pause `document.getAnimations()`, step `currentTime` across
+  the cycle, and read the computed value back at each stop. Two values and one
+  jump means discrete interpolation and no travel; a smooth ramp means it is
+  really animating. A browser too old for `@property` lands back on the
+  discrete flip, which is where these drawings already were.
 
 - **The transit metaphor, everywhere it reached.** A course was a line, a
   lesson was a stop, a part was a zone, and a lesson opened on a drawn
