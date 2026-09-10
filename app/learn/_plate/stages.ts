@@ -31,7 +31,7 @@ import type { Course } from '@/lib/learn'
  */
 
 export interface Stage {
-  /** The course this stage is. Also drives --ln-line via learn.css. */
+  /** The course this stage is. Also drives --ln-course via learn.css. */
   id: string
   /** The callout number on the plate. Ties the drawing to the legend. */
   n: number

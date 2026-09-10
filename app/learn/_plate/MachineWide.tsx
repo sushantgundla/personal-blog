@@ -3,7 +3,7 @@ import type { StageDoors } from './stages'
 import s from './plate.module.css'
 
 /**
- * FIG. 1, drawn across. One request travelling left to right through the
+ * FIG. 1, drawn across. One request running left to right through the
  * machine that answers it, with the five courses hung on the five parts.
  *
  * Read it as a signal-flow drawing, because that is what it is:
@@ -27,7 +27,7 @@ import s from './plate.module.css'
  * Stage 1 owns both manifolds. Prompt Engineering teaches the shape of the
  * answer as well as the shape of the question, so the drawing hangs the
  * course on both ends of the request; the arrowheads at each end stay on
- * the spine, because the spine is the request travelling and a stage is the
+ * the spine, because the spine is the request running and a stage is the
  * object it travels to.
  *
  * The drawing rests in one graphite, and colour is the answer to a
@@ -89,7 +89,7 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
         {/* The request arriving. The manifold it arrives at belongs to
             stage 1, the same way the inlet head here belongs to the spine
             and the inlet manifold does not — the spine's job is the
-            request travelling, and a stage owns the object at the end. */}
+            request running, and a stage owns the object at the end. */}
         <path className={s.head} d="M1402 300L1386 291.5V308.5Z" />
       </g>
 
@@ -295,7 +295,7 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
           numeral inside stays graphite; see the note on .ring and section 7
           in plate.module.css. */}
       <g className={s.callouts} aria-hidden="true">
-        <g className={s.callout} data-line="prompt-engineering">
+        <g className={s.callout} data-course="prompt-engineering">
           <path className={s.lead} d="M162 168L294 280" />
           <circle className={s.dot} cx="296" cy="282" r="3.5" />
           <circle className={s.ring} cx="150" cy="158" r="16" />
@@ -304,7 +304,7 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="rag">
+        <g className={s.callout} data-course="rag">
           <path className={s.lead} d="M382 560H458" />
           <circle className={s.dot} cx="462" cy="560" r="3.5" />
           <circle className={s.ring} cx="366" cy="560" r="16" />
@@ -313,7 +313,7 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="llms">
+        <g className={s.callout} data-course="llms">
           <path className={s.lead} d="M960 476V434" />
           <circle className={s.dot} cx="960" cy="430" r="3.5" />
           <circle className={s.ring} cx="960" cy="492" r="16" />
@@ -322,7 +322,7 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="agents">
+        <g className={s.callout} data-course="agents">
           <path className={s.lead} d="M1000 71L950 110" />
           <circle className={s.dot} cx="946" cy="113" r="3.5" />
           <circle className={s.ring} cx="1010" cy="58" r="16" />
@@ -331,7 +331,7 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="evals">
+        <g className={s.callout} data-course="evals">
           <path className={s.lead} d="M1408 530H1362" />
           <circle className={s.dot} cx="1358" cy="530" r="3.5" />
           <circle className={s.ring} cx="1424" cy="530" r="16" />

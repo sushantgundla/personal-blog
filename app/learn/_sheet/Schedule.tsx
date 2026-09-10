@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useProgress } from '../_components/useProgress'
-import { pad, zoneMinutes, type Zone } from './parts'
+import { pad, partMinutes, type CoursePart } from './parts'
 import s from './sheet.module.css'
 
 /**
@@ -20,27 +20,28 @@ import s from './sheet.module.css'
  * on the longest course this site has.
  *
  * The one client component on the page, and only because read state lives in
- * localStorage. It is handed `Zone[]` rather than the `Course`, and that is
- * not a convenience: a `Course` carries every lesson's full MDX body, and
+ * localStorage. It is handed `CoursePart[]` rather than the `Course`, and that
+ * is not a convenience: a `Course` carries every lesson's full MDX body, and
  * anything passed across this boundary is serialised into the page's payload.
- * `toZones()` in parts.ts cuts it down to what the schedule actually prints.
+ * `toParts()` in parts.ts cuts it down to what the schedule actually prints.
  */
 
 interface Props {
   courseSlug: string
-  zones: Zone[]
+  parts: CoursePart[]
   /** How many bays FIG. 2 was drawn with. A part past that has no ring. */
   bays: number
   /** Total lessons in the course, for the count in the header. */
   total: number
 }
 
-export function Schedule({ courseSlug, zones, bays, total }: Props) {
+export function Schedule({ courseSlug, parts, bays, total }: Props) {
   const { isDone, ready } = useProgress(courseSlug)
 
   // Until localStorage has been read every lesson renders unread, which is
   // what the server rendered, so the first client render matches it.
-  const read = ready ? zones.flatMap((z) => z.lessons).filter((l) => isDone(l.slug)).length : 0
+  const all = parts.flatMap((part) => part.lessons)
+  const read = ready ? all.filter((lesson) => isDone(lesson.slug)).length : 0
 
   return (
     <div className={s.schedule}>
@@ -64,35 +65,35 @@ export function Schedule({ courseSlug, zones, bays, total }: Props) {
       </div>
 
       <ol className={s.cols} role="list">
-        {zones.map((zone, index) => {
+        {parts.map((part, index) => {
           const drawn = index < bays
-          const minutes = zoneMinutes(zone)
+          const minutes = partMinutes(part)
 
           return (
-            <li key={`${zone.n}-${zone.name ?? index}`} className={s.col} data-zone={zone.n}>
+            <li key={`${part.n}-${part.name ?? index}`} className={s.col} data-part={part.n}>
               <span className={s.swatch} aria-hidden="true" />
 
               <span className={s.colHead}>
                 {drawn ? (
                   <span className={s.colN} aria-hidden="true">
-                    {zone.n}
+                    {part.n}
                   </span>
                 ) : null}
-                <span className={s.colName}>{zone.name ?? `Part ${zone.n}`}</span>
+                <span className={s.colName}>{part.name ?? `Part ${part.n}`}</span>
               </span>
 
               {drawn ? null : <p className={s.undrawn}>Not on the detail</p>}
 
               <p className={s.colFigs}>
-                {zone.lessons.length} {zone.lessons.length === 1 ? 'lesson' : 'lessons'}
-                {zone.lessons.length > 0 ? ` · ${minutes} min` : ''}
+                {part.lessons.length} {part.lessons.length === 1 ? 'lesson' : 'lessons'}
+                {part.lessons.length > 0 ? ` · ${minutes} min` : ''}
               </p>
 
-              {zone.lessons.length === 0 ? (
+              {part.lessons.length === 0 ? (
                 <p className={s.empty}>No lessons yet</p>
               ) : (
                 <ol className={s.lessons} role="list">
-                  {zone.lessons.map((lesson) => {
+                  {part.lessons.map((lesson) => {
                     const done = ready && isDone(lesson.slug)
 
                     return (

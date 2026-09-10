@@ -1,6 +1,14 @@
 /* ============================================================
-   LEARN — a printed signalling diagram
-   A course is a line; a lesson is a stop.
+   LEARN — a drawing office in print
+   The index and a course page are drawings; a lesson is a
+   printed spread and brings its own sheet with it.
+
+   What lives here is what all three share: the palette, the
+   chrome, the reading measure and the two label styles. A lesson
+   sets its own ground and its own faces on top of these, in
+   app/learn/_lesson/lesson.module.css, and reads --ln-course,
+   --ln-measure, --ln-stroke, --ln-num, --ln-ease and --ln-mark
+   back out of this file so it stays the same publication.
 
    This section is its own publication. It does NOT inherit
    --primary or the --surface-* ramp from app/globals.css: every
@@ -10,9 +18,7 @@
    file is the contract this one implements.
 
    Everything is scoped under .learn-root, so nothing here leaks
-   into the rest of the site, and nothing from the site's own
-   .prose rules survives inside it (a .learn-root .prose selector
-   outranks a bare .prose one).
+   into the rest of the site.
 
    The bans, in one place, so they are easy to check: no shadows,
    no gradients, no blur behind anything, no corner radius above
@@ -26,21 +32,21 @@
    and the viewport minus fluid gutters — so the layout fills any
    window and never leaves grey bars at the sides. The character
    measure itself is a token, --ln-measure, because the reader
-   picks between two of them (see section 3). The diagram uses
-   .bleed and runs edge to edge.
+   picks between two of them (see section 3), and a lesson builds
+   its spread out of the same token.
    ============================================================ */
 
 /* ============================================================
-   1. Tokens — printed transit inks on near-black
+   1. Tokens — printed inks on near-black
    Ten colour roles and nothing else: five course inks, then
-   mark, ground, ink, quiet ink and rule. Line colour is
-   structural: it appears in the diagram, in a lesson's position
-   strip and in the one rule under a lesson title. It never
-   colours body text and never fills a background.
+   mark, ground, ink, quiet ink and rule. Course colour is
+   structural: it appears in the drawings and in the four rules
+   that band a lesson. It never colours body text and never fills
+   a background.
    ============================================================ */
 
 .learn-root {
-  /* --- The four transit inks, one per course ----------------
+  /* --- The four original inks, one per course --------------
      Amber is the fourth because it is the only hue left that a
      protanope and a deuteranope can still tell from all three of
      the others; blue-violet collapses into --ln-prompt. It runs
@@ -66,39 +72,44 @@
   --ln-evals: #00aae0;
 
   /* --- Marks, ground and ink -------------------------------- */
-  --ln-mark: #f2efe9; /* you-are-here ring, terminus fill */
+  --ln-mark: #f2efe9; /* focus rings and hover; the brightest ink */
   --ln-ground: #12100e; /* page ground */
   --ln-ink: #ede9e2; /* body text */
   --ln-ink-quiet: #9a948b; /* labels, meta, secondary */
-  --ln-rule: #2a2725; /* hairlines, zone divisions */
+  --ln-rule: #2a2725; /* hairlines, band and column divisions */
 
-  /* --- The current line -------------------------------------
-     A subtree sets its course colour once, via data-line on a
+  /* --- The current course -----------------------------------
+     A subtree sets its course colour once, via data-course on a
      wrapper (see section 2), and everything under it just reads
-     var(--ln-line). Defaults to quiet ink so anything outside a
+     var(--ln-course). Defaults to quiet ink so anything outside a
      course still renders in the world's voice rather than
      unstyled. */
-  --ln-line: var(--ln-ink-quiet);
+  --ln-course: var(--ln-ink-quiet);
 
   /* --- Faces ------------------------------------------------
      Archivo is the display and signage face — it replaces the
-     mono-as-display costume this redesign exists to remove.
-     Inter is for the reading column alone. JetBrains Mono is
-     confined to code and tabular numerals. All three are loaded
+     mono-as-display costume this redesign exists to remove — and
+     it letters the chrome, the 404 and the two label styles
+     below. Inter is the fallback reading face for anything that
+     does not bring its own; a lesson does, in
+     app/learn/_lesson/font.ts. JetBrains Mono is confined to code
+     and tabular numerals, and every figure in the section is set
+     in it, including the ones on a lesson. All three are loaded
      in app/layout.tsx. */
   --ln-sign: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --ln-read: 'Inter', system-ui, -apple-system, sans-serif;
   --ln-num: 'JetBrains Mono', ui-monospace, 'Fira Code', monospace;
 
   /* --- Geometry and motion ----------------------------------
-     --ln-gutter is the fluid side gutter, shared by .measure,
-     .bleed and the chrome, so the top rail lines up with the
-     page under it at every window size.
-     --ln-w is the line stroke; it thins on narrow screens, where
-     the whole network turns vertical.
+     --ln-gutter is the fluid side gutter, shared by .measure and
+     the chrome, so the top rail lines up with the page under it
+     at every window size.
+     --ln-stroke is the heavy course-ink stroke, thinned on narrow
+     screens. A lesson reads it for the four rules that band the
+     page; nothing in this file draws it.
      --ln-ease is the one curve in the section. */
   --ln-gutter: clamp(1rem, 5vw, 6rem);
-  --ln-w: 6px;
+  --ln-stroke: 6px;
   --ln-ease: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* The reading measure, in characters — never px. The reader
@@ -132,54 +143,54 @@
   --ln-rule: #ddd8d0;
 }
 
-/* The diagram rotates rather than shrinks: below 52rem the whole
-   network turns vertical, and the stroke thins with it. */
+/* A drawing rotates rather than shrinks: below 52rem it turns
+   vertical, and the stroke thins with it. */
 @media (max-width: 52rem) {
   .learn-root {
-    --ln-w: 4px;
+    --ln-stroke: 4px;
   }
 }
 
 /* ============================================================
-   2. The current line
-   Set data-line on any wrapper — the diagram, a lesson header, a
-   position strip — and the whole subtree resolves var(--ln-line)
-   to that course's ink. Both the wrapper itself and .learn-root
+   2. The current course
+   Set data-course on any wrapper — a drawing, a lesson article,
+   a schedule column — and the whole subtree resolves
+   var(--ln-course) to that course's ink. Both the wrapper itself and .learn-root
    carrying the attribute are handled, and the prompt course
    answers to either its slug or its short name.
    ============================================================ */
 
-.learn-root[data-line='llms'],
-.learn-root [data-line='llms'] {
-  --ln-line: var(--ln-llms);
+.learn-root[data-course='llms'],
+.learn-root [data-course='llms'] {
+  --ln-course: var(--ln-llms);
 }
 
-.learn-root[data-line='prompt-engineering'],
-.learn-root [data-line='prompt-engineering'],
-.learn-root[data-line='prompt'],
-.learn-root [data-line='prompt'] {
-  --ln-line: var(--ln-prompt);
+.learn-root[data-course='prompt-engineering'],
+.learn-root [data-course='prompt-engineering'],
+.learn-root[data-course='prompt'],
+.learn-root [data-course='prompt'] {
+  --ln-course: var(--ln-prompt);
 }
 
-.learn-root[data-line='rag'],
-.learn-root [data-line='rag'] {
-  --ln-line: var(--ln-rag);
+.learn-root[data-course='rag'],
+.learn-root [data-course='rag'] {
+  --ln-course: var(--ln-rag);
 }
 
-.learn-root[data-line='agents'],
-.learn-root [data-line='agents'] {
-  --ln-line: var(--ln-agents);
+.learn-root[data-course='agents'],
+.learn-root [data-course='agents'] {
+  --ln-course: var(--ln-agents);
 }
 
-.learn-root[data-line='evals'],
-.learn-root [data-line='evals'] {
-  --ln-line: var(--ln-evals);
+.learn-root[data-course='evals'],
+.learn-root [data-course='evals'] {
+  --ln-course: var(--ln-evals);
 }
 
 /* ============================================================
-   3. Containers
-   Two, and only two: the reading column and the full-bleed band
-   the diagram lives in.
+   3. The reading column
+   One container. A drawing brings its own width, and so does a
+   lesson; this is what everything else holds to.
    ============================================================ */
 
 /* The reading column. No max-width in px anywhere: min() picks
@@ -204,21 +215,14 @@
   --ln-measure: 104ch;
 }
 
-/* The diagram band. Runs edge to edge — the gutter is padding
-   here, not a width limit, so the network keeps growing with the
-   window instead of stopping at a column. */
-.learn-root .bleed {
-  width: 100%;
-  padding-inline: var(--ln-gutter);
-}
-
 /* ============================================================
    4. Type
-   Signage caps for every label; Inter for reading; mono for
-   numerals. Three classes carry almost the whole section.
+   Signage caps for every label, at two strengths, and one
+   display size for a page title. A lesson letters itself; these
+   three are the chrome's, the 404's and the drawings'.
    ============================================================ */
 
-/* The universal label: a line name, a station name, a section
+/* The universal label: a course name, a lesson name, a section
    marker, the chrome. */
 .learn-root .sign {
   font-family: var(--ln-sign);
@@ -230,7 +234,7 @@
   color: var(--ln-ink);
 }
 
-/* The same label, stepped back: meta, zone names, the footer. */
+/* The same label, stepped back: meta, part names, the footer. */
 .learn-root .sign-quiet {
   font-family: var(--ln-sign);
   font-weight: 600;
@@ -253,20 +257,9 @@
   color: var(--ln-ink);
 }
 
-/* Stop numbers, minutes, quiz counts. Sized in em so it sits
-   correctly wherever it is dropped, and tabular so a column of
-   them lines up. Never used as texture. */
-.learn-root .num {
-  font-family: var(--ln-num);
-  font-size: 0.9em;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  color: var(--ln-ink-quiet);
-}
-
 /* The page title. Sentence case, not caps: at this size the
    negative tracking is what makes Archivo read as display type,
-   and caps at 3.6rem would shout over the diagram. */
+   and caps at 3.6rem would shout over the drawing. */
 .learn-root .learn-h1 {
   font-family: var(--ln-sign);
   font-weight: 700;
@@ -277,21 +270,10 @@
   text-wrap: balance;
 }
 
-/* The subtitle under a title. Inter, because it is a sentence
-   rather than a label. */
-.learn-root .learn-lede {
-  margin-top: 1rem;
-  font-family: var(--ln-read);
-  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
-  font-weight: 400;
-  line-height: 1.55;
-  color: var(--ln-ink-quiet);
-  text-wrap: pretty;
-}
-
 /* ============================================================
    5. Rules
-   A hairline divides; a 3px bar in the course ink identifies.
+   One hairline, and it divides. Course ink is drawn by the
+   drawings and by a lesson, each at its own weight.
    ============================================================ */
 
 .learn-root .rule {
@@ -302,22 +284,11 @@
   margin-block: clamp(1.75rem, 4vw, 2.75rem);
 }
 
-/* The one rule under a lesson title, in that lesson's line
-   colour. This and the diagram are the only places the line ink
-   appears at all. */
-.learn-root .rule-line {
-  border: none;
-  width: 100%;
-  height: 3px;
-  background: var(--ln-line);
-  margin-block: 1.25rem;
-}
-
 /* ============================================================
-   6. Chrome — the platform sign
-   A thin printed rail, not a nav bar. Opaque: a sign does not
-   blur what is behind it, and there is no translucency or
-   backdrop filter anywhere in this section.
+   6. Chrome — the section's own header
+   A thin printed rail, not a nav bar. Opaque: it does not blur
+   what is behind it, and there is no translucency or backdrop
+   filter anywhere in this section.
    ============================================================ */
 
 .learn-root .learn-rail {
@@ -401,367 +372,10 @@
 }
 
 /* ============================================================
-   7. .prose — the reading column
-   Typography for rendered MDX. Inter throughout the body, with
-   Archivo signage for the section headings, because a numbered
-   section in a lesson is a station marker.
-
-   Note the list rules restore markers and padding that the
-   global `* { margin: 0; padding: 0 }` reset in globals.css and
-   Tailwind's preflight strip.
-   ============================================================ */
-
-/* 16px on a phone, 17px from about 1200px up, and a real ramp in
-   between. The endpoints are the ones this rule always declared; the
-   middle term was `1.05vw`, which does not reach 16px until the window is
-   1524px wide, so the floor won every screen anyone reads on and the
-   clamp did nothing at all. A rem-plus-vw term is what makes it move:
-   the rem part sets where the ramp starts, the vw part how fast it
-   climbs. Because .measure counts in ch, the column widens with it. */
-.learn-root .prose {
-  font-family: var(--ln-read);
-  font-size: clamp(1rem, 0.9375rem + 0.17vw, 1.0625rem);
-  line-height: 1.75;
-  color: var(--ln-ink);
-}
-
-.learn-root .prose > *:first-child {
-  margin-top: 0;
-}
-
-/* --- Headings ------------------------------------------------ */
-
-/* Sentence case, not signage caps. The rule in DESIGN.md is caps
-   for every label, and a label is short — a course name, a zone
-   name, "STOP 07 / 12". A section heading here is a full sentence
-   ("2. Tokens in, attention inside, and why length costs more"),
-   and caps would slow the reading this column exists for. Archivo
-   at 700 with tight tracking carries the world instead.
-
-   The margin above is the section break, so it is long — a reader
-   scanning for where one section ends and the next begins should
-   see it before reading a word. A numbered heading adds a rule and
-   its own padding on top of this, in mdx.module.css. */
-.learn-root .prose h2 {
-  font-family: var(--ln-sign);
-  font-weight: 700;
-  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  text-transform: none;
-  color: var(--ln-ink);
-  margin-top: clamp(3.5rem, 7vw, 5rem);
-  margin-bottom: 1.15rem;
-  scroll-margin-top: 5rem;
-}
-
-/* A step down from the section heading, same voice. */
-.learn-root .prose h3 {
-  font-family: var(--ln-sign);
-  font-weight: 600;
-  font-size: clamp(1.125rem, 1.7vw, 1.3rem);
-  line-height: 1.35;
-  letter-spacing: -0.01em;
-  color: var(--ln-ink);
-  margin-top: 2.25rem;
-  margin-bottom: 0.75rem;
-  scroll-margin-top: 5rem;
-}
-
-.learn-root .prose h4 {
-  font-family: var(--ln-sign);
-  font-weight: 600;
-  font-size: 1.05rem;
-  line-height: 1.4;
-  letter-spacing: -0.005em;
-  color: var(--ln-ink);
-  margin-top: 1.9rem;
-  margin-bottom: 0.6rem;
-}
-
-/* --- Body copy ----------------------------------------------- */
-
-.learn-root .prose p {
-  font-size: inherit;
-  line-height: inherit;
-  color: var(--ln-ink);
-  margin-bottom: 1.35rem;
-}
-
-.learn-root .prose strong {
-  font-weight: 600;
-  color: var(--ln-ink);
-}
-
-.learn-root .prose em {
-  font-style: italic;
-}
-
-/* Links carry an underline, not a colour: line ink never enters
-   the reading column, and an underline is a signal that survives
-   both themes and colour blindness. */
-.learn-root .prose a {
-  color: var(--ln-ink);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--ln-ink-quiet);
-}
-
-.learn-root .prose a:hover {
-  text-decoration-color: currentColor;
-}
-
-/* --- Lists ---------------------------------------------------- */
-
-.learn-root .prose ul {
-  list-style: disc;
-  padding-left: 1.35em;
-  margin-bottom: 1.35rem;
-}
-
-.learn-root .prose ol {
-  list-style: decimal;
-  padding-left: 1.35em;
-  margin-bottom: 1.35rem;
-}
-
-.learn-root .prose li {
-  font-size: inherit;
-  line-height: inherit;
-  color: var(--ln-ink);
-  margin-bottom: 0.5rem;
-}
-
-.learn-root .prose li::marker {
-  color: var(--ln-ink-quiet);
-}
-
-.learn-root .prose li > ul,
-.learn-root .prose li > ol {
-  margin-top: 0.5rem;
-  margin-bottom: 0;
-}
-
-/* --- Blockquote ----------------------------------------------- */
-
-/* A hairline, not an accent bar: nothing in this world carries a
-   coloured edge thicker than the rules do. */
-.learn-root .prose blockquote {
-  border-left: 1px solid var(--ln-rule);
-  padding-left: 1.25rem;
-  margin: 1.75rem 0;
-  color: var(--ln-ink-quiet);
-  font-style: normal;
-}
-
-.learn-root .prose blockquote p:last-child {
-  margin-bottom: 0;
-}
-
-/* --- Rule and images ------------------------------------------ */
-
-.learn-root .prose hr {
-  border: none;
-  height: 1px;
-  background: var(--ln-rule);
-  margin: 2.5rem 0;
-}
-
-.learn-root .prose img {
-  width: 100%;
-  height: auto;
-  border: 1px solid var(--ln-rule);
-  border-radius: 0;
-  margin: 1.75rem 0;
-}
-
-/* --- Tables ---------------------------------------------------
-   These rules were tuned on the real lessons and are kept as
-   they were, on the new tokens. Comparison tables are the
-   workhorse of the writing, so they matter more than most.
-
-   The scrolling belongs to the wrapper around the table, not to
-   the table itself: `display: block` here would stop the table
-   sizing its own columns and leave them all hugging their text.
-   The min-width is what makes a narrow phone scroll rather than
-   crush three columns into four characters each.
-
-   No boxes and no zebra stripes — a rule under the head and one
-   between rows, so the table reads like the rest of the prose. */
-
-.learn-root .prose table {
-  width: 100%;
-  min-width: 34rem;
-  border-collapse: collapse;
-  margin: 1.75rem 0;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.learn-root .prose th,
-.learn-root .prose td {
-  padding: 0.75em 1.1em;
-  text-align: left;
-  vertical-align: top;
-}
-
-/* The header row is a label, not a sentence — the same signage
-   caps as .sign-quiet, tracked a little tighter so a two-word
-   column heading stays readable. */
-.learn-root .prose thead th {
-  font-family: var(--ln-sign);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ln-ink-quiet);
-  white-space: nowrap;
-  padding-bottom: 0.6em;
-  border-bottom: 1px solid var(--ln-rule);
-}
-
-.learn-root .prose tbody tr + tr td {
-  border-top: 1px solid var(--ln-rule);
-}
-
-.learn-root .prose tbody td {
-  color: var(--ln-ink-quiet);
-}
-
-/* First column carries the thing being described, so it reads as
-   the row's own label. */
-.learn-root .prose tbody td:first-child {
-  color: var(--ln-ink);
-}
-
-/* The padding is inside the cells; the outer edges sit flush
-   with the text column above and below. */
-.learn-root .prose th:first-child,
-.learn-root .prose td:first-child {
-  padding-left: 0;
-}
-
-.learn-root .prose th:last-child,
-.learn-root .prose td:last-child {
-  padding-right: 0;
-}
-
-/* --- Inline code and code blocks ------------------------------
-   Mono earns its place here and nowhere else. A hairline box at
-   2px — the one radius the bans allow outside diagram geometry —
-   instead of a filled chip, because nothing in this world has a
-   background region of its own.
-
-   A block never wraps and never widens the column: a line longer
-   than the measure scrolls sideways inside the box. The scrollbar
-   is styled rather than left to the platform, because macOS
-   overlay scrollbars are invisible until something scrolls, and a
-   line clipped at the right edge with nothing to say it continues
-   just looks broken. Styling ::-webkit-scrollbar is also what
-   takes it out of overlay mode, so the bar is always on show. The
-   block is a tab stop as well, so it can be scrolled from the
-   keyboard and not only with a trackpad. */
-
-/* overflow-wrap: break-word, not `anywhere` and not word-break: a long
-   token only breaks once it will not fit the line on its own, so
-   `useState` stays whole and `/Users/you/Projects/client-work` — 31
-   characters, about 273px at this size, inside a list item with 266px to
-   work in on a 320px phone — breaks instead of running off the screen. No
-   hyphen is inserted at the break: a hyphen inside a path is a lie. */
-.learn-root .prose code {
-  font-family: var(--ln-num);
-  font-size: 0.875em;
-  padding: 0.12em 0.4em;
-  border: 1px solid var(--ln-rule);
-  border-radius: 2px;
-  background: none;
-  color: var(--ln-ink);
-  overflow-wrap: break-word;
-  hyphens: none;
-}
-
-.learn-root .prose pre {
-  font-family: var(--ln-num);
-  border: 1px solid var(--ln-rule);
-  border-radius: 0;
-  background: none;
-  padding: clamp(1rem, 2.4vw, 1.4rem);
-  max-width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ln-ink-quiet) transparent;
-  margin: 1.75rem 0;
-  font-size: 0.875rem;
-  line-height: 1.7;
-  color: var(--ln-ink);
-}
-
-/* Firefox takes scrollbar-width / scrollbar-color above; these are
-   the same bar for WebKit and Blink. Square, hairline-framed, the
-   same two tokens. */
-.learn-root .prose pre::-webkit-scrollbar {
-  height: 10px;
-}
-
-.learn-root .prose pre::-webkit-scrollbar-track {
-  background: none;
-  border-top: 1px solid var(--ln-rule);
-}
-
-.learn-root .prose pre::-webkit-scrollbar-thumb {
-  background: var(--ln-ink-quiet);
-  border-radius: 0;
-}
-
-.learn-root .prose pre:focus-visible {
-  outline: 2px solid var(--ln-mark);
-  outline-offset: 2px;
-}
-
-/* inline-block plus min-width is what makes the block scroll to the
-   end of its longest line instead of stopping at the column's width,
-   and it keeps the box's right-hand padding visible once scrolled. */
-.learn-root .prose pre code {
-  display: inline-block;
-  min-width: 100%;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  font-size: inherit;
-  color: inherit;
-}
-
-/* ============================================================
-   8. Motion — one authored moment
-   The you-are-here ring draws itself once on load. Nothing else
-   in the section animates: no entrances, no scroll reveals, and
-   hover is an instant colour change rather than a transition.
-
-   A component sets --ln-draw-len to the path's own length and
-   adds .ln-draw. The `both` fill keeps the final state.
-   ============================================================ */
-
-@keyframes ln-draw {
-  from {
-    stroke-dashoffset: var(--ln-draw-len, 100);
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-.learn-root .ln-draw {
-  stroke-dasharray: var(--ln-draw-len, 100);
-  stroke-dashoffset: 0;
-  animation: ln-draw 600ms var(--ln-ease) both;
-}
-
-/* ============================================================
-   9. Reduced motion
-   One block. The ring renders in its final state rather than
-   drawing, and any transition a component adds is disabled.
+   7. Reduced motion
+   One block for the whole section: a drawing renders in its
+   final state rather than drawing itself, and any transition a
+   component adds is disabled.
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
@@ -772,13 +386,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-
-  /* The ring is simply there, fully drawn, from the first
-     paint — no dash to animate at all. */
-  .learn-root .ln-draw {
-    animation: none;
-    stroke-dasharray: none;
-    stroke-dashoffset: 0;
   }
 }

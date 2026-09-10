@@ -1,9 +1,9 @@
-/* ViewWidth — the reading-width switch in the platform rail.
+/* ViewWidth — the reading-width switch in the section's header rail.
 
    A segmented pair in the signage voice, split by one hairline. No fill,
    no pill, no radius, no border around the group: the active setting is
    simply at full ink and the other is stepped back, which is the same
-   read/unread distinction the ticks on a line use. */
+   read/unread distinction the schedule's marks use. */
 
 .group {
   display: flex;

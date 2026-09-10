@@ -193,7 +193,7 @@ export default function LearnAnatomyPage() {
         </h2>
         <ol className={s.legend} role="list" aria-labelledby="v1-legend">
           {stages.map((stage) => (
-            <li key={stage.id} className={s.cell} data-line={stage.id}>
+            <li key={stage.id} className={s.cell} data-course={stage.id}>
               <span className={s.swatch} aria-hidden="true" />
 
               <span className={s.cellHead}>
@@ -214,7 +214,7 @@ export default function LearnAnatomyPage() {
               <Link
                 href={stage.href}
                 className={s.cellLink}
-                data-line={stage.id}
+                data-course={stage.id}
                 aria-label={stageLabel(stage)}
               >
                 {stage.title}

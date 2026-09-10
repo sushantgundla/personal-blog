@@ -62,7 +62,7 @@
      the only question the drawing cannot answer standing still.
      It is deliberately NOT on the ink ramp: it is --primary from
      app/globals.css, the site's own accent, moved off the amber
-     of --ln-agents so a travelling spark can never be mistaken
+     of --ln-agents so a moving spark can never be mistaken
      for the tool loop lighting up. Light takes a darker shade of
      the same hue to clear 4:1 on the whiteprint. */
   --pl-spark: #ff6b2b;
@@ -441,7 +441,7 @@
    outline on an SVG element at all, and a focus ring that is missing in one
    browser is not a focus ring. It stays graphite while the stage it belongs
    to takes its course's ink, so the box never disappears into the part it is
-   marking. Focus also lights the stage itself: the anchor carries data-line,
+   marking. Focus also lights the stage itself: the anchor carries data-course,
    so the :has() rules in section 7 match a keyboard focus exactly as they
    match a hover. */
 .door:focus-visible {
@@ -501,12 +501,12 @@
    of it; it is not safe for deciding what a reader has already seen.
 
    Rings only. Five inked rings is a legend; five inked stages at rest is
-   the transit map this drawing replaced. The numeral inside stays at
+   the flat colour chart this drawing replaced. The numeral inside stays at
    --pl-line, because amber sits at 3.4:1 on the light sheet — fine for a
    1.25px ring, short of the 4.5:1 a 14px numeral needs. */
 .ring {
   fill: none;
-  stroke: var(--ln-line);
+  stroke: var(--ln-course);
   stroke-width: 1.25;
 }
 
@@ -602,8 +602,8 @@
    else back and swings that stage into its course's ink.
 
    :has() correlates the two halves because both carry the same
-   data-line value, which is also what learn.css reads to
-   resolve --ln-line. One attribute does three jobs.
+   data-course value, which is also what learn.css reads to
+   resolve --ln-course. One attribute does three jobs.
 
    The stages go a long way back: a ghost machine reads perfectly
    well on graphite, and the reveal gets the theatre. The spine
@@ -635,41 +635,41 @@
 
 /* --- The reveal, from the keyboard --------------------------- */
 
-.plate:has([data-line]:focus-visible) .stage {
+.plate:has([data-course]:focus-visible) .stage {
   opacity: 0.16;
 }
 
-.plate:has([data-line]:focus-visible) .spine,
-.plate:has([data-line]:focus-visible) .callout {
+.plate:has([data-course]:focus-visible) .spine,
+.plate:has([data-course]:focus-visible) .callout {
   opacity: 0.5;
 }
 
 /* The held stage's own number stays lit while the other four step back —
    the number is the tie between the drawing and the legend, and it is the
    one thing that must not fade at the moment the reader is using it. */
-.plate:has([data-line='prompt-engineering']:focus-visible) .callout[data-line='prompt-engineering'],
-.plate:has([data-line='rag']:focus-visible) .callout[data-line='rag'],
-.plate:has([data-line='llms']:focus-visible) .callout[data-line='llms'],
-.plate:has([data-line='agents']:focus-visible) .callout[data-line='agents'],
-.plate:has([data-line='evals']:focus-visible) .callout[data-line='evals'] {
+.plate:has([data-course='prompt-engineering']:focus-visible) .callout[data-course='prompt-engineering'],
+.plate:has([data-course='rag']:focus-visible) .callout[data-course='rag'],
+.plate:has([data-course='llms']:focus-visible) .callout[data-course='llms'],
+.plate:has([data-course='agents']:focus-visible) .callout[data-course='agents'],
+.plate:has([data-course='evals']:focus-visible) .callout[data-course='evals'] {
   opacity: 1;
 }
 
-.plate:has([data-line]:focus-visible) .swatch {
+.plate:has([data-course]:focus-visible) .swatch {
   opacity: 0.22;
 }
 
-.plate:has([data-line]:focus-visible) .calloutN {
+.plate:has([data-course]:focus-visible) .calloutN {
   border-color: var(--pl-faint);
 }
 
-.plate:has([data-line='prompt-engineering']:focus-visible) .stage[data-line='prompt-engineering'],
-.plate:has([data-line='rag']:focus-visible) .stage[data-line='rag'],
-.plate:has([data-line='llms']:focus-visible) .stage[data-line='llms'],
-.plate:has([data-line='agents']:focus-visible) .stage[data-line='agents'],
-.plate:has([data-line='evals']:focus-visible) .stage[data-line='evals'] {
+.plate:has([data-course='prompt-engineering']:focus-visible) .stage[data-course='prompt-engineering'],
+.plate:has([data-course='rag']:focus-visible) .stage[data-course='rag'],
+.plate:has([data-course='llms']:focus-visible) .stage[data-course='llms'],
+.plate:has([data-course='agents']:focus-visible) .stage[data-course='agents'],
+.plate:has([data-course='evals']:focus-visible) .stage[data-course='evals'] {
   opacity: 1;
-  --pl-stroke: var(--ln-line);
+  --pl-stroke: var(--ln-course);
   /* The strokes take the ink; the annotation only steps up to full
      graphite. Amber on the light sheet is 3.4:1 — fine for a 2.5px
      stroke, short of 4.5:1 for a 15px label, and every ink would have
@@ -680,21 +680,21 @@
 /* The echo in the legend: the ink that has just arrived on the drawing
    runs the full width of its own cell, rule to rule. Stopping at the
    cell padding left the gesture half finished. */
-.plate:has([data-line='prompt-engineering']:focus-visible) .cell[data-line='prompt-engineering'] .swatch,
-.plate:has([data-line='rag']:focus-visible) .cell[data-line='rag'] .swatch,
-.plate:has([data-line='llms']:focus-visible) .cell[data-line='llms'] .swatch,
-.plate:has([data-line='agents']:focus-visible) .cell[data-line='agents'] .swatch,
-.plate:has([data-line='evals']:focus-visible) .cell[data-line='evals'] .swatch {
+.plate:has([data-course='prompt-engineering']:focus-visible) .cell[data-course='prompt-engineering'] .swatch,
+.plate:has([data-course='rag']:focus-visible) .cell[data-course='rag'] .swatch,
+.plate:has([data-course='llms']:focus-visible) .cell[data-course='llms'] .swatch,
+.plate:has([data-course='agents']:focus-visible) .cell[data-course='agents'] .swatch,
+.plate:has([data-course='evals']:focus-visible) .cell[data-course='evals'] .swatch {
   opacity: 1;
   width: calc(100% + 2 * var(--pl-cell-pad-x));
 }
 
-.plate:has([data-line='prompt-engineering']:focus-visible) .cell[data-line='prompt-engineering'] .calloutN,
-.plate:has([data-line='rag']:focus-visible) .cell[data-line='rag'] .calloutN,
-.plate:has([data-line='llms']:focus-visible) .cell[data-line='llms'] .calloutN,
-.plate:has([data-line='agents']:focus-visible) .cell[data-line='agents'] .calloutN,
-.plate:has([data-line='evals']:focus-visible) .cell[data-line='evals'] .calloutN {
-  border-color: var(--ln-line);
+.plate:has([data-course='prompt-engineering']:focus-visible) .cell[data-course='prompt-engineering'] .calloutN,
+.plate:has([data-course='rag']:focus-visible) .cell[data-course='rag'] .calloutN,
+.plate:has([data-course='llms']:focus-visible) .cell[data-course='llms'] .calloutN,
+.plate:has([data-course='agents']:focus-visible) .cell[data-course='agents'] .calloutN,
+.plate:has([data-course='evals']:focus-visible) .cell[data-course='evals'] .calloutN {
+  border-color: var(--ln-course);
 }
 
 /* --- The same reveal, from a pointer -------------------------
@@ -703,56 +703,56 @@
    changes here too. */
 
 @media (hover: hover) and (pointer: fine) {
-  .plate:has([data-line]:hover) .stage {
+  .plate:has([data-course]:hover) .stage {
     opacity: 0.16;
   }
 
-  .plate:has([data-line]:hover) .spine,
-  .plate:has([data-line]:hover) .callout {
+  .plate:has([data-course]:hover) .spine,
+  .plate:has([data-course]:hover) .callout {
     opacity: 0.5;
   }
 
-  .plate:has([data-line='prompt-engineering']:hover) .callout[data-line='prompt-engineering'],
-  .plate:has([data-line='rag']:hover) .callout[data-line='rag'],
-  .plate:has([data-line='llms']:hover) .callout[data-line='llms'],
-  .plate:has([data-line='agents']:hover) .callout[data-line='agents'],
-  .plate:has([data-line='evals']:hover) .callout[data-line='evals'] {
+  .plate:has([data-course='prompt-engineering']:hover) .callout[data-course='prompt-engineering'],
+  .plate:has([data-course='rag']:hover) .callout[data-course='rag'],
+  .plate:has([data-course='llms']:hover) .callout[data-course='llms'],
+  .plate:has([data-course='agents']:hover) .callout[data-course='agents'],
+  .plate:has([data-course='evals']:hover) .callout[data-course='evals'] {
     opacity: 1;
   }
 
-  .plate:has([data-line]:hover) .swatch {
+  .plate:has([data-course]:hover) .swatch {
     opacity: 0.22;
   }
 
-  .plate:has([data-line]:hover) .calloutN {
+  .plate:has([data-course]:hover) .calloutN {
     border-color: var(--pl-faint);
   }
 
-  .plate:has([data-line='prompt-engineering']:hover) .stage[data-line='prompt-engineering'],
-  .plate:has([data-line='rag']:hover) .stage[data-line='rag'],
-  .plate:has([data-line='llms']:hover) .stage[data-line='llms'],
-  .plate:has([data-line='agents']:hover) .stage[data-line='agents'],
-  .plate:has([data-line='evals']:hover) .stage[data-line='evals'] {
+  .plate:has([data-course='prompt-engineering']:hover) .stage[data-course='prompt-engineering'],
+  .plate:has([data-course='rag']:hover) .stage[data-course='rag'],
+  .plate:has([data-course='llms']:hover) .stage[data-course='llms'],
+  .plate:has([data-course='agents']:hover) .stage[data-course='agents'],
+  .plate:has([data-course='evals']:hover) .stage[data-course='evals'] {
     opacity: 1;
-    --pl-stroke: var(--ln-line);
+    --pl-stroke: var(--ln-course);
     --pl-anno: var(--pl-line);
   }
 
-  .plate:has([data-line='prompt-engineering']:hover) .cell[data-line='prompt-engineering'] .swatch,
-  .plate:has([data-line='rag']:hover) .cell[data-line='rag'] .swatch,
-  .plate:has([data-line='llms']:hover) .cell[data-line='llms'] .swatch,
-  .plate:has([data-line='agents']:hover) .cell[data-line='agents'] .swatch,
-  .plate:has([data-line='evals']:hover) .cell[data-line='evals'] .swatch {
+  .plate:has([data-course='prompt-engineering']:hover) .cell[data-course='prompt-engineering'] .swatch,
+  .plate:has([data-course='rag']:hover) .cell[data-course='rag'] .swatch,
+  .plate:has([data-course='llms']:hover) .cell[data-course='llms'] .swatch,
+  .plate:has([data-course='agents']:hover) .cell[data-course='agents'] .swatch,
+  .plate:has([data-course='evals']:hover) .cell[data-course='evals'] .swatch {
     opacity: 1;
     width: calc(100% + 2 * var(--pl-cell-pad-x));
   }
 
-  .plate:has([data-line='prompt-engineering']:hover) .cell[data-line='prompt-engineering'] .calloutN,
-  .plate:has([data-line='rag']:hover) .cell[data-line='rag'] .calloutN,
-  .plate:has([data-line='llms']:hover) .cell[data-line='llms'] .calloutN,
-  .plate:has([data-line='agents']:hover) .cell[data-line='agents'] .calloutN,
-  .plate:has([data-line='evals']:hover) .cell[data-line='evals'] .calloutN {
-    border-color: var(--ln-line);
+  .plate:has([data-course='prompt-engineering']:hover) .cell[data-course='prompt-engineering'] .calloutN,
+  .plate:has([data-course='rag']:hover) .cell[data-course='rag'] .calloutN,
+  .plate:has([data-course='llms']:hover) .cell[data-course='llms'] .calloutN,
+  .plate:has([data-course='agents']:hover) .cell[data-course='agents'] .calloutN,
+  .plate:has([data-course='evals']:hover) .cell[data-course='evals'] .calloutN {
+    border-color: var(--ln-course);
   }
 }
 
@@ -813,7 +813,7 @@
   margin-inline-start: calc(-1 * var(--pl-cell-pad-x));
   width: calc(2.75rem + var(--pl-cell-pad-x));
   height: 3px;
-  background: var(--ln-line);
+  background: var(--ln-course);
   transition: width 260ms var(--ln-ease), opacity 200ms var(--ln-ease);
 }
 
@@ -829,7 +829,7 @@
   place-items: center;
   width: 1.55rem;
   height: 1.55rem;
-  border: 1px solid var(--ln-line);
+  border: 1px solid var(--ln-course);
   border-radius: 50%;
   font-family: var(--ln-num), monospace;
   font-size: 0.8125rem;

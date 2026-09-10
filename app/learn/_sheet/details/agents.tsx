@@ -80,11 +80,11 @@ function Callout({
   lead: string
   dot: [number, number]
 }) {
-  const zone = k.zone(i)
-  if (zone === undefined) return null
+  const part = k.part(i)
+  if (part === undefined) return null
 
   return (
-    <g className={s.callout} data-zone={zone} aria-hidden="true">
+    <g className={s.callout} data-part={part} aria-hidden="true">
       <path className={s.lead} d={lead} />
       <circle className={s.dot} cx={dot[0]} cy={dot[1]} r={3.5} />
       <circle className={s.ring} cx={cx} cy={cy} r={15} />

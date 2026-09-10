@@ -1,0 +1,1229 @@
+/* ============================================================
+   A LESSON — the printed spread
+   The page at app/learn/[course]/[lesson]. Its layout and type
+   are a magazine feature's; its colour and its manner are the
+   index sheet's; its structure is four rules in the course's own
+   ink. Every --lm-* token below is this page's own.
+
+   THE SHAPE
+   A single spread centred in the window, the reading measure
+   left-aligned inside it, tables and code taking the whole spread
+   and growing right into the air. A raised initial on the opener,
+   a byline row, section heads with an italic numeral, a pull
+   quote. Very few marks, all of them precise: bone text on a
+   near-black ground, one warm value used almost nowhere, mono for
+   figures and code and nothing else.
+
+   THE GROUND IS THE INDEX SHEET'S
+   The index at /learn is drawn on a plate whose ground is a COLD
+   near-black and whose one warm value is --pl-spark, the site's
+   own --primary. This page takes the plate's ground and its
+   spark. Every value below is copied from
+   app/learn/_plate/plate.module.css, name for name, so a reader
+   going index -> course -> lesson never changes worlds. No hex on
+   this page is invented.
+
+   THE TWO ACCENTS, AND THE ONE JOB EACH
+   - --ln-course, the course's ink, appears at --ln-stroke and
+     ONLY there. It says which course this is. It letters nothing,
+     fills nothing, and never touches text. Four bands and no
+     fifth: across the top of the sheet, closing the title block,
+     opening every numbered section, opening the recall band. Four
+     kinds, so on a three-section lesson it is drawn six times.
+   - --lm-spark is the reader's way through the page: the numeral
+     on a section head, and the underline under a link. Nothing
+     else on the page is warm. It is deliberately kept off every
+     small numeral, because at body size it does not clear 4.5:1
+     on the light sheet — see the contrast table below.
+
+   CONTRAST, measured against the sheet, WCAG 2, dark / light
+     --lm-line    13.95 / 14.43   body, headings, figures
+     --lm-quiet    6.25 /  5.99   labels, annotation, small numerals
+     --lm-spark    6.71 /  4.28   section numerals, link underlines
+     --lm-edge     4.34 /  3.16   control boundaries only, never text
+     --lm-firm     2.62 /  2.17   object hairlines (code, table, quote)
+     --lm-rule     1.31 /  1.27   row hairlines
+   Every colour that letters body-size text is 5.99 or better.
+   --lm-spark's 4.28 on the light sheet is why it is confined to
+   the section numeral, which is 28px at its smallest and so is
+   large text at a 3:1 bar, and to an underline, which is a
+   graphic mark at the same bar. The five course inks, drawn only
+   as 6px rules, run 3.46 to 7.11 across both themes; the worst is
+   amber on the light sheet at 3.46, above the 3:1 a graphic
+   object needs, and none of them letters anything anywhere.
+
+   THE RULE HIERARCHY, so no weight is a guess
+     --ln-stroke  course ink   the four structural bands
+     1px --lm-line             a block of the page ends here
+     1px --lm-firm             an object (code, table, quote) edge
+     1px --lm-rule             a row inside an object, or an answer
+
+   Both themes, throughout. Nothing here pins a polarity: every
+   value has a :global(.light) counterpart in section 1, copied
+   from the plate's own light block, and no rule below this one
+   knows which mode it is in.
+
+   The bans are the section's and they are kept: no cards, no
+   shadows, no gradients, no tinted panels, no rounded containers,
+   no radius above 2px. Structure is rules, space and type.
+
+   No fixed pixel width anywhere. The reading column is
+   --ln-measure, the reader's own 70ch/104ch switch, and the
+   spread grows from it with the window.
+   ============================================================ */
+
+/* ============================================================
+   1. The sheet
+   ============================================================ */
+
+.page {
+  /* --- Surfaces and ink, from app/learn/_plate/plate.module.css.
+     A cold graphite sheet laid on the section's warm hall ground,
+     which is exactly what the index does with the same values. */
+  --lm-sheet: #0d1013;
+  --lm-line: #d8dde1;
+  --lm-quiet: #8b959d;
+  /* The plate's --pl-weak, which it uses for a struck-out
+     candidate. Here it is the edge of a control and the marking
+     of an answer that was not the one. */
+  --lm-edge: #6f7a82;
+  --lm-firm: #4e585f;
+  --lm-rule: #232a30;
+  --lm-spark: #ff6b2b;
+
+  /* --- Measure and air --------------------------------------
+     The measure is the reader's, not this page's: --ln-measure is
+     70ch, or 104ch when the rail's WIDE switch is on. The spread
+     grows from it with the window and has no ceiling, so a wide
+     screen gets wider tables and a bigger right margin rather
+     than a column marooned in the middle of it. Both terms are
+     character counts and viewport units — never a pixel. */
+  --lm-gut: clamp(1.25rem, 4.5vw, 5rem);
+  --lm-measure: var(--ln-measure, 70ch);
+  --lm-spread: calc(var(--lm-measure) + 28vw);
+
+  /* 19px at 375, 21px from about 1400 up. */
+  --lm-body: clamp(1.1875rem, 1.0625rem + 0.3vw, 1.3125rem);
+
+  --lm-serif: var(--lm-display), Georgia, 'Times New Roman', serif;
+  --lm-text: var(--lm-reading), Georgia, 'Times New Roman', serif;
+  --lm-mono: var(--ln-num, 'JetBrains Mono', ui-monospace, monospace);
+
+  --lm-stroke: var(--ln-stroke, 6px);
+  --lm-course: var(--ln-course, var(--lm-quiet));
+
+  /* One labelling system for the whole page — the kicker, the
+     byline facts, the table heads, the link hosts, the verdicts.
+     Newsreader has no true small-cap set, so a label is uppercase
+     and tracked at a size that survives it. Section heads carry
+     no label at all; there is no eyebrow over every section. */
+  --lm-label: 0.8125rem;
+  --lm-track: 0.14em;
+
+  --lm-ease: var(--ln-ease, cubic-bezier(0.16, 1, 0.3, 1));
+
+  /* The first of the four course rules, across the whole sheet.
+     It is the loudest thing above the fold and it says which
+     course this is before a word is read — and the words say it
+     too, on the next line down. */
+  border-block-start: var(--lm-stroke) solid var(--lm-course);
+
+  background: var(--lm-sheet);
+  color: var(--lm-line);
+  font-family: var(--lm-text);
+  font-size: var(--lm-body);
+  line-height: 1.66;
+  font-optical-sizing: auto;
+
+  /* .learn-main pads its block and this sheet paints its own
+     ground, so that padding would leave a strip of the hall's
+     warm near-black under the page. The bottom is cancelled here;
+     the top is not, because the strip above the course rule is
+     what makes this read as a sheet laid on the hall floor. The
+     value tracks .learn-main in app/learn/learn.css. */
+  margin-block-end: calc(-1 * clamp(2.5rem, 6vw, 5rem));
+  padding-block: clamp(3rem, 8vw, 6rem) clamp(4rem, 10vw, 8rem);
+  min-block-size: 100vh;
+}
+
+/* The printed sheet. next-themes puts .light on <html>; this
+   swaps values only, and no rule below knows which mode it is in.
+   Light is a whiteprint, the same cold drawing positive instead
+   of negative — the plate's own light block, verbatim. */
+:global(.light) .page {
+  --lm-sheet: #e6eaec;
+  --lm-line: #171a1d;
+  --lm-quiet: #4f585f;
+  --lm-edge: #79848b;
+  --lm-firm: #97a1a8;
+  --lm-rule: #c9d2d6;
+  --lm-spark: #c2410c;
+}
+
+/* One focus treatment, written outside every hover query so it is
+   never conditional on a pointer, and pointed at the section's own
+   --ln-mark so the ring on this page is the ring on every other
+   page in the section. The :is() lifts it clear of learn.css's
+   .learn-root a:focus-visible, which carries the same weight and
+   would otherwise be decided by stylesheet order. */
+.page :is(a, button, summary, [tabindex]):is(:focus-visible),
+.page :focus-visible {
+  outline: 2px solid var(--ln-mark, var(--lm-line));
+  outline-offset: 3px;
+}
+
+.page ::selection {
+  background: var(--lm-line);
+  color: var(--lm-sheet);
+}
+
+/* Visually hidden, still read aloud. */
+.sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   2. The two widths. Every block on the page is one or the other.
+   The percentage resolves against the element's own containing
+   block, so on a phone the min() hands the whole window back and
+   there are never bars at the sides.
+   ============================================================ */
+
+.spread {
+  inline-size: min(var(--lm-spread), 100% - var(--lm-gut) * 2);
+  margin-inline: auto;
+}
+
+/* ============================================================
+   3. The opener
+   ============================================================ */
+
+.opener {
+  inline-size: min(var(--lm-spread), 100% - var(--lm-gut) * 2);
+  margin-inline: auto;
+}
+
+.kicker {
+  margin: 0 0 clamp(1.5rem, 3.5vw, 2.5rem);
+  font-size: var(--lm-label);
+  font-weight: 600;
+  letter-spacing: var(--lm-track);
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--lm-quiet);
+}
+
+.kickerLink {
+  color: var(--lm-line);
+  text-decoration: none;
+  border-block-end: 1px solid var(--lm-edge);
+  padding-block-end: 0.15em;
+}
+
+/* Quiet ink, not --lm-edge: this is a glyph, and --lm-edge is a
+   boundary colour that does not clear 4.5:1 on the light sheet. */
+.kickerSep {
+  padding-inline: 0.5em;
+  color: var(--lm-quiet);
+}
+
+/* The reason someone screenshots the page. 40px at 375, 96px from
+   1280 up — the craft floor's display ceiling, and no further. */
+.title {
+  margin: 0;
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 7.5vw, 6rem);
+  line-height: 1.02;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+
+/* 0.83, not 1.06: this paragraph is set 1.28 times the body size, so
+   its own "0" is 1.28 times as wide, and 70ch on it would be a third
+   wider than the prose. 0.83 x 1.28 = 1.06, which is the width a
+   standfirst wants — a shade past the measure and no more. The same
+   arithmetic is behind the factor on .why below. */
+.standfirst {
+  inline-size: min(calc(var(--lm-measure) * 0.83), 100%);
+  margin: clamp(1.25rem, 3vw, 2rem) 0 0;
+  font-size: calc(var(--lm-body) * 1.28);
+  line-height: 1.44;
+  color: var(--lm-line);
+  text-wrap: pretty;
+}
+
+/* Thick over thin, the way a masthead sets a byline — except the
+   thick one here is the second of the four course rules, and it
+   is what closes the title block. The facts are set the way a
+   title block sets its quantities: the word tracked and quiet,
+   the figure in mono and tabular, so 01 / 17 and 7 min sit in the
+   same character columns on every lesson in the course. */
+.byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6em 2em;
+  margin: clamp(2rem, 4.5vw, 3rem) 0 0;
+  padding-block: 0.9em;
+  border-block-start: 1px solid var(--lm-firm);
+  border-block-end: var(--lm-stroke) solid var(--lm-course);
+}
+
+.bylineName {
+  font-family: var(--lm-serif);
+  font-style: italic;
+  font-size: calc(var(--lm-body) * 1.05);
+  line-height: 1.2;
+  margin-inline-end: auto;
+}
+
+/* LESSON 01 / 17 and ~7 MIN, set the way a title block sets its
+   quantities: mono, tabular, at full strength. This is the whole of
+   the page's position: stated in words, never drawn. */
+.fact {
+  font-family: var(--lm-mono);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--lm-line);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   4. Why this lesson — the feature's opening paragraph, with the
+   raised initial, and its label out in the right margin once
+   there is a margin to put it in.
+   ============================================================ */
+
+.whyBlock {
+  inline-size: min(var(--lm-spread), 100% - var(--lm-gut) * 2);
+  margin: clamp(2.5rem, 6vw, 4rem) auto 0;
+}
+
+.whyLabel {
+  margin: 0 0 0.75em;
+  font-family: var(--lm-text);
+  font-size: var(--lm-label);
+  font-weight: 600;
+  letter-spacing: var(--lm-track);
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--lm-quiet);
+}
+
+.why {
+  inline-size: min(calc(var(--lm-measure) * 0.94), 100%);
+  margin: 0;
+  font-size: calc(var(--lm-body) * 1.06);
+  line-height: 1.58;
+  text-wrap: pretty;
+}
+
+/* The one raised initial on the page. Set in the display face, so
+   it is the Bodoni again and not a big paragraph letter. */
+.why::first-letter {
+  float: left;
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: 3.6em;
+  line-height: 0.8;
+  padding-inline-end: 0.09em;
+  padding-block-start: 0.05em;
+}
+
+@media (min-width: 60rem) {
+  .whyBlock {
+    display: grid;
+    grid-template-columns: minmax(0, var(--lm-measure)) minmax(0, 1fr);
+    column-gap: clamp(1.5rem, 3vw, 2.5rem);
+    align-items: start;
+  }
+
+  .whyLabel {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    padding-block-start: 0.6em;
+  }
+
+  .why {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
+/* ============================================================
+   5. The prose
+
+   Direct children sit on the measure. The four things that must
+   not be squeezed into it — a section head with its course rule,
+   a table, a code block, a pull quote — take the whole spread and
+   grow to the right, into the air. That is the one structural
+   idea in the layout, and it is why the course rule at the top of
+   a section is a band across the page rather than a stripe above
+   one column.
+   ============================================================ */
+
+.prose {
+  inline-size: min(var(--lm-spread), 100% - var(--lm-gut) * 2);
+  margin: clamp(2.5rem, 6vw, 4rem) auto 0;
+}
+
+.prose > * {
+  inline-size: min(var(--lm-measure), 100%);
+}
+
+.prose > .h2,
+.prose > .tableWrap,
+.prose > .code,
+.prose > .quote {
+  inline-size: 100%;
+}
+
+.prose p {
+  margin: 0 0 1.05em;
+  text-wrap: pretty;
+}
+
+.prose strong {
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+/* A chapter break. The third of the four course rules opens it,
+   at --ln-stroke across the whole spread; the heading itself
+   holds to the measure under it, because a display serif at 44px
+   running 104 characters is not a heading, it is a banner. The
+   numeral stays inside the heading's own text, so a screen reader
+   still hears "3. What it is good at" — the sentence a reader
+   sees. */
+.h2 {
+  margin: clamp(3.25rem, 8vw, 5.5rem) 0 clamp(1.1rem, 2.5vw, 1.75rem);
+  padding-block-start: clamp(1.1rem, 2.5vw, 1.75rem);
+  border-block-start: var(--lm-stroke) solid var(--lm-course);
+  line-height: 1.14;
+}
+
+/* The measure is in `ch`, and `ch` is the width of the "0" of the
+   element it is written on — so this box keeps the prose's own face
+   and size, and the display size goes on the two spans inside it.
+   Written the other way round, a 44px Bodoni measure comes out
+   roughly twice as wide as the paragraph under it and the heading
+   is a banner across the spread. */
+.h2in {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: clamp(0.6rem, 1.6vw, 1.1rem);
+  align-items: baseline;
+  inline-size: min(var(--lm-measure), 100%);
+  font-family: var(--lm-text);
+  font-size: var(--lm-body);
+}
+
+.h2n,
+.h2t {
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+  letter-spacing: -0.01em;
+}
+
+/* The one warm numeral on the page. 28px at its smallest, so it
+   is large text at a 3:1 bar in both themes, and it is never the
+   only thing saying which section this is — the number is in the
+   heading text and the heading text is bone. */
+.h2n {
+  font-style: italic;
+  color: var(--lm-spark);
+}
+
+.h2t {
+  text-wrap: pretty;
+}
+
+/* A section head with no leading numeral — none of the shipped
+   lessons has one, but a future one might, and a heading that
+   silently indents itself by an empty numeral column would be the
+   kind of drift nobody notices. */
+.h2wide {
+  grid-column: 1 / -1;
+}
+
+.prose h3 {
+  inline-size: min(var(--lm-measure), 100%);
+  margin: clamp(2rem, 4.5vw, 3rem) 0 0.6em;
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: clamp(1.25rem, 2.6vw, 1.6rem);
+  line-height: 1.2;
+}
+
+.prose ul,
+.prose ol {
+  margin: 0 0 1.25em;
+  padding-inline-start: 1.7em;
+}
+
+/* app/globals.css pulls in Tailwind's preflight, which clears the
+   marker off every list on the site. A numbered list in a lesson
+   body means the number, so it is asked for back here. */
+.prose ol {
+  list-style: decimal;
+}
+
+.prose ul ul,
+.prose ul ol,
+.prose ol ol,
+.prose ol ul {
+  margin-block: 0.45em 0;
+}
+
+.prose li {
+  margin-block-end: 0.45em;
+}
+
+.prose ul {
+  list-style: none;
+}
+
+.prose ul > li {
+  position: relative;
+}
+
+/* An em rule rather than a dot — the mark a magazine uses, and
+   the mark this section's own drawings use for an item in a key. */
+.prose ul > li::before {
+  content: '\2014';
+  position: absolute;
+  inset-inline-start: -1.7em;
+  color: var(--lm-quiet);
+}
+
+.prose ol > li::marker {
+  color: var(--lm-quiet);
+}
+
+/* The second and last job the warm accent has. The word stays
+   bone at 13.95:1; the underline is the mark, and an underline is
+   a graphic object, so 4.28:1 on the light sheet clears its bar
+   with room. */
+.prose a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--lm-spark);
+  text-underline-offset: 0.18em;
+}
+
+/* Inline code, copied from .learn-root .prose code in
+   app/learn/learn.css: mono, a hairline box, no fill. It is one of
+   the two or three details a reader will recognise from the rest
+   of the section without being able to name.
+
+   overflow-wrap: break-word, not `anywhere` and not word-break —
+   a long token only breaks once it will not fit a line on its
+   own, so `input_type` stays whole. */
+.prose code {
+  font-family: var(--lm-mono);
+  font-size: 0.86em;
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--lm-rule);
+  border-radius: 2px;
+  background: none;
+  color: var(--lm-line);
+  overflow-wrap: break-word;
+  hyphens: none;
+}
+
+.prose hr {
+  border: 0;
+  border-block-start: 1px solid var(--lm-rule);
+  margin-block: clamp(2.5rem, 6vw, 4rem);
+}
+
+/* A quote lifted out of the running text, set the size a magazine
+   sets one. Wider than the measure, so it is unmistakably not
+   another paragraph, and bracketed rather than filled. */
+.quote {
+  margin: clamp(2.5rem, 6vw, 4rem) 0;
+  padding-block: clamp(1.5rem, 3.5vw, 2.5rem);
+  border-block: 1px solid var(--lm-firm);
+}
+
+/* No factor here, and that is the decision rather than an oversight.
+   This paragraph runs between 1.14 and 1.56 times the body size
+   depending on the window, so there is no single number that would
+   pin it to the measure — and a pull quote is meant to be wider than
+   the column anyway. 70ch of its own face lands between 1.14 and 1.56
+   times the paragraph measure, always inside the spread. Same for the
+   lead takeaway, which is set at the same size. */
+.quote p {
+  inline-size: min(var(--lm-measure), 100%);
+  margin: 0;
+  font-family: var(--lm-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.35rem, 3.1vw, 2.05rem);
+  line-height: 1.28;
+  letter-spacing: -0.005em;
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   6. Tables — the workhorse of this writing, so they get room
+   rather than a smaller type size.
+
+   Full spread, no fill, no vertical rules but the one that marks
+   the key column off, heads in the label style, rows on hairlines.
+   When six columns will not fit — 375px, always — the block
+   scrolls sideways and the key column stays put, so a reader
+   working across a row never loses which row they are on. The
+   wrapper is focusable, because a region that scrolls has to be
+   reachable from a keyboard, and it is named, because a focus
+   stop that announces nothing is its own defect.
+   ============================================================ */
+
+.tableWrap {
+  margin: clamp(2rem, 5vw, 3.25rem) 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-block: 1px solid var(--lm-firm);
+}
+
+.tableWrap table {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: calc(var(--lm-body) * 0.84);
+  line-height: 1.48;
+}
+
+.tableWrap th,
+.tableWrap td {
+  min-inline-size: 12ch;
+  padding: 0.75em 1.5em 0.75em 0;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--lm-rule);
+}
+
+.tableWrap thead th {
+  padding-block: 0.7em;
+  font-family: var(--lm-text);
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: var(--lm-track);
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--lm-quiet);
+  border-block-end: 1px solid var(--lm-firm);
+}
+
+.tableWrap tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+/* The key column: what every one of these tables is compared
+   against. It holds still while the rest scrolls, so it needs the
+   sheet's own ground under it — the one place on the page where a
+   background is painted, and it is painted the same colour as the
+   paper it sits on. */
+.tableWrap th:first-child,
+.tableWrap td:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--lm-sheet);
+  padding-inline-end: 1.5em;
+  border-inline-end: 1px solid var(--lm-rule);
+  font-weight: 600;
+}
+
+.tableWrap code {
+  border: 0;
+  padding: 0;
+  font-size: 0.92em;
+}
+
+/* ============================================================
+   7. Code — on the paper, not in a box on it.
+
+   The section's own answer, from .learn-root .prose pre: mono, a
+   hairline frame, and no fill at all. A tinted panel is one of
+   this section's standing bans and a code sample does not need
+   one — a frame and the change of face are the whole of the
+   signal.
+
+   rehype-highlight's classes are unstyled everywhere else in the
+   section, so this is a decision rather than an inheritance: the
+   colouring is three greys and a weight and no hue whatsoever.
+   Comments drop to --lm-quiet, the words holding the structure go
+   bone and bold, everything else is body bone. The warm accent
+   stays out of it — a code block is where an accent turns into
+   confetti, and the page's restraint is the point.
+   ============================================================ */
+
+.code {
+  margin: clamp(2rem, 5vw, 3.25rem) 0;
+  border: 1px solid var(--lm-firm);
+}
+
+.code pre {
+  margin: 0;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  font-family: var(--lm-mono);
+  font-size: clamp(0.8125rem, 0.72rem + 0.28vw, 0.9375rem);
+  line-height: 1.7;
+  color: var(--lm-line);
+  /* The Python in these lessons is indented four; a browser
+     default of eight would double it. */
+  tab-size: 4;
+}
+
+/* Three classes and an element, so it outranks the page-wide ring in
+   section 1 — a <pre> with tabIndex matches [tabindex] there, and at
+   an offset of 3px the ring would sit outside the frame instead of
+   inside it. */
+.page .code pre:focus-visible {
+  outline: 2px solid var(--ln-mark, var(--lm-line));
+  outline-offset: -4px;
+}
+
+.code code {
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  color: inherit;
+}
+
+.code :global(.hljs-comment),
+.code :global(.hljs-quote) {
+  color: var(--lm-quiet);
+  font-style: italic;
+}
+
+.code :global(.hljs-keyword),
+.code :global(.hljs-built_in),
+.code :global(.hljs-type),
+.code :global(.hljs-title),
+.code :global(.hljs-section),
+.code :global(.hljs-name),
+.code :global(.hljs-selector-tag) {
+  font-weight: 700;
+}
+
+.code :global(.hljs-meta),
+.code :global(.hljs-params),
+.code :global(.hljs-punctuation),
+.code :global(.hljs-operator) {
+  color: var(--lm-quiet);
+}
+
+.code :global(.hljs-emphasis) {
+  font-style: italic;
+}
+
+.code :global(.hljs-strong) {
+  font-weight: 700;
+}
+
+/* A line clipped at the right edge with nothing to say it
+   continues just looks broken, and macOS overlay scrollbars are
+   invisible until something moves. Styling the bar is what takes
+   it out of overlay mode. Same two tokens the section uses. */
+.code pre,
+.tableWrap {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lm-edge) transparent;
+}
+
+.code pre::-webkit-scrollbar,
+.tableWrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.code pre::-webkit-scrollbar-track,
+.tableWrap::-webkit-scrollbar-track {
+  background: none;
+  border-block-start: 1px solid var(--lm-rule);
+}
+
+.code pre::-webkit-scrollbar-thumb,
+.tableWrap::-webkit-scrollbar-thumb {
+  background: var(--lm-edge);
+}
+
+/* ============================================================
+   8. Section heads, shared by what you take away / recall / go
+   deeper. Display serif, no label above them, no numeral: these
+   three are named blocks, not a numbered sequence.
+   ============================================================ */
+
+.sectionHead {
+  margin: 0 0 clamp(1.5rem, 3.5vw, 2.5rem);
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: clamp(1.35rem, 2.9vw, 2rem);
+  line-height: 1.16;
+  /* Positive, not negative. These three heads carry the section's own
+     strings — WHAT YOU TAKE AWAY, RECALL, GO DEEPER — and they are
+     capitals, which want letting out rather than tightening up. */
+  letter-spacing: 0.035em;
+  text-wrap: balance;
+}
+
+/* NO SCROLLING BACK, on the same line as RECALL and a step down from
+   it. It is the instruction that makes retrieval practice work, so it
+   sits beside the head rather than under it, in the page's own label
+   style. */
+.headNote {
+  margin-inline-start: 0.9em;
+  font-family: var(--lm-text);
+  font-size: var(--lm-label);
+  font-weight: 600;
+  letter-spacing: var(--lm-track);
+  color: var(--lm-quiet);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   9. What you take away
+
+   Five, in order. The first is set as the pull quote — it is the
+   lead takeaway, not a repeat of one — and the other four run in
+   two columns under it once there is width for two. The numerals
+   are quiet ink, not the accent: at this size the accent does not
+   clear 4.5:1 on the light sheet, and they are a count rather
+   than a route.
+   ============================================================ */
+
+.takeaways {
+  inline-size: min(var(--lm-spread), 100% - var(--lm-gut) * 2);
+  margin: clamp(3.5rem, 9vw, 6rem) auto 0;
+  padding-block-start: clamp(1.5rem, 3.5vw, 2.5rem);
+  border-block-start: 1px solid var(--lm-line);
+}
+
+.winList {
+  display: grid;
+  gap: clamp(1.1rem, 2.5vw, 1.75rem) clamp(1.75rem, 4vw, 3rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: win;
+}
+
+.win {
+  counter-increment: win;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.75em;
+  align-items: baseline;
+}
+
+.win::before {
+  content: counter(win);
+  font-family: var(--lm-mono);
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  color: var(--lm-quiet);
+}
+
+.winLead {
+  padding-block-end: clamp(1.1rem, 2.5vw, 1.75rem);
+  border-block-end: 1px solid var(--lm-firm);
+  font-family: var(--lm-serif);
+  font-size: clamp(1.35rem, 3.1vw, 2.05rem);
+  line-height: 1.28;
+  letter-spacing: -0.005em;
+  text-wrap: pretty;
+}
+
+.winLead::before {
+  font-size: 0.5em;
+}
+
+.winLead > span {
+  display: block;
+  inline-size: min(var(--lm-measure), 100%);
+}
+
+.winRest {
+  font-size: calc(var(--lm-body) * 0.95);
+  line-height: 1.52;
+}
+
+@media (min-width: 56rem) {
+  .winList {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .winLead {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ============================================================
+   10. Recall — the checkpoint.
+
+   A full-window band opening on the last of the four course
+   rules, with its content on the spread so its left edge is the
+   h1's to the pixel. No fill and no tint: the rule and the air
+   are what make it a break in the feature rather than more of it.
+
+   Nothing here is counted. There is no score, no total, no
+   percentage, no badge and no celebration — the point is that the
+   reader has to retrieve the answer, not that anyone finds out
+   whether they could.
+   ============================================================ */
+
+.recall {
+  margin-block: clamp(3.5rem, 9vw, 6rem);
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+  border-block-start: var(--lm-stroke) solid var(--lm-course);
+  border-block-end: 1px solid var(--lm-line);
+}
+
+.qList {
+  display: grid;
+  gap: clamp(2.25rem, 5.5vw, 3.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: q;
+}
+
+.q {
+  counter-increment: q;
+  inline-size: min(calc(var(--lm-measure) * 1.05), 100%);
+}
+
+.qText {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.8em;
+  align-items: baseline;
+  margin: 0 0 clamp(0.9rem, 2vw, 1.25rem);
+  font-family: var(--lm-serif);
+  font-size: clamp(1.2rem, 2.4vw, 1.5rem);
+  line-height: 1.26;
+  text-wrap: pretty;
+}
+
+.qText::before {
+  content: counter(q);
+  font-family: var(--lm-mono);
+  font-size: 0.62em;
+  font-variant-numeric: tabular-nums;
+  color: var(--lm-quiet);
+}
+
+/* An answer is a row on a ruled list, not a box. The options are
+   bracketed by two hairlines and divided by hairlines — the same
+   construction as .deeperList further down, and as the ruled bands
+   in the prose above — so the recall band is built out of the page's
+   own three materials and nothing else. No border on the sides, no
+   radius, no fill, so there is no enclosed shape anywhere on it. */
+.options {
+  display: grid;
+  border-block-start: 1px solid var(--lm-rule);
+}
+
+.option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 1.1em;
+  align-items: baseline;
+  inline-size: 100%;
+  margin: 0;
+  padding: 0.75em 0;
+  text-align: start;
+  font: inherit;
+  font-size: calc(var(--lm-body) * 0.95);
+  line-height: 1.45;
+  color: var(--lm-line);
+  background: none;
+  border: 0;
+  border-block-end: 1px solid var(--lm-rule);
+  border-radius: 0;
+  cursor: pointer;
+  transition: color 140ms var(--lm-ease), border-color 140ms var(--lm-ease);
+}
+
+/* Flush with the left edge everything else on the page hangs off.
+   The reversed cell below pays for its own padding with an equal
+   negative margin, so answering a question never shifts the column. */
+.optKey {
+  font-family: var(--lm-mono);
+  font-size: 0.86em;
+  color: var(--lm-quiet);
+}
+
+/* The verdict, in three weights and no hue at all — this page has
+   no red and no green, and a right answer that is only a colour
+   is a right answer half the readers cannot see. The answer's key
+   letter is reversed out, the way the index sheet reverses a
+   cell; the reader's wrong pick drops to the plate's own
+   struck-out grey; the options nobody touched go quiet. And every
+   one of the three also prints, or does not print, a word. */
+.right {
+  border-block-end-color: var(--lm-line);
+  cursor: default;
+  font-weight: 600;
+}
+
+.right .optKey {
+  background: var(--lm-line);
+  color: var(--lm-sheet);
+  padding: 0.15em 0.4em;
+  margin: 0 -0.4em;
+  font-weight: 400;
+}
+
+/* The option the reader picked, when it was not the answer. Its
+   text stays at full strength: it is the thing they chose and the
+   thing they now have to re-read, and --lm-edge is 3.16:1 on the
+   light sheet, which is a boundary colour and not a text one. So
+   the marking is the border, the word, and nothing else. */
+.wrong {
+  border-block-end-color: var(--lm-edge);
+  cursor: default;
+}
+
+.wrong .optKey {
+  color: var(--lm-quiet);
+}
+
+.muted {
+  color: var(--lm-quiet);
+  cursor: default;
+}
+
+.verdict {
+  font-size: var(--lm-label);
+  font-weight: 600;
+  letter-spacing: var(--lm-track);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.right .verdict {
+  color: var(--lm-line);
+}
+
+.wrong .verdict {
+  color: var(--lm-quiet);
+}
+
+@media (max-width: 30rem) {
+  .option {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .verdict {
+    grid-column: 2;
+    grid-row: 2;
+    margin-block-start: 0.45em;
+  }
+}
+
+/* The page's only hover block, and every hover rule on the page is
+   in it. Gated on a fine pointer because mobile Safari and Chrome
+   on Android both synthesise hover on the first tap, and a hover
+   state that eats a tap is a bug this section has already paid for
+   once — see "Arguments already had" in app/learn/DESIGN.md. The
+   focus rule is in section 1, written separately and outside every
+   hover query, so it is never conditional on a pointer.
+
+   Only an option that can still be answered reacts: once the
+   question is locked, hovering does nothing, because nothing will
+   happen if it is clicked. */
+@media (hover: hover) and (pointer: fine) {
+  .option:not(.right):not(.wrong):not(.muted):hover {
+    border-block-end-color: var(--lm-line);
+  }
+
+  .option:not(.right):not(.wrong):not(.muted):hover .optKey {
+    color: var(--lm-line);
+  }
+
+  .prose a:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .kickerLink:hover {
+    border-block-end-color: var(--lm-line);
+  }
+
+  .deeperLink:hover .deeperLabel {
+    text-decoration-thickness: 2px;
+  }
+
+  .pagerLink:hover .pagerTitle {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: var(--lm-spark);
+    text-underline-offset: 0.18em;
+  }
+}
+
+/* Kept in the DOM from the first render, empty, so the live region
+   exists before it has anything to announce — a region added at
+   the same moment as its text is not announced by most screen
+   readers. Empty it collapses; it is never display:none, which
+   would take it back out of the accessibility tree. */
+.explain {
+  margin: 0;
+  font-size: calc(var(--lm-body) * 0.92);
+  line-height: 1.52;
+  color: var(--lm-quiet);
+}
+
+.explainOn {
+  margin-block-start: clamp(0.9rem, 2vw, 1.25rem);
+  padding-inline-start: 1em;
+  border-inline-start: 1px solid var(--lm-firm);
+  animation: rise 420ms var(--lm-ease) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================
+   11. Go deeper
+   ============================================================ */
+
+.deeper {
+  inline-size: min(var(--lm-spread), 100% - var(--lm-gut) * 2);
+  margin-inline: auto;
+}
+
+.deeperList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  inline-size: min(calc(var(--lm-measure) * 1.05), 100%);
+  border-block-start: 1px solid var(--lm-rule);
+}
+
+.deeperLink {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1.25em;
+  align-items: baseline;
+  padding-block: 0.85em;
+  border-block-end: 1px solid var(--lm-rule);
+  color: inherit;
+  text-decoration: none;
+}
+
+.deeperLabel {
+  font-size: calc(var(--lm-body) * 0.98);
+  line-height: 1.4;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--lm-spark);
+  text-underline-offset: 0.18em;
+}
+
+/* The address the link already carries, set as a figure — mono,
+   quiet, the way the index sheet sets everything that is a fact
+   rather than a sentence. */
+.deeperHost {
+  font-family: var(--lm-mono);
+  font-size: 0.8125rem;
+  color: var(--lm-quiet);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   12. The course continuing. Position in words, never a track:
+   the previous lesson and the next one, named, and a printed
+   sentence where there is neither.
+   ============================================================ */
+
+.pager {
+  inline-size: min(var(--lm-spread), 100% - var(--lm-gut) * 2);
+  margin: clamp(3.5rem, 9vw, 6rem) auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.pagerLink {
+  display: grid;
+  gap: 0.45em;
+  padding-block: clamp(1.1rem, 2.5vw, 1.6rem);
+  border-block-start: 1px solid var(--lm-firm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.pagerLabel {
+  font-size: var(--lm-label);
+  font-weight: 600;
+  letter-spacing: var(--lm-track);
+  text-transform: uppercase;
+  color: var(--lm-quiet);
+}
+
+.pagerTitle {
+  font-family: var(--lm-serif);
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+  line-height: 1.18;
+  text-wrap: pretty;
+}
+
+@media (min-width: 48rem) {
+  .pager {
+    grid-template-columns: 1fr 1fr;
+    column-gap: clamp(1.75rem, 4vw, 3rem);
+  }
+
+  .pagerNext {
+    text-align: end;
+  }
+}
+
+/* ============================================================
+   13. Motion is one authored moment — an answered question's
+   explanation arriving. Under a reduced-motion preference it is
+   simply already there.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

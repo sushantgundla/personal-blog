@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { CSSProperties, ReactNode } from 'react'
 import type { KeyBox } from './KeyPlan'
-import type { ZoneDoor } from './parts'
+import type { PartDoor } from './parts'
 
 /* Re-exported so a per-course file has one place to import its contract
    from, rather than reaching past this module into ./KeyPlan. */
@@ -60,14 +60,14 @@ import s from './sheet.module.css'
  * Every bay is also a door, into the first lesson of the part it draws —
  * the same thing FIG. 1's five parts do, one level down. `Bay` below owns
  * the link and the accessible name, so no drawing writes an href or a
- * label; both come off disk through `zoneDoor()` in parts.ts. Because there
+ * label; both come off disk through `partDoor()` in parts.ts. Because there
  * are now real links inside the picture, none of the five SVGs may be
  * `aria-hidden`: each is `role="presentation"`, which says nothing itself
  * and hides nothing inside it, and every mark, numeral and label in it is
  * hidden instead — by `Bay`, `Callout` and `Spark` here, and by
  * `aria-hidden` on the spine group in each drawing.
  *
- * Bays are keyed by position, not by a number written here: `k.zone(0)` is
+ * Bays are keyed by position, not by a number written here: `k.part(0)` is
  * whatever number the course's first part carries on disk. So renaming or
  * renumbering a part in course.json moves the ring with it, and a course
  * that grows a fifth part gets a fifth schedule column with no ring and the
@@ -101,17 +101,17 @@ import s from './sheet.module.css'
 
 /** Ties a bay and its callout to the part the course actually has there. */
 export interface BayKey {
-  /** The `data-zone` for the i-th part, or undefined if there is no i-th part. */
-  zone: (index: number) => string | undefined
+  /** The `data-part` for the i-th part, or undefined if there is no i-th part. */
+  part: (index: number) => string | undefined
   /** The numeral in that part's callout ring. */
   num: (index: number) => string | undefined
   /**
    * Where the i-th bay leads, or undefined when it leads nowhere: no i-th
    * part, or a part with no lessons filed under it yet. Built by
-   * `zoneDoor()` in parts.ts and passed in, so no drawing ever writes an
+   * `partDoor()` in parts.ts and passed in, so no drawing ever writes an
    * href or an accessible name of its own.
    */
-  door: (index: number) => ZoneDoor | undefined
+  door: (index: number) => PartDoor | undefined
 }
 
 /** One course's detail. */
@@ -153,7 +153,7 @@ export interface Detail {
  *     lives in localStorage.
  *   - The reveal needs no help. Unlike the plate, section 8 of
  *     sheet.module.css correlates on `:focus-within` rather than
- *     `:focus-visible`, and a bay already carries `data-zone` — so an
+ *     `:focus-visible`, and a bay already carries `data-part` — so an
  *     anchor focused inside it lights the bay and its schedule column
  *     without the anchor having to repeat the attribute. The hover half of
  *     that reveal is scoped to a real pointer, because a touch browser
@@ -165,13 +165,13 @@ export interface Detail {
  *     announce itself by reading every label inside it out loud.
  *
  * A bay whose part has no lessons yet is drawn and not clickable — see
- * zoneDoor(). A part past the last bay of the drawing has no bay at all,
+ * partDoor(). A part past the last bay of the drawing has no bay at all,
  * and the schedule says "Not on the detail" for it instead.
  */
 export function Bay({ k, i, children }: { k: BayKey; i: number; children: ReactNode }) {
-  const zone = k.zone(i)
+  const part = k.part(i)
 
-  if (zone === undefined) {
+  if (part === undefined) {
     return (
       <g className={s.spine} aria-hidden="true">
         {children}
@@ -183,14 +183,14 @@ export function Bay({ k, i, children }: { k: BayKey; i: number; children: ReactN
 
   if (!door) {
     return (
-      <g className={s.bay} data-zone={zone} aria-hidden="true">
+      <g className={s.bay} data-part={part} aria-hidden="true">
         {children}
       </g>
     )
   }
 
   return (
-    <g className={s.bay} data-zone={zone}>
+    <g className={s.bay} data-part={part}>
       <Link className={s.door} href={door.href} aria-label={door.label}>
         <g aria-hidden="true">{children}</g>
       </Link>
@@ -226,11 +226,11 @@ export function Callout({
   lead: string
   dot: [number, number]
 }) {
-  const zone = k.zone(i)
-  if (zone === undefined) return null
+  const part = k.part(i)
+  if (part === undefined) return null
 
   return (
-    <g className={s.callout} data-zone={zone} aria-hidden="true">
+    <g className={s.callout} data-part={part} aria-hidden="true">
       <path className={s.lead} d={lead} />
       <circle className={s.dot} cx={dot[0]} cy={dot[1]} r={3.5} />
       <circle className={s.ring} cx={cx} cy={cy} r={17} />
