@@ -50,6 +50,16 @@ Build it like this.
 
 **This part is manual.** You can have a model draft candidates - point it at a chunk and ask what question this passage answers - and that is a reasonable way to get to a first draft fast. But if you ship the labels unchecked, you are measuring your retriever against another model's opinion, and any systematic mistake in that opinion becomes invisible to you forever. Read them. It is a day.
 
+<Flow
+  caption="Building the eval set, in order. A model can shortcut the drafting, but nothing shortcuts the last step - skip it and you are measuring against a model's opinion instead of the truth."
+  steps={[
+    { label: 'Fifty real queries', note: "Support tickets, search logs, chat history - not ones invented at a desk" },
+    { label: 'Chunk ids for each', note: 'Search the corpus and write down what should answer it, including the ones with none' },
+    { label: 'A model drafts candidates', note: 'A reasonable way to get a first pass fast' },
+    { label: 'A human reads every label', subject: true, note: 'The day of work with no shortcut' },
+  ]}
+/>
+
 Fifty is enough to see a real change and small enough to actually finish. Grow it later, mostly by adding queries that failed in production - a failure you have written down is a regression test.
 
 > Fifty labelled queries is a day of work. Not having them costs you that day every month, in arguments about whether the answers feel worse.
@@ -106,6 +116,17 @@ print(f"MRR      {mrr():.2f}")            # 0.56
 
 Forty lines and no dependencies. That is the whole barrier between you and knowing whether Tuesday's change helped.
 
+<Bars
+  caption="What that script actually prints, on the three queries above. Recall already reaches every right chunk by k=3, and MRR sits above 0.5 because two of the three hits land in first place."
+  axis="Score on the three-query example above, 0 to 1"
+  max={1}
+  bars={[
+    { label: 'recall@1', value: 0.33 },
+    { label: 'recall@3', value: 1.00, subject: true },
+    { label: 'MRR', value: 0.56 },
+  ]}
+/>
+
 ### Which k
 
 Measure at the k you actually send to the model, and at the k your first stage returns.
@@ -117,6 +138,20 @@ Measure at the k you actually send to the model, and at the k your first stage r
 | recall@1 | How often you nail it outright - a useful vanity check, not a target |
 
 The gap between those first two numbers is your reranker's opportunity. If recall@50 is 0.94 and recall@5 is 0.71, there are twenty-three questions in a hundred where the answer is in the candidate pile and not in the prompt. That gap is exactly what *Reranking* is for.
+
+<Dial
+  caption="Recall@k is three different numbers depending on which k you mean. Drag from the vanity check at k=1 up to the candidate count your first stage returns, and watch what the number is actually telling you change."
+  name="k"
+  min={1}
+  max={50}
+  step={1}
+  start={5}
+  bands={[
+    { at: 1, label: 'recall@1', outcome: 'How often you nail it outright - a useful vanity check, not a target.' },
+    { at: 5, label: 'What you paste in', outcome: 'Your real ceiling on answer quality, at the k you actually send the model.' },
+    { at: 50, label: 'Rerank candidates', outcome: 'Whether the reranker has the answer to find, at your first-stage candidate count.' },
+  ]}
+/>
 
 ## 3. Test the halves separately
 

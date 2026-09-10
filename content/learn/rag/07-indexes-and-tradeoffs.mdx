@@ -61,6 +61,17 @@ Even after you index, keep exact search available on a sample. It is your ground
 
 **HNSW** — hierarchical navigable small world — builds a graph. Each vector becomes a node connected to some of its near neighbours, in layers: a sparse top layer for long jumps across the space, denser layers below for local refinement. A search enters at the top, greedily walks towards the query, drops a layer, walks again, and finishes with a careful local search at the bottom. Think of it as travelling by motorway, then A-road, then street.
 
+<Flow
+  caption="The walk through the graph, layer by layer. The sparse top layer covers long distances cheaply; the walk drops a layer and repeats until the dense bottom layer, where the candidates actually get found."
+  steps={[
+    { label: 'Enter at the top layer', note: 'Sparse — built for long jumps across the space' },
+    { label: 'Walk toward the query', note: 'Greedy: each hop lands closer than the last' },
+    { label: 'Drop a layer', note: 'Denser, more local neighbours to check' },
+    { label: 'Finish with a local search', note: 'The bottom layer, where the candidates are found', subject: true },
+  ]}
+  back={{ from: 3, to: 2, label: 'One layer at a time, until the bottom' }}
+/>
+
 It is the default in most vector stores because it is fast and its recall is high. Its costs are memory — the graph edges are stored alongside the vectors — and build time.
 
 | Knob | When | What it does | Raise it and you get |
@@ -71,6 +82,21 @@ It is the default in most vector stores because it is fast and its recall is hig
 
 `ef_search` is the one to know. It is per query, so you can tune it live, expose it per endpoint, and raise it for a slow accurate path while keeping it low for a fast one. `ef_search` must be at least your `k`, and raising it well above `k` is the standard fix for disappointing recall. Note that `M` and `ef_construction` are baked in at build time — changing them means rebuilding the index.
 
+<Dial
+  caption="The same five values the recall sweep below walks through — 10, 40, 100, 200, 400. Drag it up and each region trades a little more latency for a little more recall, with the gains shrinking as you go."
+  name="ef_search"
+  min={10}
+  max={400}
+  step={10}
+  start={40}
+  bands={[
+    { at: 10, label: 'Narrow', outcome: 'The candidate list closes before it reaches many of the true neighbours — fast, but recall suffers.' },
+    { at: 40, label: 'Common default', outcome: 'Enough width for a small k. Once k grows, this stops being enough.' },
+    { at: 100, label: 'Wide', outcome: 'Recall keeps climbing, and this is roughly where the gains start to taper.' },
+    { at: 200, label: 'Past the elbow', outcome: 'Extra width buys smaller and smaller amounts of recall for a real cost in latency.' },
+  ]}
+/>
+
 **IVF** — inverted file — partitions instead. Cluster all the vectors into `nlist` buckets, remember each bucket's centre, and at query time compare the query to the centres, pick the closest `nprobe` buckets and search only inside those.
 
 | Knob | When | What it does |
@@ -79,6 +105,19 @@ It is the default in most vector stores because it is fast and its recall is hig
 | `nprobe` | Query | How many buckets to actually search. This is IVF's `ef_search`. |
 
 IVF's characteristic failure is a query that lands near a bucket boundary: its true nearest neighbour sits in the bucket next door, which you did not search. Raising `nprobe` fixes it at the cost of speed. IVF also has to be **trained** — the clusters are learned from a sample of your vectors, so an index built on an empty or unrepresentative table will have bad buckets, and heavy inserts after training degrade it until you rebuild.
+
+<Flow
+  caption="One query against IVF's buckets. Raising nprobe checks more of them and lowers the odds of missing a neighbour that landed just over a boundary, at the cost of a slower query."
+  steps={[
+    { label: 'Compare query to centroids', note: 'One comparison per bucket, not per vector' },
+    { label: 'Pick the closest nprobe buckets', note: 'Only these get searched' },
+    {
+      label: 'Search inside them',
+      subject: true,
+      branch: ['Neighbour was in a picked bucket — found', 'Neighbour was one bucket over — missed'],
+    },
+  ]}
+/>
 
 | | HNSW | IVF |
 |---|---|---|
@@ -123,6 +162,21 @@ for ef in (10, 40, 100, 200, 400):
 ```
 
 Run that once and the shape of the curve tells you everything. Recall climbs steeply at first, then flattens; latency climbs steadily and does not flatten. You want the elbow — the point past which you are paying real milliseconds for a fraction of a percent.
+
+<Plot
+  caption="Where the same five ef_search values from the sweep above might land: recall rises fast at first and then bends, while latency keeps climbing in a straight line. These positions are an illustration of the shape, not a measurement — run the script to find your own elbow."
+  xAxis="Latency"
+  xEnds={['Fast', 'Slow']}
+  yAxis="Recall@10"
+  yEnds={['Low', 'High']}
+  points={[
+    { label: 'ef_search=10', x: 8, y: 25 },
+    { label: 'ef_search=40', x: 22, y: 60 },
+    { label: 'ef_search=100', x: 42, y: 82, subject: true },
+    { label: 'ef_search=200', x: 65, y: 90 },
+    { label: 'ef_search=400', x: 92, y: 94 },
+  ]}
+/>
 
 A few things the numbers will teach you:
 

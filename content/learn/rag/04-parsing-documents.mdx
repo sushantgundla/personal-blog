@@ -46,6 +46,8 @@ Open any PDF library, call its default text extraction function, and it will han
 
 On a single column of plain prose, the inference is trivial and every extractor gets it right. On anything else, it starts failing in specific, predictable ways.
 
+<Figure bare caption="Five ways a naive extractor gets fooled, and one cause behind all of them: it follows the order glyphs were drawn on the page, never the order a person would read them in.">
+
 | What the document has | What a naive extractor produces | Why |
 |---|---|---|
 | Two or more columns | Text interleaved mid-sentence between columns | Extraction follows drawing order, not reading order |
@@ -53,6 +55,8 @@ On a single column of plain prose, the inference is trivial and every extractor 
 | A repeated header or footer | The same fragment injected into the middle of paragraphs, once per page | The extractor cannot tell a page furniture element from body text |
 | A scanned page | Nothing, or a handful of stray characters | There is no text layer at all - only pixels |
 | A slide or an infographic | Fragments in an order that matches nothing | Layout carries the meaning; text alone does not |
+
+</Figure>
 
 None of these are edge cases if your corpus is real-world documents. Contracts have footers. Financial reports have tables on every page. Support tickets get exported with screenshots. If your source documents are clean single-column text you can skip most of this lesson - but check that assumption before you assume it.
 
@@ -79,11 +83,80 @@ There is no single parser that is always right, because the documents are not al
 
 Most real pipelines end up using more than one tier: OCR to get text off a scan, then a layout-aware pass on the result, and a vision model reserved for the pages that still come out wrong. Measure which pages fail before deciding you need the expensive tier everywhere.
 
+<Steps
+  caption="One scanned page, carried through the tiers most real pipelines actually chain together. Watch the same three fields change at each step - that is the difference the extra tiers buy."
+  steps={[
+    {
+      label: 'Scan arrives',
+      title: 'No text layer',
+      body: 'Only pixels reach the pipeline. A plain extractor has nothing to extract.',
+      facts: [
+        { label: 'has text?', value: 'no' },
+        { label: 'reading order', value: 'n/a' },
+        { label: 'table structure', value: 'none' },
+      ],
+    },
+    {
+      label: 'OCR runs',
+      title: 'Pixels become text',
+      body: 'OCR reads the pixels and produces text, but it still does not know a table from a paragraph.',
+      facts: [
+        { label: 'has text?', value: 'yes, raw' },
+        { label: 'reading order', value: 'not yet restored' },
+        { label: 'table structure', value: 'still flat' },
+      ],
+    },
+    {
+      label: 'Layout-aware pass',
+      title: 'Reading order restored',
+      body: 'A layout-aware parser detects the blocks in the OCR output and reconstructs reading order across columns.',
+      facts: [
+        { label: 'has text?', value: 'yes' },
+        { label: 'reading order', value: 'restored' },
+        { label: 'table structure', value: 'still flat' },
+      ],
+    },
+    {
+      label: 'Vision model',
+      title: 'Reserved for what still comes out wrong',
+      body: 'The pages the parser still gets wrong - merged cells, scattered form fields - go to a model that reads layout and text together.',
+      facts: [
+        { label: 'has text?', value: 'yes' },
+        { label: 'reading order', value: 'restored' },
+        { label: 'table structure', value: 'kept, headers intact' },
+      ],
+    },
+  ]}
+/>
+
 ## 3. Tables, and knowing when parsing is the problem
 
 Tables deserve their own paragraph because flattening one is the single most damaging thing a naive parser does. A paragraph that loses its formatting is still mostly readable. A table that loses its grid produces a run of numbers that looks exactly as confident as real data and means nothing - a chunk saying "14 30 90 250 500" with no header row is worse than no chunk at all, because it will retrieve, get pasted into a prompt, and get summarised as if it were true.
 
 The fix is not clever: convert every table to markdown or JSON before it reaches the chunker, so each value stays attached to its row and column label. A layout-aware parser or a vision model can both produce this directly; a plain text extractor cannot, which is exactly why tables are where the cheap tier fails first.
+
+<Compare caption="The same five digits from the flattened chunk above, with and without a grid around them. The numbers do not change - only whether a reader can say which is which.">
+  <Panel label="Naive" title="What the flattened chunk holds">
+
+`14 30 90 250 500`
+
+Five numbers with no row or column to tell them apart. Retrieved on its own, this means nothing.
+
+  </Panel>
+  <Panel label="What to do" title="The same numbers, kept as a table">
+
+| Row | Value |
+|---|---|
+| 1 | 14 |
+| 2 | 30 |
+| 3 | 90 |
+| 4 | 250 |
+| 5 | 500 |
+
+Converted to markdown before the chunker ever sees it, so each value keeps its row and column label.
+
+  </Panel>
+</Compare>
 
 ```python
 import base64

@@ -88,6 +88,24 @@ else:
 
 Read the two comments on the terminations. One is the model saying it is done. One is you saying it is done whether or not the model agrees. Both belong in every real loop, and *Planning a run, and knowing when to stop* is about the awkward fact that only the second one is dependable.
 
+<Flow
+  caption="The whole machine. Nothing in it runs itself: the model emits a request, your process executes it, and the loop exits on whichever termination comes first."
+  steps={[
+    { label: 'Your messages', note: 'Plus the tool definitions, on every single request' },
+    { label: 'The model', note: 'Stateless. Reads everything you send' },
+    {
+      label: 'stop_reason',
+      subject: true,
+      branch: [
+        'tool_use — the model wants a tool',
+        'anything else — the model decided it is finished',
+      ],
+    },
+    { label: 'Your executor', note: 'Your code runs the real function and returns a tool_result' },
+  ]}
+  back={{ from: 4, to: 1, label: 'Round again, until the step budget runs out' }}
+/>
+
 That is the whole machine. No planner object, no state machine, no memory system. Those are things people bolt on afterwards, and each of them is worth understanding on its own — which is what the rest of this course is.
 
 ## 2. The one test
@@ -109,11 +127,29 @@ A model making a decision does not make something an agent. Classifying a ticket
 
 The middle ground is real and underrated: a fixed pipeline with one genuinely agentic step inside it. Five steps you control, and step three is a small loop with three tools and a budget of four calls. You keep the predictable outer shape, you keep the ability to point at the step that broke, and you pay for flexibility only in the one place that needs it. Most systems that work in production look like this rather than like either extreme.
 
+<Plot
+  caption="Flexibility is bought with predictability, and the middle ground is where most systems that work in production actually sit."
+  divide
+  xAxis="Who picks the next step"
+  xEnds={['Your code', 'The model']}
+  yAxis="What you can state in advance"
+  yEnds={['A range', 'A number']}
+  points={[
+    { label: 'Prompt chaining', x: 8, y: 95 },
+    { label: 'Routing', x: 22, y: 88 },
+    { label: 'Orchestrator–workers', x: 45, y: 62 },
+    { label: 'One agentic step inside a pipeline', x: 62, y: 48, subject: true },
+    { label: 'A coding agent', x: 94, y: 12 },
+  ]}
+/>
+
 > Agent is not a compliment and not an architecture. It is the answer to one question: who picks the next step, your code or the model?
 
 ## 3. Most of what you want is a workflow
 
 Before you give the model the wheel, check whether one of these covers you. All five are workflows. All five are in production somewhere doing work people are paying for.
+
+<Figure bare caption="Five workflow patterns, all of them in production somewhere. Every one of them is a path you wrote.">
 
 | Pattern | Shape | Reach for it when |
 |---|---|---|
@@ -122,6 +158,8 @@ Before you give the model the wheel, check whether one of these covers you. All 
 | Parallelisation | Run several calls at once, then combine | Subtasks are independent, or you want a vote |
 | Orchestrator–workers | One call breaks the task into subtasks, others do them | The subtask list varies, the moves do not |
 | Evaluator–optimiser | One call produces, another critiques, repeat | You have a quality bar you can check |
+
+</Figure>
 
 Look at orchestrator–workers, because that is the one people mislabel. A model decides how many subtasks there are and what each one says. It is still a workflow: the set of things that can happen is yours, the loop runs a known shape, and you can draw it. The model is filling in a form you designed, not choosing what form to fill in.
 

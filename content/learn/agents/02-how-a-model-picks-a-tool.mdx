@@ -45,6 +45,17 @@ Function calling looks like a plugin system from the outside: you register funct
 
 Send a request with a `tools` array and the API does something plain: it builds a system prompt out of your tool definitions and prepends it to the conversation. Anthropic publishes the scaffold. It opens by telling the model it has access to a set of tools, adds formatting instructions and a note that string and scalar parameters go in as-is while lists and objects use JSON, then says *here are the functions available in JSONSchema format* and pastes your definitions in. Your own system prompt goes after that, and the tool configuration after that.
 
+<Flow
+  caption="What your `tools` array becomes before the model ever sees it. Every stage here is prompt text, assembled once per request — there is no side channel and nothing runs until the last box."
+  steps={[
+    { label: 'Your tools array', note: 'Names, descriptions, JSON Schema' },
+    { label: 'Tool scaffold + your schemas', note: 'The API pastes your definitions into a system prompt it writes' },
+    { label: 'Your own system prompt', note: 'Appended after the tool scaffold' },
+    { label: 'Tool configuration', note: 'tool_choice, appended last' },
+    { label: 'One prompt the model reads', subject: true, note: 'Everything above competes for the same attention' },
+  ]}
+/>
+
 Three consequences fall straight out of this.
 
 **Tool definitions cost input tokens, on every request.** Names, descriptions and schemas are all prompt text, plus a few hundred tokens of scaffold. The exact scaffold cost varies by model and by `tool_choice`; there is a table on the tool use overview page — look it up rather than trusting a number in a tutorial, this one included. The practical point is that a forty-tool array is a fixed tax paid on step one and again on step thirty of the same run.
@@ -70,6 +81,22 @@ Read the right-hand column when a tool call surprises you. Almost every "why did
 With the default `tool_choice` of `auto`, the model makes two decisions in order, and they fail for different reasons. First: does this turn need a tool at all? Second: which one?
 
 The first one is a judgement about whether the answer is already available. Stable knowledge, creative work and ordinary conversation get answered directly. A request that maps onto a described capability, and whose answer is not already in context, gets a tool call. That boundary is soft, which is exactly why your `get_order_status` tool sat there while the model wrote a plausible paragraph — the model treated the question as answerable from what it knew.
+
+<Flow
+  caption="The two decisions tool_choice: auto makes, in order. The first is the soft boundary that let the model answer the order-status question from general knowledge instead of calling anything."
+  steps={[
+    { label: 'A user turn arrives' },
+    {
+      label: 'Does this need a tool at all?',
+      subject: true,
+      branch: [
+        'No — answered directly from what the model already knows',
+        'Yes — maps onto a described capability, not already in context',
+      ],
+    },
+    { label: 'Which tool matches best?', note: 'Judged against your descriptions, not your code' },
+  ]}
+/>
 
 You have two ways to move that boundary, and they are not interchangeable.
 
@@ -141,5 +168,18 @@ for label, tool in [("vague", vague), ("specific", specific)]:
     called = [b.name for b in resp.content if b.type == "tool_use"]
     print(f"{label:9} stop_reason={resp.stop_reason:10} called={called or 'nothing'}")
 ```
+
+<Compare caption="The two descriptions from the script above. The schema is identical in both — the only difference the model has to go on is the sentence.">
+  <Panel label="Vague" title='"Gets order status."'>
+
+Says what comes back and nothing about when to reach for it. Facing "Where is my order?", the model has no stated trigger condition to match against, so it can answer from general knowledge instead of calling anything.
+
+  </Panel>
+  <Panel label="Specific" title="Names the trigger, and what's out of scope">
+
+Says exactly which phrasing to catch, what the result contains, and what it does not return. There is no guessing left for the model to fill in.
+
+  </Panel>
+</Compare>
 
 Run it against your own tools with your own real user phrasings. When the two rows differ, you have found the cheapest fix in this course. Next: how to write the schema underneath that description so the arguments are right the first time.

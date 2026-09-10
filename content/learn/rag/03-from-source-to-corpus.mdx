@@ -56,6 +56,16 @@ Each kind of source system fails in its own way, and the failure has nothing to 
 
 None of these problems show up in a parsing library, because parsing runs after extraction. If your retrieval quality looks bad and the corpus is missing whole documents rather than mangling the ones it has, look here first, not at chunk size.
 
+<Flow
+  caption="The pipeline this course covers, in order. Extraction is the step this lesson is about, and nothing downstream of it ever runs on a document that never got this far."
+  steps={[
+    { label: 'Source system', note: 'Wiki, helpdesk, CRM, shared drive - on its own terms' },
+    { label: 'Extraction', note: 'Getting bytes out - this lesson', subject: true },
+    { label: 'Parsing', note: 'Turning bytes into clean text - next lesson' },
+    { label: 'Chunking and embedding', note: 'One uniform step, regardless of source' },
+  ]}
+/>
+
 ## 2. Buy the connector, hand-roll only the gap
 
 Once you accept extraction as its own problem, the next question is who solves it: a connector someone else maintains, or a script you write and own.
@@ -124,6 +134,48 @@ def extract_pages(base_url: str, api_token: str, since_cursor: str | None = None
 
 Notice what the function returns: not just text, but a `content_hash` and a `source_url` alongside it. That is not incidental - it is the beginning of a schema every document needs before it is ever chunked: a stable id, a content hash, and a source url decided at the point of extraction, and it is cheapest to capture right here rather than reconstructed later from a corpus that has already forgotten where anything came from.
 
+<Steps
+  caption="The same three fields, across four calls that this function makes. Step through them and watch what a cursor and a rate limit actually do to a pagination loop."
+  steps={[
+    {
+      label: 'First call',
+      title: 'No cursor yet',
+      body: 'The first request has no cursor, so the API starts from the beginning of the page tree.',
+      facts: [
+        { label: 'cursor', value: 'None' },
+        { label: 'result', value: 'first batch of pages returned' },
+      ],
+    },
+    {
+      label: 'Second call',
+      title: 'Normal page',
+      body: 'The next_cursor from the previous batch is sent back, so this call picks up exactly where the last one left off.',
+      facts: [
+        { label: 'cursor', value: 'the next_cursor from the previous call' },
+        { label: 'result', value: 'next batch of pages returned' },
+      ],
+    },
+    {
+      label: 'Third call',
+      title: 'Rate limited',
+      body: 'The API returns 429. The loop sleeps for Retry-After and retries the same request - no page is skipped, but none is gained this round either.',
+      facts: [
+        { label: 'cursor', value: 'unchanged - same request retried' },
+        { label: 'result', value: '429, wait, then retry' },
+      ],
+    },
+    {
+      label: 'Last call',
+      title: 'No cursor returned',
+      body: 'The batch carries no next_cursor, so the loop breaks. Extraction for this run is done.',
+      facts: [
+        { label: 'cursor', value: 'no next_cursor in the response' },
+        { label: 'result', value: 'loop breaks, extraction is done' },
+      ],
+    },
+  ]}
+/>
+
 ## 3. Where the ingestion budget actually goes
 
 Teams that budget an ingestion project usually put the biggest number next to embedding, because that is the line item with a per-token price attached to it. In practice the money and the time go somewhere else.
@@ -135,6 +187,20 @@ Teams that budget an ingestion project usually put the biggest number next to em
 | Normalising formats before parsing | Moderate, one-time per source type |
 | Embedding the resulting chunks | Small, predictable, scales with corpus size |
 | Writing vectors to the store | Small, predictable |
+
+<Budget
+  caption="One illustrative split of an ingestion project's engineering time. Connectors and the auth, pagination and rate-limit handling behind them dwarf embedding and writing to the store. The figures are an illustration, not a measurement - count your own."
+  totalLabel="An ingestion project's engineering time"
+  unit="%"
+  total={100}
+  segments={[
+    { label: 'Building and maintaining connectors', value: 35, note: 'Large, ongoing', subject: true },
+    { label: 'Auth, pagination, rate limits, retries', value: 30, note: 'Large, ongoing' },
+    { label: 'Normalising formats before parsing', value: 15, note: 'Moderate, one-time per source type' },
+    { label: 'Embedding the resulting chunks', value: 12, note: 'Small, predictable, scales with corpus size' },
+    { label: 'Writing vectors to the store', value: 8, note: 'Small, predictable' },
+  ]}
+/>
 
 Embedding a chunk costs the same whether that chunk came from a PDF, a wiki page, or a support ticket - it is one uniform API call regardless of source. Extraction has none of that uniformity. Every source system has its own auth model, its own pagination scheme, its own way of telling you a record changed, and its own way of silently going quiet when something upstream shifts. That variability, not the per-token price of an embedding call, is what actually consumes an ingestion team's time.
 

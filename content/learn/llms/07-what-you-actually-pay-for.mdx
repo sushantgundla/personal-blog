@@ -72,6 +72,15 @@ Two more things worth internalising. Within one family, the small model and the 
 
 Separately from all three, there is **batch**. If the work can wait — nightly enrichment, a backfill, an eval run, bulk classification of a table — submit it as a batch job instead of thousands of live calls and take the discount. You give up an immediate answer and you give up streaming; results come back within hours. For anything that is not in front of a waiting user, that is not a real cost.
 
+<Flow
+  caption="The three levers, tried in the order they pay off. Context is pulled first because it is both the biggest saving and the one least likely to cost you anything in accuracy."
+  steps={[
+    { label: 'Shorten the context', note: 'Trim the system prompt, prune tool schemas, retrieve instead of paste', subject: true },
+    { label: 'Send it to a smaller model', note: 'Easy requests rarely need the frontier model' },
+    { label: 'Cache the repeated prefix', note: 'Cuts latency as well as cost, for a prefix that repeats' },
+  ]}
+/>
+
 ## 3. Where the money actually goes, and how to see it
 
 The intuition is nearly always wrong. People tune the clever prompt, which is four hundred tokens. The bill is elsewhere.
@@ -80,6 +89,19 @@ The intuition is nearly always wrong. People tune the clever prompt, which is fo
 - **Stuffed retrieval.** Someone set `top_k` to 20 to be safe, each chunk is 800 tokens, and now every request carries 16,000 tokens of mostly irrelevant text. It costs money and hurts accuracy simultaneously — a rare combination, and always worth hunting for.
 - **Retries and agent loops.** A call retried three times is billed four times. An agent loop without a hard step cap is an unbounded bill with a friendly interface.
 - **A fat system prompt and fat tool schemas.** Small in isolation, resent on every request, and usually not cached because nobody thought to.
+
+<Scale
+  caption="Three of the four culprits above, placed on a log rule by roughly how many tokens each one adds to a single request. The jump from a short message to a stuffed retrieval is on the order of a thousand times, before a single price is even applied. The figures are an illustration, not a measurement — count your own."
+  unit="tokens"
+  fromLabel="A short message"
+  toLabel="A stuffed request"
+  marks={[
+    { at: 40, label: 'A short user message' },
+    { at: 1200, label: 'A fat system prompt' },
+    { at: 9000, label: 'Resent conversation history' },
+    { at: 62000, label: 'A stuffed retrieval', subject: true },
+  ]}
+/>
 
 > Almost nobody's bill is their prompt. It is the history they resend and the documents they stuff.
 
@@ -111,5 +133,24 @@ def ask(feature: str, prompt: str, model: str = "claude-sonnet-5") -> str:
     )
     return resp.content[0].text
 ```
+
+<Anatomy
+  caption="The one line every request logs. feature is the field worth marking — group by it once and the call costing ten times what you assumed finds itself."
+  label="One log line"
+  parts={[
+    { text: 'llm feature=' },
+    { text: '%s', name: 'feature', note: 'What you group cost by', subject: true },
+    { text: ' model=' },
+    { text: '%s', name: 'model' },
+    { text: ' in=' },
+    { text: '%d', name: 'input tokens' },
+    { text: ' out=' },
+    { text: '%d', name: 'output tokens' },
+    { text: ' cost=' },
+    { text: '%.5f', name: 'cost, computed from the usage object' },
+    { text: ' secs=' },
+    { text: '%.2f', name: 'latency' },
+  ]}
+/>
 
 The important argument is `feature`. Tag every call with the thing that made it, and the first time you group that log by feature you will find one costing ten times what you assumed. It is nearly always one of the same two culprits: a chat history nobody trims, or a retrieval step that quietly grew.

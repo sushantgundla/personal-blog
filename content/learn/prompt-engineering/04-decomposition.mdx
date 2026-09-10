@@ -52,6 +52,20 @@ A prompt doing five things fails at the hardest one and hands you a single outpu
 
 There is an arithmetic version of the same problem. Five steps at 95% each is about 77% end to end, if the errors are independent. Be careful with that number — real errors are correlated, so it is a direction, not a measurement. What is reliable is the shape of it: accuracy multiplies down, and a fused prompt hides which factor is dragging.
 
+<Bars
+  caption="End-to-end accuracy as more independently-95%-accurate steps are chained. The shape — accuracy multiplying down — is what to trust; real errors are usually correlated, so this is an illustration to reason from, not a number to quote. Measure your own chain."
+  unit="%"
+  max={100}
+  axis="If every step is independently 95% accurate and the errors don't correlate"
+  bars={[
+    { label: '1 step', value: 95 },
+    { label: '2 steps', value: 90 },
+    { label: '3 steps', value: 86 },
+    { label: '4 steps', value: 81 },
+    { label: '5 steps', value: 77, subject: true },
+  ]}
+/>
+
 There is an attention version too. Your instructions for step 5 sit a long way from the data step 1 needs, and every sub-task competes with the others for the model's limited willingness to follow instructions. The hardest job loses that competition, every time.
 
 ## 2. The chain: extract, then classify, then write
@@ -63,6 +77,19 @@ The shape that works most often is boring: pull out facts, decide something, pro
 | 1. Extract | The raw email | JSON: `order_id`, `purchase_date`, `product`, `problem` | Schema validation, plus does `order_id` exist in the database |
 | 2. Decide | The extracted fields | One of `refund`, `replace`, `decline`, `needs_human` | An enum, plus a fixed set of policy test cases |
 | 3. Write | The decision plus the customer's own words | The reply text | Length, tone, and no facts absent from step 1 |
+
+<Flow
+  caption="The three-step chain, drawn as a pipeline rather than a table. Decide is the only node with more than one exit, and each of its four outcomes is a separate downstream path — exactly the branching a single fused prompt hides from you."
+  steps={[
+    { label: 'Extract', note: 'Raw email in, a JSON object of facts out' },
+    {
+      label: 'Decide',
+      subject: true,
+      branch: ['refund', 'replace', 'decline', 'needs_human'],
+    },
+    { label: 'Write', note: "The decision plus the customer's own words in, reply text out" },
+  ]}
+/>
 
 Look at step 2 for a second. Once it is on its own, with a JSON input and a four-value output, an obvious question appears: does this need a model at all? Refund policy is usually a handful of rules about dates and amounts, and rules are cheaper, faster and exactly repeatable in code. You could not see that while it was buried in the middle of a paragraph. **Splitting shows you which parts were never LLM work.**
 
@@ -123,6 +150,19 @@ The last one is the one people underestimate. The customer wrote "third time thi
 The last cell is not a joke. Decomposition is a debugging tool, not a virtue. A single prompt that passes its tests does not need splitting because it looks monolithic.
 
 **Routing** is decomposition's cousin, and often the better first cut. Instead of one prompt with five conditional branches inside it, make one cheap classification call, then dispatch to whichever specialised prompt matches. A tiny `max_tokens=5` classifier costs almost nothing, and every downstream prompt stays short, focused and independently testable. Adding a sixth category means writing a sixth prompt, not editing the one prompt that all five other categories depend on.
+
+<Compare caption="The same five categories, handled two ways. Routing keeps every prompt short, and a sixth category becomes a new file rather than a new branch inside an old one.">
+  <Panel label="Naive" title="One prompt, five branches inside it">
+
+Every category's instructions live in the same call, so a fix to one branch risks the other four, and the prompt keeps growing as categories are added.
+
+  </Panel>
+  <Panel label="What to do" title="Classify, then dispatch">
+
+A tiny classification call names the category. A short prompt built for exactly that category runs alone, and stays short, focused and independently testable.
+
+  </Panel>
+</Compare>
 
 Two things to get right when routing: give the classifier an explicit fallback category — `other`, going to a generic handler or a human — so it never has to force a bad fit; and log the routing decision, because "which branch did this take" is the first question you will ask when something goes wrong.
 

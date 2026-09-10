@@ -56,6 +56,17 @@ The test is simple: six months from now, someone pastes a cited id into a search
 
 Store the id with the chunk at index time, alongside the metadata from *Metadata and filtering*, and carry it through retrieval and reranking untouched. It should be the same string in your index, your prompt, your logs and your UI.
 
+<Flow
+  caption="The same id, unchanged, from the moment a chunk is indexed to the moment someone reads the answer - which is what makes it traceable at all."
+  steps={[
+    { label: 'Assigned at index time', note: 'Stored with the chunk and its metadata' },
+    { label: 'Retrieval and reranking', note: 'Carried through untouched' },
+    { label: 'Placed in the prompt', note: 'Next to the passage, in square brackets' },
+    { label: 'Cited in the answer', subject: true },
+    { label: 'Logs and UI', note: 'Same string - findable months later' },
+  ]}
+/>
+
 The format in the prompt only needs to be unambiguous and easy to parse:
 
 ```
@@ -77,6 +88,21 @@ Three instructions do most of the work, and the third is the one people leave ou
 **After each claim, cite the id it came from, and quote the words you used.** The quote is what makes verification possible. Without it you can check that the id exists; with it you can check that the id supports the claim.
 
 **If the passages do not answer the question, say exactly that and stop.** This is the important one. A model with no permitted way to fail will not fail - it will produce something. Naming the failure output, and giving it exact words to use, converts confident invention into a signal you can count and alert on.
+
+<Flow
+  caption="The instruction as a decision, not a hope: the model is given exactly two allowed outcomes, and one of them is admitting the passages do not say it."
+  steps={[
+    { label: 'Read the passages', note: 'The only source of truth allowed' },
+    {
+      label: 'Does an answer exist there?',
+      subject: true,
+      branch: [
+        'Yes - cite the id, quote the exact words used',
+        'No - say exactly: "The documents provided do not answer this."',
+      ],
+    },
+  ]}
+/>
 
 Be specific about the failure case rather than gesturing at it:
 
@@ -121,6 +147,52 @@ for quote, chunk_id in re.findall(r'"([^"]+)"\s*\[([^\]]+)\]', answer):
 ```
 
 Normalising whitespace and case before comparing matters, because models reflow text. If your corpus has heavy formatting you may want to strip punctuation too, or fall back to a fuzzy ratio - but keep the threshold high, or you are back to guessing.
+
+<Steps
+  caption="Four responses run through the same check. Only the last one, where the id was really in the prompt and the quoted words are really inside that chunk, is one you can ship without a person reading it first."
+  steps={[
+    {
+      label: 'Unknown id',
+      title: 'Cited id was never in the prompt',
+      body: 'The model cites a chunk that was never sent to it. There is nothing to check the quote against - this is invention.',
+      facts: [
+        { label: 'cited', value: '[policy-99]' },
+        { label: 'found in prompt?', value: 'no' },
+        { label: 'verdict', value: 'FAIL - block the answer' },
+      ],
+    },
+    {
+      label: 'Bad quote',
+      title: 'Quote not found in the cited chunk',
+      body: 'The id is real, but the quoted words are not in policy-14 - the model paraphrased, or blended it with something else.',
+      facts: [
+        { label: 'cited', value: '[policy-14]' },
+        { label: 'quote in chunk?', value: 'no' },
+        { label: 'verdict', value: 'FAIL - block, or retry once' },
+      ],
+    },
+    {
+      label: 'No citation',
+      title: 'A claim with no citation at all',
+      body: 'A sentence makes a claim and cites nothing. The check has no id to look up, so it can neither confirm nor deny it.',
+      facts: [
+        { label: 'cited', value: 'none' },
+        { label: 'quote in chunk?', value: 'n/a' },
+        { label: 'verdict', value: 'flag in UI, or strip it' },
+      ],
+    },
+    {
+      label: 'Verified',
+      title: 'Everything checks out',
+      body: 'The id was in the prompt, and the quoted words are really inside it, whitespace and case aside.',
+      facts: [
+        { label: 'cited', value: '[policy-14]' },
+        { label: 'quote in chunk?', value: 'yes' },
+        { label: 'verdict', value: 'ship it, log the id' },
+      ],
+    },
+  ]}
+/>
 
 What to do when it fails is a product decision, not a technical one:
 

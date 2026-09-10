@@ -48,6 +48,16 @@ Names and numbers in this space go stale in months. What follows is the shape of
 
 **Dimensions.** How many floats per vector. This is the one that follows you around, because it sets storage and search cost for the life of the system. Ten million chunks at 1536 dimensions in 4-byte floats is about 60 GB of raw vectors before any index overhead; the same corpus at 384 dimensions is about 15 GB. That is the difference between fitting in memory and not.
 
+<Bars
+  caption="The same ten million chunks, at two dimension counts. Fewer dimensions is less to store and less arithmetic per comparison — the trade you are making every time you pick a smaller model."
+  unit="GB"
+  axis="Ten million chunks, 4-byte floats, raw vectors before index overhead"
+  bars={[
+    { label: '1536 dimensions', value: 60, subject: true },
+    { label: '384 dimensions', value: 15 },
+  ]}
+/>
+
 **Max input length.** The token ceiling per call. If your chunks are 800 tokens you have room almost everywhere. If you want to embed whole documents, this becomes the binding constraint, and a model that silently truncates instead of erroring will lose the back half of every long chunk without telling you.
 
 **Cost per million tokens.** Hosted embedding pricing sits in the low cents to low tens of cents per million tokens, which is one to two orders of magnitude cheaper than generation. Look it up on the vendor's pricing page before you commit — do not trust a number from a blog post, including this one. The number that surprises people is not the indexing cost, which is a one-off, but the query cost at high traffic, which is not.
@@ -97,13 +107,70 @@ for name, embed in candidates.items():        # candidates: {"model-a": fn, "mod
 
 Read the result like an engineer. If two models are within a couple of points on 30 queries, that is noise — pick the cheaper or faster one and stop thinking about it. If everything scores below about 0.6, your problem is not the model. It is your chunking, and *Chunking* is where you should be.
 
+<Flow
+  caption="The whole method, in order. The last step is a decision, not a number: recall@k only tells you when two models are close enough that price or speed should settle it."
+  steps={[
+    { label: '30 real questions', note: 'Each one labelled with the chunk id that should come back' },
+    { label: 'recall@k', note: 'The fraction of queries where the right chunk lands in the top k results' },
+    { label: 'Run it per model', note: 'Once for each candidate on the shortlist' },
+    {
+      label: 'Read the result',
+      subject: true,
+      branch: [
+        'Within a couple of points — noise; pick the cheaper or faster model',
+        'Below about 0.6 — the problem is your chunking, not the model',
+      ],
+    },
+  ]}
+/>
+
 > Model choice is a shortlist from the leaderboard and a decision from your own data. Anyone who picked purely from a leaderboard has not measured their system.
 
 ## 3. The costs you are signing up for
 
 **Dimensions are a lever, not a fixed cost.** Some models are trained with **Matryoshka representation learning**, which pushes most of the signal into the leading dimensions. That means you can keep the first 512 of a 1536-dimension vector, renormalise it, and still have a usable embedding — a third of the storage for a small, measurable quality drop. Measure the drop on your labelled set with the same `recall_at_k` above. If losing a point of recall saves you two thirds of a large index, that is often the right trade. Truncating a model **not** trained this way just breaks it, so check the model card first.
 
+<Dial
+  caption="One knob, on a model actually trained for it: how many leading dimensions of the vector you keep. The middle band is the trade this lesson names — a third of the storage for a small, measured quality drop."
+  name="dimensions kept"
+  min={128}
+  max={1536}
+  step={64}
+  start={1536}
+  unit="of 1536"
+  bands={[
+    {
+      at: 128,
+      label: 'Heavily truncated',
+      outcome: 'Well below where most Matryoshka models were tuned. Treat any number here as unmeasured until you run it against your own labelled queries.',
+    },
+    {
+      at: 512,
+      label: 'A third kept back',
+      outcome: 'Cut to 512 of 1536 and renormalise: a third of the storage for a small, measured quality drop — if the model was actually trained this way.',
+    },
+    {
+      at: 1536,
+      label: 'Full vector',
+      outcome: 'No truncation. Full quality and full storage — the baseline until you have measured a cut worth making.',
+    },
+  ]}
+/>
+
 **Changing the model is a migration.** This is the constraint that catches teams six months in. Vectors from different models are not comparable, so switching means re-embedding every chunk and rebuilding every index. On a large corpus that is hours of compute, a real bill, and a window where old and new vectors must not mix. Plan for it the way you plan a schema change: version the model name in your chunk records, build the new index alongside the old one, cut over reads atomically, then drop the old one. If you cannot name which model produced a given vector in your database, you cannot do that safely — so store it.
+
+<Compare caption="The same switch, planned two ways. Only one of them lets you cut over without a window where you cannot tell which vectors came from which model.">
+  <Panel label="Naive" title="No version on the vector">
+
+Nothing in the chunk record says which model produced it. The day you switch, every stored vector is stale and there is no safe way to tell old from new.
+
+  </Panel>
+  <Panel label="What to do" title="Version the model name">
+
+Store the model name on every chunk record. Build the new index alongside the old one, cut reads over atomically, then drop the old index.
+
+  </Panel>
+</Compare>
 
 **Prefixes and modes.** Many retrieval models want to know whether the text is a query or a document, either through an `input_type` parameter or a literal prefix string you prepend. The rules are per-model and they are in the model card.
 

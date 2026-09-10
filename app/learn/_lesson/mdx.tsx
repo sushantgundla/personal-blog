@@ -1,5 +1,18 @@
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
+import {
+  Anatomy,
+  Bars,
+  Budget,
+  Compare,
+  Dial,
+  Figure,
+  Flow,
+  Panel,
+  Plot,
+  Scale,
+  Steps,
+} from '../_figures'
 import s from './lesson.module.css'
 
 /**
@@ -16,8 +29,18 @@ import s from './lesson.module.css'
  *   blockquote  a pull quote, bracketed by two hairlines
  *
  * Everything else is styled from .prose in lesson.module.css and
- * needs no markup of its own. All of it is server-rendered, from
- * app/learn/[course]/[lesson]/page.tsx.
+ * needs no markup of its own.
+ *
+ * On top of those four, the map carries the figure kit from
+ * app/learn/_figures/, so a lesson body writes <Flow>, <Budget> and
+ * the rest by name with no import line. The manual for them is
+ * app/learn/_figures/README.md; that is what a lesson author reads,
+ * not the source.
+ *
+ * All of it is server-rendered from app/learn/[course]/[lesson]/
+ * page.tsx except <Dial> and <Steps>, which are the two figures a
+ * reader operates. A lesson carrying neither still ships no
+ * JavaScript of its own.
  */
 
 /** Matches a heading that opens with its section number: "3. Context windows". */
@@ -145,4 +168,17 @@ export const lessonComponents = {
   table: Table,
   blockquote: Quote,
   a: Anchor,
+
+  // The figure kit. See app/learn/_figures/README.md.
+  Figure,
+  Flow,
+  Budget,
+  Bars,
+  Scale,
+  Plot,
+  Compare,
+  Panel,
+  Anatomy,
+  Dial,
+  Steps,
 }

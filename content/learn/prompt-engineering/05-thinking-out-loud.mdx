@@ -50,6 +50,19 @@ Two consequences fall out immediately, and both are practical.
 
 **The reasoning has to come before the answer.** Ask for the answer and then the explanation, and the answer token is generated with no working available, exactly as if you had never asked. Worse, everything after it is written to fit a conclusion already in the context. You get a justification, not reasoning. This ordering bug is common and it silently removes the whole benefit.
 
+<Compare caption="The same instruction, reordered. Only one order gives the model anything to compute with — flip it, and the model has already committed to the answer before it writes a single justifying word.">
+  <Panel label="Answer first" title="Explain after the answer">
+
+The answer token is generated with no working available — exactly as if reasoning had never been asked for. Everything written afterward is shaped to fit a conclusion already fixed in the context.
+
+  </Panel>
+  <Panel label="Reasoning first" title="Answer after the working">
+
+Each written step lands in the context before the next one is written, so the model is actually computing across them. The answer token is the one thing in the whole exchange that gets to lean on real working.
+
+  </Panel>
+</Compare>
+
 **More tokens is the point.** "Take your time" and "be careful" produce no additional tokens, so they produce no additional computation — which is why *Why prompts fail* puts them in the do-nothing pile. "List the constraints one per line, then answer" produces tokens. That is the difference between the two phrasings, and it is the only difference that matters.
 
 One honest caveat before you build on this. The written reasoning is not a reliable account of how the answer was produced. Turpin et al. (2023) showed models giving fluent step-by-step explanations that did not mention the feature actually driving the answer. So the working is genuinely extra computation, and genuinely useful for debugging, but it is not evidence.
@@ -57,6 +70,8 @@ One honest caveat before you build on this. The written reasoning is not a relia
 > The written reasoning is extra computation, not a confession. Do not use it as an audit trail.
 
 ## 2. Where it pays, and where it is waste
+
+<Figure bare caption="Seven tasks sorted by whether the extra tokens buy anything: derivation and rule-checking earn their cost, extraction and formatting only pay for latency.">
 
 | Task | Worth it? | Why |
 |---|---|---|
@@ -68,9 +83,22 @@ One honest caveat before you build on this. The written reasoning is not a relia
 | Formatting, rewriting, translation | No | Mechanical work; the answer is a transformation, not a conclusion |
 | Anything with a one-word answer and no ambiguity | No | Pure latency, paid on every call |
 
+</Figure>
+
 A quick test that gets it right most of the time: **if you could do the task yourself without writing anything down, the model probably can too.**
 
 Now the cost, plainly. Reasoning tokens are output tokens. Output tokens are the expensive ones, and they are produced one at a time, so they dominate latency — the LLMs course explains why in *What you actually pay for*. A 300-token derivation in front of a five-token answer means roughly sixty times the output of the answer alone, in both money and wall-clock time. In a nightly batch job that is irrelevant. In something a user is watching, it is the whole experience.
+
+<Scale
+  caption="The same two numbers from the paragraph above, drawn to scale — the reasoning is not a rounding error next to the answer it wraps around. The figures are an illustration, not a measurement — count your own."
+  unit="tokens"
+  fromLabel="A one-word answer"
+  toLabel="A worked derivation"
+  marks={[
+    { at: 5, label: 'The answer alone' },
+    { at: 300, label: 'With the reasoning first', subject: true },
+  ]}
+/>
 
 And the honest note this area badly needs: **"chain-of-thought helps" is a statement about populations of tasks, not about yours.** The published gains are on reasoning benchmarks. On your classification, with your prompt and your data, it may do nothing at all, or it may help on one input class and hurt on another. Run it against a fixed test set both ways before you ship it — *Versioning and testing prompts*, at the end of this course, covers how to build that set. This is one of the few prompting decisions that is cheap to measure and expensive to guess at.
 
@@ -109,6 +137,22 @@ print(working)    # goes to your logs
 Note what the system prompt asks for: rule, then fact, then conclusion. Not "think about it". Naming the steps is the difference between reasoning that helps and three sentences of throat-clearing that cost the same.
 
 Keep the working in your logs. It is the best debugging artefact this whole course offers — even though it is not a faithful trace, it shows which rule the model latched onto, and that is usually enough to find the ambiguity in your policy.
+
+<Flow
+  caption="What happens to the response after the call returns: the tag is the seam between what the model reasoned and what the user ever sees."
+  steps={[
+    { label: 'One request', note: 'The system prompt asks for <scratch> tags first, then one word' },
+    { label: 'The model replies', note: 'Rule, then fact, then conclusion — before the one-word answer' },
+    {
+      label: 'Split on the tag',
+      subject: true,
+      branch: [
+        'The answer — shown to the user',
+        'The working — kept in your logs',
+      ],
+    },
+  ]}
+/>
 
 **Reasoning models.** Most current models do this internally, and on the newest ones it is on by default: they reason, and the API returns the thinking separately from the answer. Where that is available, use it instead of hand-rolling tags. You get the separation for free, the model was trained to do this working well, and you are not spending your own prompt on scaffolding.
 

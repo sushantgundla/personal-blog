@@ -60,6 +60,8 @@ Once you have several independent answers, the question is how to turn them into
 
 **Open prose doesn't vote at all.** Five calls asking for a one-paragraph summary give you five different, individually reasonable paragraphs. There's no meaningful "majority" paragraph to extract — you'd need a second model call just to judge which of the five is best, which is a different technique (LLM-as-judge) belonging to a different course, not a vote.
 
+<Figure bare caption="Retries and voting side by side, attribute for attribute. They don't compete — one reacts to a failure, the other reacts to a success you don't trust — which is why a system can carry both.">
+
 | | *Retries and fallbacks* | Voting (this lesson) |
 |---|---|---|
 | Triggered by | A validation failure or an error response | No failure — a plausible answer you don't trust |
@@ -68,7 +70,22 @@ Once you have several independent answers, the question is how to turn them into
 | Cost shape | Extra latency, bounded attempts (cap at 2 repairs) | N× the tokens, but not N× the wall-clock time |
 | Fixes | Malformed or invalid output | A wrong answer that would have passed every check |
 
+</Figure>
+
 **Ties need a rule you set in advance.** A clean 3-2 split has a winner. A 2-2-1 split across three labels does not, and treating the first-arrived answer as the tiebreaker throws away exactly the signal a split vote is giving you — that the input is genuinely ambiguous. Escalate ties to a stronger model, or queue them for a human, the same fallback-ladder instinct from *Retries and fallbacks*. Never resolve a tie by coin flip; you'd be manufacturing false confidence on the cases you most need to flag.
+
+<Flow
+  caption="The shape of vote(), below: calls run in parallel, not in sequence, and the tally ends in exactly one of two places — a mode, or an escalation. Nothing in this path is a retry."
+  steps={[
+    { label: 'N parallel calls', note: 'Same prompt, independent draws' },
+    { label: 'Tally the labels', note: 'Only closed answers — a mode needs something comparable' },
+    {
+      label: 'Top count shared by more than one label?',
+      subject: true,
+      branch: ['No — take the mode', 'Yes — a genuine tie, escalate'],
+    },
+  ]}
+/>
 
 ```python
 import anthropic
@@ -104,6 +121,30 @@ print(label, tally)
 ```
 
 The `ThreadPoolExecutor` is doing the real work here — five calls fired at once, not five calls in a row. That's the whole latency argument from the table above made concrete.
+
+<Steps
+  caption="Two runs of vote() from the code above, worked with example urgency labels — the figures are an illustration, not a measurement of any real ticket. Watch the winner field: the same tally logic returns a label in one case and nothing at all in the other."
+  steps={[
+    {
+      label: '3-2 split',
+      title: 'A clean majority',
+      body: "One label is ahead of every other. counts.most_common(1) returns it outright.",
+      facts: [
+        { label: 'votes', value: 'high, high, high, medium, medium' },
+        { label: 'winner', value: '"high"' },
+      ],
+    },
+    {
+      label: '2-2-1 split',
+      title: 'A genuine tie',
+      body: 'Two labels share the top count. The function returns None on purpose — a split this even is a signal, not something to break with a coin flip.',
+      facts: [
+        { label: 'votes', value: 'high, high, medium, medium, low' },
+        { label: 'winner', value: 'None — escalate' },
+      ],
+    },
+  ]}
+/>
 
 ## 3. What it costs, and when it's worth it
 

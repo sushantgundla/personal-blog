@@ -48,6 +48,31 @@ Send it `Write a haiku about rain` and a very plausible continuation is `Write a
 
 You steer a base model by shaping the prefix so that the thing you want *is* the natural continuation. To translate, you do not ask for a translation — you write `English: the cat is asleep` followed by `French: le chat dort`, then a second `English:` line with your real sentence and a bare `French:` at the end, and let it complete the pattern.
 
+<Anatomy
+  caption="The whole steering trick in one literal: a single worked example teaches the shape, and the bare French: at the end is not an instruction — it is a blank the model fills in because that is what usually follows the pattern above it."
+  label="A prefix, not a prompt"
+  parts={[
+    {
+      text: 'English: the cat is asleep\nFrench: le chat dort\n',
+      name: 'The worked example',
+      note: 'Shows the pattern once, so there is something to imitate',
+    },
+    { text: 'English: ' },
+    {
+      text: 'where is the nearest station',
+      name: 'The real question',
+      note: "The model has no idea this is your actual question — it is just more prefix",
+    },
+    { text: '\n' },
+    {
+      text: 'French:',
+      name: 'The bare trigger',
+      note: 'Nothing follows it yet. Completing exactly this shape is the whole interface',
+      subject: true,
+    },
+  ]}
+/>
+
 That works. It is also the entire interface, and it is why nobody builds a product this way any more.
 
 Where you meet base models:
@@ -64,6 +89,16 @@ Take the base model and run it through post-training and you get the thing every
 
 Two stages do the work. **Supervised fine-tuning** shows it thousands of written examples of a request and a good answer, so continuing the text and doing what was asked start to coincide. Then **preference tuning** shows it pairs of candidate answers with a judgement about which is better, and pushes the weights toward the preferred one. That second stage goes by several names — RLHF (reinforcement learning from human feedback) with human raters and a separate reward model, DPO (direct preference optimization) which reaches the same place without the reward model, or AI-feedback methods where a model applies a written set of rules instead of a human rating every pair.
 
+<Flow
+  caption="The two stages that turn a base model into the thing everyone calls a model. RLHF, DPO and AI-feedback methods disagree on the mechanics, but every route runs through the same two jobs: teach it to answer, then teach it which answer is better."
+  steps={[
+    { label: 'A base model', note: 'Continues whatever text it is given' },
+    { label: 'Supervised fine-tuning', note: 'Thousands of examples pairing a request with a good answer' },
+    { label: 'Preference tuning', note: 'RLHF, DPO, or AI feedback — ranked pairs push the weights toward the preferred answer', subject: true },
+    { label: 'An instruct model', note: 'Follows an instruction instead of merely continuing it' },
+  ]}
+/>
+
 The mechanics differ. The result is the same shape:
 
 | What post-training adds | What it costs you |
@@ -79,6 +114,16 @@ This is the default, and it is what a doc means when it says *the model* with no
 ## 3. A reasoning model buys accuracy with tokens
 
 Same machinery again, post-trained to do something specific: generate a long run of intermediate working before it commits to an answer. Providers call this **extended thinking** or **reasoning tokens**. The working is often hidden from you or returned only as a summary, but it is generated one token at a time exactly like any other output — so you pay for it at the output rate, and it takes up room in the context window.
+
+<Budget
+  caption="Where the output budget goes on one reasoning call. The hidden working is usually the majority of it, billed and counted against the window whether or not the provider ever shows it to you. The figures are an illustration, not a measurement — count your own."
+  totalLabel="One reasoning call's output tokens"
+  unit="tokens"
+  segments={[
+    { label: 'Reasoning tokens', value: 3400, note: 'The hidden working, billed as output', subject: true },
+    { label: 'The answer', value: 400, note: 'What you actually asked for' },
+  ]}
+/>
 
 What that buys, and only this: problems where getting step three wrong ruins the answer, and where checking your own work partway through helps. Multi-step maths. Competitive-programming-shaped code. Planning against several constraints that interact. Debugging from indirect evidence. Careful analysis where a document has rules that qualify each other.
 
@@ -108,6 +153,42 @@ That is a better default, and for the reason the budget was always awkward. A la
 The other half of the change is an inversion worth expecting. On the current frontier models thinking is **on unless you turn it off**, so the question is no longer *is this worth switching on* but *is this cheap enough to leave on*. For a classifier running a million times a day, it usually is not.
 
 So the working rule: start with thinking off and the lowest effort your task tolerates. Find the requests that fail. Turn thinking back on for those, raise effort one step at a time, and confirm on a test set that it actually did.
+
+<Steps
+  caption="The working rule, one setting at a time. Click through: cost and latency only go up when a step earns it, and the last step is kept only once a test set shows it actually changed the answer."
+  steps={[
+    {
+      label: 'Thinking off',
+      title: 'The default to start from',
+      body: 'No reasoning tokens generated. Cheapest and fastest, and the right setting until you have evidence it is not enough.',
+      facts: [
+        { label: 'thinking', value: 'disabled' },
+        { label: 'extra output tokens', value: 'none' },
+        { label: 'extra latency', value: 'none' },
+      ],
+    },
+    {
+      label: 'Low effort',
+      title: 'Turned back on for the failures',
+      body: 'The model decides for itself whether the request needs working through, and how far to take it.',
+      facts: [
+        { label: 'thinking', value: 'adaptive' },
+        { label: 'output_config.effort', value: 'low' },
+        { label: 'extra output tokens', value: 'some' },
+      ],
+    },
+    {
+      label: 'High effort',
+      title: 'Raised one step at a time',
+      body: 'Reserved for the genuinely hard requests, and only kept there once a test set shows it actually changes the answer.',
+      facts: [
+        { label: 'thinking', value: 'adaptive' },
+        { label: 'output_config.effort', value: 'high' },
+        { label: 'extra output tokens', value: 'often several times the plain answer' },
+      ],
+    },
+  ]}
+/>
 
 ```python
 from anthropic import Anthropic

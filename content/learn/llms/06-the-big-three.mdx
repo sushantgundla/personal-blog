@@ -55,6 +55,19 @@ The middle two are convenience layers and they cost something. New models and ne
 
 In a company, the deciding factor is often none of the above. It is which vendor is already through legal.
 
+<Plot
+  caption="Where each route sits between the two things that trade off against each other. The provider's own API is fastest to a new feature and ticks none of a procurement checklist by itself; a cloud marketplace is the other way round."
+  xAxis="How soon a new feature shows up"
+  xEnds={['Lags behind', 'First']}
+  yAxis="How much of your procurement checklist it ticks by itself"
+  yEnds={['None of it', 'Most of it']}
+  points={[
+    { label: "The provider's own API", x: 95, y: 10, subject: true },
+    { label: 'A cloud marketplace', x: 30, y: 90 },
+    { label: 'An aggregator', x: 55, y: 25 },
+  ]}
+/>
+
 ## 2. What genuinely differs when you write the code
 
 Here is the honest split.
@@ -76,6 +89,19 @@ Here is the honest split.
 - The engineering problems. Hallucination, prompt injection, evaluation, cost control, latency. You solve all of them the same way regardless of the logo.
 - The top of the capability range. The frontier models trade places release to release, and the gap between the best and third-best on a general task is usually smaller than the gap between your first prompt and your fifth.
 
+<Compare caption="The same split, sorted into two boxes: what actually forces a rewrite when you switch vendors, and what stays true underneath whichever one you call.">
+  <Panel label="Costs real work" title="Shape, safety, and the contract">
+
+Message formats, where the system prompt lives, how a tool call comes back, where the refusal line sits, and what the vendor's data contract allows — none of it maps cleanly from one to the next.
+
+  </Panel>
+  <Panel label="Stays the same" title="The loop, and the problems on top of it">
+
+Stateless calls, billed per token, with a capped output — and the same hallucination, injection, cost and latency work waiting on the other side, regardless of which of the three answers.
+
+  </Panel>
+</Compare>
+
 That last point is worth being blunt about: **any architecture that only works because one specific model is currently ahead has a shelf life measured in months.**
 
 ## 3. Lock-in, and the thin layer that removes it
@@ -89,6 +115,16 @@ The fix is small and boring. One module. One function. Your own type coming out.
 - **What the adapter owns:** building the request, placing the system prompt, translating tool schemas, normalising the streaming events, retries and fallback, and logging usage and cost.
 - **What comes out:** your own small result object — text, token counts, stop reason, tool calls. Never the provider's response object.
 - **What the adapter must not become:** a universal abstraction over every feature of every provider. Support the features you use. When you need something that exists on only one provider, expose it deliberately and name it for what it is, rather than pretending it is generic.
+
+<Flow
+  caption="The adapter's whole job in one shape: everything that knows which vendor it is talking to lives in the one box in the middle, and what leaves it on the right is a type you defined, not the provider's."
+  steps={[
+    { label: 'Your call site', note: 'A system prompt and a list of messages, in your own shape' },
+    { label: 'The adapter', note: 'Builds the request, places the system prompt, translates the tool schema, normalises streaming, retries and logs', subject: true },
+    { label: 'The provider SDK', note: 'The only place in the codebase that imports it' },
+    { label: 'Your own result object', note: "Text, token counts, stop reason — never the provider's response object" },
+  ]}
+/>
 
 > The lock-in is never the model. It is the two hundred places your code imports one provider's SDK.
 

@@ -1,0 +1,1297 @@
+/* ============================================================
+   THE FIGURE KIT — one stylesheet for every figure in a lesson
+
+   A lesson is a printed spread and its figures are drawings on
+   that spread: hairlines, ink and type. Nothing here invents a
+   colour. Every value resolves to a --lm-* token declared on
+   .page in app/learn/_lesson/lesson.module.css, which copies the
+   plate's palette value for value in both themes — so no rule in
+   this file knows whether it is in dark or light, and a figure
+   changes mode when the sheet does, for free.
+
+   WHY ALMOST NONE OF THIS IS AN SVG
+   The two drawings in this section (_plate, _sheet) letter inside
+   the picture, and both pay for it: a viewBox is fixed and the
+   type inside it scales with the rendered width, so FIG. 2 is not
+   drawn at all below 62rem because its annotation would letter at
+   about five pixels. The plate's own answer is to author the
+   drawing twice, wide and narrow, by hand.
+
+   A lesson figure cannot take either deal. It has to read on a
+   375px phone and on a 2560px monitor from ONE authored source,
+   because seventy-two lesson authors are going to fill these in
+   with data and none of them is going to hand-author a narrow
+   twin. So the type in a figure is HTML type: it sets at the
+   page's own sizes at every width, it wraps, a screen reader
+   reaches it, and a long label pushes the drawing around instead
+   of overflowing it. The lines round it are CSS rules, which is
+   what every other rule on this page already is.
+
+   SVG survives in exactly one place: the arrow between two nodes
+   of a <Flow>. It carries no text, it is 48 units wide and it
+   never changes size, so none of the above applies to it — and it
+   is where the --pl-spark / pathLength idiom from
+   app/learn/_plate/plate.module.css belongs.
+
+   WHY EVERY SELECTOR BELOW IS PREFIXED .fig
+   A figure sits inside .prose, and .prose in lesson.module.css
+   styles bare elements: `.prose p`, `.prose ul`, `.prose li`,
+   `.prose ul > li::before` — the em rule in front of every bullet
+   — all at one class plus one or two types. A single class in
+   this file loses to every one of them. Prefixing .fig puts each
+   rule at two classes, which wins outright, and it is why no
+   figure grows an em rule in front of its legend rows.
+
+   Two consequences, both deliberate. Every list inside a figure
+   is an <ol>, never a <ul>, because <ul> is the one .prose paints
+   a bullet on. And no <p> is used inside a figure at all: a label
+   row is a <div>, so `.prose p`'s bottom margin never lands on
+   one. The exception is <Panel>, whose contents ARE markdown
+   prose and are meant to keep the page's own list and paragraph
+   treatment.
+
+   WHAT CARRIES DIFFERENCE, SINCE COLOUR DOES NOT
+   Categorical colour is banned in this section: five bars are not
+   five hues. Difference is weight, position, hatching and the
+   label. --lm-spark marks the ONE thing that is the subject of
+   the figure right now and nothing else in it is ever warm.
+
+   The hatch is a repeating-linear-gradient, which is the same
+   thing .drawing in plate.module.css already uses to rule its
+   paper. It is a texture, never a fill of colour: every band of
+   it is --lm-line on nothing.
+
+   THE RULE HIERARCHY, the lesson's own, unchanged
+     1px --lm-line   a block of the figure ends here
+     1px --lm-firm   an object's edge
+     1px --lm-rule   a row inside an object
+   Plus --lm-stroke in --lm-course, which a figure never draws:
+   the four course bands are the page's and a figure is not one.
+
+   THE CAPTION NUMBER
+   .fig increments a CSS counter and .capN prints it. There is no
+   counter-reset anywhere, deliberately: a counter that is never
+   reset is instantiated on the root element at zero, so the first
+   figure in the document is 1 and they run in document order.
+   One lesson is one document, figures only ever appear in a
+   lesson body, so an author never writes FIG. 3 and never has to
+   renumber after inserting one.
+
+   BANS KEPT: no shadow, no gradient as colour, no blur, no tinted
+   panel, no card, no radius above 2px, no scroll reveal, and no
+   transit / track / journey metaphor of any kind.
+   ============================================================ */
+
+/* ============================================================
+   1. The frame every figure shares
+   ============================================================ */
+
+/* figure.fig, not .fig: .prose > * in lesson.module.css pins a
+   direct child of the body to the reading measure at (0,1,0), and
+   a figure takes the whole spread. One element in the selector
+   outranks it without touching that file. */
+figure.fig {
+  counter-increment: lmfig;
+  inline-size: 100%;
+  margin: clamp(2.25rem, 5.5vw, 3.5rem) 0;
+}
+
+/* The drawing itself, bracketed the way a code block and a table
+   already are on this page: two hairlines, no box, no fill. */
+.fig .plate {
+  padding-block: clamp(1.25rem, 3vw, 2rem);
+  border-block: 1px solid var(--lm-firm);
+}
+
+/* A figure that is only a caption on somebody else's block —
+   <Figure> round a markdown table — brackets nothing of its own,
+   because the table already brackets itself. */
+.fig .bare {
+  padding: 0;
+  border: 0;
+}
+
+.fig .cap {
+  display: block;
+  inline-size: min(calc(var(--lm-measure) * 1.05), 100%);
+  margin-block-start: 0.9em;
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.82);
+  line-height: 1.5;
+  color: var(--lm-quiet);
+  text-wrap: pretty;
+}
+
+/* FIG. 4 —, printed by the counter. Hidden from a screen reader:
+   the caption text after it is the accessible name of the figure
+   and a number nobody can cross-reference out loud adds nothing. */
+.fig .capN {
+  font-family: var(--lm-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--lm-line);
+}
+
+.fig .capN::before {
+  content: 'FIG. ' counter(lmfig) '\2002\2014\2002';
+}
+
+/* Visually hidden, still read aloud. Every figure that encodes a
+   number carries one of these, because a bar a reader cannot see
+   is a bar with no value in it. */
+.fig .sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The page's one label system, borrowed rather than restated. */
+.fig .lab {
+  display: block;
+  margin: 0;
+  font-family: var(--lm-text);
+  font-size: var(--lm-label);
+  font-weight: 600;
+  letter-spacing: var(--lm-track);
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--lm-quiet);
+}
+
+/* Every number, every unit, every axis tick, every literal. */
+.fig .num {
+  font-family: var(--lm-mono);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--lm-line);
+  white-space: nowrap;
+}
+
+.fig .quiet {
+  color: var(--lm-quiet);
+}
+
+/* One warm mark per figure, and only ever on its subject. */
+.fig .subject {
+  color: var(--lm-spark);
+}
+
+/* Every list in the kit is an <ol> and none of them prints its
+   own marker — the numbering that matters is drawn by hand, in
+   mono, where a figure needs it. See the header for why <ul> is
+   not used at all. */
+.fig .list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--lm-rule);
+}
+
+.fig .row {
+  margin: 0;
+  padding-block: 0.5em;
+  border-block-end: 1px solid var(--lm-rule);
+}
+
+/* ============================================================
+   2. The spark — the one idiom borrowed whole from the plate
+
+   pathLength="1", so the dash arithmetic is in fractions of the
+   path and one keyframe drives paths of any length. The gap is
+   longer than the path, so exactly one spark is ever on a line
+   and the resting offset leaves none on it.
+   ============================================================ */
+
+.fig .spark {
+  --lmf-d: 0.22;
+  fill: none;
+  stroke: var(--lm-spark);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: var(--lmf-d) 2;
+  stroke-dashoffset: 1;
+  animation: lmf-run 1.8s cubic-bezier(0.33, 0, 0.3, 1) var(--lmf-delay, 0s) 1 both;
+}
+
+@keyframes lmf-run {
+  from {
+    stroke-dashoffset: calc(2 + var(--lmf-d));
+  }
+  to {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* ============================================================
+   3. <Flow> — labelled nodes joined by arrows
+
+   A row above 46rem, a column below it. The nodes are HTML boxes
+   so a long label wraps instead of colliding with the arrow; the
+   arrow is the only SVG in the kit, and it carries the spark.
+   ============================================================ */
+
+.fig .flow {
+  display: grid;
+  gap: 0;
+  grid-auto-flow: row;
+  justify-items: stretch;
+  align-items: stretch;
+}
+
+.fig .node {
+  display: grid;
+  align-content: start;
+  gap: 0.35em;
+  padding: 0.9em 1em;
+  border: 1px solid var(--lm-firm);
+  border-radius: 2px;
+  min-inline-size: 0;
+}
+
+/* The one node the figure is about. A change of rule and of
+   weight — never a fill. */
+.fig .nodeOn {
+  border-color: var(--lm-spark);
+}
+
+.fig .nodeLab {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.88);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--lm-line);
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+.fig .nodeNote {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.76);
+  line-height: 1.45;
+  color: var(--lm-quiet);
+  text-wrap: pretty;
+}
+
+/* A branch: the alternatives the request can take out of this
+   node, ruled apart inside it rather than fanned out beside it.
+   Fanning needs a second dimension the column does not have on a
+   phone, and a ruled list says the same thing at every width. */
+.fig .branch {
+  margin-block-start: 0.5em;
+}
+
+.fig .branchItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.7em;
+  align-items: baseline;
+  padding-block: 0.4em;
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.78);
+  line-height: 1.4;
+  color: var(--lm-line);
+}
+
+.fig .branchItem:last-child {
+  border-block-end: 0;
+}
+
+.fig .branchKey {
+  font-family: var(--lm-mono);
+  font-size: 0.75rem;
+  color: var(--lm-quiet);
+}
+
+/* The connector cell. It holds two arrows, one for each
+   orientation, and section 3b shows exactly one of them. */
+.fig .conn {
+  display: grid;
+  place-items: center;
+  min-inline-size: 0;
+}
+
+.fig .connH,
+.fig .connV {
+  display: block;
+  overflow: visible;
+}
+
+.fig .connH {
+  inline-size: clamp(2rem, 4vw, 3.25rem);
+  display: none;
+}
+
+.fig .connV {
+  block-size: 2.25rem;
+}
+
+.fig .rail,
+.fig .head {
+  fill: none;
+  stroke: var(--lm-firm);
+  stroke-width: 1.5;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+/* The loop back. A bracket ruled under the run it returns over —
+   three sides of a box with its label sitting on it, which is how
+   a drawing office marks a return leg. Drawn only where there is
+   a row to bracket; below 46rem the run is a column and the same
+   fact is a ruled note instead. */
+.fig .back {
+  display: none;
+  margin-block-start: 0.9rem;
+  border: 1px solid var(--lm-firm);
+  border-block-start: 0;
+  border-radius: 0 0 2px 2px;
+}
+
+.fig .backLab {
+  display: block;
+  padding: 0.55em 1em 0.7em;
+  text-align: center;
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.76);
+  line-height: 1.4;
+  color: var(--lm-quiet);
+  text-wrap: pretty;
+}
+
+.fig .backNote {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.7em;
+  align-items: baseline;
+  margin-block-start: 0.75rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--lm-rule);
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.78);
+  line-height: 1.45;
+  color: var(--lm-quiet);
+  text-wrap: pretty;
+}
+
+.fig .backGlyph {
+  font-family: var(--lm-mono);
+  color: var(--lm-line);
+}
+
+@media (min-width: 46rem) {
+  .fig .flow {
+    grid-auto-flow: column;
+    grid-template-columns: var(--lmf-cols);
+    align-items: start;
+  }
+
+  .fig .connH {
+    display: block;
+  }
+
+  .fig .connV {
+    display: none;
+  }
+
+  .fig .node,
+  .fig .conn {
+    grid-row: 1;
+  }
+
+  /* grid-column is a shorthand, and a shorthand substitutes a
+     var() whole — so `3 / 8` arrives from two inline custom
+     properties the component computes off the node indices. */
+  .fig .back {
+    display: block;
+    grid-row: 2;
+    grid-column: var(--lmf-c1) / var(--lmf-c2);
+  }
+
+  .fig .backNote {
+    display: none;
+  }
+
+  /* Six nodes or more. Five boxes across the spread is a drawing
+     and nine is a smudge, so a long run stays a column at every
+     width — and the bracket goes back to being a ruled note,
+     because there is no row left to bracket. */
+  .fig .flow[data-many='true'] {
+    grid-auto-flow: row;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fig .flow[data-many='true'] .connH {
+    display: none;
+  }
+
+  .fig .flow[data-many='true'] .connV {
+    display: block;
+  }
+
+  .fig .flow[data-many='true'] .node,
+  .fig .flow[data-many='true'] .conn {
+    grid-row: auto;
+  }
+
+  .fig .flow[data-many='true'] .back {
+    display: none;
+  }
+
+  .fig .flow[data-many='true'] .backNote {
+    display: grid;
+  }
+}
+
+/* ============================================================
+   4. <Budget> — one whole, cut into named parts
+
+   A stacked strip. The parts are told apart by hatch and by
+   label, never by hue, and the one that is the subject takes the
+   warm ink. The strip is bracketed by hairlines and divided by
+   them, so it is a ruled measure rather than a filled block.
+   ============================================================ */
+
+.fig .budget {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.fig .bar {
+  display: flex;
+  block-size: 1.75rem;
+  border: 1px solid var(--lm-firm);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.fig .seg {
+  min-inline-size: 1px;
+  border-inline-end: 1px solid var(--lm-sheet);
+}
+
+.fig .seg:last-child {
+  border-inline-end: 0;
+}
+
+/* Four textures, cycled, all of them --lm-line on nothing. The
+   repeating-linear-gradient is the same hatch .drawing already
+   rules its paper with; it is texture and not colour. */
+.fig .t0 {
+  background: var(--lm-line);
+}
+
+.fig .t1 {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--lm-line) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+.fig .t2 {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--lm-line) 0 1px,
+    transparent 1px 6px
+  );
+}
+
+.fig .t3 {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--lm-line) 0 1px,
+    transparent 1px 5px
+  );
+}
+
+/* The subject of the figure. One per bar, and nothing else warm. */
+.fig .tOn {
+  background: var(--lm-spark);
+}
+
+/* Headroom: the part of the whole that is not spent. Ruled off
+   and left empty, which is what unspent room looks like. */
+.fig .tSpare {
+  background: none;
+}
+
+/* The key. A swatch carrying the same texture as its segment, the
+   name, and the figure — the legend-cell construction the index
+   sheet already uses, one hairline between rows. */
+.fig .keyRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 0.9em;
+  align-items: baseline;
+  padding-block: 0.45em;
+}
+
+.fig .keySwatch {
+  inline-size: 1.5rem;
+  block-size: 0.55rem;
+  align-self: center;
+  border: 1px solid var(--lm-firm);
+}
+
+.fig .keyName {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.82);
+  line-height: 1.4;
+  color: var(--lm-line);
+  text-wrap: pretty;
+}
+
+.fig .keyNote {
+  display: block;
+  font-size: 0.92em;
+  color: var(--lm-quiet);
+}
+
+.fig .total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 1.5em;
+  justify-content: space-between;
+}
+
+/* ============================================================
+   5. <Bars> — a handful of numbers, compared
+
+   One row per item: the name, a measured rule, the figure. The
+   rule is ink at a single weight — five bars are not five hues,
+   and the one that is the point of the figure is the only warm
+   thing in it.
+   ============================================================ */
+
+.fig .barRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1em;
+  align-items: baseline;
+  padding-block: 0.6em;
+}
+
+.fig .barName {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.82);
+  line-height: 1.35;
+  color: var(--lm-line);
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+.fig .barNote {
+  display: block;
+  font-size: 0.9em;
+  color: var(--lm-quiet);
+}
+
+/* The measured rule itself. Its own grid row, so a long name
+   never squeezes it to nothing on a phone. */
+.fig .barTrack {
+  display: block;
+  grid-column: 1 / -1;
+  margin-block-start: 0.4em;
+  border-block-end: 1px solid var(--lm-rule);
+}
+
+.fig .barFill {
+  display: block;
+  block-size: 0.5rem;
+  min-inline-size: 1px;
+  background: var(--lm-line);
+}
+
+.fig .barOn {
+  background: var(--lm-spark);
+}
+
+/* A value that could not be drawn — no number, or a number that
+   is not on the same scale as the rest. Named, never guessed. */
+.fig .barNone {
+  display: block;
+  block-size: 0.5rem;
+  border-block-end: 1px dashed var(--lm-firm);
+}
+
+.fig .barsAxis {
+  margin-block-start: 0.55em;
+}
+
+/* ============================================================
+   6. <Scale> — magnitudes placed against each other
+
+   A number line with named ticks. Log where the span needs it,
+   which is most of the time in this subject: a context window run
+   from 4k to 1M is unreadable on a linear rule.
+
+   Everything stands ON the rule and grows upward from it, so the
+   line itself is the baseline and no label ever lands under it.
+   The top margin is the tallest a tick can be.
+   ============================================================ */
+
+.fig .scale {
+  display: grid;
+  gap: 0;
+}
+
+.fig .scaleLine {
+  position: relative;
+  block-size: 1px;
+  margin-block: 7rem 0.5rem;
+  background: var(--lm-line);
+}
+
+.fig .tick {
+  position: absolute;
+  inset-block-end: 0;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 0.25em;
+  inline-size: max-content;
+  max-inline-size: 9rem;
+}
+
+/* The stem, drawn down from the label onto the rule. Its length
+   is the whole of the staggering: a long stem puts its label in
+   the upper rank, a short one in the lower, so a crowded rule
+   reads as two ranks rather than as one collision. */
+.fig .tickStem {
+  order: 3;
+  inline-size: 1px;
+  background: var(--lm-quiet);
+}
+
+.fig .tickVal {
+  order: 1;
+}
+
+.fig .tickName {
+  order: 2;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.fig .tickHigh .tickStem {
+  block-size: 2.6rem;
+}
+
+.fig .tickLow .tickStem {
+  block-size: 0.6rem;
+}
+
+.fig .tickOn .tickStem {
+  background: var(--lm-spark);
+  inline-size: 2px;
+}
+
+.fig .tickOn .tickVal {
+  color: var(--lm-spark);
+}
+
+.fig .scaleEnds {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+/* ============================================================
+   7. <Plot> — named things placed against two named axes
+
+   The 2x2 that was asked for is this with `divide` on: the axes
+   are named, the quadrants are ruled, and the items sit where
+   they actually are rather than one per box. Below 44rem it is a
+   ruled list, for the same reason FIG. 2 is not drawn on a phone
+   — a plot whose labels cannot be read is a smudge, and a list of
+   the same facts can be read.
+   ============================================================ */
+
+.fig .plot {
+  display: none;
+}
+
+.fig .plotBox {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  border-inline-start: 1px solid var(--lm-line);
+  border-block-end: 1px solid var(--lm-line);
+}
+
+.fig .divideX,
+.fig .divideY {
+  position: absolute;
+  background: var(--lm-rule);
+}
+
+.fig .divideX {
+  inset-block: 0;
+  inset-inline-start: 50%;
+  inline-size: 1px;
+}
+
+.fig .divideY {
+  inset-inline: 0;
+  inset-block-end: 50%;
+  block-size: 1px;
+}
+
+.fig .pt {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  transform: translate(-0.25rem, 50%);
+}
+
+.fig .ptDot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  flex: none;
+  background: var(--lm-line);
+}
+
+.fig .ptOn .ptDot {
+  background: var(--lm-spark);
+}
+
+.fig .ptName {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.74);
+  line-height: 1.25;
+  color: var(--lm-line);
+  white-space: nowrap;
+}
+
+.fig .ptOn .ptName {
+  font-weight: 600;
+}
+
+/* Every axis label is horizontal, including the vertical one's:
+   no rotated text at any width, on any surface in this section.
+   So the y axis is named above the box with its high end, and its
+   low end is printed under it. */
+.fig .axisX,
+.fig .axisY {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.fig .axisX {
+  margin-block-start: 0.35em;
+}
+
+.fig .axisY {
+  margin-block-end: 0.5em;
+}
+
+.fig .axisYFoot {
+  margin-block-start: 0.35em;
+}
+
+/* The same facts, ruled, for a phone and for a screen reader on
+   any device. One node with two treatments rather than two copies
+   that can drift — the pattern a course page already uses for its
+   drawing's description. */
+.fig .plotSay {
+  display: grid;
+  gap: 0.5em;
+}
+
+.fig .plotListRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1em;
+  align-items: baseline;
+}
+
+@media (min-width: 44rem) {
+  .fig .plot {
+    display: block;
+  }
+
+  .fig .plotSay {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* ============================================================
+   8. <Compare> — two panels, split by one hairline
+
+   No fill on either side, no tint on the good one. The difference
+   is the head and the words under it, which is the same trade the
+   recall band makes between Correct and Not this.
+
+   This is the one component whose contents are markdown, so it is
+   also the one place the page's own paragraph and list treatment
+   is wanted rather than reset — the rules below only tighten the
+   sizes, and the em rule in front of a bullet survives.
+   ============================================================ */
+
+.fig .compare {
+  display: grid;
+  gap: 0;
+}
+
+.fig .panel {
+  padding-block: clamp(1rem, 2.5vw, 1.5rem);
+  border-block-start: 1px solid var(--lm-rule);
+  min-inline-size: 0;
+}
+
+.fig .panel:first-child {
+  border-block-start: 0;
+  padding-block-start: 0;
+}
+
+.fig .panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4em 0.8em;
+  margin-block-end: 0.7em;
+}
+
+.fig .panelTitle {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.9);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--lm-line);
+}
+
+.fig .panelBody {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.86);
+  line-height: 1.55;
+  color: var(--lm-line);
+}
+
+.fig .panelBody > :first-child {
+  margin-block-start: 0;
+}
+
+.fig .panelBody > :last-child {
+  margin-block-end: 0;
+}
+
+.fig .panelBody p {
+  margin: 0 0 0.8em;
+  text-wrap: pretty;
+}
+
+.fig .panelBody :is(ul, ol) {
+  margin: 0 0 0.8em;
+}
+
+@media (min-width: 46rem) {
+  .fig .compare {
+    grid-template-columns: 1fr 1fr;
+    column-gap: clamp(1.5rem, 3.5vw, 2.5rem);
+  }
+
+  .fig .panel {
+    padding-block: 0;
+    border-block-start: 0;
+  }
+
+  .fig .panel + .panel {
+    padding-inline-start: clamp(1.5rem, 3.5vw, 2.5rem);
+    border-inline-start: 1px solid var(--lm-rule);
+  }
+
+  /* Three panels rather than two, counted off the panels that are
+     actually there — <Compare> takes children, so nothing has to
+     be declared twice and kept in step. */
+  .fig .compare:has(> .panel:nth-child(3)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ============================================================
+   9. <Anatomy> — a literal, with its parts named in the margin
+
+   The prompt, the JSON, the trace: printed as it really is, with
+   the parts marked and numbered, and the numbers repeated beside
+   it. The margin is the spread's own right-hand air, the same air
+   the WHY THIS, FOR YOU label goes out into.
+   ============================================================ */
+
+.fig .anat {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.fig .anatLabel {
+  margin-block-end: 0.55em;
+}
+
+.fig .anatText {
+  margin: 0;
+  padding: clamp(0.9rem, 2.2vw, 1.25rem);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--lm-firm);
+  border-radius: 2px;
+  font-family: var(--lm-mono);
+  font-size: clamp(0.8125rem, 0.72rem + 0.28vw, 0.9375rem);
+  line-height: 1.85;
+  color: var(--lm-line);
+  tab-size: 4;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lm-edge) transparent;
+}
+
+.fig .anatText::-webkit-scrollbar {
+  height: 10px;
+}
+
+.fig .anatText::-webkit-scrollbar-track {
+  background: none;
+  border-block-start: 1px solid var(--lm-rule);
+}
+
+.fig .anatText::-webkit-scrollbar-thumb {
+  background: var(--lm-edge);
+}
+
+/* Three classes and an element, so it outranks the page-wide
+   focus ring in section 1 of lesson.module.css — a <pre> with a
+   tabIndex matches [tabindex] there, and at an offset of 3px the
+   ring would sit outside this frame instead of inside it. */
+.fig .anat .anatText:focus-visible {
+  outline: 2px solid var(--ln-mark, var(--lm-line));
+  outline-offset: -4px;
+}
+
+/* A marked part. Underlined rather than highlighted — a tinted
+   panel is a standing ban and a rule under the words does the
+   whole job. */
+.fig .anatMark {
+  border-block-end: 1px solid var(--lm-edge);
+  padding-block-end: 0.1em;
+}
+
+.fig .anatMarkOn {
+  border-block-end-color: var(--lm-spark);
+}
+
+/* The numeral riding on the marked run, and its twin in the key.
+   Not aria-hidden: it is the only thing tying the two together
+   for a reader who is listening rather than looking. */
+.fig .anatN {
+  font-size: 0.78em;
+  vertical-align: super;
+  line-height: 0;
+  padding-inline-start: 0.25em;
+  color: var(--lm-quiet);
+}
+
+.fig .anatKeyRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.9em;
+  align-items: baseline;
+}
+
+.fig .anatKeyN {
+  font-family: var(--lm-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--lm-quiet);
+}
+
+.fig .anatKeyOn .anatKeyN {
+  color: var(--lm-spark);
+}
+
+/* Above 62rem the key goes out into the margin beside the
+   literal, which is what the margin is for. Below it there is no
+   margin, so it sits underneath. */
+@media (min-width: 62rem) {
+  .fig .anat {
+    grid-template-columns: minmax(0, 1.6fr) minmax(14rem, 1fr);
+    column-gap: clamp(1.5rem, 3vw, 2.5rem);
+    align-items: start;
+  }
+}
+
+/* ============================================================
+   10. <Dial> — the reader turns the knob
+
+   A real <input type="range"> with a real <label>. The track is a
+   hairline and the thumb is a square of ink: no pill, no fill, no
+   radius. The band the value falls in is printed under it, in
+   words, so the figure says something at every position.
+   ============================================================ */
+
+.fig .dial {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.fig .dialHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4em 1.5em;
+}
+
+.fig .dialVal {
+  font-family: var(--lm-mono);
+  font-size: calc(var(--lm-body) * 1.05);
+  font-variant-numeric: tabular-nums;
+  color: var(--lm-spark);
+  white-space: nowrap;
+}
+
+.fig .dialRange {
+  inline-size: 100%;
+  block-size: 1.75rem;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.fig .dialRange::-webkit-slider-runnable-track {
+  block-size: 1px;
+  background: var(--lm-line);
+  border: 0;
+  border-radius: 0;
+}
+
+.fig .dialRange::-moz-range-track {
+  block-size: 1px;
+  background: var(--lm-line);
+  border: 0;
+  border-radius: 0;
+}
+
+/* A square of ink sliding on a ruled line. The negative top
+   margin centres it on a 1px track by hand, which is what WebKit
+   requires. */
+.fig .dialRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  margin-block-start: -0.4375rem;
+  background: var(--lm-spark);
+  border: 0;
+  border-radius: 0;
+}
+
+.fig .dialRange::-moz-range-thumb {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  background: var(--lm-spark);
+  border: 0;
+  border-radius: 0;
+}
+
+.fig .dialRange:focus-visible {
+  outline: 2px solid var(--ln-mark, var(--lm-line));
+  outline-offset: 3px;
+}
+
+/* The band boundaries, printed under the rail where they fall. */
+.fig .dialTicks {
+  position: relative;
+  block-size: 3rem;
+  margin-block-start: -0.5rem;
+}
+
+.fig .dialTick {
+  position: absolute;
+  inset-block-start: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.25em;
+  inline-size: max-content;
+  max-inline-size: 7rem;
+}
+
+.fig .dialTickStem {
+  inline-size: 1px;
+  block-size: 0.5rem;
+  background: var(--lm-firm);
+}
+
+.fig .dialTickOn .dialTickStem {
+  background: var(--lm-spark);
+}
+
+.fig .dialTickOn .lab {
+  color: var(--lm-line);
+}
+
+.fig .dialOut {
+  padding-block-start: 0.9em;
+  border-block-start: 1px solid var(--lm-rule);
+}
+
+.fig .dialOutName {
+  display: block;
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.9);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--lm-line);
+  margin-block-end: 0.35em;
+}
+
+.fig .say {
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.86);
+  line-height: 1.5;
+  color: var(--lm-line);
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   11. <Steps> — one state at a time, the reader clicking through
+
+   A ruled row of numbered buttons and one panel. No track, no
+   progress bar, no percentage: the section has none of those and
+   this is not where they come back.
+   ============================================================ */
+
+.fig .steps {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.fig .stepBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-end: 1px solid var(--lm-rule);
+}
+
+/* .prose li carries a bottom margin, and these rows are buttons on
+   a rule rather than items in a list. Two classes and a type, so
+   it outranks it. */
+.fig .stepBar li {
+  margin: 0;
+}
+
+.fig .stepBtn {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0 0 -1px;
+  padding: 0.5em 1.25em 0.5em 0;
+  font: inherit;
+  font-family: var(--lm-text);
+  font-size: calc(var(--lm-body) * 0.8);
+  line-height: 1.35;
+  text-align: start;
+  color: var(--lm-quiet);
+  background: none;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.fig .stepBtnN {
+  font-family: var(--lm-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fig .stepOn {
+  color: var(--lm-line);
+  font-weight: 600;
+  border-block-end-color: var(--lm-spark);
+  cursor: default;
+}
+
+.fig .stepPanel {
+  display: grid;
+  gap: 0.6em;
+  align-content: start;
+  min-block-size: 7rem;
+}
+
+.fig .stepTitle {
+  margin: 0;
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+  line-height: 1.2;
+  color: var(--lm-line);
+  text-wrap: pretty;
+}
+
+/* The state at this step, ruled: one fact per row. */
+.fig .stepState {
+  margin-block-start: 0.3em;
+}
+
+.fig .stepStateRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1em;
+  align-items: baseline;
+  padding-block: 0.4em;
+}
+
+/* ============================================================
+   12. Hover, and only hover, is behind a pointer query
+
+   A touch browser synthesises hover on the first tap, and this
+   section has already paid for that once — the first tap went on
+   lighting a part of FIG. 1 instead of opening the course. Every
+   focus rule above is unconditional and outside this block.
+   ============================================================ */
+
+@media (hover: hover) and (pointer: fine) {
+  .fig .stepBtn:not(.stepOn):hover {
+    color: var(--lm-line);
+    border-block-end-color: var(--lm-firm);
+  }
+}
+
+/* ============================================================
+   13. Reduced motion
+
+   The spark is REMOVED, not shortened. lesson.module.css sets
+   every animation inside .page to 0.01ms, which would fire it as
+   a one-frame flash. An interactive figure simply arrives in its
+   new state; nothing in this file transitions, so there is
+   nothing else to switch off.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .fig .spark {
+    display: none;
+  }
+}

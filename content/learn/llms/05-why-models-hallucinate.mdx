@@ -44,6 +44,22 @@ Every answer a model gives, right or wrong, comes out of the same machine: a for
 
 Refusing to answer is not a special mode sitting outside generation. It's a sequence of tokens — "I'm not certain," "I don't have reliable information on that" — and those tokens have to win the same competition every other continuation wins: highest probability, given everything the model has seen. A refusal only comes out if it happens to score higher than a specific, confident, wrong answer. Most of the time, for most models, it doesn't.
 
+<Flow
+  caption="What happens after the forward pass. A refusal is not a separate mode checked first — it is one candidate continuation, competing on probability like any other, and most of the time it doesn't win."
+  steps={[
+    { label: 'The question', note: 'Whatever the user asked' },
+    { label: 'Forward pass', note: 'Ends in a distribution over the next token' },
+    {
+      label: 'Highest-probability continuation wins',
+      subject: true,
+      branch: [
+        'A confident, specific answer',
+        'An admission of doubt — only if it scores higher',
+      ],
+    },
+  ]}
+/>
+
 Think about why. A confident wrong answer and a confident right answer are produced by the identical process — the model has learned that certain question shapes are followed by certain answer shapes, and it produces the shape. "What year was X founded" is reliably followed by a year. If the model has seen the real year during training, it produces that year. If it hasn't, or has seen conflicting years, it still produces *a* year, because the shape of the continuation — a confident four-digit number — was never conditioned on whether the model actually knew it.
 
 > A wrong answer and a right one come off the same production line. The model isn't lying and it isn't guessing in a way it could tell you about — it's doing the one thing it does, which is continue the text.
@@ -58,12 +74,16 @@ Kalai, Nachum, Vempala, and Zhang, in a 2025 OpenAI paper, gave this an actual m
 
 **Part two** is the sharper one, and it's about evaluation, not pretraining. Once a model exists, it gets graded — on benchmarks, on human preference ratings, on the metrics a lab optimizes against. Nearly all of those grading schemes work like a multiple-choice exam with no penalty for a wrong guess: a right answer scores full marks, a wrong answer and an admitted "I don't know" score the same zero. Under that scoring, guessing is never worse than abstaining, and it's sometimes better. A model — or a training process shaping a model's behavior toward higher eval scores — that has any nonzero chance of guessing right does strictly better on average by always guessing than by ever admitting doubt.
 
+<Figure bare caption="Four assumptions about what causes hallucination, set against the mechanism Kalai and colleagues describe — notice the right column never blames data quality or model size.">
+
 | What people assume causes it | What the mechanism actually is |
 |---|---|
 | The model is lying or being deceptive | There is no internal distinction, at generation time, between a fact it knows solidly and a guess |
 | It's a bug that better data will fix | Pretraining error on sparse facts is a structural floor, not a data-cleaning problem |
 | A bigger, smarter model won't do this | Model scale doesn't touch the evaluation incentive — a bigger model graded the same way still learns that guessing beats abstaining |
 | It only happens on obscure trivia | It happens on any fact the training and eval process didn't specifically reward the model for admitting doubt about |
+
+</Figure>
 
 Put the two parts together: pretraining guarantees the model will sometimes not really know a fact, and the standard evaluation regime guarantees that "not really knowing" gets rendered as a confident guess rather than a flagged uncertainty, because a confident guess is the higher-scoring move under how these systems get graded. Hallucination, on this account, isn't a glitch that slipped through testing. It's what the testing rewards.
 
@@ -95,6 +115,47 @@ print("\nDistinct answers:", len(set(answers)))
 ```
 
 Run something like this on a fact you can independently check, and you'll usually see one of two shapes: the same confident wrong number every time (the model converged hard on a bad pattern) or a different confident wrong number each time (there was nothing solid to converge on at all). Neither shape announces itself in the text. The prose reads the same either way — this is the uncorrelated-signals point from the wins list, and it's the reason you can't eyeball your way out of this.
+
+<Steps
+  caption="One way the self-consistency check above can come out — a different confident number almost every run, with nothing in the wording giving away which ones are guesses. Illustrative, not a real run: ask the actual question yourself and see which shape you get."
+  steps={[
+    {
+      label: 'Run 1',
+      title: 'First sample',
+      body: 'The model answers as confidently as it will on any of the five — nothing in the phrasing marks this one as a guess.',
+      facts: [
+        { label: 'answer', value: '"around 1,450 attendees"' },
+        { label: 'distinct answers so far', value: '1' },
+      ],
+    },
+    {
+      label: 'Run 2',
+      title: 'Second sample',
+      body: 'Same question, same prompt, a new sample from the same distribution.',
+      facts: [
+        { label: 'answer', value: '"roughly 2,100 attendees"' },
+        { label: 'distinct answers so far', value: '2' },
+      ],
+    },
+    {
+      label: 'Run 3',
+      title: 'Third sample',
+      body: 'A third number, as fluent as the first two.',
+      facts: [
+        { label: 'answer', value: '"about 1,800 people"' },
+        { label: 'distinct answers so far', value: '3' },
+      ],
+    },
+    {
+      label: 'Run 5',
+      title: 'Five runs done',
+      body: 'Three different numbers out of five tries is the shape you get when nothing in training reliably picked out one answer over another.',
+      facts: [
+        { label: 'distinct answers', value: '3 of 5' },
+      ],
+    },
+  ]}
+/>
 
 ## 3. What actually reduces it, and what doesn't
 

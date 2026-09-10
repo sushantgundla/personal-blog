@@ -73,6 +73,26 @@ This takes an afternoon if you already have the twenty cases from *Picking a mod
 6. **Check cost and p95 latency too.** A model with a lower price per token can still cost more if it is chattier, and can still miss your latency budget. Measure the bill, not the rate card.
 7. **Then ship it, gradually.** Section 3.
 
+<Flow
+  caption="The recipe is a loop, not a checklist. Diffing the failures forks into three piles, and only one of them is the actual migration."
+  steps={[
+    { label: 'Freeze the eval set', note: 'One fixed ruler — do not edit cases while comparing' },
+    { label: 'Run both models', note: 'Same inputs, same settings, only the model id differs' },
+    {
+      label: 'Diff the failures',
+      subject: true,
+      branch: [
+        'Both models fail — pre-existing, not new',
+        'Only the old one fails — free wins',
+        'Only the new one fails — this is the entire migration',
+      ],
+    },
+    { label: 'Fix the prompt', note: 'Against the new model, never by patching its output' },
+    { label: 'Ship it, gradually', note: 'Shadow traffic, then a slow ramp with a kill switch' },
+  ]}
+  back={{ from: 4, to: 2, label: 'Re-run everything — a fix for one case often breaks another' }}
+/>
+
 > Fix the prompt for the new model. Post-processing its output back into the old model's shape means you are now maintaining the quirks of a model you no longer use.
 
 One more thing that survives every migration: keep a small set of cases that check the boring plumbing, not the intelligence. Does it return valid JSON. Does it call the tool with the right argument names. Does it stay under the length limit. Those are the failures that reach users fastest, and they are the cheapest to catch.
@@ -114,10 +134,69 @@ That second return value earns its keep the first time someone reports a bad ans
 
 **Pin versions.** Use exact dated model ids, not aliases that point at the latest. An alias moves without a deploy on your side, which means your behaviour changed and your git history shows nothing. Pinning turns a surprise into a scheduled task.
 
+<Compare caption="The same defence against drift, two different mechanisms. A moving alias looks safer because you never touch it, and that is exactly why it is not.">
+  <Panel label="Fragile" title="A moving alias, like the latest pointer">
+
+The provider can move it to a new model at any time. Your behaviour changes and your git history shows nothing, because nothing in your repo changed.
+
+  </Panel>
+  <Panel label="What to do" title="An exact, dated model id">
+
+Nothing moves until you change the config value yourself. A surprise becomes a scheduled task, on your calendar, not the provider's.
+
+  </Panel>
+</Compare>
+
 **Watch the deprecation pages.** Every major provider publishes one, and they are the only reliable warning you get. Subscribe, put the retirement dates in the same calendar you use for certificate expiry, and treat them the same way — because they are the same kind of problem.
 
 **Keep a second provider warm.** Credentials that work, an adapter path that works, and a smoke test in CI that actually calls it. A fallback you have never exercised is not a fallback; it is a plan to debug authentication during an outage.
 
 **Cut over with shadow traffic.** Send a copy of real requests to the candidate model without returning its answers to anyone. Compare offline against what the live model produced, on genuinely representative inputs — the ones your eval set never thought of. Sample a small slice, 1 to 5 percent, since you pay for the copies. Then ramp: a small percentage of live traffic, watch your quality signal and error rate, increase, and keep a kill switch that puts the old model back in one config change.
+
+<Steps
+  caption="The same rollout, watched one stage at a time. Traffic share and user risk move together — the kill switch is what keeps the last stage reversible in one config change."
+  steps={[
+    {
+      label: 'Shadow',
+      title: 'A copy of real traffic',
+      body: 'The candidate answers a sampled copy of real requests. Nobody sees its output yet — you are only comparing it offline against what the live model produced.',
+      facts: [
+        { label: 'share of live traffic', value: '0%' },
+        { label: 'users who see it', value: 'none' },
+        { label: 'sample rate', value: '1 to 5%, since you pay for the copies' },
+      ],
+    },
+    {
+      label: 'Small slice',
+      title: 'A little live traffic',
+      body: 'A small percentage of real users now see what the candidate says. You watch your quality signal and error rate against that slice.',
+      facts: [
+        { label: 'share of live traffic', value: 'a small percentage' },
+        { label: 'users who see it', value: 'a sampled few' },
+        { label: 'rollback', value: 'one config change' },
+      ],
+    },
+    {
+      label: 'Ramp up',
+      title: 'The slice grows',
+      body: 'Quality signal and error rate stay acceptable, so the percentage increases. The kill switch stays live the whole time.',
+      facts: [
+        { label: 'share of live traffic', value: 'increasing' },
+        { label: 'users who see it', value: 'a growing share' },
+        { label: 'rollback', value: 'one config change' },
+      ],
+    },
+    {
+      label: 'Full cutover',
+      title: 'The new model is the default',
+      body: 'The old model is one config change away, not a deploy and an argument, for as long as that matters.',
+      facts: [
+        { label: 'share of live traffic', value: '100%' },
+        { label: 'users who see it', value: 'everyone' },
+        { label: 'rollback', value: 'one config change' },
+      ],
+    },
+  ]}
+/>
 
 That last sentence is the point of the whole lesson. If reverting takes a deploy and an argument, you will hesitate at exactly the wrong moment.

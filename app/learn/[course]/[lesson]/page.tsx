@@ -64,6 +64,16 @@ export default function LessonPage({ params }: Props) {
         source={lesson.content}
         components={lessonComponents}
         options={{
+          // next-mdx-remote 6 strips every JSX expression attribute by
+          // default — `caption="a string"` survives and `steps={[...]}`
+          // silently becomes undefined, which is how a figure ends up
+          // rendering nothing. That default is for MDX from strangers;
+          // this MDX is the owner's own files on disk, read at build
+          // time, so there is no untrusted source to defend against.
+          // blockDangerousJS stays on: it costs nothing, since a figure
+          // is given data and never calls anything.
+          blockJS: false,
+          blockDangerousJS: true,
           mdxOptions: {
             // Every lesson body uses GitHub-flavoured markdown tables,
             // which plain MDX does not parse — without this they render

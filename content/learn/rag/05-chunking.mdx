@@ -58,6 +58,42 @@ A chunk has to satisfy two requirements that fight each other.
 
 Those token ranges are starting points, not law. The right answer depends on how your documents are written and how your users ask.
 
+<Dial
+  caption="The same four rows as the table above, as one knob. There is no size that wins on both axes — moving right trades sharp matches for self-contained answers."
+  name="chunk size"
+  min={30}
+  max={1500}
+  step={10}
+  start={300}
+  unit="tokens"
+  bands={[
+    {
+      at: 30,
+      label: 'Sentence',
+      outcome: 'Sharp matches, but the answer is often split across several chunks.',
+      note: 'Suits FAQ pairs, glossary terms, product attributes.',
+    },
+    {
+      at: 150,
+      label: 'Paragraph',
+      outcome: 'Good precision, and usually self-contained enough to answer from.',
+      note: 'Suits most documentation and support content.',
+    },
+    {
+      at: 400,
+      label: 'Section',
+      outcome: 'Slightly blurrier vectors, but a high chance the answer is complete.',
+      note: 'Suits long-form prose, policies, contracts.',
+    },
+    {
+      at: 1500,
+      label: 'Page or more',
+      outcome: 'Matches everything weakly — the model must find the needle itself, and often does not.',
+      note: 'Rarely the right call.',
+    },
+  ]}
+/>
+
 ## 2. How to actually split
 
 **Fixed size with overlap** is the honest baseline. Cut every N tokens, repeat the last 10 to 15 percent of each chunk at the start of the next. It works on anything, it takes ten lines, and it will get you a working system. Its weakness is that it is blind — it will happily cut through the middle of a sentence, a table, or a function body, and a chunk that begins mid-sentence was embedded describing something it does not actually say.
@@ -65,6 +101,19 @@ Those token ranges are starting points, not law. The right answer depends on how
 **Structure-aware splitting** uses the boundaries the author already put in. Split on headings first, then paragraphs, then sentences, and only fall back to a character count when a single paragraph is somehow enormous. This almost always beats fixed size, and the reason is not subtle: a section heading is the author telling you where one topic stops and the next starts. You paid nothing for that signal, so use it.
 
 The same rule holds for other formats. Split code on function and class boundaries, not on line counts. Split markdown on headings. Split HTML on semantic blocks. Keep tables whole, because half a table is worse than no table.
+
+<Compare caption="The same document, cut two ways. Structure-aware splitting is not cleverer — it just uses a signal the fixed-size cut throws away for free.">
+  <Panel label="Fixed size" title="Cut every N tokens, blind to structure">
+
+Ten lines of code, and it works on anything. But it does not know where a sentence, a table, or a function body ends, so it will happily cut through the middle of one — and a chunk that begins mid-sentence was embedded describing something it does not actually say.
+
+  </Panel>
+  <Panel label="Structure-aware" title="Split on the boundaries the author already left">
+
+Split on headings first, then paragraphs, then sentences, falling back to a character count only when a single paragraph is somehow enormous. A heading is the author telling you where one topic stops and the next starts — a signal you paid nothing for.
+
+  </Panel>
+</Compare>
 
 **Overlap** is insurance against boundary cuts, and it is not free. Fifteen percent overlap means roughly fifteen percent more vectors, fifteen percent more storage, and a tendency to return two chunks that are mostly the same text — which wastes slots in your top-k and wastes context. If you split on structure well, you need less overlap, sometimes none. Measure it like everything else.
 
@@ -75,6 +124,24 @@ So instead of embedding the bare sentence `Requests submitted within 30 days of 
 The vector now knows this is about Acme Cloud refunds, and a query about "Acme refund window" will find it. Without the first line, that chunk is a sentence about an unnamed thing.
 
 > A chunk must carry its own context. The embedding can only encode what is in the text, so anything the reader needs from elsewhere in the document has to be copied in.
+
+<Anatomy
+  caption="The same sentence, embedded with its context restored. The header line is what turns a query for 'Acme refund window' into a hit — without it the vector has nothing to point at."
+  label="A chunk, ready to embed"
+  parts={[
+    {
+      text: 'Acme Cloud — Billing — Refunds\n',
+      name: 'The header line',
+      note: 'Physically copied in, so the vector can actually encode it',
+      subject: true,
+    },
+    {
+      text: 'Requests submitted within 30 days of purchase are honoured in full.',
+      name: 'The original sentence',
+      note: 'On its own, a sentence about an unnamed thing',
+    },
+  ]}
+/>
 
 The richer version of this idea is **contextual retrieval**: use a cheap LLM call at index time to write one or two sentences explaining where each chunk sits in its document, and prepend that instead of a bare heading. It costs a one-off generation per chunk and it measurably helps. Start with the heading — it is free — and reach for the generated version if your measurements say you need it.
 
@@ -113,6 +180,16 @@ It is not clever code and it does not need to be. The two things it does that a 
 ## 3. Small-to-big, and choosing the size by measuring
 
 The two forces in section 1 do not actually have to be resolved in one number. **Small-to-big** retrieval separates them: embed and search over small, sharp chunks, but when one wins, return its larger parent — the full section, or the chunk plus its neighbours on each side. You match with precision and you answer with context.
+
+<Flow
+  caption="Small-to-big in one pass: the search runs on the small chunk, but what gets handed to the model is its larger parent — precision at match time, context at answer time."
+  steps={[
+    { label: 'Small chunk', note: 'Embedded and searched — a sharp, single-topic vector' },
+    { label: 'Best match found', note: 'Precision comes from the small chunk' },
+    { label: 'Return its parent', note: 'The full section, or the chunk plus its neighbours', subject: true },
+    { label: 'Model reads the parent', note: 'Enough surrounding text to actually answer from' },
+  ]}
+/>
 
 | Strategy | What you embed | What the model reads | Cost |
 |---|---|---|---|

@@ -93,7 +93,48 @@ Note `vector(1024)` — the dimension is fixed in the schema. Changing embedding
 
 **Rung three: a dedicated store.** Qdrant, Weaviate, Milvus and Chroma self-hosted; Pinecone and the managed offerings from the others if you would rather not run it. You climb here for reasons you can state: tens of millions of vectors, sustained write throughput, filtering behaviour Postgres struggles with, sharding, or a team that wants the ops handled.
 
+<Steps
+  caption="The same four questions, asked at each rung. Click through and watch ops burden and getting-out cost rise together as scale rises — that trade is the whole decision."
+  steps={[
+    {
+      label: 'A numpy array',
+      title: 'Rung one',
+      body: 'Score every vector with one matrix multiply and take the top k with argsort. Exact, no service to run, and small enough to print when something looks wrong.',
+      facts: [
+        { label: 'Where it runs', value: 'In your process' },
+        { label: 'Practical scale', value: 'Up to ~10^4–10^5' },
+        { label: 'Ops burden', value: 'None' },
+        { label: 'Getting out', value: 'Trivial' },
+      ],
+    },
+    {
+      label: 'pgvector',
+      title: 'Rung two',
+      body: 'Vectors live beside your own rows in the Postgres you already run, so filters and joins are plain SQL and an update to a document and its vector share one transaction.',
+      facts: [
+        { label: 'Where it runs', value: 'Your existing Postgres' },
+        { label: 'Practical scale', value: '~10^5–10^7, with care' },
+        { label: 'Ops burden', value: 'None beyond Postgres' },
+        { label: 'Getting out', value: 'Trivial' },
+      ],
+    },
+    {
+      label: 'A dedicated store',
+      title: 'Rung three',
+      body: 'Self-hosted or managed. Climb here for tens of millions of vectors, sustained write throughput, filtering Postgres struggles with, or a team that wants the ops handled.',
+      facts: [
+        { label: 'Where it runs', value: 'A service you deploy, or someone else’s cloud' },
+        { label: 'Practical scale', value: '10^7+' },
+        { label: 'Ops burden', value: 'Real, deploy and monitor — or low, if managed' },
+        { label: 'Getting out', value: 'Export and reload' },
+      ],
+    },
+  ]}
+/>
+
 ## 3. Choosing between them, and when to move
+
+<Figure bare caption="The four rungs, one column each, on the seven questions worth asking before you climb. Ops burden and getting-out cost rise together with scale; cost shape is the row that changes most sharply between the two free rungs and the two you pay to run.">
 
 | | numpy array | pgvector | Dedicated self-hosted | Managed |
 |---|---|---|---|---|
@@ -105,6 +146,8 @@ Note `vector(1024)` — the dimension is fixed in the schema. Changing embedding
 | Debuggability | Print the array | `psql` | Its own API and dashboard | Its own dashboard |
 | Getting out | Trivial | Trivial | Export and reload | Export and reload |
 
+</Figure>
+
 Read the memory column implicitly: index structures like HNSW want your vectors in RAM. Ten million vectors at 1024 dimensions is around 40 GB of floats before index overhead, and that number — not query volume — is usually what forces a move.
 
 The signals that you have genuinely outgrown a rung are specific, and none of them are "it feels small-scale":
@@ -115,5 +158,18 @@ The signals that you have genuinely outgrown a rung are specific, and none of th
 - You need filtering that your current rung does badly — *Metadata and filtering* is where that gets specific.
 
 Whatever rung you are on, keep the interface thin. One module exposing `search(query, k, filters) -> list[Chunk]` and one exposing `upsert(chunks)`. Everything else in your codebase talks to those two functions and knows nothing about the store behind them. Then climbing a rung is one file, an afternoon, and a re-index — instead of a rewrite. This is the same discipline as putting the embedding call behind one function in *Choosing an embedding model*, and it pays off for the same reason: the parts of a retrieval system that change are the parts you should have wrapped.
+
+<Compare caption="Whether the rest of the codebase calls the store's own client or one thin interface decides what climbing a rung costs later.">
+  <Panel label="Naive" title="Call the store's client directly">
+
+Every part of the codebase that needs a nearest neighbour imports the store's SDK and knows its API. Moving from pgvector to a dedicated store means finding and rewriting every one of those call sites.
+
+  </Panel>
+  <Panel label="What to do" title="One thin search and upsert">
+
+Everything else talks to `search(query, k, filters) -> list[Chunk]` and `upsert(chunks)`, and knows nothing about what is behind them. Climbing a rung is one file, an afternoon, and a re-index.
+
+  </Panel>
+</Compare>
 
 > Adding a vector database is an optimisation. Do it when a measurement tells you to, and pick the rung that matches your corpus rather than the one that matches your ambitions.

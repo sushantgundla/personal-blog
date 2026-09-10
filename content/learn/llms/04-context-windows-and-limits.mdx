@@ -54,9 +54,52 @@ The **context window** is a token budget for a single request. Not for a convers
 | Thinking tokens | Output | Only if extended thinking is on |
 | The answer | Output | You must reserve `max_tokens` for it |
 
+<Budget
+  caption="One worked request against a 200,000-token window. The retrieved documents are the biggest slice, as they usually are, and the answer is inside the same budget as everything that was sent. The figures are an illustration, not a measurement — count your own."
+  totalLabel="A 200,000-token window"
+  unit="tokens"
+  total={200000}
+  segments={[
+    { label: 'System prompt', value: 1200, note: 'Resent on every single turn' },
+    { label: 'Tool definitions', value: 2400, note: 'Schemas get large faster than you expect' },
+    { label: 'Conversation history', value: 9000, note: 'Grows every turn, never shrinks on its own' },
+    { label: 'Retrieved documents', value: 62000, note: 'Usually the biggest slice by far', subject: true },
+    { label: 'The new user message', value: 180, note: 'Rarely the problem' },
+    { label: 'Reserved for the answer', value: 1500, note: 'max_tokens, out of the same budget' },
+    { label: 'Unspent headroom', value: 123720, spare: true },
+  ]}
+/>
+
 Frontier windows are in the hundreds of thousands of tokens, and some models offer around a million. Exact figures move with every release, so read them off the provider's model page rather than off anything written down — including this.
 
 When the total exceeds the window, the API returns an error. It does not quietly drop your oldest messages, because deciding what is safe to lose is a product decision and only you can make it. So you need a policy before a user finds the edge for you: drop old turns, summarise them into a single message, or retrieve only the parts that matter. Pick one deliberately.
+
+<Flow
+  caption="Where the limit is actually enforced. Nothing is dropped for you, so the branch on the right is a decision you make in your own code, before a user finds the edge."
+  steps={[
+    {
+      label: 'One request',
+      note: 'System prompt, tools, history, documents, the new message',
+    },
+    {
+      label: 'Add max_tokens',
+      note: 'The answer is counted out of the same budget',
+    },
+    {
+      label: 'Measured against the window',
+      subject: true,
+      branch: ['Under it — the call runs', 'Over it — the API returns an error'],
+    },
+    {
+      label: 'Your policy, chosen in advance',
+      branch: [
+        'Drop old turns',
+        'Summarise them into a single message',
+        'Retrieve only the parts that matter',
+      ],
+    },
+  ]}
+/>
 
 ## 2. A bigger window is not a free upgrade
 
@@ -82,7 +125,45 @@ Five moves, in the order they pay.
 
 **Put the instruction where it will be seen.** Start or end, never the middle. The shape that holds up across models is: short instruction first, documents in the middle, then the specific question repeated at the end. Repeating it costs a few dozen tokens and is the cheapest reliability fix on this list.
 
+<Anatomy
+  caption="The shape that holds up across models: the instruction at the start, the bulk in the middle where position hurts least because it is bulk, and the question again at the end."
+  label="One long request"
+  parts={[
+    {
+      text: 'Answer only from the documents below. Cite the section you used.',
+      name: 'The instruction, first',
+      note: 'The start is one of the two strong positions',
+    },
+    { text: '\n\n<documents>\n' },
+    {
+      text: '  ...40,000 tokens of retrieved passages...',
+      name: 'The documents, in the middle',
+      note: 'The weakest position, and where the bulk has to go anyway',
+      subject: true,
+    },
+    { text: '\n</documents>\n\n' },
+    {
+      text: 'How much notice do I have to give?',
+      name: 'The question again, last',
+      note: 'A few dozen tokens, and the cheapest reliability fix on the list',
+    },
+  ]}
+/>
+
 **Retrieve rather than paste.** Ten relevant paragraphs beat the whole handbook, on cost, on latency, and on accuracy at the same time. The RAG course covers how to build that retrieval step; the point here is that a big window is not a reason to stop doing it.
+
+<Compare caption="The same question, answered two ways. The retrieval side wins on all three axes at once, which is why a big window is not a reason to stop retrieving.">
+  <Panel label="Naive" title="Paste the whole handbook">
+
+Every token of it is read on every turn, and paid for on every turn. Time to first token is mostly the model reading input, so the user watches a blank screen. And the paragraph that answers the question is competing with a few hundred that do not.
+
+  </Panel>
+  <Panel label="What to do" title="Retrieve ten paragraphs">
+
+Cheaper, because you send a fraction of the tokens. Faster, for the same reason. And more accurate, because the evidence is not buried in text that pulls the answer away from it.
+
+  </Panel>
+</Compare>
 
 **Order what you retrieve.** If you have a relevance score, put the strongest evidence first or last rather than in the order the database returned it. And use fewer chunks than feels safe — a `top_k` of 20 is usually 15 chunks of noise.
 
@@ -119,3 +200,49 @@ print("written:", u.cache_creation_input_tokens, "read:", u.cache_read_input_tok
 ```
 
 Run it twice. The first call writes the cache and the second reads it, and you will see `cache_read_input_tokens` jump while the cost of that slice collapses. Change one character above the breakpoint and it drops back to zero — which is the fastest way to learn what byte-identical means in practice.
+
+<Steps
+  caption="The same script, four times over. Click through and watch the two usage fields: the saving is entirely a matter of whether the prefix is still byte-identical and still warm."
+  steps={[
+    {
+      label: 'First call',
+      title: 'The cache is written',
+      body: 'The provider processes the handbook and stores the result against the prefix. Writing costs slightly more than a plain input token, so this call is a small loss.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'the whole prefix' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'cost of that slice', value: 'a little above normal' },
+      ],
+    },
+    {
+      label: 'Second call',
+      title: 'The cache is read',
+      body: 'Byte-identical prefix, still inside the window. The provider reuses the processing it already did and the request also comes back faster.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: '0' },
+        { label: 'cache_read_input_tokens', value: 'the whole prefix' },
+        { label: 'cost of that slice', value: 'a fraction of normal' },
+      ],
+    },
+    {
+      label: 'One character changes',
+      title: 'Back to zero',
+      body: 'A timestamp, a user name, a re-ordered tool schema — anything above the breakpoint. It is a prefix cache, so a single differing byte means there is no matching prefix to read.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'the whole prefix' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'cost of that slice', value: 'a little above normal' },
+      ],
+    },
+    {
+      label: 'Minutes idle',
+      title: 'The entry expires',
+      body: 'Entries live for minutes, not hours. The next call writes the cache again, which is why this pays on traffic and not on an occasional run.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'the whole prefix' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'cost of that slice', value: 'a little above normal' },
+      ],
+    },
+  ]}
+/>

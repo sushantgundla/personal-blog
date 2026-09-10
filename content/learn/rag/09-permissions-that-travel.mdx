@@ -60,6 +60,19 @@ The naive approach is to write a list of user IDs onto each chunk at ingestion t
 
 The fix that holds up is the one Google's Zanzibar paper popularized well beyond Google: separate the relationship from the resolution. Store the *group or role* a chunk belongs to - `allowed_group_ids: ["team-finance", "role-manager"]` - as metadata written once at ingestion. Resolve *which groups the current user belongs to* live, at query time, from whatever your identity provider says right now. The filter then becomes a set intersection: does the user's current group list overlap the chunk's stored group list. You've turned a fact that changes constantly (who is in which group) into a lookup you do fresh every time, and left only the far more stable fact (which groups can see this document) baked into the index.
 
+<Compare caption="The same permission fact, stored two ways. The per-user list has to be rewritten on every membership change with nothing to trigger the rewrite; the per-group list only needs the user's current groups resolved fresh, on the query that actually needs them.">
+  <Panel label="Naive" title="A list of user IDs, written at ingestion">
+
+Works on day one. Rots from day two, because it has to be rewritten every time group membership changes anywhere near the document, and nothing tells you that happened.
+
+  </Panel>
+  <Panel label="What to do" title="A list of group IDs, resolved against the user live">
+
+The chunk stores the group or role it belongs to, written once. The user's current groups come from the identity provider on every query, so the part that changes constantly is never baked into the index.
+
+  </Panel>
+</Compare>
+
 This is exactly the model SharePoint- and Drive-backed search systems converge on in practice: permissions are materialized into the index as group or role identifiers at ingestion, and the identity provider is consulted live for the user's current memberships. Nobody tries to keep a per-user list in sync with an identity system that changes by the hour.
 
 ```python
@@ -83,6 +96,22 @@ def is_visible(chunk_metadata, user_group_ids):
     return bool(set(chunk_metadata["allowed_group_ids"]) & user_group_ids)
 ```
 
+<Flow
+  caption="The check the code above runs on every query: the chunk's stored group list was written once, at ingestion, and everything else is resolved live, so revoking a user's group membership takes effect on their very next query."
+  steps={[
+    { label: 'Ingestion', note: 'allowed_group_ids and visibility written onto the chunk, once' },
+    { label: 'A query arrives', note: "The user's current groups are resolved live, from the identity provider" },
+    {
+      label: 'is_visible check',
+      subject: true,
+      branch: [
+        'visibility is "org" — visible to everyone',
+        'otherwise — visible only if the user\'s groups intersect allowed_group_ids',
+      ],
+    },
+  ]}
+/>
+
 Notice what never appears here: a list of individual users. Individuals move between groups constantly; groups themselves change composition far less often than group membership does, which is precisely why this split is worth making.
 
 Nested groups make this harder than the code above lets on. A user rarely belongs to just one flat group - they inherit access through a team, which inherits through a department, which might inherit through an org-wide role. If your identity provider resolves that whole chain for you, `get_current_groups` can return the fully expanded set and the intersection check above still works unchanged. If it doesn't, you have to walk the chain yourself before comparing, and it's worth testing that walk explicitly rather than assuming a nested group "just works" the same way a flat one does - it's the single most common place a permission sync looks correct in a demo and leaks in production, because the demo never had more than one level of nesting to get wrong.
@@ -100,5 +129,47 @@ Content freshness and permission freshness are not the same problem and should n
 Poll where you must, but treat revocation as the case that decides your sync interval, not the average case. A stale group-membership cache saves a few API calls and costs you exactly the incident this lesson opened on. And when a sync run fails - the identity API times out, a webhook payload doesn't parse - fail loudly. A permission sync that silently skips a batch looks identical, from the outside, to one that succeeded. Log the failure, alert on it, and treat "we don't know if this ACL is current" as equivalent to "this ACL is wrong" until proven otherwise.
 
 The only way to know any of this actually works is to test the failure case directly: revoke a real test user's access in the source system, wait exactly as long as your stated freshness target allows, then search as that user. If the document still comes back, you don't have a sync job, you have a sync job that has never been checked.
+
+<Steps
+  caption="The test described above, one state at a time. Click through and watch whether the search result actually flips before the clock the stated freshness target promised runs out."
+  steps={[
+    {
+      label: 'Revoke access',
+      title: 'In the source system',
+      body: "The test user is pulled from the folder. The source system's own sharing dialog shows them gone immediately.",
+      facts: [
+        { label: 'source system', value: 'access removed' },
+        { label: 'search index', value: 'still holds the old allowed_group_ids' },
+      ],
+    },
+    {
+      label: 'Wait it out',
+      title: 'The stated freshness target elapses',
+      body: 'However long was promised, and no longer — the test only means something if it matches the claim written down.',
+      facts: [
+        { label: 'source system', value: 'access removed' },
+        { label: 'search index', value: 'should now be synced, if the job ran' },
+      ],
+    },
+    {
+      label: 'Search as that user',
+      title: 'The only check that counts',
+      body: 'Not reading the sync code and assuming it works — actually querying as the revoked user.',
+      facts: [
+        { label: 'source system', value: 'access removed' },
+        { label: 'search index', value: 'correct only if the document is now withheld' },
+      ],
+    },
+    {
+      label: 'Read the result',
+      title: 'Pass or fail',
+      body: 'The document still returning means there is no working sync job, whatever the code appears to do.',
+      facts: [
+        { label: 'document returned', value: 'fail — the sync has never been checked' },
+        { label: 'document withheld', value: 'pass — the sync is confirmed, not assumed' },
+      ],
+    },
+  ]}
+/>
 
 Pick the freshness target as deliberately as you would for content changes - by asking what staleness actually costs, not by inheriting whatever a cron job happens to run - and write it down somewhere a security review can find it - "revoked access is reflected in search within five minutes" is a claim you can audit, and "we sync permissions periodically" is not. The two targets don't have to use the same mechanism. It's entirely normal to poll content changes nightly while consuming permission-change events in near real time, because the two failure modes cost completely different amounts. A pipeline that treats them identically is usually treating permissions too slowly, not content too fast.

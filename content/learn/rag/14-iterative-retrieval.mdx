@@ -46,12 +46,16 @@ Some questions don't. "Find the incident that caused this regression, then tell 
 
 That's the line worth being precise about, because it's the whole reason this needs its own lesson instead of being a paragraph inside decomposition:
 
+<Figure bare caption="Only the right-hand column needs a decision mid-loop, because only it depends on a search result that doesn't exist yet when the first query is written.">
+
 | | Single-pass retrieval | Decomposition | Iterative retrieval |
 |---|---|---|---|
 | Sub-queries known up front | One query, no splitting needed | Yes — all sub-queries nameable before searching | No — each query depends on the previous result |
 | Model calls | None beyond the answer | One (to split the question) | One per round, plus a stop/continue decision each round |
 | Best for | A question that maps to one search | A question with named, independent parts | A question where the next search depends on what the last one found |
 | Main risk | Missing a second aspect entirely | Merging badly, or missing a part the split didn't catch | Looping without a stopping rule, or thrashing on the same result |
+
+</Figure>
 
 `13-when-rag-is-wrong.mdx` names this pattern in passing as "agentic search... a loop." This lesson is that loop, worked through properly: what each round actually decides, what tells it to stop, and where it breaks if you don't put a ceiling on it.
 
@@ -66,6 +70,23 @@ Each round does three things:
 1. **Search.** Run the current query through your normal retrieval stack — nothing about this step changes because it's inside a loop.
 2. **Read.** Feed the retrieved chunks to the model along with what it already knows from earlier rounds.
 3. **Decide.** This is the part worth being careful about, because it's easy to describe as "decide what to do next" and quietly turn it into the general-purpose agent decision — which tool, which action — that the Agents and Tool Use course already teaches in *A loop, not a brain* and *How a model picks a tool*. It isn't that. The decision here is narrower and specific to retrieval: **is the evidence gathered so far enough to answer and cite, or do I need to search again?** That's a question about recall and citation coverage, not about task completion in general. Keep it that narrow and the loop stays simple; let it drift into "what should I do next, generally" and you've quietly rebuilt a full agent for a job that didn't need one.
+
+<Flow
+  caption="Decide is the one new step, and it asks a narrower question than a general agent loop would: not what should I do next, but is this enough to cite. Whichever way it answers, that answer is also what ends the loop or sends it around again."
+  steps={[
+    { label: 'Search', note: 'Run the current query through your normal retrieval stack' },
+    { label: 'Read', note: 'Feed the new chunks to the model along with everything gathered so far' },
+    {
+      label: 'Decide',
+      subject: true,
+      branch: [
+        'STOP — enough evidence to answer and cite',
+        'SEARCH — name the next query',
+      ],
+    },
+  ]}
+  back={{ from: 3, to: 1, label: 'SEARCH sends it around again, until MAX_ROUNDS or the cost budget stops it' }}
+/>
 
 ```python
 import anthropic
@@ -126,5 +147,40 @@ A loop with no stopping rule doesn't fail loudly — it just keeps searching, ke
 - **A hard iteration cap.** `MAX_ROUNDS` above. No matter how the stop/continue decision reasons, it doesn't get infinite turns. This is the same instinct as the budget caps in *Planning a run, and knowing when to stop* in the Agents course — a run needs a ceiling your code enforces, not one the model decides to respect.
 - **A cost budget.** Each round is a full search plus a model call judging sufficiency. Four rounds is four searches and four judgment calls, on top of whatever the reranker adds. Track it per request the same way *Retries and fallbacks* tracks retry budgets, and fail loudly rather than silently truncating when you hit it.
 - **Thrash detection.** The genuinely distinctive failure mode of this loop: the same chunk (or the same handful of chunks) keeps coming back round after round with nothing new. That's not a sign you're one search away from the answer — it's a sign the corpus has given up everything it has on this query, and further searching just spends budget re-reading it. The `new_ids` check in the code above is exactly this: if a round adds nothing to what you've already seen, stop, don't retry with a slightly different phrasing and hope.
+
+<Steps
+  caption="The incident-and-reviewer question from earlier, three rounds through the code above. Round 2's query didn't exist until round 1 finished — decide() named it, not you — and round 3 shows what thrash looks like: new_ids comes back empty, and the loop breaks itself before decide() is even called. The trace is illustrative, not a real run — build your own to see the shape hold."
+  steps={[
+    {
+      label: 'Round 1',
+      title: 'Search the question as written',
+      body: 'The loop runs the question exactly as asked. The chunk that comes back names the incident but not who reviewed the fix — enough to know another search is needed, not enough to answer.',
+      facts: [
+        { label: 'query', value: 'the question, unchanged' },
+        { label: 'new_ids', value: 'the incident report' },
+        { label: 'decide() verdict', value: 'SEARCH — needs the reviewer' },
+      ],
+    },
+    {
+      label: 'Round 2',
+      title: 'Search the query decide() just named',
+      body: 'This query only exists because round 1 finished first. The new chunk it turns up is enough to answer and cite.',
+      facts: [
+        { label: 'query', value: 'named by decide(), not by you' },
+        { label: 'new_ids', value: 'the review log entry' },
+        { label: 'decide() verdict', value: 'STOP — enough to cite' },
+      ],
+    },
+    {
+      label: 'Round 3',
+      title: 'Thrash: nothing new comes back',
+      body: 'If a further round returned that same review log entry again, new_ids would be empty. The loop breaks on that check, before decide() ever runs — this is the stop signal, not a reason to reword the query and try once more.',
+      facts: [
+        { label: 'new_ids', value: 'empty — same chunk as round 2' },
+        { label: 'outcome', value: 'loop breaks, no decide() call' },
+      ],
+    },
+  ]}
+/>
 
 Where this genuinely earns its cost: dependent multi-hop lookups, incident and audit-trail questions, anything where the next useful query only exists after you've read the last answer. Where it doesn't: anything decomposition already handles for one round's price, and anything where a single well-rewritten query already covers the ground — running a loop around a question that didn't need one is pure latency and pure spend, with no accuracy gained to show for it.
