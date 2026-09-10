@@ -1,0 +1,574 @@
+/* ============================================================
+   CANDIDATE 4 — THE SPREAD
+   A lesson is two facing pages. The prose is one of them.
+   Everything that is not prose is the other, and it stays
+   beside the reading instead of interrupting it.
+
+   The whole argument is that apparatus belongs on the other
+   axis. Today a reader hits a position strip, then a why-band,
+   then prose, then takeaways, then a quiz, then further
+   reading, then prev/next — seven horizontal interruptions
+   down one spine, each one stopping the reading to be got
+   past. Here there is one spine and it is vertical: a hairline
+   between a verso that carries the apparatus and a recto that
+   carries nothing but the lesson.
+
+   Two structural rules hold everything up.
+
+   1. THE RECTO IS THE MEASURE. Column three is the reading
+      column and it is --ln-measure, at 70ch and at 104ch. The
+      verso takes the width a wide window was wasting, never
+      the width the prose needs. When the window cannot hold
+      both, the sheet stops at the window and the recto gives a
+      little — it never drops below about 68ch at the point the
+      spread appears at all, which is inside the 65–75ch a body
+      column wants.
+
+   2. NOTHING IS A FIXED PIXEL WIDTH. The sheet is
+      verso + fold + measure, and every one of those three is a
+      character count or a viewport clamp. It is .measure's own
+      idiom — min(a character measure, the window minus
+      gutters) — with two columns instead of one.
+
+   Below 70rem there is one page, in the order the reading
+   needs: placement, title, why, prose, takeaways, checkpoint,
+   further reading, the way on. That is the DOM order at every
+   width; the spread is grid placement over it, so the source
+   order, the focus order and the phone are the same sequence.
+
+   No cards, no shadows, no glass, no gradients, no rounded
+   containers, no tinted panels. Structure is rules, space and
+   type. Every colour resolves to an --ln-* token in
+   app/learn/learn.css.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   The sheet
+   ------------------------------------------------------------ */
+
+.spread {
+  /* The verso's own measure. It is a printed column of about
+     35–43 characters — a newspaper column, not a rail of links
+     — and it is clamped rather than fixed so that a 1120px
+     laptop does not have to buy it out of the reading column.
+     22vw is what makes it give way first as the window
+     narrows. */
+  --v4-verso: clamp(26ch, 22vw, 32ch);
+
+  /* The fold: the whole distance between the two text blocks.
+     The spine rule sits down the middle of it, so each page
+     clears the rule by half this. */
+  --v4-fold: clamp(2.25rem, 5vw, 4.5rem);
+
+  /* The head line. Both pages start on it, and it is deep
+     enough that the verso's running head can never reach into
+     the block below it however long the course and part names
+     run. Measured against the tallest real pair,
+     "Evals and Observability" over "Why 'looks good' is not a
+     metric", which comes out around 9.5rem. */
+  --v4-head: 11.5rem;
+
+  /* Where the pinned running head parks. The section rail is
+     sticky at the top of the window and about 48px tall, so
+     the head's box top is set just inside that: the rail is
+     opaque and sits above it, so it covers the top few pixels
+     and there is no sliver between the two for scrolling text
+     to show through. The head's own top padding is what puts
+     its first line clear of the rail. */
+  --v4-top: 2.75rem;
+
+  width: min(var(--ln-measure), 100% - 2 * var(--ln-gutter));
+  margin-inline: auto;
+
+  /* One page. Everything is auto-placed in source order, which
+     is the reading order. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The two spine segments only exist when there are two pages to
+   divide. On one page the order is the structure. */
+.spine,
+.spineTurn {
+  display: none;
+}
+
+/* ------------------------------------------------------------
+   The verso — the running head
+   The one thing on the page whose value never changes: which
+   course, which part, which stop of how many, how long. A
+   reader who landed here from a search result needs it in the
+   first second, and a reader eight minutes down a long lesson
+   still needs it, so on the spread it is pinned and the rest
+   of the verso scrolls under it. It is a running head, which
+   is what a book puts at the top of a page — not a nav: there
+   is no tree here, no list of other lessons, no search.
+   ------------------------------------------------------------ */
+
+.plate {
+  padding-bottom: clamp(0.75rem, 2vw, 1rem);
+  border-bottom: 1px solid var(--ln-rule);
+}
+
+/* Course, then part. They wrap onto two rows rather than
+   shrinking — a sign is read at a glance or not at all. */
+.plateHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
+}
+
+/* The :global(.learn-root) prefix is load-bearing on every doubled
+   class in this file: `.learn-root .sign` and `.learn-root a.sign:hover`
+   in learn.css are (0,2,0) and (0,3,1), so a doubled module class alone
+   either ties with them or loses, and which one won would depend on the
+   order the bundler happened to emit the stylesheets in. */
+:global(.learn-root) a.line.line {
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+:global(.learn-root) a.line.line:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :global(.learn-root) a.line.line:hover {
+    color: var(--ln-mark);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+/* The segment of the line. Fixed height, because the track's
+   viewBox maps y 1:1 onto these pixels; the x axis stretches
+   to whatever the verso is wide, so the tick pitch opens up
+   with the column and every stroke stays its drawn weight. */
+.rail {
+  position: relative;
+  height: 40px;
+  margin-top: clamp(0.7rem, 2vw, 0.9rem);
+}
+
+/* The round caps at x=0 and x=100 are centred on the ends, so
+   half of each falls outside the viewBox; clipping them turns
+   a capsule terminus into a square cut and thins the two end
+   ticks to 1px. Painting past the viewport is the only fix
+   that keeps the pitch uniform and the line spanning the whole
+   verso. The overhang is half a ring, 13px, and the page
+   gutter is never below 1rem, so there is room for it and no
+   horizontal scrollbar. */
+.track {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.trackLine {
+  stroke: var(--ln-line);
+  stroke-width: var(--ln-w);
+}
+
+/* Stops behind the reader are solid; the ones still ahead are
+   drawn back. Order carries this as much as fill does, so it
+   never rests on colour. */
+.tickRead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+}
+
+.tickAhead {
+  stroke: var(--ln-mark);
+  stroke-width: 2;
+  opacity: 0.3;
+}
+
+/* You are here. Its own square SVG, so the track's horizontal
+   stretch can never squash the ring into an ellipse. */
+.ringBox {
+  position: absolute;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.ring {
+  stroke: var(--ln-mark);
+  stroke-width: 3;
+}
+
+:global(.learn-root) .plateMeta.plateMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin-top: clamp(0.6rem, 1.6vw, 0.85rem);
+  font-size: 0.8125rem;
+  color: var(--ln-ink-quiet);
+}
+
+/* ------------------------------------------------------------
+   The recto — title and prose, and nothing else, ever
+   ------------------------------------------------------------ */
+
+.title {
+  margin-top: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.body {
+  /* A grid item's automatic minimum is its content, and one
+     wide table would push the reading column past its track.
+     The table and the code block scroll inside themselves; the
+     column does not move. */
+  min-width: 0;
+  margin-top: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+/* ------------------------------------------------------------
+   The verso — why this, for you
+   Needed first, so it sits at the top of the verso beside the
+   opening of the prose. A printed marginal note: a label, a
+   hairline, the owner's sentence. No fill, no panel.
+   ------------------------------------------------------------ */
+
+.why {
+  margin-top: clamp(1.5rem, 3.5vw, 2rem);
+  padding-top: clamp(0.9rem, 2.2vw, 1.25rem);
+  border-top: 1px solid var(--ln-rule);
+}
+
+.whyText {
+  margin-top: 0.55rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--ln-ink);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------
+   The verso — what you take away
+   Needed at the end, so it is printed at the foot of the
+   verso, level with the end of the prose. Its rule is quiet
+   ink rather than the page hairline, because this is where the
+   left page closes.
+   ------------------------------------------------------------ */
+
+.wins {
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  padding-top: clamp(1.25rem, 3vw, 1.75rem);
+  border-top: 1px solid var(--ln-ink-quiet);
+}
+
+.winsList {
+  list-style: none;
+  margin-top: clamp(0.9rem, 2.2vw, 1.25rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.winsItem {
+  display: grid;
+  grid-template-columns: 2.5ch minmax(0, 1fr);
+  column-gap: 0.9rem;
+  align-items: baseline;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ln-ink);
+}
+
+:global(.learn-root) .winsN.winsN {
+  color: var(--ln-ink-quiet);
+}
+
+/* ------------------------------------------------------------
+   The checkpoint — the turn of the page
+   The quiz is five questions with real buttons. It does not
+   fit a marginal column, and putting it in the recto would
+   break the one rule the recto has. So it is where the spread
+   ends: the two pages close, and the checkpoint runs the full
+   width beneath them. Its own heavy rules are the fold of the
+   leaf being turned.
+
+   Quiz.tsx puts .measure inside its band so that on the
+   ordinary lesson page its left edge is the h1's. Here the
+   band is a grid item spanning both pages, so that column is
+   re-hung on the sheet instead: centred, at the reading
+   measure, never wider than whatever it is sitting in. The
+   :global(.learn-root) prefix is load-bearing — it is what
+   beats `.learn-root .measure` in learn.css without depending
+   on which stylesheet the bundler puts last.
+   ------------------------------------------------------------ */
+
+:global(.learn-root) .quiz :global(.measure) {
+  width: min(var(--ln-measure), 100%);
+  margin-inline: auto;
+}
+
+/* ------------------------------------------------------------
+   After the turn — the next spread opens
+   Further reading on the verso, the way on down the line on
+   the recto. They come after the checkpoint and not before it,
+   because retrieval practice only works if it is the next
+   thing the reader does: an exit off the site printed above
+   the quiz is an exit the quiz never gets.
+   ------------------------------------------------------------ */
+
+.deeper {
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  padding-top: clamp(1.25rem, 3vw, 1.75rem);
+  /* Quiet ink, matching the rule over the way on beside it:
+     after the checkpoint the two of them are one line across
+     the new spread, and a hairline against a quiet-ink rule on
+     the same y reads as a mistake. */
+  border-top: 1px solid var(--ln-ink-quiet);
+}
+
+.deeperList {
+  list-style: none;
+  margin-top: clamp(0.6rem, 1.6vw, 0.9rem);
+}
+
+.deeperRow + .deeperRow {
+  border-top: 1px solid var(--ln-rule);
+}
+
+.deeperLink {
+  display: block;
+  padding-block: 0.7rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ln-ink);
+  text-decoration: none;
+  /* A bare URL used as a label has no spaces in it and would
+     otherwise run out of a 26ch column. */
+  overflow-wrap: break-word;
+}
+
+:global(.learn-root) a.deeperLink.deeperLink:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .deeperLink:hover {
+    color: var(--ln-mark);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* The arrow says the link leaves the site. It sits inline
+   after the label rather than pushed to the far edge, so a
+   three-line label does not leave it stranded a column away
+   from the words it belongs to. */
+.out {
+  padding-left: 0.4rem;
+  color: var(--ln-ink-quiet);
+}
+
+/* ------------------------------------------------------------
+   The way on
+   Two stops, one above the other, split by a hairline. Each is
+   a deep row with the label in its own column, so the two
+   destinations line up and read as the two ways off this page
+   rather than as a caption. Hover and focus put a bar in the
+   course's ink down the leading edge of the row — the one
+   place after the title rule where the line's colour lands.
+   ------------------------------------------------------------ */
+
+.onward {
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  border-top: 1px solid var(--ln-ink-quiet);
+}
+
+:global(.learn-root) a.stop.stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: clamp(1rem, 3vw, 2rem);
+  row-gap: 0.4rem;
+  padding: clamp(1.1rem, 2.6vw, 1.5rem) 0 clamp(1.1rem, 2.6vw, 1.5rem)
+    clamp(0.9rem, 2vw, 1.25rem);
+  color: inherit;
+  text-decoration: none;
+}
+
+.stop + .stop {
+  border-top: 1px solid var(--ln-rule);
+}
+
+/* Always in the layout, always the same width, so nothing
+   moves when it is wanted; only its opacity changes, and
+   instantly. */
+.stop::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--ln-line);
+  opacity: 0;
+}
+
+:global(.learn-root) a.stop.stop:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: -2px;
+}
+
+.stop:focus-visible::before {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .stop:hover::before {
+    opacity: 1;
+  }
+
+  .stop:hover span {
+    color: var(--ln-mark);
+  }
+}
+
+:global(.learn-root) .stopLabel.stopLabel {
+  font-size: 0.75rem;
+  color: var(--ln-ink-quiet);
+}
+
+:global(.learn-root) .stopName.stopName {
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: var(--ln-ink);
+  text-wrap: balance;
+}
+
+@media (max-width: 34rem) {
+  :global(.learn-root) a.stop.stop {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ============================================================
+   TWO PAGES
+   The sheet becomes verso | fold | recto. Nothing above moves
+   into a different order — only where each block is printed.
+
+   70rem is where the arithmetic works, not where it was
+   guessed. At 1120px the window has 1008px inside its gutters;
+   a 26ch verso and a 56px fold leave the reading column 648px,
+   which is 68 characters. Below that the recto starts paying
+   for the verso, so below that there is one page.
+   ============================================================ */
+
+@media (min-width: 70rem) {
+  .spread {
+    width: min(
+      calc(var(--v4-verso) + var(--v4-fold) + var(--ln-measure)),
+      100% - 2 * var(--ln-gutter)
+    );
+    grid-template-columns: var(--v4-verso) var(--v4-fold) minmax(0, 1fr);
+    /* Five rows: the head line, the reading, the foot of the
+       verso, the checkpoint, and the spread that opens after
+       it. The head row has a floor so the running head can
+       never reach the block below it when a title is short. */
+    grid-template-rows: minmax(var(--v4-head), auto) auto auto auto auto;
+  }
+
+  /* Pinned. Its area is the head row and the reading row, so
+     it rides down the whole of the prose and lets go exactly
+     where the verso's foot begins — it can never come to rest
+     on top of the takeaways. The ground behind it is the
+     page's own paper, not a panel: there is nothing to tint
+     and nothing to blur. */
+  .plate {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: start;
+    position: sticky;
+    top: var(--v4-top);
+    z-index: 2;
+    padding-top: 0.85rem;
+    background: var(--ln-ground);
+  }
+
+  /* The same top padding as the running head opposite it, so
+     the two pages of the spread begin on one line. */
+  .title {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+    margin-top: 0;
+    padding-top: 0.85rem;
+  }
+
+  .why {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    margin-top: clamp(1.75rem, 3.5vw, 2.5rem);
+  }
+
+  .body {
+    grid-column: 3;
+    grid-row: 2;
+    margin-top: 1rem;
+  }
+
+  .wins {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: start;
+    margin-top: clamp(2rem, 4vw, 2.75rem);
+  }
+
+  /* The spine. It is the one piece of structure the whole
+     design rests on, so it is drawn as a thing and not as a
+     border on something else: a hairline down the middle of
+     the fold, running the full height of the two pages and
+     stopping dead where the leaf turns. */
+  .spine {
+    display: block;
+    grid-column: 2;
+    grid-row: 1 / 4;
+    justify-self: center;
+    width: 1px;
+    background: var(--ln-rule);
+  }
+
+  .quiz {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
+  .deeper {
+    grid-column: 1;
+    grid-row: 5;
+  }
+
+  /* The same margin as the two blocks either side of it, so the
+     new spread's spine starts level with their rules instead of
+     running up to touch the checkpoint's own. */
+  .spineTurn {
+    display: block;
+    grid-column: 2;
+    grid-row: 5;
+    justify-self: center;
+    width: 1px;
+    margin-top: clamp(2.5rem, 6vw, 3.5rem);
+    background: var(--ln-rule);
+  }
+
+  .onward {
+    grid-column: 3;
+    grid-row: 5;
+  }
+}

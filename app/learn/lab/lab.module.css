@@ -1,0 +1,161 @@
+/* The lab's scaffolding, and nothing a candidate is judged on.
+
+   Deliberately plain: a hairline rail in the section's quiet ink, so it
+   reads as apparatus laid over the page rather than as part of any of the
+   five designs underneath it. Every value is an existing --ln-* token. */
+
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem clamp(1rem, 3vw, 2rem);
+  padding: 0.85rem var(--ln-gutter);
+  border-bottom: 1px solid var(--ln-rule);
+  font-family: var(--ln-sign);
+}
+
+.switcherLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ln-ink-quiet);
+}
+
+.switcherList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem clamp(0.75rem, 2vw, 1.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.switcherLink {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ln-ink-quiet);
+  text-decoration: none;
+}
+
+.switcherLink[aria-current='page'] {
+  color: var(--ln-ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.switcherLink:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .switcherLink:hover {
+    color: var(--ln-ink);
+  }
+}
+
+.switcherN {
+  font-family: var(--ln-num);
+  font-size: 0.6875rem;
+}
+
+.switcherThesis {
+  flex: 1 1 18rem;
+  margin: 0;
+  font-family: var(--ln-read);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ln-ink-quiet);
+}
+
+/* ---- The lab index ------------------------------------------------- */
+
+.index {
+  padding: clamp(2.5rem, 8vw, 5rem) var(--ln-gutter);
+}
+
+.indexHead {
+  font-family: var(--ln-sign);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ln-ink);
+}
+
+.indexLede {
+  font-family: var(--ln-read);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ln-ink-quiet);
+  max-width: 60ch;
+  margin: 0.75rem 0 clamp(2rem, 5vw, 3rem);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ln-rule);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem) clamp(1rem, 2vw, 1.5rem);
+  border-bottom: 1px solid var(--ln-rule);
+}
+
+.cell + .cell {
+  border-left: 1px solid var(--ln-rule);
+}
+
+.cellN {
+  font-family: var(--ln-num);
+  font-size: 0.75rem;
+  color: var(--ln-ink-quiet);
+}
+
+.cellName {
+  font-family: var(--ln-sign);
+  font-size: clamp(1.0625rem, 1.8vw, 1.3125rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ln-ink);
+  text-decoration: none;
+}
+
+.cellName:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cellName:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+.cellThesis {
+  font-family: var(--ln-read);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ln-ink-quiet);
+  margin: 0;
+}
+
+@media (max-width: 40rem) {
+  .cell + .cell {
+    border-left: none;
+  }
+}
