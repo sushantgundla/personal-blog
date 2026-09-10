@@ -65,8 +65,11 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
 
   function choose(questionIndex: number, optionIndex: number) {
     setChosen((current) =>
-      // Already answered — the click does nothing. The buttons are disabled
-      // too; this is the guard for anything that gets past that.
+      // Already answered — the click does nothing. This is the only lock on
+      // a second answer: the buttons carry aria-disabled but stay enabled,
+      // because the `disabled` attribute used to fire in the same frame as
+      // the click and the browser dropped focus to <body>, sending the next
+      // Tab back to the top of the page.
       questionIndex in current ? current : { ...current, [questionIndex]: optionIndex }
     )
   }
@@ -88,8 +91,14 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
           </h2>
 
           {/* Counts up as questions are answered. Server and first client
-              render both start at zero, so there is nothing to mismatch. */}
-          <p className={`num ${styles.counter}`} aria-live="polite">
+              render both start at zero, so there is nothing to mismatch.
+
+              Deliberately not a live region. It used to be one, and it
+              changed on the same click as the explanation below, so every
+              answer queued two announcements — the count first, then the
+              thing the reader actually asked for. The explanation is the
+              one that speaks; this stays on screen and keeps quiet. */}
+          <p className={`num ${styles.counter}`}>
             {pad2(answeredCount)} / {pad2(total)} answered
           </p>
         </div>
@@ -134,7 +143,11 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
                         key={option}
                         type="button"
                         className={`${styles.option} ${state}`.trim()}
-                        disabled={answered}
+                        // aria-disabled, never the real `disabled` attribute:
+                        // that removed the button from the tab order in the
+                        // frame it was activated, so focus fell to <body> and
+                        // an answered option could not be read back. choose()
+                        // is what stops a second answer.
                         aria-disabled={answered}
                         aria-pressed={isPicked}
                         onClick={() => choose(questionIndex, optionIndex)}
@@ -143,12 +156,19 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
                           {KEYS[optionIndex] ?? '•'}
                         </span>
                         <span className={styles.label}>{option}</span>
-                        {/* Right and wrong carry a glyph as well as a colour,
-                            so neither signal stands on its own. */}
+                        {/* Right and wrong carry a glyph, a colour and a word,
+                            so no one signal stands on its own. The glyph is
+                            decoration — the word beside it, off screen, is
+                            what a screen reader reads out of the row. */}
                         {answered && (isAnswer || isPicked) && (
-                          <span className={`num ${styles.mark}`} aria-hidden="true">
-                            {isAnswer ? '✓' : '✗'}
-                          </span>
+                          <>
+                            <span className={styles.sr}>
+                              {isAnswer ? 'Correct' : 'Incorrect'}
+                            </span>
+                            <span className={`num ${styles.mark}`} aria-hidden="true">
+                              {isAnswer ? '✓' : '✗'}
+                            </span>
+                          </>
                         )}
                       </button>
                     )
@@ -158,23 +178,43 @@ export function Quiz({ courseSlug, lessonSlug, questions }: Props) {
                 {/* Rendered empty rather than conditionally, so the live region
                     is already in the DOM when the explanation arrives — a
                     region added at the same moment as its text is not
-                    announced by most screen readers. */}
+                    announced by most screen readers. The CSS collapses the
+                    empty box without display: none, which would take it back
+                    out of the accessibility tree and undo all of this.
+
+                    The verdict leads, off screen: no explanation in
+                    content/learn/ says in words whether the reader was right,
+                    so without it the announcement is an explanation of a
+                    result they were never told. */}
                 <p className={styles.explain} aria-live="polite">
-                  {answered ? question.explain : ''}
+                  {answered && (
+                    <>
+                      <span className={styles.sr}>
+                        {picked === question.answer ? 'Correct.' : 'Incorrect.'}{' '}
+                      </span>
+                      {question.explain}
+                    </>
+                  )}
                 </p>
               </li>
             )
           })}
         </ol>
 
-        {finished && (
-          <p className={`num ${styles.score}`} aria-live="polite">
-            <span className={styles.scoreValue}>
-              {correct} of {total}
-            </span>
-            <span>{correct === total ? 'all correct' : 'recalled'}</span>
-          </p>
-        )}
+        {/* Mounted from the first render, empty, for the same reason as the
+            explanation above: this used to appear only once `finished` went
+            true, which put the region and its text into the DOM in one go,
+            and a region born with its content is not announced. */}
+        <p className={`num ${styles.score}`} aria-live="polite">
+          {finished && (
+            <>
+              <span className={styles.scoreValue}>
+                {correct} of {total}
+              </span>
+              <span>{correct === total ? 'all correct' : 'recalled'}</span>
+            </>
+          )}
+        </p>
       </div>
     </section>
   )

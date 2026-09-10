@@ -40,8 +40,10 @@ import s from '../sheet.module.css'
  * versioned.
  *
  * Geometry is hand-authored in a 1200 x 428 viewBox — the house width, at
- * the aspect this composition wants. The page fixes height and lets width
- * follow, so the lettering here lands at the same size as its siblings.
+ * the aspect this composition wants, and the flattest of the five. The page
+ * fixes the width and lets the height follow, so the lettering here lands at
+ * the same size as its siblings and this is the drawing that comes closest to
+ * fitting a 1440 x 800 laptop whole: it misses by 15px.
  */
 
 function PromptDetail({ k }: { k: BayKey }) {
@@ -49,12 +51,11 @@ function PromptDetail({ k }: { k: BayKey }) {
     <svg
       viewBox="0 0 1200 428"
       className={s.detail}
-      aria-hidden="true"
       focusable="false"
       role="presentation"
     >
       {/* The axis, between the objects that belong to a part. */}
-      <g className={s.spine}>
+      <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M333 213H363" />
         <path className={s.flow} d="M643 213H720" />
       </g>

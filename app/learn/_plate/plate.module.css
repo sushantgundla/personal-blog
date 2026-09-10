@@ -276,15 +276,34 @@
   height: auto;
 }
 
-/* The ceiling exists so a 2500px window does not turn the plate into a
-   metre of diagram with the legend off screen. It is deliberately high:
-   at 60vh the drawing letterboxed inside its own field and .lab dropped
-   to 10.4px, which is a notation you guess at rather than read. A plate
-   is allowed to be taller than one screen. The cap is on the drawing's
-   height and never on the sheet's width — the sheet always runs the
-   full window. */
+/* The ceiling exists so a 2500px window does not turn the plate into a metre
+   of diagram with the legend off screen. It is on the drawing's WIDTH, never
+   on its height, and never on the sheet — the sheet always runs the full
+   window.
+
+   Width, because a height cap letterboxes. An inline SVG with a viewBox and
+   no width/height keeps its aspect ratio, so capping the height shrinks the
+   drawing sideways by exactly the factor the height was cut by and takes the
+   lettering down with it. The rule that used to be here,
+   `max-height: clamp(24rem, 72vh, 44rem)`, did that: at 2560 the field is
+   2276px wide, the drawing wants 967px of height, the cap gave it 704, and it
+   rendered 1656 wide with about 310px of bare grid either side while .lab
+   fell from 21.3px to 15.5px. It also bound on any short window — at
+   1440 x 700 the cap was 504px against a natural 514px. A width cap scales
+   the drawing and its lettering together, which is the reasoning .detail in
+   sheet.module.css is already built on.
+
+   100rem is 1600px and the viewBox is 1600 units, so at the cap one unit is
+   one pixel and a 15-unit .lab letters at exactly 15px. That is the size the
+   annotation was drawn to read at, and it is the size FIG. 2's labels come
+   out at under their own 76rem cap (15.2px) — so the two sheets letter alike
+   and a reader moving between them meets one size of writing. It starts
+   binding at about 1880px of window; past that the drawing centres, and the
+   bare grid either side of it is a sheet margin, always narrower than the
+   drawing it frames. */
 .wide {
-  max-height: clamp(24rem, 72vh, 44rem);
+  width: min(100%, 100rem);
+  margin-inline: auto;
 }
 
 .narrow {
@@ -304,7 +323,6 @@
     display: block;
     max-width: 26rem;
     margin-inline: auto;
-    max-height: none;
   }
 }
 
@@ -871,6 +889,24 @@
   content: '';
   position: absolute;
   inset: 0;
+}
+
+/* The two blocks of prose sit above that overlay. An overlay swallows the
+   mousedown that starts a text selection, so with .cellLink::after over
+   everything the reader could not select a word of .role or .sub — a legend
+   entry is reading matter, and reading matter nobody can copy is a
+   regression, not a bigger target.
+
+   The explicit z-index is doing real work: .role comes before .cellLink in
+   the document, so `position: relative` alone would still paint under a
+   pseudo-element whose z-index is auto. What it costs is the two paragraphs'
+   own area as click surface. The swatch, the numeral ring, the part's name,
+   the title, the figures and every millimetre of cell padding are still the
+   door, which is most of the cell and all of the obvious parts of it. */
+.role,
+.sub {
+  position: relative;
+  z-index: 1;
 }
 
 .arrow {

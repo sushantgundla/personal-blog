@@ -19,8 +19,13 @@
    the page can count the questions without reading them.
 
    Options are full-width rows separated by hairlines, not cards. Nothing
-   is filled, nothing is rounded; the letter, the glyph and the colour
-   together carry the result, so no one of them is the only signal.
+   is filled, nothing is rounded; the letter, the glyph, the colour and an
+   off-screen word together carry the result, so no one of them is the
+   only signal — the word is the one that survives with the screen off.
+
+   An option is never `disabled`, only aria-disabled, so answering a
+   question does not throw focus off the button. Everything that used to
+   hang off :disabled here hangs off [aria-disabled='true'] instead.
 
    The right/wrong colours are declared as custom properties on .band and
    overridden under :global(.light), which is the class next-themes puts on
@@ -143,6 +148,7 @@
 }
 
 .option {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: 0.9rem;
@@ -159,20 +165,59 @@
   cursor: pointer;
 }
 
-.option:hover:not(:disabled) {
-  color: var(--ln-mark);
+/* The row's own rule, sitting exactly on top of the hairline at its foot,
+   in the course's ink at the same 2px as the bar in front of a question
+   number. Always in the layout and always the same height, so nothing
+   moves when it is wanted; only its opacity changes, instantly.
+
+   It replaces a hover that swapped --ln-ink for --ln-mark. Those two are
+   a hair apart in both themes (#ede9e2 against #f2efe9 on dark, #12100e
+   against #191714 on light), so pointing at an option looked like
+   pointing at nothing. */
+.option::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--ln-line);
+  opacity: 0;
 }
 
+/* Only where there is a real pointer, and only on a question that can
+   still be answered — an option that is already marked must not look like
+   it is offering anything. */
+@media (hover: hover) and (pointer: fine) {
+  .option[aria-disabled='false']:hover {
+    color: var(--ln-mark);
+  }
+
+  .option[aria-disabled='false']:hover::after {
+    opacity: 1;
+  }
+
+  .option[aria-disabled='false']:hover .key.key {
+    color: var(--ln-mark);
+  }
+}
+
+/* The keyboard's version of the same thing, outside the query, because a
+   touch or trackpad-less reader still tabs through these. */
 .option:focus-visible {
   outline: 2px solid var(--ln-mark);
   outline-offset: -2px;
 }
 
-/* Answered questions lock. The cursor says so, and the browser's default
-   50% fade is turned off — these options still have to be readable. */
-.option:disabled {
-  cursor: default;
+.option[aria-disabled='false']:focus-visible::after {
   opacity: 1;
+}
+
+/* Answered questions lock. The cursor says so; the row stays fully
+   readable, and stays focusable, so it can be tabbed back to and read
+   again. */
+.option[aria-disabled='true'] {
+  cursor: default;
 }
 
 /* The a/b/c/d key in front of each option, in its own column so the
@@ -230,8 +275,18 @@
   color: var(--ln-ink-quiet);
 }
 
+/* Empty, the paragraph has to take up no room and still be in the
+   accessibility tree — it is a live region that was pre-mounted precisely
+   so the explanation has somewhere to land. display: none and
+   visibility: hidden both remove it, which is what used to happen here
+   and cancelled the pre-mounting outright. Collapsing the box instead
+   leaves the node exactly where the reader's screen reader is watching. */
 .explain:empty {
-  display: none;
+  margin-top: 0;
+  padding-left: 0;
+  border-left-width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
 /* ---- The score line ---------------------------------------------- */
@@ -247,8 +302,34 @@
   color: var(--ln-ink-quiet);
 }
 
+/* Same story as .explain — mounted from the first paint, so it is the
+   box that has to disappear until the last question is answered, not the
+   element. */
+.score.score:empty {
+  margin-top: 0;
+  padding-top: 0;
+  border-top-width: 0;
+}
+
 .scoreValue {
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--ln-mark);
+}
+
+/* ---- Off screen, in the tree -------------------------------------- */
+
+/* The section's own visually-hidden class, the same shape as .sr in
+   _plate/plate.module.css. Never display: none: every one of these is a
+   word a screen reader has to reach. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

@@ -49,9 +49,44 @@
 }
 
 /* A wide table scrolls sideways inside the reading column instead of
-   pushing the page wider on a phone. */
+   pushing the page wider on a phone.
+
+   The bar is styled rather than left to the platform, exactly as
+   `.prose pre` is in app/learn/learn.css, and for the same reason: macOS
+   overlay scrollbars stay invisible until something moves, so a table cut
+   off at the right edge with no bar under it just looks broken. Styling
+   ::-webkit-scrollbar is also what takes it out of overlay mode, so the
+   bar is always on show. Same height, same two tokens, square. */
 .tableScroll {
   max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ln-ink-quiet) transparent;
+}
+
+/* Firefox takes scrollbar-width / scrollbar-color above; these are the
+   same bar for WebKit and Blink. */
+.tableScroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.tableScroll::-webkit-scrollbar-track {
+  background: none;
+  border-top: 1px solid var(--ln-rule);
+}
+
+.tableScroll::-webkit-scrollbar-thumb {
+  background: var(--ln-ink-quiet);
+  border-radius: 0;
+}
+
+/* The wrapper is a tab stop, because a region that scrolls has to be
+   reachable from the keyboard — see Table() in mdx.tsx. A tab stop with no
+   focus ring is a reader losing their place, so it takes the same ring as
+   .prose pre in learn.css. */
+.tableScroll:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 2px;
 }

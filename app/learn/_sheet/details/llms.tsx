@@ -37,8 +37,10 @@ import s from '../sheet.module.css'
  * Geometry is hand-authored in a 1200 x 560 viewBox: the house width, and
  * the tallest of the five, because the choosing needs a second storey
  * under the machine and cramming it in beside would have cost the
- * annotation its legibility. Height is the fixed dimension in the CSS, so
- * this sheet comes out the narrowest of the five rather than the largest.
+ * annotation its legibility. Width is the fixed dimension in the CSS, so
+ * this sheet letters exactly like its four siblings and simply comes out
+ * the tallest on the page — 149px past the fold on a 1440 x 800 laptop,
+ * which is the price the second storey costs and is recorded in DESIGN.md.
  */
 
 /* --- The stack -------------------------------------------------- */
@@ -66,12 +68,11 @@ function LlmsDetail({ k }: { k: BayKey }) {
     <svg
       viewBox="0 0 1200 560"
       className={s.detail}
-      aria-hidden="true"
       focusable="false"
       role="presentation"
     >
       {/* ---- The spine: the request travelling ---------------------- */}
-      <g className={s.spine}>
+      <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M20 292H318" />
         <path className={s.head} d="M54 292L32 281V303Z" />
         <path className={s.flow} d="M370 292H506" />

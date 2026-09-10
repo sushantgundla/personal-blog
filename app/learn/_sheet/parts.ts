@@ -8,10 +8,11 @@ import type { Course, Lesson } from '@/lib/learn'
  * hand: the name comes off disk, the count is counted, the minutes are
  * summed.
  *
- * Plain data and pure functions, kept out of the components, for the same
- * reason app/learn/_components/line-data.ts exists: Schedule.tsx is a
- * client component, and across that boundary Next replaces a module's
- * exports with client-reference proxies.
+ * Plain data and pure functions, kept out of the components: Schedule.tsx is
+ * a client component, and across that boundary Next replaces a module's
+ * exports with client-reference proxies, so anything both sides need has to
+ * live in a module that is neither. `_plate/stages.ts` does the same job for
+ * FIG. 1.
  */
 
 /** One lesson, reduced to what the schedule prints. */
@@ -84,6 +85,63 @@ export function toZones(course: Course): Zone[] {
 /** Minutes in a zone, summed from the lessons' own frontmatter. */
 export function zoneMinutes(zone: Zone): number {
   return zone.lessons.reduce((sum, lesson) => sum + lesson.minutes, 0)
+}
+
+/** What a bay of FIG. 2 needs to turn itself into a door. */
+export interface ZoneDoor {
+  href: string
+  label: string
+}
+
+/** The lesson a part opens on: the lowest `order` it holds, or none. */
+function firstLesson(zone: Zone): ScheduleLesson | undefined {
+  return zone.lessons.reduce<ScheduleLesson | undefined>(
+    (best, lesson) => (best === undefined || lesson.order < best.order ? lesson : best),
+    undefined,
+  )
+}
+
+/**
+ * What a screen reader hears at a bay.
+ *
+ * The same sentence the schedule column already says, in the same order —
+ * the part's number and name, then how much of it there is — with one clause
+ * added for the thing the column cannot say, which is where the bay leads.
+ * Written here rather than in the five drawings for the reason `stageLabel()`
+ * exists on the index: hearing two different sentences about one part is how
+ * a reader concludes there are eight parts.
+ */
+function zoneLabel(zone: Zone, first: ScheduleLesson): string {
+  const head = zone.name === null ? `Part ${zone.n}` : `Part ${zone.n}, ${zone.name}`
+  const count = `${zone.lessons.length} ${zone.lessons.length === 1 ? 'lesson' : 'lessons'}`
+
+  return `${head} — ${count}, ${zoneMinutes(zone)} minutes. Opens lesson ${first.order}: ${first.title}.`
+}
+
+/**
+ * The way into a part: its first lesson in reading order.
+ *
+ * A bay is a part and a part is several lessons, so there is no one lesson a
+ * bay *is*. The first one is the useful destination — it is where a reader
+ * who clicked that part of the drawing was going to start anyway.
+ *
+ * A named part with no lessons yet gets no door, and `Bay` leaves it drawn
+ * and unclickable. `toZones()` keeps such a part rather than hiding it, so
+ * this case is real on a course nobody has finished writing, and a link that
+ * goes nowhere is worse than no link.
+ *
+ * The href is `/learn/<course>/<lesson>` and nothing else. middleware.ts
+ * turns that into the right address on the subdomain; a drawing has no
+ * business knowing which host it is being read on.
+ */
+export function zoneDoor(courseSlug: string, zone: Zone): ZoneDoor | undefined {
+  const first = firstLesson(zone)
+  if (first === undefined) return undefined
+
+  return {
+    href: `/learn/${courseSlug}/${first.slug}`,
+    label: zoneLabel(zone, first),
+  }
 }
 
 /** `7` -> `07`. Two digits, so a column of stop numbers lines up. */

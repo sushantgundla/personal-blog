@@ -153,8 +153,12 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
         <path className={s.flow} d="M466 524V596M594 524V596" />
         <path className={s.flow} d="M466 596A64 16 0 0 0 594 596" />
 
-        {/* Out of it, a fan of candidates. Two are kept and drawn solid;
-            two are dashed, because reranking is what drops them. */}
+        {/* Out of it, a fan of candidates. Two are kept, at the heavier of
+            the fan's two weights; two are struck through and drawn weak,
+            because reranking is what drops them. Struck and not dashed:
+            dashed is spoken for on this sheet and means "only if the model
+            calls a tool", and a fourth meaning may not be invented — see
+            .dropped in plate.module.css. */}
         <path className={s.flow} d="M530 508V478" />
         <path
           className={s.thin}
@@ -187,8 +191,10 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
 
       {/* ---- 3. LLMs — the thing in the middle -------------------------
           The heaviest object on the plate, because it is the heaviest
-          thing in the machine: a stack of layers with attention crossing
-          between them, inside an enclosure with feet. */}
+          thing in the machine: a stack of layers, each with attention
+          running across the tokens inside it, in an enclosure with feet.
+          The label says so, and so does the geometry below — nothing here
+          crosses from one layer to the next. */}
       <Stage id="llms" doors={doors}>
         <rect className={s.hit} x="646" y="156" width="350" height="316" />
 

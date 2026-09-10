@@ -21,6 +21,9 @@
      .bay        one part of the course, drawn. FIG. 1's stages are
                  five courses; a detail's bays are one course's own
                  parts, so the same reveal works one level down.
+     .door       a bay, as a link into the first lesson of the part
+                 it draws. Paints nothing at rest — the cursor and
+                 the focus box are the whole of it.
      .col        a schedule column, one per bay. A draughting
                  schedule is the table beside a drawing that says
                  what every numbered thing on it is; here it is what
@@ -216,6 +219,20 @@
   }
 }
 
+/* The way back to FIG. 1 had a hover state and no focus state, so a reader
+   on the keyboard could land on the largest target in the strip and see
+   nothing. The border is already there and already transparent, so the ring
+   is that border inked — a ruled box, in the drawing's own vocabulary, not a
+   glow the browser would round the corners of. */
+.keyWrap:focus-visible {
+  outline: none;
+  border-color: var(--pl-line);
+}
+
+.keyWrap:focus-visible .keyLabel {
+  color: var(--pl-line);
+}
+
 .keyPlan {
   display: block;
   width: 100%;
@@ -390,6 +407,32 @@
   }
 }
 
+/* The detail's own heading, for a screen reader and nobody else. Every bay
+   on the drawing is a link, and without this a reader tabbing into the
+   picture meets a run of links with nothing saying what they belong to. It is
+   off screen, never display: none, for the same reason .stepsWrap is —
+   display: none would take it out of the accessibility tree too.
+
+   It hides with the drawing below 62rem, where .detail is not rendered and
+   there are no bay links left for it to head. */
+.detailLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 61.9375rem) {
+  .detailLabel {
+    display: none;
+  }
+}
+
 /* --- The drawing in words ------------------------------------
    One node, two treatments. Beside the drawing it is the screen-reader
    equivalent, off screen but never display: none. In place of the
@@ -539,6 +582,37 @@
 .hit {
   fill: transparent;
   stroke: none;
+}
+
+/* The door. Every bay is a link into the first lesson of the part it draws,
+   and the link wraps the whole bay: the invisible targets above and every
+   mark drawn inside them. It paints nothing of its own, so the sheet at rest
+   is exactly the sheet that was there before — the only thing that changed
+   is the cursor. Same rule, same reasons, as .door on the plate. */
+.door {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Focused from the keyboard, the bay is ruled round. A drawing office marks
+   a detail with a box, so the ring is a box: the hit rects themselves, inked
+   at 1.5 — the thin weight already on this sheet, not a fourth one — and
+   never a glow or a radius.
+
+   The rects rather than an outline because WebKit does not paint an outline
+   on an SVG element at all, and a focus ring that is missing in one browser
+   is not a focus ring. It stays graphite while the bay it belongs to takes
+   the course ink, so the box never disappears into the part it is marking.
+   Focus also lights the bay: the anchor sits inside a [data-zone] group and
+   section 8 correlates on :focus-within, so a keyboard focus fires the
+   reveal exactly as a hover does. */
+.door:focus-visible {
+  outline: none;
+}
+
+.door:focus-visible .hit {
+  stroke: var(--pl-line);
+  stroke-width: 1.5;
 }
 
 .bay,
@@ -967,11 +1041,15 @@
 
    EVERY RULE HERE IS WRITTEN TWICE, for the reason set out in
    section 7 of plate.module.css: a touch browser synthesises
-   hover on the first tap, and a schedule column is full of
-   lesson links, so an unscoped hover rule costs the reader their
-   first tap. The focus-within half is unconditional — a keyboard
-   is not the same set of devices as a fine pointer — and the
-   hover half is scoped to a real pointer.
+   hover on the first tap, and both halves of a pair are now
+   links — a schedule column full of lesson links, and a bay that
+   is itself a door into the part's first lesson — so an unscoped
+   hover rule costs the reader their first tap on either. The
+   focus-within half is unconditional — a keyboard is not the same
+   set of devices as a fine pointer — and the hover half is scoped
+   to a real pointer. focus-within, not focus-visible: the thing
+   that takes focus is the anchor inside the bay, and the bay is
+   what carries data-zone.
    ============================================================ */
 
 /* --- The reveal, from the keyboard --------------------------- */

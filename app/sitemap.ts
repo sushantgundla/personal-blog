@@ -6,7 +6,7 @@ import { siteConfig } from '@/lib/config'
 import { ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
 import { ALL_INDICATOR_CODES } from '@/lib/atlas/indicators'
 import { getAllCourses } from '@/lib/learn'
-import { learnSubdomainLive } from '@/lib/learn-domain'
+import { LEARN_ORIGIN, learnSubdomainLive, stripLearnPrefix } from '@/lib/learn-domain'
 
 // Same snapshot directory and read pattern as lib/atlas/dossier.ts's
 // readSnapshot — but only ever pulls `capturedAt` out of each file, and
@@ -28,6 +28,17 @@ async function capturedAtFor(iso3: string): Promise<Date> {
 // its GAMES record. Hand-typed here rather than imported so this file stays
 // a plain data list; if a game is ever added there, add it here too.
 const LEARN_GAMES = ['forgery', 'higher-lower', 'flags', 'guess-country', 'where-in-the-world'] as const
+
+// The absolute URL of a /learn page, for whichever address the section is
+// answering on. Takes the path it has on the main site — `/learn`,
+// `/learn/rag`, `/learn/rag/chunking` — and, when the subdomain is live, moves
+// it to `https://learn.sushantgundla.com/...` exactly the way learnCanonical()
+// does: same LEARN_ORIGIN, same stripLearnPrefix(). Built out of that pair
+// rather than restated, so a sitemap URL and a page's canonical URL cannot
+// drift apart.
+function learnUrl(path: string): string {
+  return learnSubdomainLive ? `${LEARN_ORIGIN}${stripLearnPrefix(path)}` : `${siteConfig.url}${path}`
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const articles = getAllArticles()
@@ -76,40 +87,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   //
   // Once NEXT_PUBLIC_LEARN_SUBDOMAIN_LIVE=1 the section lives on
   // learn.sushantgundla.com and every `sushantgundla.com/learn/...` URL
-  // redirects there, so listing them here would be a sitemap full of
-  // redirects. They are dropped instead. The subdomain's own URLs are not
-  // added in their place: a sitemap is only trusted for the host it sits on,
-  // so the subdomain serves its own.
+  // redirects there, so listing the apex URLs would be a sitemap full of
+  // redirects. learnUrl() lists the subdomain's own URLs instead — the address
+  // each page actually answers on, and the one it names as its canonical.
+  //
+  // There is only one sitemap route in this app, and middleware.ts's matcher
+  // skips any path with a dot in it, so `learn.sushantgundla.com/sitemap.xml`
+  // serves this same file. That is what makes listing subdomain URLs here the
+  // right move rather than a cross-host one: on the copy the subdomain serves,
+  // these URLs sit on the host they belong to. Dropping them, as this used to,
+  // left the whole section in no sitemap at all.
   const courses = getAllCourses()
 
-  const courseEntries: MetadataRoute.Sitemap = learnSubdomainLive
-    ? []
-    : courses.flatMap((course) => [
-        {
-          url: `${siteConfig.url}/learn/${course.slug}`,
-          lastModified: new Date(),
-          changeFrequency: 'monthly' as const,
-          priority: 0.7,
-        },
-        ...course.lessons.map((lesson) => ({
-          url: `${siteConfig.url}/learn/${course.slug}/${lesson.slug}`,
-          lastModified: new Date(),
-          changeFrequency: 'monthly' as const,
-          priority: 0.6,
-        })),
-      ])
+  const courseEntries: MetadataRoute.Sitemap = courses.flatMap((course) => [
+    {
+      url: learnUrl(`/learn/${course.slug}`),
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    },
+    ...course.lessons.map((lesson) => ({
+      url: learnUrl(`/learn/${course.slug}/${lesson.slug}`),
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+  ])
 
-  // The section's index page, dropped for the same reason.
-  const learnIndexEntry: MetadataRoute.Sitemap = learnSubdomainLive
-    ? []
-    : [
-        {
-          url: `${siteConfig.url}/learn`,
-          lastModified: new Date(),
-          changeFrequency: 'weekly',
-          priority: 0.8,
-        },
-      ]
+  // The section's index page, moved by the same rule: `/learn` on the main
+  // site, `https://learn.sushantgundla.com/` once the switch is on.
+  const learnIndexEntry: MetadataRoute.Sitemap = [
+    {
+      url: learnUrl('/learn'),
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+  ]
 
   return [
     {
