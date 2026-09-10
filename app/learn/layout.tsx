@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import Link from 'next/link'
+import { ThemeChoice } from './_components/ThemeChoice'
 import { ViewWidth } from './_components/ViewWidth'
 import './learn.css'
 
@@ -46,9 +47,20 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  // Matches --ln-ground in the dark theme, so the mobile browser chrome
-  // blends into the page instead of banding against it.
-  themeColor: '#12100E',
+  // The two --ln-ground values, so the mobile browser chrome blends into
+  // the page instead of banding a near-black strip above a whiteprint.
+  // This one genuinely has to differ per mode and cannot be a token: a
+  // <meta> colour is not CSS and cannot read var(--ln-ground).
+  //
+  // It follows the operating system rather than the rail's own LIGHT /
+  // DARK switch, because next-themes drives the theme with a class on
+  // <html> and a media attribute is the only thing a meta tag understands.
+  // For the reader who has not overridden their machine — nearly all of
+  // them — the two agree.
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#12100E' },
+    { media: '(prefers-color-scheme: light)', color: '#F7F5F1' },
+  ],
 }
 
 export default function LearnLayout({ children }: { children: React.ReactNode }) {
@@ -69,9 +81,12 @@ export default function LearnLayout({ children }: { children: React.ReactNode })
             Sushant Gundla / Learn
           </Link>
 
-          {/* The right of the rail: how wide to read, then the way out. */}
+          {/* The right of the rail: how wide to read, which way round to
+              read it, then the way out. The two switches are twins and sit
+              together; the way out stays last. */}
           <div className="learn-rail-right">
             <ViewWidth />
+            <ThemeChoice />
             <a href="https://sushantgundla.com/about" className="sign-quiet">
               About Sushant ↗
             </a>

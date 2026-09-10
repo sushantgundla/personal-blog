@@ -41,7 +41,7 @@
      --lm-quiet    6.25 /  5.99   labels, annotation, small numerals
      --lm-spark    6.71 /  4.28   section numerals, link underlines
      --lm-edge     4.34 /  3.16   control boundaries only, never text
-     --lm-firm     2.62 /  2.17   object hairlines (code, table, quote)
+     --lm-firm     2.62 /  2.62   object hairlines (code, table, quote)
      --lm-rule     1.31 /  1.27   row hairlines
    Every colour that letters body-size text is 5.99 or better.
    --lm-spark's 4.28 on the light sheet is why it is confined to
@@ -155,7 +155,14 @@
   --lm-line: #171a1d;
   --lm-quiet: #4f585f;
   --lm-edge: #79848b;
-  --lm-firm: #97a1a8;
+  /* Not the plate's original #97a1a8. That sat at 2.17:1 on this sheet
+     while its dark twin sits at 2.62:1, so the faintest hairline in the
+     section — the frame that is the whole of a code block, a table edge,
+     a link's underline — came out weaker in light than in dark. This is
+     one of the few values that has to be measured against its own ground
+     rather than mirrored: #889298 puts it at 2.62:1, the same strength as
+     dark. Hairlines only; it never letters anything. */
+  --lm-firm: #889298;
   --lm-rule: #c9d2d6;
   --lm-spark: #c2410c;
 }

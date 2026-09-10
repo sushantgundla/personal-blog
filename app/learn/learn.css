@@ -308,20 +308,29 @@
   padding: 0.85rem var(--ln-gutter);
 }
 
-/* The right of the rail: the reading-width switch, then the way out. */
+/* The right of the rail: the two switches, then the way out. */
 .learn-root .learn-rail-right {
   display: flex;
   align-items: center;
   gap: clamp(0.6rem, 2vw, 1.5rem);
 }
 
-/* On a phone the three pieces genuinely do not fit across 350-odd pixels
+/* On a phone the pieces genuinely do not fit across 350-odd pixels
    — measured, not guessed: the section name alone is most of it. So the
-   rail becomes two rows rather than shrinking the signage or dropping the
-   switch, which is the one control a reader on a small screen most wants.
-   The name takes the first row; the switch and the way out share the
-   second, pushed to the two gutters, so both rows still line up with the
-   column under them. */
+   rail becomes two rows rather than shrinking the signage or dropping a
+   switch, which is the control a reader on a small screen most wants.
+   The name takes the first row; the two switches and the way out share
+   the second, pushed to the two gutters, so both rows still line up with
+   the column under them.
+
+   The arithmetic for that second row, at 375px with the gutter at 5vw:
+   337px of usable width against roughly 92px for NARROW / WIDE, 84px for
+   LIGHT / DARK once ThemeChoice.module.css trims its padding at this
+   width, and 120px for ABOUT SUSHANT — about 296px plus two 7px gaps.
+   It fits, with something like 25px to spare, which is not much. Below
+   roughly 340px it stops fitting, and there the row is allowed to wrap so
+   the way out drops under the switches rather than being pushed past the
+   gutter. Everything is still on screen and nothing is dropped. */
 @media (max-width: 34rem) {
   .learn-root .learn-rail-inner {
     flex-wrap: wrap;
@@ -335,6 +344,8 @@
   .learn-root .learn-rail-right {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
   }
 }
 
