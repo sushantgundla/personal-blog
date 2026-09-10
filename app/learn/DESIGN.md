@@ -385,10 +385,9 @@ earlier build split the field into two columns above 100rem, drawing left and
 schedule right; on RAG's seventeen lessons the schedule made the row tall, the
 drawing's column stretched to match it, and the drawing sat centred with the
 top of the field showing nothing but bare grid. Grid rows size to their
-content, so a stack cannot do that at any lesson count. The drawing's height
-is capped so the whole of it stays above the fold at 1440 x 800, and every
-drawing is authored between 2.5:1 and 2.9:1 so the margin of bare grid either
-side of a capped drawing stays narrower than the drawing it frames.
+content, so a stack cannot do that at any lesson count. The drawing is capped
+on its width, so the bare grid either side of it on a wide window is a sheet
+margin and always narrower than the drawing it frames.
 
 **One column per part, and never a written number.** The schedule is
 `repeat(auto-fit, minmax(min(13rem, 100%), 1fr))`, so three parts give three
@@ -446,9 +445,17 @@ signage-caps label, and they belong to one line, not the whole page.
     Both caps are on the drawing. **Neither is ever on the sheet**, which runs
     the full window at every size.
   - **FIG. 2, on a course page.** The sheet runs the full window; only the
-    drawing has a ceiling, `clamp(15rem, 45vh, 32rem)`, which is what keeps
-    the whole of it above the fold at 1440 x 800 under the rail, the page's
-    own top padding and the title strip. Below `62rem` the drawing is not
+    drawing has a ceiling, and it is on the **width**, `min(100%, 76rem)`,
+    never on the height. Every drawing's viewBox is 1200 units wide and
+    every label on it is 15 units, so a label's rendered size is the box
+    width over 1200: fix the width and all five letter identically, cap the
+    height instead and the SVG letterboxes, scaling the drawing — and its
+    lettering — down by whatever the height was cut by. Measured, not
+    argued: under a height cap the same label came out 12.6px on
+    prompt-engineering and 9.6px on llms; under the width cap it is 15.2px
+    on both. The cost is the fold — a 1200 x 560 drawing is taller than the
+    room under the title strip on a 1440 x 800 laptop, and the fix for that
+    is a flatter viewBox, not a ceiling. Below `62rem` the drawing is not
     shown at all — a 1200-unit detail rendered into a 320px column letters its
     annotation at about five pixels, and a detail whose annotation cannot be
     read is a smudge rather than a detail. The phone gets the key plan, which
