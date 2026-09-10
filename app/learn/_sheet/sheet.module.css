@@ -140,8 +140,12 @@
   text-decoration: none;
 }
 
-.backLink:hover {
-  color: var(--pl-line);
+/* Scoped to a real pointer, like every other hover on this sheet: a touch
+   browser synthesises hover on the first tap, and this one sits on a link. */
+@media (hover: hover) and (pointer: fine) {
+  .backLink:hover {
+    color: var(--pl-line);
+  }
 }
 
 .h1 {
@@ -206,8 +210,10 @@
   transition: border-color 200ms var(--ln-ease);
 }
 
-.keyWrap:hover {
-  border-color: var(--pl-rule);
+@media (hover: hover) and (pointer: fine) {
+  .keyWrap:hover {
+    border-color: var(--pl-rule);
+  }
 }
 
 .keyPlan {
@@ -226,8 +232,10 @@
   color: var(--pl-quiet);
 }
 
-.keyWrap:hover .keyLabel {
-  color: var(--pl-line);
+@media (hover: hover) and (pointer: fine) {
+  .keyWrap:hover .keyLabel {
+    color: var(--pl-line);
+  }
 }
 
 .faint {
@@ -848,11 +856,20 @@
   inset: 0;
 }
 
-.row:hover .rowLink,
+/* The row is the door, so its hover half is scoped and its focus half is
+   not — see section 8. */
 .rowLink:focus-visible {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover .rowLink {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
 }
 
 .rowMin {
@@ -947,42 +964,52 @@
    fail 4.5:1 in both themes. Only the ink swatch fades and the
    ring steps back — the two marks whose whole job is to point at
    the drawing.
+
+   EVERY RULE HERE IS WRITTEN TWICE, for the reason set out in
+   section 7 of plate.module.css: a touch browser synthesises
+   hover on the first tap, and a schedule column is full of
+   lesson links, so an unscoped hover rule costs the reader their
+   first tap. The focus-within half is unconditional — a keyboard
+   is not the same set of devices as a fine pointer — and the
+   hover half is scoped to a real pointer.
    ============================================================ */
 
-.sheet:has([data-zone]:is(:hover, :focus-within)) .bay {
+/* --- The reveal, from the keyboard --------------------------- */
+
+.sheet:has([data-zone]:focus-within) .bay {
   opacity: 0.16;
 }
 
-.sheet:has([data-zone]:is(:hover, :focus-within)) .spine,
-.sheet:has([data-zone]:is(:hover, :focus-within)) .callout {
+.sheet:has([data-zone]:focus-within) .spine,
+.sheet:has([data-zone]:focus-within) .callout {
   opacity: 0.5;
 }
 
-.sheet:has([data-zone]:is(:hover, :focus-within)) .swatch {
+.sheet:has([data-zone]:focus-within) .swatch {
   opacity: 0.24;
 }
 
-.sheet:has([data-zone]:is(:hover, :focus-within)) .colN {
+.sheet:has([data-zone]:focus-within) .colN {
   border-color: var(--pl-faint);
 }
 
 /* The held bay takes its course's ink, and its callout comes back with it. */
-.sheet:has([data-zone='1']:is(:hover, :focus-within)) .bay[data-zone='1'],
-.sheet:has([data-zone='2']:is(:hover, :focus-within)) .bay[data-zone='2'],
-.sheet:has([data-zone='3']:is(:hover, :focus-within)) .bay[data-zone='3'],
-.sheet:has([data-zone='4']:is(:hover, :focus-within)) .bay[data-zone='4'],
-.sheet:has([data-zone='5']:is(:hover, :focus-within)) .bay[data-zone='5'],
-.sheet:has([data-zone='6']:is(:hover, :focus-within)) .bay[data-zone='6'],
-.sheet:has([data-zone='7']:is(:hover, :focus-within)) .bay[data-zone='7'],
-.sheet:has([data-zone='8']:is(:hover, :focus-within)) .bay[data-zone='8'],
-.sheet:has([data-zone='1']:is(:hover, :focus-within)) .callout[data-zone='1'],
-.sheet:has([data-zone='2']:is(:hover, :focus-within)) .callout[data-zone='2'],
-.sheet:has([data-zone='3']:is(:hover, :focus-within)) .callout[data-zone='3'],
-.sheet:has([data-zone='4']:is(:hover, :focus-within)) .callout[data-zone='4'],
-.sheet:has([data-zone='5']:is(:hover, :focus-within)) .callout[data-zone='5'],
-.sheet:has([data-zone='6']:is(:hover, :focus-within)) .callout[data-zone='6'],
-.sheet:has([data-zone='7']:is(:hover, :focus-within)) .callout[data-zone='7'],
-.sheet:has([data-zone='8']:is(:hover, :focus-within)) .callout[data-zone='8'] {
+.sheet:has([data-zone='1']:focus-within) .bay[data-zone='1'],
+.sheet:has([data-zone='2']:focus-within) .bay[data-zone='2'],
+.sheet:has([data-zone='3']:focus-within) .bay[data-zone='3'],
+.sheet:has([data-zone='4']:focus-within) .bay[data-zone='4'],
+.sheet:has([data-zone='5']:focus-within) .bay[data-zone='5'],
+.sheet:has([data-zone='6']:focus-within) .bay[data-zone='6'],
+.sheet:has([data-zone='7']:focus-within) .bay[data-zone='7'],
+.sheet:has([data-zone='8']:focus-within) .bay[data-zone='8'],
+.sheet:has([data-zone='1']:focus-within) .callout[data-zone='1'],
+.sheet:has([data-zone='2']:focus-within) .callout[data-zone='2'],
+.sheet:has([data-zone='3']:focus-within) .callout[data-zone='3'],
+.sheet:has([data-zone='4']:focus-within) .callout[data-zone='4'],
+.sheet:has([data-zone='5']:focus-within) .callout[data-zone='5'],
+.sheet:has([data-zone='6']:focus-within) .callout[data-zone='6'],
+.sheet:has([data-zone='7']:focus-within) .callout[data-zone='7'],
+.sheet:has([data-zone='8']:focus-within) .callout[data-zone='8'] {
   opacity: 1;
   --pl-stroke: var(--ln-line);
   /* The strokes take the ink; the annotation only steps up to full
@@ -993,27 +1020,94 @@
 
 /* The echo in the schedule: the ink that has just arrived on the drawing
    runs the full width of that part's column, tab to edge. */
-.sheet:has([data-zone='1']:is(:hover, :focus-within)) .col[data-zone='1'] .swatch,
-.sheet:has([data-zone='2']:is(:hover, :focus-within)) .col[data-zone='2'] .swatch,
-.sheet:has([data-zone='3']:is(:hover, :focus-within)) .col[data-zone='3'] .swatch,
-.sheet:has([data-zone='4']:is(:hover, :focus-within)) .col[data-zone='4'] .swatch,
-.sheet:has([data-zone='5']:is(:hover, :focus-within)) .col[data-zone='5'] .swatch,
-.sheet:has([data-zone='6']:is(:hover, :focus-within)) .col[data-zone='6'] .swatch,
-.sheet:has([data-zone='7']:is(:hover, :focus-within)) .col[data-zone='7'] .swatch,
-.sheet:has([data-zone='8']:is(:hover, :focus-within)) .col[data-zone='8'] .swatch {
+.sheet:has([data-zone='1']:focus-within) .col[data-zone='1'] .swatch,
+.sheet:has([data-zone='2']:focus-within) .col[data-zone='2'] .swatch,
+.sheet:has([data-zone='3']:focus-within) .col[data-zone='3'] .swatch,
+.sheet:has([data-zone='4']:focus-within) .col[data-zone='4'] .swatch,
+.sheet:has([data-zone='5']:focus-within) .col[data-zone='5'] .swatch,
+.sheet:has([data-zone='6']:focus-within) .col[data-zone='6'] .swatch,
+.sheet:has([data-zone='7']:focus-within) .col[data-zone='7'] .swatch,
+.sheet:has([data-zone='8']:focus-within) .col[data-zone='8'] .swatch {
   opacity: 1;
   width: 100%;
 }
 
-.sheet:has([data-zone='1']:is(:hover, :focus-within)) .col[data-zone='1'] .colN,
-.sheet:has([data-zone='2']:is(:hover, :focus-within)) .col[data-zone='2'] .colN,
-.sheet:has([data-zone='3']:is(:hover, :focus-within)) .col[data-zone='3'] .colN,
-.sheet:has([data-zone='4']:is(:hover, :focus-within)) .col[data-zone='4'] .colN,
-.sheet:has([data-zone='5']:is(:hover, :focus-within)) .col[data-zone='5'] .colN,
-.sheet:has([data-zone='6']:is(:hover, :focus-within)) .col[data-zone='6'] .colN,
-.sheet:has([data-zone='7']:is(:hover, :focus-within)) .col[data-zone='7'] .colN,
-.sheet:has([data-zone='8']:is(:hover, :focus-within)) .col[data-zone='8'] .colN {
+.sheet:has([data-zone='1']:focus-within) .col[data-zone='1'] .colN,
+.sheet:has([data-zone='2']:focus-within) .col[data-zone='2'] .colN,
+.sheet:has([data-zone='3']:focus-within) .col[data-zone='3'] .colN,
+.sheet:has([data-zone='4']:focus-within) .col[data-zone='4'] .colN,
+.sheet:has([data-zone='5']:focus-within) .col[data-zone='5'] .colN,
+.sheet:has([data-zone='6']:focus-within) .col[data-zone='6'] .colN,
+.sheet:has([data-zone='7']:focus-within) .col[data-zone='7'] .colN,
+.sheet:has([data-zone='8']:focus-within) .col[data-zone='8'] .colN {
   border-color: var(--ln-line);
+}
+
+/* --- The same reveal, from a pointer -------------------------
+   The same rules, hover for focus, and only where the pointer
+   is real. Nothing new is styled here. */
+
+@media (hover: hover) and (pointer: fine) {
+  .sheet:has([data-zone]:hover) .bay {
+    opacity: 0.16;
+  }
+
+  .sheet:has([data-zone]:hover) .spine,
+  .sheet:has([data-zone]:hover) .callout {
+    opacity: 0.5;
+  }
+
+  .sheet:has([data-zone]:hover) .swatch {
+    opacity: 0.24;
+  }
+
+  .sheet:has([data-zone]:hover) .colN {
+    border-color: var(--pl-faint);
+  }
+
+  .sheet:has([data-zone='1']:hover) .bay[data-zone='1'],
+  .sheet:has([data-zone='2']:hover) .bay[data-zone='2'],
+  .sheet:has([data-zone='3']:hover) .bay[data-zone='3'],
+  .sheet:has([data-zone='4']:hover) .bay[data-zone='4'],
+  .sheet:has([data-zone='5']:hover) .bay[data-zone='5'],
+  .sheet:has([data-zone='6']:hover) .bay[data-zone='6'],
+  .sheet:has([data-zone='7']:hover) .bay[data-zone='7'],
+  .sheet:has([data-zone='8']:hover) .bay[data-zone='8'],
+  .sheet:has([data-zone='1']:hover) .callout[data-zone='1'],
+  .sheet:has([data-zone='2']:hover) .callout[data-zone='2'],
+  .sheet:has([data-zone='3']:hover) .callout[data-zone='3'],
+  .sheet:has([data-zone='4']:hover) .callout[data-zone='4'],
+  .sheet:has([data-zone='5']:hover) .callout[data-zone='5'],
+  .sheet:has([data-zone='6']:hover) .callout[data-zone='6'],
+  .sheet:has([data-zone='7']:hover) .callout[data-zone='7'],
+  .sheet:has([data-zone='8']:hover) .callout[data-zone='8'] {
+    opacity: 1;
+    --pl-stroke: var(--ln-line);
+    --pl-anno: var(--pl-line);
+  }
+
+  .sheet:has([data-zone='1']:hover) .col[data-zone='1'] .swatch,
+  .sheet:has([data-zone='2']:hover) .col[data-zone='2'] .swatch,
+  .sheet:has([data-zone='3']:hover) .col[data-zone='3'] .swatch,
+  .sheet:has([data-zone='4']:hover) .col[data-zone='4'] .swatch,
+  .sheet:has([data-zone='5']:hover) .col[data-zone='5'] .swatch,
+  .sheet:has([data-zone='6']:hover) .col[data-zone='6'] .swatch,
+  .sheet:has([data-zone='7']:hover) .col[data-zone='7'] .swatch,
+  .sheet:has([data-zone='8']:hover) .col[data-zone='8'] .swatch {
+    opacity: 1;
+    width: 100%;
+  }
+
+  .sheet:has([data-zone='1']:hover) .col[data-zone='1'] .colN,
+  .sheet:has([data-zone='2']:hover) .col[data-zone='2'] .colN,
+  .sheet:has([data-zone='3']:hover) .col[data-zone='3'] .colN,
+  .sheet:has([data-zone='4']:hover) .col[data-zone='4'] .colN,
+  .sheet:has([data-zone='5']:hover) .col[data-zone='5'] .colN,
+  .sheet:has([data-zone='6']:hover) .col[data-zone='6'] .colN,
+  .sheet:has([data-zone='7']:hover) .col[data-zone='7'] .colN,
+  .sheet:has([data-zone='8']:hover) .col[data-zone='8'] .colN {
+    border-color: var(--ln-line);
+  }
 }
 
 /* ============================================================

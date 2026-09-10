@@ -469,11 +469,18 @@
 }
 
 /* Inked at rest, on every device. The reveal is what ties a part of the
-   machine to a course, and on a touch screen it never fires — so without
-   this the argument of the page is invisible to a reader on a phone, and
-   PRODUCT.md says that is a normal reader here. A media query cannot fix
-   it: `hover: hover` is reported by an iPad with a keyboard and by a
-   touchscreen laptop, which is exactly where it would need to be right.
+   machine to a course, and a reader with a finger never sees it: section 7
+   scopes the hover half to (hover: hover) and (pointer: fine), so on a touch
+   screen the drawing simply never lights up. Without these rings the
+   argument of the page would be invisible to a reader on a phone, and
+   PRODUCT.md says that is a normal reader here.
+
+   A media query cannot decide this the other way round — inking the rings
+   only where there is no reveal. `hover: hover` is reported by an iPad with
+   a keyboard and by a touchscreen laptop, and neither says whether the
+   reader is currently using the pointer or the glass. The query is safe for
+   deciding whether hover styles apply at all, which is all section 7 asks
+   of it; it is not safe for deciding what a reader has already seen.
 
    Rings only. Five inked rings is a legend; five inked stages at rest is
    the transit map this drawing replaced. The numeral inside stays at
@@ -591,41 +598,58 @@
    would fail 4.5:1 in both themes. Only the ink swatch fades and
    the ring steps back — the two marks whose whole job is to
    point at the drawing.
+
+   EVERY RULE HERE IS WRITTEN TWICE, and it has to be. The focus
+   half is unconditional, because a keyboard is not the same set
+   of devices as a fine pointer — a phone with a Bluetooth
+   keyboard has one and not the other. The hover half is inside
+   @media (hover: hover) and (pointer: fine), because a touch
+   browser synthesises hover on the first tap: leave the hover
+   rules unscoped and the first tap on a part of the machine
+   lights it instead of opening the course, and the reader has to
+   tap twice. Now that the five parts are links, that is not a
+   cosmetic bug, it is a door that does not open.
+
+   The two halves may not be merged back into one
+   :is(:hover, :focus-visible) selector list. That is what was
+   there before, and it is what caused the dead first tap.
    ============================================================ */
 
-.plate:has([data-line]:is(:hover, :focus-visible)) .stage {
+/* --- The reveal, from the keyboard --------------------------- */
+
+.plate:has([data-line]:focus-visible) .stage {
   opacity: 0.16;
 }
 
-.plate:has([data-line]:is(:hover, :focus-visible)) .spine,
-.plate:has([data-line]:is(:hover, :focus-visible)) .callout {
+.plate:has([data-line]:focus-visible) .spine,
+.plate:has([data-line]:focus-visible) .callout {
   opacity: 0.5;
 }
 
 /* The held stage's own number stays lit while the other four step back —
    the number is the tie between the drawing and the legend, and it is the
    one thing that must not fade at the moment the reader is using it. */
-.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .callout[data-line='prompt-engineering'],
-.plate:has([data-line='rag']:is(:hover, :focus-visible)) .callout[data-line='rag'],
-.plate:has([data-line='llms']:is(:hover, :focus-visible)) .callout[data-line='llms'],
-.plate:has([data-line='agents']:is(:hover, :focus-visible)) .callout[data-line='agents'],
-.plate:has([data-line='evals']:is(:hover, :focus-visible)) .callout[data-line='evals'] {
+.plate:has([data-line='prompt-engineering']:focus-visible) .callout[data-line='prompt-engineering'],
+.plate:has([data-line='rag']:focus-visible) .callout[data-line='rag'],
+.plate:has([data-line='llms']:focus-visible) .callout[data-line='llms'],
+.plate:has([data-line='agents']:focus-visible) .callout[data-line='agents'],
+.plate:has([data-line='evals']:focus-visible) .callout[data-line='evals'] {
   opacity: 1;
 }
 
-.plate:has([data-line]:is(:hover, :focus-visible)) .swatch {
+.plate:has([data-line]:focus-visible) .swatch {
   opacity: 0.22;
 }
 
-.plate:has([data-line]:is(:hover, :focus-visible)) .calloutN {
+.plate:has([data-line]:focus-visible) .calloutN {
   border-color: var(--pl-faint);
 }
 
-.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .stage[data-line='prompt-engineering'],
-.plate:has([data-line='rag']:is(:hover, :focus-visible)) .stage[data-line='rag'],
-.plate:has([data-line='llms']:is(:hover, :focus-visible)) .stage[data-line='llms'],
-.plate:has([data-line='agents']:is(:hover, :focus-visible)) .stage[data-line='agents'],
-.plate:has([data-line='evals']:is(:hover, :focus-visible)) .stage[data-line='evals'] {
+.plate:has([data-line='prompt-engineering']:focus-visible) .stage[data-line='prompt-engineering'],
+.plate:has([data-line='rag']:focus-visible) .stage[data-line='rag'],
+.plate:has([data-line='llms']:focus-visible) .stage[data-line='llms'],
+.plate:has([data-line='agents']:focus-visible) .stage[data-line='agents'],
+.plate:has([data-line='evals']:focus-visible) .stage[data-line='evals'] {
   opacity: 1;
   --pl-stroke: var(--ln-line);
   /* The strokes take the ink; the annotation only steps up to full
@@ -638,21 +662,80 @@
 /* The echo in the legend: the ink that has just arrived on the drawing
    runs the full width of its own cell, rule to rule. Stopping at the
    cell padding left the gesture half finished. */
-.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .cell[data-line='prompt-engineering'] .swatch,
-.plate:has([data-line='rag']:is(:hover, :focus-visible)) .cell[data-line='rag'] .swatch,
-.plate:has([data-line='llms']:is(:hover, :focus-visible)) .cell[data-line='llms'] .swatch,
-.plate:has([data-line='agents']:is(:hover, :focus-visible)) .cell[data-line='agents'] .swatch,
-.plate:has([data-line='evals']:is(:hover, :focus-visible)) .cell[data-line='evals'] .swatch {
+.plate:has([data-line='prompt-engineering']:focus-visible) .cell[data-line='prompt-engineering'] .swatch,
+.plate:has([data-line='rag']:focus-visible) .cell[data-line='rag'] .swatch,
+.plate:has([data-line='llms']:focus-visible) .cell[data-line='llms'] .swatch,
+.plate:has([data-line='agents']:focus-visible) .cell[data-line='agents'] .swatch,
+.plate:has([data-line='evals']:focus-visible) .cell[data-line='evals'] .swatch {
   opacity: 1;
   width: calc(100% + 2 * var(--pl-cell-pad-x));
 }
 
-.plate:has([data-line='prompt-engineering']:is(:hover, :focus-visible)) .cell[data-line='prompt-engineering'] .calloutN,
-.plate:has([data-line='rag']:is(:hover, :focus-visible)) .cell[data-line='rag'] .calloutN,
-.plate:has([data-line='llms']:is(:hover, :focus-visible)) .cell[data-line='llms'] .calloutN,
-.plate:has([data-line='agents']:is(:hover, :focus-visible)) .cell[data-line='agents'] .calloutN,
-.plate:has([data-line='evals']:is(:hover, :focus-visible)) .cell[data-line='evals'] .calloutN {
+.plate:has([data-line='prompt-engineering']:focus-visible) .cell[data-line='prompt-engineering'] .calloutN,
+.plate:has([data-line='rag']:focus-visible) .cell[data-line='rag'] .calloutN,
+.plate:has([data-line='llms']:focus-visible) .cell[data-line='llms'] .calloutN,
+.plate:has([data-line='agents']:focus-visible) .cell[data-line='agents'] .calloutN,
+.plate:has([data-line='evals']:focus-visible) .cell[data-line='evals'] .calloutN {
   border-color: var(--ln-line);
+}
+
+/* --- The same reveal, from a pointer -------------------------
+   The same rules, hover for focus, and only where the pointer is
+   real. Nothing new is styled here; if a value changes above it
+   changes here too. */
+
+@media (hover: hover) and (pointer: fine) {
+  .plate:has([data-line]:hover) .stage {
+    opacity: 0.16;
+  }
+
+  .plate:has([data-line]:hover) .spine,
+  .plate:has([data-line]:hover) .callout {
+    opacity: 0.5;
+  }
+
+  .plate:has([data-line='prompt-engineering']:hover) .callout[data-line='prompt-engineering'],
+  .plate:has([data-line='rag']:hover) .callout[data-line='rag'],
+  .plate:has([data-line='llms']:hover) .callout[data-line='llms'],
+  .plate:has([data-line='agents']:hover) .callout[data-line='agents'],
+  .plate:has([data-line='evals']:hover) .callout[data-line='evals'] {
+    opacity: 1;
+  }
+
+  .plate:has([data-line]:hover) .swatch {
+    opacity: 0.22;
+  }
+
+  .plate:has([data-line]:hover) .calloutN {
+    border-color: var(--pl-faint);
+  }
+
+  .plate:has([data-line='prompt-engineering']:hover) .stage[data-line='prompt-engineering'],
+  .plate:has([data-line='rag']:hover) .stage[data-line='rag'],
+  .plate:has([data-line='llms']:hover) .stage[data-line='llms'],
+  .plate:has([data-line='agents']:hover) .stage[data-line='agents'],
+  .plate:has([data-line='evals']:hover) .stage[data-line='evals'] {
+    opacity: 1;
+    --pl-stroke: var(--ln-line);
+    --pl-anno: var(--pl-line);
+  }
+
+  .plate:has([data-line='prompt-engineering']:hover) .cell[data-line='prompt-engineering'] .swatch,
+  .plate:has([data-line='rag']:hover) .cell[data-line='rag'] .swatch,
+  .plate:has([data-line='llms']:hover) .cell[data-line='llms'] .swatch,
+  .plate:has([data-line='agents']:hover) .cell[data-line='agents'] .swatch,
+  .plate:has([data-line='evals']:hover) .cell[data-line='evals'] .swatch {
+    opacity: 1;
+    width: calc(100% + 2 * var(--pl-cell-pad-x));
+  }
+
+  .plate:has([data-line='prompt-engineering']:hover) .cell[data-line='prompt-engineering'] .calloutN,
+  .plate:has([data-line='rag']:hover) .cell[data-line='rag'] .calloutN,
+  .plate:has([data-line='llms']:hover) .cell[data-line='llms'] .calloutN,
+  .plate:has([data-line='agents']:hover) .cell[data-line='agents'] .calloutN,
+  .plate:has([data-line='evals']:hover) .cell[data-line='evals'] .calloutN {
+    border-color: var(--ln-line);
+  }
 }
 
 /* ============================================================
@@ -770,8 +853,10 @@
   text-decoration-color: var(--pl-faint);
 }
 
-.cellLink:hover {
-  text-decoration-color: var(--pl-line);
+@media (hover: hover) and (pointer: fine) {
+  .cellLink:hover {
+    text-decoration-color: var(--pl-line);
+  }
 }
 
 .cellLink:focus-visible {

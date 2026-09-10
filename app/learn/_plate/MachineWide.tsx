@@ -36,6 +36,13 @@ import s from './plate.module.css'
  * in plate.module.css and runs on :has(); nothing here is a client
  * component and this page ships no JavaScript of its own.
  *
+ * The hover half of it is scoped to a device with a real pointer. A touch
+ * browser synthesises hover on the first tap, and now that the parts are
+ * links, an unscoped reveal spends the reader's first tap lighting the part
+ * instead of opening the course. On a phone the drawing never lights up; the
+ * five inked callout rings are what carry the tie to the legend there, and
+ * they are inked at rest for exactly that reason.
+ *
  * Each of the five parts is also the door into its course — see Stage.tsx,
  * which wraps the geometry below in the link and carries the accessible
  * name. So the sheet is no longer aria-hidden: it is role="presentation",
@@ -275,11 +282,12 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
       {/* ---- Callouts -------------------------------------------------
           A numbered ring and a leader to the part it names. The same five
           numbers head the five entries in the legend below, and the rings
-          carry their course's ink at rest on every device — on a touch
-          screen the reveal never fires, and without the rings the tie
-          between a part of the machine and a course would be invisible to
-          a reader on a phone. The numeral inside stays graphite; see the
-          note on .ring in plate.module.css. */}
+          carry their course's ink at rest on every device — the reveal is
+          scoped to a real pointer, so a reader with a finger never sees the
+          drawing light up at all, and without the rings the tie between a
+          part of the machine and a course would be invisible to them. The
+          numeral inside stays graphite; see the note on .ring and section 7
+          in plate.module.css. */}
       <g className={s.callouts} aria-hidden="true">
         <g className={s.callout} data-line="prompt-engineering">
           <path className={s.lead} d="M162 168L294 280" />

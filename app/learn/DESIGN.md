@@ -99,13 +99,27 @@ nothing; here the ink means "this part of the machine is that course", and it
 only means that at the moment somebody asks.
 
 **Why the callout rings are inked anyway.** On a touch screen the reveal never
-fires, and `PRODUCT.md` says readers are frequently on a phone — so without
-the rings, the whole argument of the page is invisible to them. A
-`@media (hover: none)` guard cannot fix it: an iPad with a keyboard and a
-touchscreen laptop both report `hover: hover`, which is exactly where it would
-need to be right. Rings only. The numeral inside each ring stays at
-`--pl-line`, because the ink is measured for a 1.25px stroke and not for
-14px type.
+fires — the hover rules are scoped to `(hover: hover) and (pointer: fine)`,
+see below — and `PRODUCT.md` says readers are frequently on a phone, so
+without the rings the whole argument of the page is invisible to them. The
+same media query cannot be used the other way round, to ink the rings only
+where there is no reveal: an iPad with a keyboard and a touchscreen laptop
+both report `hover: hover`, and neither says whether the reader is using the
+pointer or the glass right now. It is safe for deciding whether a hover style
+applies; it is not safe for deciding what a reader has already been shown.
+Rings only, everywhere. The numeral inside each ring stays at `--pl-line`,
+because the ink is measured for a 1.25px stroke and not for 14px type.
+
+**Hover is scoped, focus is not.** Every hover-driven rule on both sheets sits
+inside `@media (hover: hover) and (pointer: fine)`, and every focus-driven one
+is unconditional. They are written out twice rather than paired in one
+`:is(:hover, :focus-visible)` list, and they may not be folded back together:
+a touch browser synthesises hover on the first tap, so an unscoped reveal
+spends that tap lighting the part instead of opening the course, and the
+reader has to tap twice. The two conditions are also not the same set of
+devices — a phone with a Bluetooth keyboard has focus and no fine pointer.
+That covers the plate, the detail sheet's own reveal, and every `:hover` that
+sits on a link.
 
 **How the two halves are correlated.** Both carry the same `data-line` value,
 which is also what `learn.css` reads to resolve `--ln-line`; the whole reveal
@@ -602,9 +616,10 @@ On the index:
   to carry everything the drawing carries **in the same order**, including the
   two facts the drawing states in words rather than lines. When FIG. 1
   changes, that list changes with it.
-- The reveal fires from the keyboard as well as the pointer: the `:has()`
-  rules match `:is(:hover, :focus-visible)`, so tabbing the legend walks the
-  machine, and so does tabbing the drawing.
+- The reveal fires from the keyboard as well as the pointer, and the two are
+  separate rules: the `:focus-visible` half is unconditional, the `:hover`
+  half is inside `@media (hover: hover) and (pointer: fine)`. Tabbing the
+  legend walks the machine, and so does tabbing the drawing, on any device.
 - **Both ways into a course are real links.** The whole legend cell is a
   target, via `::after { position: absolute; inset: 0 }` on the link, and each
   part of the machine is a target too. **What that costs:** a screen-reader
@@ -678,6 +693,15 @@ lost on a reason, not on taste.
   `next/link` inside the drawing is a client navigation like any other. The
   five parts are doors. What that cost is recorded in Accessibility, and it is
   a real cost, not a free win.
+- **"On a touch screen the reveal never fires", left as an assumption.** It
+  was recorded here and in the code as a fact about touch browsers, and it was
+  false: Mobile Safari and Chrome on Android both synthesise hover on the
+  first tap. Nothing showed while the drawing was only a highlight; the moment
+  the parts became links it cost the reader their first tap — one tap lit the
+  stage, the second opened the course. Fixed by scoping every hover rule to
+  `(hover: hover) and (pointer: fine)` and leaving every focus rule
+  unconditional, on both sheets. The sentence is now true because a media
+  query makes it true, not because a browser was assumed to behave.
 
 - **Every lesson as a callout on FIG. 2.** The literal reading of the detail
   ideology, and it does not survive contact with RAG: seventeen numbered rings
