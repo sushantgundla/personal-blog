@@ -43,6 +43,16 @@ import s from '../sheet.module.css'
  * which is the price the second storey costs and is recorded in DESIGN.md.
  */
 
+/**
+ * The loop. One request runs the sheet and a beat of rest follows, and the
+ * three sparks below are timed against this one number so the order they
+ * fire in is the order the request meets the machinery. A path that only
+ * happens on some runs gets OTHER, which is two laps, so it fires on every
+ * second one.
+ */
+const CYCLE = 7
+const OTHER = CYCLE * 2
+
 /* --- The stack -------------------------------------------------- */
 
 const PLATES = [538, 584, 630, 674, 720, 766]
@@ -249,7 +259,35 @@ function LlmsDetail({ k }: { k: BayKey }) {
         <Callout k={k} i={3} cx={1157} cy={430} lead="M1151 416L1123 355" dot={[1120, 349]} />
       </g>
 
-      <Spark d="M20 292H1040L1088 349H1157" dur="2.1s" delay="0.3s" />
+      {/* ---- The request ---------------------------------------------
+          Three of them, on one cycle. The first is the whole journey:
+          in through the context window, across the meter onto their
+          machine, through the plates, past the sampling picket and out
+          of the switch. The second peels off at the same moment onto
+          your own machine, and stops at the contact it does not get
+          wired through — which is the true drawing of a box that is
+          running and simply is not the one you picked. The third is the
+          retry, and it is conditional, so it runs on every other lap:
+          the request hit a ceiling and came back to be sent again. */}
+      <Spark
+        d="M20 292H1040L1088 349H1157"
+        dur="3.4s"
+        delay="0.2s"
+        cycle={`${CYCLE}s`}
+      />
+      <Spark
+        d="M80 292V461H1040"
+        dur="3.3s"
+        delay="0.5s"
+        cycle={`${CYCLE}s`}
+      />
+      <Spark
+        d="M440 292V131H394V283"
+        dur="1.1s"
+        delay="3.9s"
+        cycle={`${OTHER}s`}
+        len="0.17"
+      />
     </svg>
   )
 }

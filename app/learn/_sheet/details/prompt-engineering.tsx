@@ -46,6 +46,14 @@ import s from '../sheet.module.css'
  * fitting a 1440 x 800 laptop whole: it misses by 15px.
  */
 
+/**
+ * The loop. One request runs the sheet, a beat of rest follows, and the
+ * next one goes after it. Every spark below is timed against this number.
+ * OTHER is two laps, for the path that only happens on some runs.
+ */
+const CYCLE = 7
+const OTHER = CYCLE * 2
+
 function PromptDetail({ k }: { k: BayKey }) {
   return (
     <svg
@@ -256,7 +264,37 @@ function PromptDetail({ k }: { k: BayKey }) {
         <Callout k={k} i={3} cx={227} cy={352} lead="M245 357L261 361" dot={[267, 361]} />
       </g>
 
-      <Spark d="M160 91H227L333 213H560V301H643V213H1024L1117 277" dur="2.4s" delay="0.25s" />
+      {/* ---- The request ---------------------------------------------
+          Two inlets, not one, so two sparks set off together and meet at
+          the manifold — which is the whole of that lesson, said in
+          motion. The upper one carries on: down the decomposition, the
+          long way round the loop below the axis, through the samples,
+          the vote and the valve, and out of the outlet manifold. The
+          third is what fails the valve, and it is conditional, so it
+          runs on every other lap and goes back round the bottom to be
+          asked again. Nothing dotted is ever sparked: the version tap
+          and the contract watch, and a spark on them would say they
+          carry something. */}
+      <Spark
+        d="M160 91H227L333 213H560V301H643V213H1024L1117 277"
+        dur="3.5s"
+        delay="0.2s"
+        cycle={`${CYCLE}s`}
+      />
+      <Spark
+        d="M160 285H227L333 221"
+        dur="0.66s"
+        delay="0.2s"
+        cycle={`${CYCLE}s`}
+        len="0.36"
+      />
+      <Spark
+        d="M976 243V349H720V231"
+        dur="1.4s"
+        delay="3.9s"
+        cycle={`${OTHER}s`}
+        len="0.145"
+      />
     </svg>
   )
 }

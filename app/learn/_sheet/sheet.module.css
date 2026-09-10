@@ -676,13 +676,56 @@
 }
 
 /* ============================================================
-   5. The one authored moment
-   One request runs this detail once, on load, and is then gone —
-   the same event FIG. 1 opens with, at the scale of one part.
-   pathLength="1" puts the dash arithmetic in fractions of the
-   path; the gap is longer than the path, so exactly one spark is
-   ever on a line and the resting offset leaves none.
+   5. The authored moment, on a loop
+   One request runs this detail, a beat of rest follows, and the
+   next one goes after it — the same event FIG. 1 opens with, at
+   the scale of one part, repeated. Each drawing names its own
+   --pl-cycle on the <svg>, and every spark on that sheet is timed
+   against it, so what a reader sees is one request making its way
+   through and not a conveyor belt of dots.
+
+   All of the arithmetic is in the dash pattern, so one keyframe
+   set drives paths of very different lengths. pathLength="1" puts
+   it in fractions of the path: the spark is --pl-d long, and the
+   gap is longer than the path plus both waits, so exactly one
+   spark is ever on a line. The waiting is done off the ends of
+   the path, where nothing is drawn — --pl-lead is how far before
+   the start the spark begins, --pl-trail how far past the end it
+   runs on, both in path lengths. Spark() in details.tsx works
+   those two out from seconds, so a drawing is authored in the
+   timing a reader actually sees.
+
+   The timing function is linear on purpose. An ease would stretch
+   the waits as well as the run, and a request travelling at a
+   steady speed is the thing being drawn.
+
+   **stroke-dashoffset is not what animates, and it cannot be.**
+   Both ends of the run are calc() over unitless custom properties,
+   and an unregistered custom property is still an unresolved token
+   stream when the animation's endpoints are built — so the two are
+   not interpolatable and the browser falls back to discrete. That
+   is not a guess: stepping a paused animation across the cycle and
+   reading the offset back gives two values and one flip at the
+   midpoint, and no travel at all. The one-shot version this
+   replaced had the same shape, `calc(2 + var(--pl-d))` at one end,
+   so it never travelled either.
+
+   So the thing that animates is --pl-t, a registered <number> that
+   runs 0 to 1 across the cycle on two literal keyframes with no
+   var() anywhere in them. A registered property interpolates by
+   its declared syntax, and stroke-dashoffset — worked out from it
+   in the rule below — is recomputed every frame with it.
    ============================================================ */
+
+/* Registered here rather than in learn.css because it belongs to this
+   sheet's motion and nothing else reads it. CSS modules scope class
+   names and @keyframes names; a custom property name is left alone,
+   so --pl-t is the same token in the stylesheet and in the built CSS. */
+@property --pl-t {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
 
 .sparks {
   pointer-events: none;
@@ -690,39 +733,58 @@
 
 .spark {
   --pl-d: 0.06;
+  --pl-lead: 0;
+  --pl-trail: 0;
+  --pl-gap: calc(2 + var(--pl-lead) + var(--pl-trail));
+  /* The whole travel, in path lengths: on at --pl-lead before the start
+     of the path, off at --pl-trail past the end of it. */
+  --pl-travel: calc(1 + var(--pl-lead) + var(--pl-trail));
   fill: none;
   stroke: var(--pl-spark);
   stroke-width: 5;
   stroke-linecap: round;
-  stroke-dasharray: var(--pl-d) 2;
-  stroke-dashoffset: 1;
-  animation: cv-run var(--pl-dur, 2.4s) cubic-bezier(0.33, 0, 0.3, 1) var(--pl-delay, 0s) 1 both;
+  stroke-dasharray: var(--pl-d) var(--pl-gap);
+  stroke-dashoffset: calc(
+    var(--pl-d) + var(--pl-gap) + var(--pl-lead) - var(--pl-t) * var(--pl-travel)
+  );
+  animation: cv-run var(--pl-dur, 7s) linear infinite both;
 }
 
 @keyframes cv-run {
   from {
-    stroke-dashoffset: calc(2 + var(--pl-d));
+    --pl-t: 0;
   }
   to {
-    stroke-dashoffset: 1;
+    --pl-t: 1;
   }
 }
 
 /* A dial settles on its reading as the request finishes — the last beat of
-   the same event, not a second effect. The origin is set per drawing,
-   because the two dials are in different places. */
+   the same event, not a second effect — and then falls back through the
+   rest beat so the next request has something to settle again. It falls
+   rather than snapping, because a needle that flicks back at the top of
+   the loop is a blink. The origin and the phase are set per drawing: the
+   two dials are in different places and are read at different points in
+   the cycle. */
 .needle {
   stroke-linecap: round;
   transform-box: view-box;
-  animation: cv-swing 800ms cubic-bezier(0.16, 1, 0.3, 1) 2.6s 1 both;
+  animation: cv-swing var(--pl-cycle, 8s) cubic-bezier(0.16, 1, 0.3, 1)
+    var(--pl-swing-at, 0s) infinite both;
 }
 
 @keyframes cv-swing {
-  from {
+  0%,
+  4% {
     transform: rotate(-62deg);
   }
-  to {
+  16%,
+  60% {
     transform: rotate(0deg);
+  }
+  76%,
+  100% {
+    transform: rotate(-62deg);
   }
 }
 
@@ -1197,11 +1259,11 @@
 
 /* ============================================================
    9. Reduced motion
-   The request is removed outright rather than shortened. The
+   The loop is removed outright rather than shortened. The
    section-wide block in learn.css sets every animation to 0.01ms,
-   which would fire the spark as a one-frame flash; this takes it
-   off the sheet instead, and the needle simply starts at its
-   reading.
+   which would fire every spark as a one-frame flash, over and
+   over; this takes them off the sheet instead, and the needle
+   simply sits at its reading.
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {

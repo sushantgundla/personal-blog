@@ -95,6 +95,15 @@ function Callout({
   )
 }
 
+/**
+ * The loop. This sheet has the most machinery on it and gets the most
+ * sparks: the tools arriving as text, the request reaching the decision,
+ * the dashed circuit out to the tool and back, and the answer leaving.
+ * OTHER is two laps, for the failed call that only happens on some runs.
+ */
+const CYCLE = 10
+const OTHER = CYCLE * 2
+
 function AgentsDetail({ k }: { k: BayKey }) {
   return (
     <svg
@@ -327,10 +336,54 @@ function AgentsDetail({ k }: { k: BayKey }) {
         <Callout k={k} i={3} cx={700} cy={400} lead="M715 400H782" dot={[785, 400]} />
       </g>
 
+      {/* ---- One lap of the circuit ------------------------------------
+          The tools go in as text first, because they are in the context
+          window before the request is. Then the request reaches the one
+          decision. Then the dashed circuit, which is the subject of this
+          sheet and gets the longest run of the five: out through the
+          schema, into the tool, and all the way back along the return.
+          A failed call is struck out on that return, and it is
+          conditional even by this sheet's standards, so it runs on every
+          other lap. Last, the model stops instead of calling and the
+          answer leaves on the right.
+
+          The dashed circuit is sparked and the two dotted taps are not.
+          Dashed only happens if the model calls a tool, and on this lap
+          it did; dotted watches and carries nothing, on every lap. */}
       <Spark
-        d="M236 300H320M510 300H570L620 250V212H990V164M930 138H208V256"
-        dur="2.6s"
-        delay="0.3s"
+        d="M152 72H184V286"
+        dur="0.8s"
+        delay="0.1s"
+        cycle={`${CYCLE}s`}
+        len="0.28"
+      />
+      <Spark
+        d="M84 300H164M236 300H510M510 300H570L620 250"
+        dur="1.6s"
+        delay="0.5s"
+        cycle={`${CYCLE}s`}
+        len="0.145"
+      />
+      <Spark
+        d="M620 250V212H990V164M930 138H208V256"
+        dur="4.2s"
+        delay="2.1s"
+        cycle={`${CYCLE}s`}
+        len="0.054"
+      />
+      <Spark
+        d="M900 126V88H972V104"
+        dur="0.4s"
+        delay="3.7s"
+        cycle={`${OTHER}s`}
+        len="0.58"
+      />
+      <Spark
+        d="M670 300H1096"
+        dur="1.5s"
+        delay="6.5s"
+        cycle={`${CYCLE}s`}
+        len="0.164"
       />
     </svg>
   )

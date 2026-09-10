@@ -539,18 +539,93 @@
 }
 
 /* ============================================================
-   6. The one authored moment
-   One request runs the machine once on load and is gone. Three
-   sparks on three paths, timed against each other: the retrieved
-   passages reach the junction as the request does, and the tool
-   result comes back after the model has run.
+   6. The authored moment, on a loop
+   One request runs the machine, a beat of rest follows, and the
+   next one goes after it. Seven sparks on seven paths, staged
+   against each other so what a reader sees is one request making
+   its way through and not a conveyor belt of dots: the prompt in
+   and cut into tokens, the query out to the corpus, the passages
+   back up into the junction, the assembled context into the
+   model, the model running, the tool loop out and back — after
+   the model has run, because that is what the dashed weight
+   means — the answer out at the outlet, and the needle settling
+   on its reading as the last beat. Then a second and a half of
+   nothing, which is what keeps a drawing on a page somebody is
+   reading a thing they can glance at and then ignore.
 
-   Each path carries pathLength="1", so the dash arithmetic is in
-   fractions of the path rather than user units and the same two
-   keyframes drive paths of very different lengths. The gap is 2,
-   which is longer than the path, so exactly one spark is ever on
-   a path and the resting offset of 1 leaves none.
+   The cycle is 7.5s and the request is running for 5.9s of it,
+   so the sheet is working for most of the loop rather than
+   sitting dead in it.
+
+   EVERY SPARK SHARES THAT DURATION and differs only in phase,
+   and that is not a detail. animation-delay is spent once while
+   animation-duration repeats, so the phase written into the dash
+   pattern below is the only thing that holds an ordering on
+   every lap rather than on the first one. One document timeline
+   keeps seven sparks honest, with no JavaScript.
+
+   THE ARITHMETIC is .spark in sheet.module.css's, so one pair of
+   keyframes drives paths of wildly different lengths. Each path
+   carries pathLength="1", which puts it all in fractions of the
+   path: the spark is --pl-d long, and the waiting is done off
+   the ends of the path where nothing is drawn — --pl-lead is how
+   far before the start of the path a spark begins, --pl-trail
+   how far past the end it runs on, both in path lengths. Both
+   are worked out here from the three times a drawing actually
+   writes, as plain seconds, because the stylesheet is what does
+   the dividing:
+
+     --pl-run     how long this spark takes to cross its own path
+     --pl-delay   how far into the cycle it sets off
+     --pl-cycle   the whole loop, shared by every spark on the sheet
+
+   Dividing by --pl-run is what converts one to the other, since
+   --pl-run is the time a spark takes to cover exactly one path
+   length.
+
+   The gap is a whole path length longer than the run and both
+   waits together, so exactly one spark is ever on a line. Both
+   waits are non-zero on every path here, so at the top of the
+   loop — the one frame where the offset jumps back — there is
+   nothing on the sheet to see it happen.
+
+   Linear on purpose. An ease would stretch the waits as well as
+   the run, and a request travelling at a steady speed is the
+   thing being drawn.
+
+   WHAT IS ANIMATED IS A NUMBER, NOT THE OFFSET. This is the part
+   that is easy to get wrong, and getting it wrong looks fine in
+   a screenshot. stroke-dashoffset is a <length-percentage>, and
+   a declaration whose value contains var() computes to a
+   pending-substitution value — a token stream the animation
+   system has nothing to interpolate between, so it falls back to
+   discrete and flips from one endpoint to the other at the
+   halfway mark. The dash pattern still renders and the spark
+   still sits somewhere plausible; it simply never travels. The
+   keyframes this section replaced had exactly that shape.
+
+   A registered custom property is the fix. --pl-o is declared
+   <number>, so it has a real computed value, two numbers
+   interpolate, and stroke-dashoffset just reads it every frame.
+   @property is scoped to nothing — the name is global however
+   this module is bundled — so the registration is here beside
+   the animation that needs it rather than in learn.css. A
+   browser too old to support @property leaves --pl-o
+   unregistered and lands back on the discrete flip, which is
+   where this drawing already was.
    ============================================================ */
+
+@property --pl-o {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+.sparks,
+.needle,
+.needleN {
+  --pl-cycle: 7.5;
+}
 
 .sparks {
   pointer-events: none;
@@ -558,31 +633,41 @@
 
 .spark {
   --pl-d: 0.06;
+  --pl-run: 1;
+  --pl-delay: 0;
+  --pl-lead: calc(var(--pl-delay) / var(--pl-run));
+  --pl-trail: calc((var(--pl-cycle) - var(--pl-delay) - var(--pl-run)) / var(--pl-run));
+  --pl-gap: calc(2 + var(--pl-lead) + var(--pl-trail));
+
   fill: none;
   stroke: var(--pl-spark);
   stroke-width: 5;
   stroke-linecap: round;
-  stroke-dasharray: var(--pl-d) 2;
-  stroke-dashoffset: 1;
-  animation: pl-run var(--pl-dur, 2.5s) cubic-bezier(0.33, 0, 0.3, 1) var(--pl-delay, 0s) 1 both;
+  stroke-dasharray: var(--pl-d) var(--pl-gap);
+  stroke-dashoffset: var(--pl-o);
+  animation: pl-run calc(var(--pl-cycle) * 1s) linear infinite both;
 }
 
 @keyframes pl-run {
   from {
-    stroke-dashoffset: calc(2 + var(--pl-d));
+    --pl-o: calc(var(--pl-d) + var(--pl-gap) + var(--pl-lead));
   }
   to {
-    stroke-dashoffset: 1;
+    --pl-o: calc(var(--pl-d) + var(--pl-gap) - 1 - var(--pl-trail));
   }
 }
 
-/* The needle settles on its reading as the request finishes —
-   the last beat of the same moment, not a second effect. */
+/* The needle settles on its reading as the answer leaves — the last beat
+   of the same event, not a second effect — holds it through the rest
+   beat, and falls back to zero at the very end so the next request has
+   something to settle again. It falls rather than snapping back: a needle
+   that flicks to zero at the top of the loop is a blink, and there is
+   nothing on this sheet that blinks. */
 .needle,
 .needleN {
   stroke-linecap: round;
   transform-box: view-box;
-  animation: pl-swing 800ms cubic-bezier(0.16, 1, 0.3, 1) 2.75s 1 both;
+  animation: pl-swing calc(var(--pl-cycle) * 1s) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
 }
 
 .needle {
@@ -594,11 +679,16 @@
 }
 
 @keyframes pl-swing {
-  from {
+  0%,
+  68% {
     transform: rotate(-62deg);
   }
-  to {
+  79%,
+  91% {
     transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-62deg);
   }
 }
 
@@ -1036,11 +1126,14 @@
 
 /* ============================================================
    11. Reduced motion
-   The request is removed outright rather than shortened. The
-   section's own reduced-motion block sets every animation to
-   0.01ms, which would fire the spark as a one-frame flash; this
-   takes it off the sheet instead, and the needle simply starts
-   at its reading.
+   The request is removed outright rather than shortened, and
+   that matters more now that it loops than it did when it ran
+   once. The section's own reduced-motion block in learn.css sets
+   every animation to 0.01ms, which would not slow this down — it
+   would turn it into a one-frame flash of every spark, eight
+   times a minute. So the sparks come off the sheet entirely and
+   the needle simply sits at its reading, which is where the
+   geometry is drawn.
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {

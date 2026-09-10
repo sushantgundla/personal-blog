@@ -216,28 +216,78 @@ export function MachineNarrow({ doors }: { doors: StageDoors }) {
         </g>
       </g>
 
-      {/* ---- The request ---------------------------------------------- */}
+      {/* ---- The request ----------------------------------------------
+          The same loop the wide plate runs, on the same 7.5s cycle and
+          at the same seven moments — the phone gets the whole journey, not
+          an abbreviation of it. What differs is the geometry underneath
+          and the length of each spark: this viewBox is 360 units wide
+          against 1600, so a mark that reads at 44 units there reads at
+          26 here. See the note in MachineWide.tsx for the schedule and
+          section 6 of plate.module.css for the dash arithmetic. */}
       <g className={s.sparks} aria-hidden="true">
+        {/* In at the inlet, down through the comb, to the junction. */}
         <path
           className={s.spark}
-          d="M180 118V788"
+          d="M180 118V268"
           pathLength={1}
-          style={{ '--pl-dur': '2.5s', '--pl-delay': '0.2s' } as React.CSSProperties}
+          style={
+            { '--pl-delay': '0.15', '--pl-run': '1', '--pl-d': '0.17' } as React.CSSProperties
+          }
         />
+        {/* Out to the corpus as a query, down the far right. */}
+        <path
+          className={s.spark}
+          d="M198 152H350V470"
+          pathLength={1}
+          style={
+            { '--pl-delay': '0.55', '--pl-run': '0.8', '--pl-d': '0.055' } as React.CSSProperties
+          }
+        />
+        {/* What came back, into the junction from the right. */}
         <path
           className={s.spark}
           d="M304 419V400L288 366L304 344V300H226"
           pathLength={1}
           style={
-            { '--pl-dur': '0.5s', '--pl-delay': '0.6s', '--pl-d': '0.16' } as React.CSSProperties
+            { '--pl-delay': '1.35', '--pl-run': '0.5', '--pl-d': '0.13' } as React.CSSProperties
           }
         />
+        {/* Assembled, and into the model. */}
+        <path
+          className={s.spark}
+          d="M180 314V380"
+          pathLength={1}
+          style={
+            { '--pl-delay': '1.95', '--pl-run': '0.3', '--pl-d': '0.3' } as React.CSSProperties
+          }
+        />
+        {/* The model running: down through all six layers and out to the
+            decision. The slowest leg here too. */}
+        <path
+          className={s.spark}
+          d="M180 380V632"
+          pathLength={1}
+          style={
+            { '--pl-delay': '2.25', '--pl-run': '1.25', '--pl-d': '0.1' } as React.CSSProperties
+          }
+        />
+        {/* Out to the tool and back, on the dashed path, after the model
+            has run. */}
         <path
           className={s.spark}
           d="M150 660H52V300H150"
           pathLength={1}
           style={
-            { '--pl-dur': '0.9s', '--pl-delay': '2.05s', '--pl-d': '0.1' } as React.CSSProperties
+            { '--pl-delay': '3.6', '--pl-run': '0.95', '--pl-d': '0.05' } as React.CSSProperties
+          }
+        />
+        {/* And out, past the trace tap, to the outlet manifold. */}
+        <path
+          className={s.spark}
+          d="M180 688V788"
+          pathLength={1}
+          style={
+            { '--pl-delay': '4.65', '--pl-run': '0.5', '--pl-d': '0.26' } as React.CSSProperties
           }
         />
       </g>
