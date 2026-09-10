@@ -273,7 +273,8 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
         />
 
         {/* The needle swings up to its reading as the request finishes —
-            the last beat of the one moment this page animates. */}
+            the last beat of the run, and then it falls back through the
+            rest beat so the next request has something to settle again. */}
         <path className={`${s.flow} ${s.needle}`} d="M1290 530L1322 489" />
         <circle className={s.dot} cx="1290" cy="530" r="5" />
 
@@ -342,32 +343,114 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
       </g>
 
       {/* ---- The request ----------------------------------------------
-          One request runs the machine once, on load, and is then gone.
-          Three sparks on three paths, timed so the retrieved passages
-          arrive at the junction as the request reaches it and the tool
-          result comes back after the model has run. Removed entirely
-          under prefers-reduced-motion. */}
+          One request runs the machine, the sheet rests, and the next one
+          goes after it. Seven sparks on seven paths, and they are seven
+          rather than three because the drawing is a journey and three
+          sparks only showed three of its legs; what the loop has to
+          carry is the whole order, or a reader who watches twice learns
+          nothing the second time.
+
+          The order below is the order it happens in, and the numbers
+          are what make that true rather than the order of the JSX:
+
+            0.15  the prompt in at the inlet, cut into tokens
+            0.55  the query out to the corpus
+            1.35  the passages back up into the junction
+            1.95  the assembled context into the model
+            2.25  the model running, out to the decision
+            3.60  the tool loop, out and back — AFTER the model has
+                  run, which is the whole meaning of the dashed weight
+            4.65  the answer out at the outlet
+            5.10  the needle settles, and that is the last beat
+
+          The cycle is 7.5s. No spark is on the sheet after 5.15s; the
+          needle holds its reading in silence until 6.8s and falls back
+          to zero over the last of the cycle, so the only thing moving
+          through the rest beat is one 40-unit line going quiet. The
+          request runs for most of the loop and the pause is short on
+          purpose — a drawing that rests longer than it works reads as
+          broken rather than as calm.
+
+          Three numbers per spark, all in seconds except the last:
+          --pl-delay is when in the cycle it sets off, --pl-run how long
+          it takes to cross its own path, and --pl-d its own length as a
+          fraction of that path — worth setting per path, because 0.06
+          of the 876-unit tool loop is a 53-unit mark and 0.06 of the
+          96-unit run into the model is a speck. They are all about 44
+          units long here, so the same request reads as the same size
+          wherever it is on the sheet. The dash arithmetic that turns
+          those three into a loop is section 6 of plate.module.css.
+
+          Removed entirely under prefers-reduced-motion. */}
       <g className={s.sparks} aria-hidden="true">
+        {/* In at the inlet, through the comb, to the junction. */}
         <path
           className={s.spark}
-          d="M200 300H1386"
+          d="M200 300H502"
           pathLength={1}
-          style={{ '--pl-dur': '2.5s', '--pl-delay': '0.2s' } as React.CSSProperties}
+          style={
+            { '--pl-delay': '0.15', '--pl-run': '1', '--pl-d': '0.15' } as React.CSSProperties
+          }
         />
+        {/* Out to the corpus as a query. It leaves from the comb, so it
+            sets off as the request passes that tooth and not before. */}
+        <path
+          className={s.spark}
+          d="M307 316V524H450"
+          pathLength={1}
+          style={
+            { '--pl-delay': '0.55', '--pl-run': '0.8', '--pl-d': '0.13' } as React.CSSProperties
+          }
+        />
+        {/* What came back: up out of the corpus, through the candidate
+            the reranker kept, and into the junction from below. */}
         <path
           className={s.spark}
           d="M530 508V478L510 442V404L530 376V340"
           pathLength={1}
           style={
-            { '--pl-dur': '0.5s', '--pl-delay': '0.6s', '--pl-d': '0.18' } as React.CSSProperties
+            { '--pl-delay': '1.35', '--pl-run': '0.5', '--pl-d': '0.18' } as React.CSSProperties
           }
         />
+        {/* Assembled, and into the model. */}
+        <path
+          className={s.spark}
+          d="M558 300H654"
+          pathLength={1}
+          style={
+            { '--pl-delay': '1.95', '--pl-run': '0.3', '--pl-d': '0.28' } as React.CSSProperties
+          }
+        />
+        {/* The model running: across all seven layers and out to the
+            decision. The slowest leg on the sheet, 432 units against the
+            96 it took to get here, because this is where the time in a
+            request actually goes. */}
+        <path
+          className={s.spark}
+          d="M654 300H1086"
+          pathLength={1}
+          style={
+            { '--pl-delay': '2.25', '--pl-run': '1.25', '--pl-d': '0.1' } as React.CSSProperties
+          }
+        />
+        {/* Out to the tool and back into the junction. It runs the dashed
+            path and it runs it after the model, which is the drawing's
+            one conditional saying when it is allowed to happen. */}
         <path
           className={s.spark}
           d="M1120 264V120H530V262"
           pathLength={1}
           style={
-            { '--pl-dur': '0.9s', '--pl-delay': '2.05s', '--pl-d': '0.09' } as React.CSSProperties
+            { '--pl-delay': '3.6', '--pl-run': '0.95', '--pl-d': '0.05' } as React.CSSProperties
+          }
+        />
+        {/* And out, past the trace tap, to the outlet manifold. */}
+        <path
+          className={s.spark}
+          d="M1154 300H1386"
+          pathLength={1}
+          style={
+            { '--pl-delay': '4.65', '--pl-run': '0.5', '--pl-d': '0.19' } as React.CSSProperties
           }
         />
       </g>

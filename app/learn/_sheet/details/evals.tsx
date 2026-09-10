@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { BayKey, Detail } from '../details'
 import { Bay, Callout, Spark } from '../details'
 import s from '../sheet.module.css'
@@ -50,6 +51,15 @@ import s from '../sheet.module.css'
  * the second tallest of the five, behind llms, because a board of gauges
  * needs a column to hang in.
  */
+/**
+ * The loop. A live request runs the top of the sheet, the set is replayed
+ * to both instruments, and a change goes out past the gate; then a beat of
+ * rest and it all happens again. Nothing on this sheet is conditional, so
+ * there is no second cycle here. The score needle is hung off the same
+ * number — see the note where it is drawn.
+ */
+const CYCLE = 8
+
 function EvalsDetail({ k }: { k: BayKey }) {
   return (
     <svg
@@ -57,6 +67,7 @@ function EvalsDetail({ k }: { k: BayKey }) {
       className={s.detail}
       focusable="false"
       role="presentation"
+      style={{ '--pl-cycle': `${CYCLE}s` } as CSSProperties}
     >
       {/* ---- The spine: the machine, and the line that watches it ------
           One solid line across the top is the whole machine of FIG. 1,
@@ -182,10 +193,17 @@ function EvalsDetail({ k }: { k: BayKey }) {
           className={s.thin}
           d="M622 320H634M635 288L644 297M667 275V287M699 288L690 297M712 320H700"
         />
+        {/* The score settles as the last of the two readings reaches it,
+            and falls back through the rest beat so the next replay has
+            something to settle again. The exact check's spark lands at
+            4.1s, and cv-swing finishes its rise 16% into the cycle, so
+            the phase is 4.1 - 0.16 x 8. */}
         <path
           className={`${s.flow} ${s.needle}`}
           d="M667 320L694 285"
-          style={{ transformOrigin: '667px 320px' }}
+          style={
+            { transformOrigin: '667px 320px', '--pl-swing-at': '2.82s' } as CSSProperties
+          }
         />
         <circle className={s.dot} cx="667" cy="320" r="5" />
         <text className={s.lab} x="667" y="355" textAnchor="middle">
@@ -358,12 +376,46 @@ function EvalsDetail({ k }: { k: BayKey }) {
       </g>
 
       {/* ---- The request -----------------------------------------------
-          Three sparks: the live request across the top, the replay through
-          the judge to the dial, and the change going out past the gate. The
-          needle on the score dial settles as the last of them lands. */}
-      <Spark d="M40 61H1128" dur="2.2s" delay="0.2s" />
-      <Spark d="M293 279H400V301H421M523 301H581L617 320" dur="1.1s" delay="1.2s" len="0.12" />
-      <Spark d="M536 459H725" dur="0.7s" delay="2.2s" len="0.16" />
+          Four sparks on one cycle, in the order the sheet is true in. The
+          live request runs the top first, because everything below reads
+          what it left behind. Then the replayed set arrives at the riser
+          and splits to both instruments — two sparks, because the whole
+          point of that bay is that they are not the same instrument — and
+          both converge on the score dial, whose needle settles as the
+          second of them lands. Last, along the bottom, the before run
+          reaches the comparator, passes the gate and ships.
+
+          None of the dotted lines is sparked, on the one sheet where the
+          dotted line is the subject. They watch and carry nothing, and a
+          spark on the bus or a tap would say the opposite. */}
+      <Spark
+        d="M40 61H1128"
+        dur="3.2s"
+        delay="0.2s"
+        cycle={`${CYCLE}s`}
+        len="0.064"
+      />
+      <Spark
+        d="M293 279H400V301H421M523 301H581L617 320"
+        dur="1s"
+        delay="2.9s"
+        cycle={`${CYCLE}s`}
+        len="0.2"
+      />
+      <Spark
+        d="M400 279V189H435M536 189H581L617 320"
+        dur="0.9s"
+        delay="3.2s"
+        cycle={`${CYCLE}s`}
+        len="0.23"
+      />
+      <Spark
+        d="M267 347V395H200V429H373L490 449M536 459H725"
+        dur="1.9s"
+        delay="4.4s"
+        cycle={`${CYCLE}s`}
+        len="0.11"
+      />
     </svg>
   )
 }

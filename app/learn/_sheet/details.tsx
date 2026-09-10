@@ -241,8 +241,69 @@ export function Callout({
   )
 }
 
-/** The one authored moment: a single request runs the detail once, on load. */
-export function Spark({ d, dur, delay, len }: { d: string; dur: string; delay: string; len?: string }) {
+/** Seconds off a CSS time. Every time written on these five sheets is in
+ *  seconds, because a cycle is measured in seconds and nothing here is
+ *  short enough to be worth writing in milliseconds. */
+function secs(time: string): number {
+  return Number.parseFloat(time)
+}
+
+/** The rest beat a spark gets when its drawing has not named a cycle. */
+const REST = 2
+
+/**
+ * The authored moment: one request runs this drawing, a beat of rest
+ * follows, and the next one goes after it. Forever, until the reader has
+ * asked for less motion.
+ *
+ * The three times are all in seconds and all describe the same loop, so a
+ * drawing is authored in what a reader sees rather than in dash arithmetic:
+ *
+ *   dur     how long this spark takes to cross its own path
+ *   delay   how far into the cycle it sets off
+ *   cycle   the whole loop, shared by every spark on the sheet
+ *
+ * `dur` and `delay` mean exactly what they meant when this ran once on
+ * load, so a call written before the loop existed still reads correctly;
+ * it simply gets `delay + dur + REST` as its cycle.
+ *
+ * Two things follow from sharing one cycle. The order the sparks fire in
+ * is the order the request meets the machinery, and it stays that way on
+ * every lap, because they are all on one document timeline with no
+ * JavaScript keeping them honest. And a conditional path — a retry, a
+ * second search, a failed call going round again — can be given **twice**
+ * the sheet's cycle, so it fires on every other run and lands in the same
+ * place in the cycle when it does. That is the whole of "sometimes", in
+ * pure CSS, with no fourth line weight and no second colour.
+ *
+ * What reaches the stylesheet is the dash pattern's own units: --pl-lead
+ * is how far before the start of the path the spark begins and --pl-trail
+ * how far past the end it runs on, both in path lengths, both waited out
+ * where nothing is drawn. Dividing by `dur` is what converts one to the
+ * other, because `dur` is the time a spark takes to cover exactly one
+ * path length.
+ *
+ * `len` is the spark's own length as a fraction of the path, and it is
+ * worth setting on a short path: 0.06 of a 1200-unit run is a 70-unit
+ * mark, and 0.06 of a 350-unit return is a dot.
+ */
+export function Spark({
+  d,
+  dur,
+  delay,
+  cycle,
+  len,
+}: {
+  d: string
+  dur: string
+  delay: string
+  cycle?: string
+  len?: string
+}) {
+  const run = secs(dur)
+  const at = secs(delay)
+  const loop = cycle ? secs(cycle) : at + run + REST
+
   return (
     <g className={s.sparks} aria-hidden="true">
       <path
@@ -250,7 +311,12 @@ export function Spark({ d, dur, delay, len }: { d: string; dur: string; delay: s
         d={d}
         pathLength={1}
         style={
-          { '--pl-dur': dur, '--pl-delay': delay, ...(len ? { '--pl-d': len } : {}) } as CSSProperties
+          {
+            '--pl-dur': `${loop}s`,
+            '--pl-lead': (at / run).toFixed(3),
+            '--pl-trail': Math.max(0, (loop - at - run) / run).toFixed(3),
+            ...(len ? { '--pl-d': len } : {}),
+          } as CSSProperties
         }
       />
     </g>

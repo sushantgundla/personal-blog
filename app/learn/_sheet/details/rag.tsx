@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { BayKey, Detail } from '../details'
 import { Bay, Callout, Spark } from '../details'
 import s from '../sheet.module.css'
@@ -58,6 +59,16 @@ const INDEX_NODES: [number, number][] = [
 const INDEX_EDGES =
   'M592 244L622 264L656 232L698 262L600 292L592 244M622 264L682 296L698 262M600 292L682 296M656 232L682 296'
 
+/**
+ * The loop, and the longest of the five, because this sheet has the most to
+ * say: the corpus is built before a question is asked, the question is
+ * asked, and on some runs it is asked again. OTHER is two laps, for that
+ * last one. The needle on the recall dial is hung off the same cycle — see
+ * the note where it is drawn.
+ */
+const CYCLE = 10
+const OTHER = CYCLE * 2
+
 function RagDrawing({ k }: { k: BayKey }) {
   return (
     <svg
@@ -65,6 +76,7 @@ function RagDrawing({ k }: { k: BayKey }) {
       className={s.detail}
       focusable="false"
       role="presentation"
+      style={{ '--pl-cycle': `${CYCLE}s` } as CSSProperties}
     >
       {/* ---- The spine: the query arriving, and the context window ------
           Everything a reader needs to place this sheet on FIG. 1. The
@@ -314,10 +326,17 @@ function RagDrawing({ k }: { k: BayKey }) {
           className={s.thin}
           d="M1042 400H1052M1056 366L1063 373M1090 352V362M1124 366L1117 373M1138 400H1128"
         />
+        {/* The needle settles as the top-k line reaches the context
+            window — the last beat of the same request — and falls back
+            through the rest beat so the next one has something to settle
+            again. The query spark lands at 5.4s, and cv-swing finishes
+            its rise 16% into the cycle, so the phase is 5.4 - 0.16 x 10. */}
         <path
           className={`${s.flow} ${s.needle}`}
           d="M1090 400L1118 366"
-          style={{ transformOrigin: '1090px 400px' }}
+          style={
+            { transformOrigin: '1090px 400px', '--pl-swing-at': '3.8s' } as CSSProperties
+          }
         />
         <circle className={s.dot} cx="1090" cy="400" r="5" />
 
@@ -336,12 +355,36 @@ function RagDrawing({ k }: { k: BayKey }) {
         <Callout k={k} i={3} cx={660} cy={60} lead="M674 54L704 41" dot={[706, 40]} />
       </g>
 
-      <Spark d="M30 100H342M364 101H646M646 101H666V178" dur="1.7s" delay="0.15s" len="0.12" />
+      {/* ---- The request ---------------------------------------------
+          Three sparks on one cycle, in the order the sheet is true in.
+          The corpus is built first and the query is not asked until it
+          is there, which is why the second sets off after the first has
+          landed in the store rather than beside it. The third is the
+          search-again path, and it is conditional — what came up was
+          not enough — so it runs on every other lap.
+
+          Neither dotted line is sparked. The citation and the recall tap
+          watch and carry nothing, and a spark on either would say they
+          carry something. */}
+      <Spark
+        d="M30 100H342M364 101H646M646 101H666V178"
+        dur="2.4s"
+        delay="0.2s"
+        cycle={`${CYCLE}s`}
+        len="0.1"
+      />
       <Spark
         d="M30 412H228M248 446H300M420 446H522V312H550M726 250H860M890 250H1000V132"
-        dur="2.3s"
-        delay="0.5s"
-        len="0.1"
+        dur="2.7s"
+        delay="2.7s"
+        cycle={`${CYCLE}s`}
+        len="0.09"
+      />
+      <Spark
+        d="M1000 250V490H144V452"
+        dur="2.9s"
+        delay="5.4s"
+        cycle={`${OTHER}s`}
       />
     </svg>
   )
