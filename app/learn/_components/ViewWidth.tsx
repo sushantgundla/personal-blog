@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import styles from './ViewWidth.module.css'
 
 /**
- * The reading-width switch in the platform rail.
+ * The reading-width switch in the section's header rail.
  *
  * On a large screen a 70ch column leaves most of the window empty, and
  * some readers want the prose to cover more of it. Two settings, not a

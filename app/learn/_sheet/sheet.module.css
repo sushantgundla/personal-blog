@@ -281,7 +281,7 @@
    says "you are here", and here is a region of the general arrangement. */
 .keyBox {
   fill: none;
-  stroke: var(--ln-line);
+  stroke: var(--ln-course);
   stroke-width: 1.5;
 }
 
@@ -603,7 +603,7 @@
    on an SVG element at all, and a focus ring that is missing in one browser
    is not a focus ring. It stays graphite while the bay it belongs to takes
    the course ink, so the box never disappears into the part it is marking.
-   Focus also lights the bay: the anchor sits inside a [data-zone] group and
+   Focus also lights the bay: the anchor sits inside a [data-part] group and
    section 8 correlates on :focus-within, so a keyboard focus fires the
    reveal exactly as a hover does. */
 .door:focus-visible {
@@ -651,7 +651,7 @@
 
 .ring {
   fill: none;
-  stroke: var(--ln-line);
+  stroke: var(--ln-course);
   stroke-width: 1.25;
 }
 
@@ -810,7 +810,7 @@
   left: 0;
   width: 2.75rem;
   height: 3px;
-  background: var(--ln-line);
+  background: var(--ln-course);
   transition: width 260ms var(--ln-ease), opacity 200ms var(--ln-ease);
 }
 
@@ -825,7 +825,7 @@
   place-items: center;
   width: 1.45rem;
   height: 1.45rem;
-  border: 1px solid var(--ln-line);
+  border: 1px solid var(--ln-course);
   border-radius: 50%;
   font-family: var(--ln-num), monospace;
   font-size: 0.75rem;
@@ -1027,7 +1027,7 @@
    rest of the detail steps back.
 
    :has() correlates the two halves because both carry the same
-   data-zone, which is the part number off disk. The values have to
+   data-part, which is the part number off disk. The values have to
    be enumerated, because CSS cannot match one attribute against
    another; eight is the bound, and a ninth part would simply get
    no reveal rather than a broken one.
@@ -1049,47 +1049,47 @@
    set of devices as a fine pointer — and the hover half is scoped
    to a real pointer. focus-within, not focus-visible: the thing
    that takes focus is the anchor inside the bay, and the bay is
-   what carries data-zone.
+   what carries data-part.
    ============================================================ */
 
 /* --- The reveal, from the keyboard --------------------------- */
 
-.sheet:has([data-zone]:focus-within) .bay {
+.sheet:has([data-part]:focus-within) .bay {
   opacity: 0.16;
 }
 
-.sheet:has([data-zone]:focus-within) .spine,
-.sheet:has([data-zone]:focus-within) .callout {
+.sheet:has([data-part]:focus-within) .spine,
+.sheet:has([data-part]:focus-within) .callout {
   opacity: 0.5;
 }
 
-.sheet:has([data-zone]:focus-within) .swatch {
+.sheet:has([data-part]:focus-within) .swatch {
   opacity: 0.24;
 }
 
-.sheet:has([data-zone]:focus-within) .colN {
+.sheet:has([data-part]:focus-within) .colN {
   border-color: var(--pl-faint);
 }
 
 /* The held bay takes its course's ink, and its callout comes back with it. */
-.sheet:has([data-zone='1']:focus-within) .bay[data-zone='1'],
-.sheet:has([data-zone='2']:focus-within) .bay[data-zone='2'],
-.sheet:has([data-zone='3']:focus-within) .bay[data-zone='3'],
-.sheet:has([data-zone='4']:focus-within) .bay[data-zone='4'],
-.sheet:has([data-zone='5']:focus-within) .bay[data-zone='5'],
-.sheet:has([data-zone='6']:focus-within) .bay[data-zone='6'],
-.sheet:has([data-zone='7']:focus-within) .bay[data-zone='7'],
-.sheet:has([data-zone='8']:focus-within) .bay[data-zone='8'],
-.sheet:has([data-zone='1']:focus-within) .callout[data-zone='1'],
-.sheet:has([data-zone='2']:focus-within) .callout[data-zone='2'],
-.sheet:has([data-zone='3']:focus-within) .callout[data-zone='3'],
-.sheet:has([data-zone='4']:focus-within) .callout[data-zone='4'],
-.sheet:has([data-zone='5']:focus-within) .callout[data-zone='5'],
-.sheet:has([data-zone='6']:focus-within) .callout[data-zone='6'],
-.sheet:has([data-zone='7']:focus-within) .callout[data-zone='7'],
-.sheet:has([data-zone='8']:focus-within) .callout[data-zone='8'] {
+.sheet:has([data-part='1']:focus-within) .bay[data-part='1'],
+.sheet:has([data-part='2']:focus-within) .bay[data-part='2'],
+.sheet:has([data-part='3']:focus-within) .bay[data-part='3'],
+.sheet:has([data-part='4']:focus-within) .bay[data-part='4'],
+.sheet:has([data-part='5']:focus-within) .bay[data-part='5'],
+.sheet:has([data-part='6']:focus-within) .bay[data-part='6'],
+.sheet:has([data-part='7']:focus-within) .bay[data-part='7'],
+.sheet:has([data-part='8']:focus-within) .bay[data-part='8'],
+.sheet:has([data-part='1']:focus-within) .callout[data-part='1'],
+.sheet:has([data-part='2']:focus-within) .callout[data-part='2'],
+.sheet:has([data-part='3']:focus-within) .callout[data-part='3'],
+.sheet:has([data-part='4']:focus-within) .callout[data-part='4'],
+.sheet:has([data-part='5']:focus-within) .callout[data-part='5'],
+.sheet:has([data-part='6']:focus-within) .callout[data-part='6'],
+.sheet:has([data-part='7']:focus-within) .callout[data-part='7'],
+.sheet:has([data-part='8']:focus-within) .callout[data-part='8'] {
   opacity: 1;
-  --pl-stroke: var(--ln-line);
+  --pl-stroke: var(--ln-course);
   /* The strokes take the ink; the annotation only steps up to full
      graphite. The inks were measured for a 1.25px ring and a 2.5px
      stroke, not for a 15px label — see DESIGN.md's Colour section. */
@@ -1098,27 +1098,27 @@
 
 /* The echo in the schedule: the ink that has just arrived on the drawing
    runs the full width of that part's column, tab to edge. */
-.sheet:has([data-zone='1']:focus-within) .col[data-zone='1'] .swatch,
-.sheet:has([data-zone='2']:focus-within) .col[data-zone='2'] .swatch,
-.sheet:has([data-zone='3']:focus-within) .col[data-zone='3'] .swatch,
-.sheet:has([data-zone='4']:focus-within) .col[data-zone='4'] .swatch,
-.sheet:has([data-zone='5']:focus-within) .col[data-zone='5'] .swatch,
-.sheet:has([data-zone='6']:focus-within) .col[data-zone='6'] .swatch,
-.sheet:has([data-zone='7']:focus-within) .col[data-zone='7'] .swatch,
-.sheet:has([data-zone='8']:focus-within) .col[data-zone='8'] .swatch {
+.sheet:has([data-part='1']:focus-within) .col[data-part='1'] .swatch,
+.sheet:has([data-part='2']:focus-within) .col[data-part='2'] .swatch,
+.sheet:has([data-part='3']:focus-within) .col[data-part='3'] .swatch,
+.sheet:has([data-part='4']:focus-within) .col[data-part='4'] .swatch,
+.sheet:has([data-part='5']:focus-within) .col[data-part='5'] .swatch,
+.sheet:has([data-part='6']:focus-within) .col[data-part='6'] .swatch,
+.sheet:has([data-part='7']:focus-within) .col[data-part='7'] .swatch,
+.sheet:has([data-part='8']:focus-within) .col[data-part='8'] .swatch {
   opacity: 1;
   width: 100%;
 }
 
-.sheet:has([data-zone='1']:focus-within) .col[data-zone='1'] .colN,
-.sheet:has([data-zone='2']:focus-within) .col[data-zone='2'] .colN,
-.sheet:has([data-zone='3']:focus-within) .col[data-zone='3'] .colN,
-.sheet:has([data-zone='4']:focus-within) .col[data-zone='4'] .colN,
-.sheet:has([data-zone='5']:focus-within) .col[data-zone='5'] .colN,
-.sheet:has([data-zone='6']:focus-within) .col[data-zone='6'] .colN,
-.sheet:has([data-zone='7']:focus-within) .col[data-zone='7'] .colN,
-.sheet:has([data-zone='8']:focus-within) .col[data-zone='8'] .colN {
-  border-color: var(--ln-line);
+.sheet:has([data-part='1']:focus-within) .col[data-part='1'] .colN,
+.sheet:has([data-part='2']:focus-within) .col[data-part='2'] .colN,
+.sheet:has([data-part='3']:focus-within) .col[data-part='3'] .colN,
+.sheet:has([data-part='4']:focus-within) .col[data-part='4'] .colN,
+.sheet:has([data-part='5']:focus-within) .col[data-part='5'] .colN,
+.sheet:has([data-part='6']:focus-within) .col[data-part='6'] .colN,
+.sheet:has([data-part='7']:focus-within) .col[data-part='7'] .colN,
+.sheet:has([data-part='8']:focus-within) .col[data-part='8'] .colN {
+  border-color: var(--ln-course);
 }
 
 /* --- The same reveal, from a pointer -------------------------
@@ -1126,65 +1126,65 @@
    is real. Nothing new is styled here. */
 
 @media (hover: hover) and (pointer: fine) {
-  .sheet:has([data-zone]:hover) .bay {
+  .sheet:has([data-part]:hover) .bay {
     opacity: 0.16;
   }
 
-  .sheet:has([data-zone]:hover) .spine,
-  .sheet:has([data-zone]:hover) .callout {
+  .sheet:has([data-part]:hover) .spine,
+  .sheet:has([data-part]:hover) .callout {
     opacity: 0.5;
   }
 
-  .sheet:has([data-zone]:hover) .swatch {
+  .sheet:has([data-part]:hover) .swatch {
     opacity: 0.24;
   }
 
-  .sheet:has([data-zone]:hover) .colN {
+  .sheet:has([data-part]:hover) .colN {
     border-color: var(--pl-faint);
   }
 
-  .sheet:has([data-zone='1']:hover) .bay[data-zone='1'],
-  .sheet:has([data-zone='2']:hover) .bay[data-zone='2'],
-  .sheet:has([data-zone='3']:hover) .bay[data-zone='3'],
-  .sheet:has([data-zone='4']:hover) .bay[data-zone='4'],
-  .sheet:has([data-zone='5']:hover) .bay[data-zone='5'],
-  .sheet:has([data-zone='6']:hover) .bay[data-zone='6'],
-  .sheet:has([data-zone='7']:hover) .bay[data-zone='7'],
-  .sheet:has([data-zone='8']:hover) .bay[data-zone='8'],
-  .sheet:has([data-zone='1']:hover) .callout[data-zone='1'],
-  .sheet:has([data-zone='2']:hover) .callout[data-zone='2'],
-  .sheet:has([data-zone='3']:hover) .callout[data-zone='3'],
-  .sheet:has([data-zone='4']:hover) .callout[data-zone='4'],
-  .sheet:has([data-zone='5']:hover) .callout[data-zone='5'],
-  .sheet:has([data-zone='6']:hover) .callout[data-zone='6'],
-  .sheet:has([data-zone='7']:hover) .callout[data-zone='7'],
-  .sheet:has([data-zone='8']:hover) .callout[data-zone='8'] {
+  .sheet:has([data-part='1']:hover) .bay[data-part='1'],
+  .sheet:has([data-part='2']:hover) .bay[data-part='2'],
+  .sheet:has([data-part='3']:hover) .bay[data-part='3'],
+  .sheet:has([data-part='4']:hover) .bay[data-part='4'],
+  .sheet:has([data-part='5']:hover) .bay[data-part='5'],
+  .sheet:has([data-part='6']:hover) .bay[data-part='6'],
+  .sheet:has([data-part='7']:hover) .bay[data-part='7'],
+  .sheet:has([data-part='8']:hover) .bay[data-part='8'],
+  .sheet:has([data-part='1']:hover) .callout[data-part='1'],
+  .sheet:has([data-part='2']:hover) .callout[data-part='2'],
+  .sheet:has([data-part='3']:hover) .callout[data-part='3'],
+  .sheet:has([data-part='4']:hover) .callout[data-part='4'],
+  .sheet:has([data-part='5']:hover) .callout[data-part='5'],
+  .sheet:has([data-part='6']:hover) .callout[data-part='6'],
+  .sheet:has([data-part='7']:hover) .callout[data-part='7'],
+  .sheet:has([data-part='8']:hover) .callout[data-part='8'] {
     opacity: 1;
-    --pl-stroke: var(--ln-line);
+    --pl-stroke: var(--ln-course);
     --pl-anno: var(--pl-line);
   }
 
-  .sheet:has([data-zone='1']:hover) .col[data-zone='1'] .swatch,
-  .sheet:has([data-zone='2']:hover) .col[data-zone='2'] .swatch,
-  .sheet:has([data-zone='3']:hover) .col[data-zone='3'] .swatch,
-  .sheet:has([data-zone='4']:hover) .col[data-zone='4'] .swatch,
-  .sheet:has([data-zone='5']:hover) .col[data-zone='5'] .swatch,
-  .sheet:has([data-zone='6']:hover) .col[data-zone='6'] .swatch,
-  .sheet:has([data-zone='7']:hover) .col[data-zone='7'] .swatch,
-  .sheet:has([data-zone='8']:hover) .col[data-zone='8'] .swatch {
+  .sheet:has([data-part='1']:hover) .col[data-part='1'] .swatch,
+  .sheet:has([data-part='2']:hover) .col[data-part='2'] .swatch,
+  .sheet:has([data-part='3']:hover) .col[data-part='3'] .swatch,
+  .sheet:has([data-part='4']:hover) .col[data-part='4'] .swatch,
+  .sheet:has([data-part='5']:hover) .col[data-part='5'] .swatch,
+  .sheet:has([data-part='6']:hover) .col[data-part='6'] .swatch,
+  .sheet:has([data-part='7']:hover) .col[data-part='7'] .swatch,
+  .sheet:has([data-part='8']:hover) .col[data-part='8'] .swatch {
     opacity: 1;
     width: 100%;
   }
 
-  .sheet:has([data-zone='1']:hover) .col[data-zone='1'] .colN,
-  .sheet:has([data-zone='2']:hover) .col[data-zone='2'] .colN,
-  .sheet:has([data-zone='3']:hover) .col[data-zone='3'] .colN,
-  .sheet:has([data-zone='4']:hover) .col[data-zone='4'] .colN,
-  .sheet:has([data-zone='5']:hover) .col[data-zone='5'] .colN,
-  .sheet:has([data-zone='6']:hover) .col[data-zone='6'] .colN,
-  .sheet:has([data-zone='7']:hover) .col[data-zone='7'] .colN,
-  .sheet:has([data-zone='8']:hover) .col[data-zone='8'] .colN {
-    border-color: var(--ln-line);
+  .sheet:has([data-part='1']:hover) .col[data-part='1'] .colN,
+  .sheet:has([data-part='2']:hover) .col[data-part='2'] .colN,
+  .sheet:has([data-part='3']:hover) .col[data-part='3'] .colN,
+  .sheet:has([data-part='4']:hover) .col[data-part='4'] .colN,
+  .sheet:has([data-part='5']:hover) .col[data-part='5'] .colN,
+  .sheet:has([data-part='6']:hover) .col[data-part='6'] .colN,
+  .sheet:has([data-part='7']:hover) .col[data-part='7'] .colN,
+  .sheet:has([data-part='8']:hover) .col[data-part='8'] .colN {
+    border-color: var(--ln-course);
   }
 }
 

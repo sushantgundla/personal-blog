@@ -8,7 +8,7 @@ import { buildStages } from '../_plate/stages'
 import { KeyPlan } from '../_sheet/KeyPlan'
 import { Schedule } from '../_sheet/Schedule'
 import { getDetail, type BayKey } from '../_sheet/details'
-import { toZones, zoneDoor } from '../_sheet/parts'
+import { toParts, partDoor } from '../_sheet/parts'
 import s from '../_sheet/sheet.module.css'
 
 /**
@@ -57,7 +57,7 @@ export default function DetailSheetPage({ params }: Props) {
   const course = getCourse(params.course)
   if (!course) notFound()
 
-  const zones = toZones(course)
+  const parts = toParts(course)
   const detail = getDetail(course.slug)
 
   // Which part of FIG. 1 this course owns, and what that part does — read
@@ -83,19 +83,19 @@ export default function DetailSheetPage({ params }: Props) {
    * `door` is the third thing a bay needs and the reason it is here rather
    * than in the drawings: the five details are pictures, and nothing in them
    * should know an address. A bay opens its part's first lesson, and a part
-   * with no lessons yet opens nothing — see zoneDoor().
+   * with no lessons yet opens nothing — see partDoor().
    */
   const bayKey: BayKey = {
-    zone: (index) => (index < zones.length ? String(zones[index].n) : undefined),
-    num: (index) => (index < zones.length ? String(zones[index].n) : undefined),
-    door: (index) => (index < zones.length ? zoneDoor(course.slug, zones[index]) : undefined),
+    part: (index) => (index < parts.length ? String(parts[index].n) : undefined),
+    num: (index) => (index < parts.length ? String(parts[index].n) : undefined),
+    door: (index) => (index < parts.length ? partDoor(course.slug, parts[index]) : undefined),
   }
 
   const Drawing = detail?.Drawing
 
   return (
     <div className={`${plateFace.variable} ${s.sheetWrap}`}>
-      <section className={s.sheet} data-line={course.slug}>
+      <section className={s.sheet} data-course={course.slug}>
         {/* ---- The title strip ---------------------------------------- */}
         <div className={s.strip}>
           <div className={s.stripCell}>
@@ -135,7 +135,7 @@ export default function DetailSheetPage({ params }: Props) {
             <div className={s.tally}>
               <span className={s.tallyFig}>{lessons.length}</span>
               <span className={s.tallyKey}>lessons</span>
-              <span className={s.tallyFig}>{zones.length}</span>
+              <span className={s.tallyFig}>{parts.length}</span>
               <span className={s.tallyKey}>parts</span>
               <span className={s.tallyFig}>{perLesson}</span>
               <span className={s.tallyKey}>min a lesson</span>
@@ -179,7 +179,7 @@ export default function DetailSheetPage({ params }: Props) {
 
           <Schedule
             courseSlug={course.slug}
-            zones={zones}
+            parts={parts}
             bays={detail?.bays ?? 0}
             total={lessons.length}
           />

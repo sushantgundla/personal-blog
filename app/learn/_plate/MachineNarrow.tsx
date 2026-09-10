@@ -170,7 +170,7 @@ export function MachineNarrow({ doors }: { doors: StageDoors }) {
 
       {/* ---- Callouts ------------------------------------------------- */}
       <g className={s.callouts} aria-hidden="true">
-        <g className={s.callout} data-line="prompt-engineering">
+        <g className={s.callout} data-course="prompt-engineering">
           <path className={s.lead} d="M142 170H158" />
           <circle className={s.dot} cx="162" cy="170" r="3" />
           <circle className={s.ring} cx="128" cy="170" r="14" />
@@ -179,7 +179,7 @@ export function MachineNarrow({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="rag">
+        <g className={s.callout} data-course="rag">
           <path className={s.lead} d="M304 498V489" />
           <circle className={s.dot} cx="304" cy="485" r="3" />
           <circle className={s.ring} cx="304" cy="512" r="14" />
@@ -188,7 +188,7 @@ export function MachineNarrow({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="llms">
+        <g className={s.callout} data-course="llms">
           <path className={s.lead} d="M108 360V376" />
           <circle className={s.dot} cx="108" cy="380" r="3" />
           <circle className={s.ring} cx="108" cy="346" r="14" />
@@ -197,7 +197,7 @@ export function MachineNarrow({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="agents">
+        <g className={s.callout} data-course="agents">
           <path className={s.lead} d="M100 700V664" />
           <circle className={s.dot} cx="100" cy="660" r="3" />
           <circle className={s.ring} cx="100" cy="714" r="14" />
@@ -206,7 +206,7 @@ export function MachineNarrow({ doors }: { doors: StageDoors }) {
           </text>
         </g>
 
-        <g className={s.callout} data-line="evals">
+        <g className={s.callout} data-course="evals">
           <path className={s.lead} d="M108 1010H120" />
           <circle className={s.dot} cx="124" cy="1010" r="3" />
           <circle className={s.ring} cx="94" cy="1010" r="14" />

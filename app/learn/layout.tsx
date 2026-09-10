@@ -8,10 +8,10 @@ import './learn.css'
  * renders every non-/old route bare, so this section owns its full
  * chrome — no site Header, no Footer.
  *
- * The chrome here is a platform sign, not a nav bar: a thin printed rail
- * with a hairline under it, the publication's name on the left and the way
- * back out on the right. It is opaque — nothing in this section blurs or
- * tints what is behind it.
+ * The chrome here is a printed header, not a nav bar: a thin rail with a
+ * hairline under it, the publication's name on the left and the way back
+ * out on the right. It is opaque — nothing in this section blurs or tints
+ * what is behind it.
  *
  * Unlike the rest of the site, this section defines its own palette. Every
  * colour resolves to an --ln-* token in learn.css, with a .light override,

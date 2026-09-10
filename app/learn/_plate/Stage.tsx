@@ -23,8 +23,8 @@ import s from './plate.module.css'
  *     inside an svg have a lowercase nodeName" — so the router takes the
  *     click and the page does not reload. The drawing components stay server
  *     components and the index still ships no JavaScript of its own.
- *   - data-line is repeated on the anchor. The reveal is a :has() rule on
- *     [data-line], and the element that takes focus is the anchor, not the
+ *   - data-course is repeated on the anchor. The reveal is a :has() rule on
+ *     [data-course], and the element that takes focus is the anchor, not the
  *     group — without this, tabbing to a part of the machine would light
  *     nothing. It is the same trick .cellLink already plays in the legend.
  *     The hover half of that reveal is scoped to a real pointer, because a
@@ -47,7 +47,7 @@ export function Stage({
   doors,
   children,
 }: {
-  /** The course this part is. Drives --ln-line and the reveal. */
+  /** The course this part is. Drives --ln-course and the reveal. */
   id: string
   doors: StageDoors
   children: ReactNode
@@ -56,15 +56,15 @@ export function Stage({
 
   if (!door) {
     return (
-      <g className={s.stage} data-line={id} aria-hidden="true">
+      <g className={s.stage} data-course={id} aria-hidden="true">
         {children}
       </g>
     )
   }
 
   return (
-    <g className={s.stage} data-line={id}>
-      <Link className={s.door} data-line={id} href={door.href} aria-label={door.label}>
+    <g className={s.stage} data-course={id}>
+      <Link className={s.door} data-course={id} href={door.href} aria-label={door.label}>
         <g aria-hidden="true">{children}</g>
       </Link>
     </g>

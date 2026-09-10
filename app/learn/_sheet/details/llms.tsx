@@ -31,7 +31,7 @@ import s from '../sheet.module.css'
  * texture, and a fourth meaning is not invented.
  *
  * The retry return is solid, not dashed. A retry carries the request again
- * — it is the same request travelling, not a conditional branch out to a
+ * — it is the same request running on, not a conditional branch out to a
  * tool — and dashed is spoken for.
  *
  * Geometry is hand-authored in a 1200 x 560 viewBox: the house width, and
@@ -71,7 +71,7 @@ function LlmsDetail({ k }: { k: BayKey }) {
       focusable="false"
       role="presentation"
     >
-      {/* ---- The spine: the request travelling ---------------------- */}
+      {/* ---- The spine: the request running ------------------------- */}
       <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M20 292H318" />
         <path className={s.head} d="M54 292L32 281V303Z" />
@@ -153,7 +153,7 @@ function LlmsDetail({ k }: { k: BayKey }) {
         <path className={s.thin} d="M400 75H626M400 99H626M400 123H626" />
 
         {/* Up until it hits one, then back and sent again. Solid: a retry
-            is the same request travelling, not a conditional branch. */}
+            is the same request running on, not a conditional branch. */}
         <path className={s.flow} d="M440 292V131H394V275" />
         <path className={s.head} d="M394 291L383 269H405Z" />
 
