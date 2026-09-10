@@ -23,11 +23,14 @@ import s from './plate.module.css'
  *     inside an svg have a lowercase nodeName" — so the router takes the
  *     click and the page does not reload. The drawing components stay server
  *     components and the index still ships no JavaScript of its own.
- *   - data-line is repeated on the anchor. The reveal is a :has() rule that
- *     matches [data-line]:is(:hover, :focus-visible), and the element that
- *     takes focus is the anchor, not the group — without this, tabbing to a
- *     part of the machine would light nothing. It is the same trick .cellLink
- *     already plays in the legend.
+ *   - data-line is repeated on the anchor. The reveal is a :has() rule on
+ *     [data-line], and the element that takes focus is the anchor, not the
+ *     group — without this, tabbing to a part of the machine would light
+ *     nothing. It is the same trick .cellLink already plays in the legend.
+ *     The hover half of that reveal is scoped to a real pointer, because a
+ *     touch browser synthesises hover on the first tap and would spend it
+ *     lighting the part instead of opening this link. See section 7 of
+ *     plate.module.css.
  *   - aria-label carries the whole sentence, in the legend's own words, and
  *     the marks it wraps are hidden in one go by the inner group. The
  *     alternative is a link that announces "Corpus Candidates Top-k". The

@@ -41,6 +41,12 @@ import s from './plate.module.css'
  * terms — see Stage.tsx. Only one of the two plates is ever in the tab order,
  * because the other is display: none and the browser takes a hidden link out
  * of the tab order and out of the accessibility tree with it.
+ *
+ * This is the plate a phone gets, and a phone gets no reveal at all: the
+ * hover rules are scoped to a device with a real pointer, so a tap opens the
+ * course instead of spending itself lighting the part. Which is why the five
+ * callout rings are inked at rest — on this drawing they are the whole tie
+ * between a part of the machine and a course.
  */
 export function MachineNarrow({ doors }: { doors: StageDoors }) {
   return (
