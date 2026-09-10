@@ -263,10 +263,12 @@
   background-position: center;
 }
 
-/* Both drawings are in the DOM and one is shown. They are
-   aria-hidden either way — the ordered description in page.tsx
-   is what a screen reader gets, and it says the same things in
-   the same order. */
+/* Both drawings are in the DOM and one is shown. display: none
+   rather than a nudge off screen, because each plate now holds
+   five real links: a hidden one is out of the tab order and out
+   of the accessibility tree, so the reader only ever meets the
+   plate they can see. Every mark in both is aria-hidden, and the
+   ordered description in page.tsx carries the structure. */
 .wide,
 .narrow {
   display: block;
@@ -400,6 +402,37 @@
 .hit {
   fill: transparent;
   stroke: none;
+}
+
+/* The door. Each of the five parts of the machine is a link into the course
+   it is, and the link wraps the whole part: the invisible targets above and
+   every mark drawn inside them. It paints nothing of its own, so the sheet
+   at rest is exactly the sheet that was there before — the only thing that
+   changed is the cursor. */
+.door {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Focused from the keyboard, the part is ruled round. A drawing office marks
+   a detail with a box, so the ring is a box: the hit rect itself, inked at
+   1.5 — the thin weight already on this sheet, not a fourth one — and never
+   a glow or a radius.
+
+   It is the rect rather than an outline because WebKit does not paint an
+   outline on an SVG element at all, and a focus ring that is missing in one
+   browser is not a focus ring. It stays graphite while the stage it belongs
+   to takes its course's ink, so the box never disappears into the part it is
+   marking. Focus also lights the stage itself: the anchor carries data-line,
+   so the :has() rules in section 7 match a keyboard focus exactly as they
+   match a hover. */
+.door:focus-visible {
+  outline: none;
+}
+
+.door:focus-visible .hit {
+  stroke: var(--pl-line);
+  stroke-width: 1.5;
 }
 
 .stage,
@@ -746,10 +779,9 @@
   outline-offset: 3px;
 }
 
-/* The whole cell is the door. The drawing itself cannot be one — an SVG
-   <a> would bypass the router and reload the page — so the way into a
-   course is a cell-sized target rather than one underlined phrase
-   inside it. */
+/* The whole cell is the door, so the way into a course is a cell-sized
+   target rather than one underlined phrase inside it. The part of the
+   machine above is the other door into the same course — see .door. */
 .cellLink::after {
   content: '';
   position: absolute;
@@ -855,10 +887,11 @@
 
 /* ============================================================
    10. The structure in words
-   The drawings are aria-hidden, so this carries the same
-   information in the same order for anyone who is not looking at
-   them. Off screen, never display: none — that would take it out
-   of the accessibility tree along with the picture.
+   Every mark on the drawings is aria-hidden — only their five
+   links are exposed — so this carries the same information in
+   the same order for anyone who is not looking at them. Off
+   screen, never display: none: that would take it out of the
+   accessibility tree along with the picture.
    ============================================================ */
 
 .sr {

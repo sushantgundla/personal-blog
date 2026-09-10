@@ -26,11 +26,13 @@ function pad2(n: number): string {
  * what marks the lesson done.
  *
  * It is its own full-width band, not another block of the reading column:
- * hairlines top and bottom spanning the window, the same shape as the
+ * a rule top and bottom spanning the window, the same shape as the
  * position strip at the head of the page. Inside, everything sits in
  * .measure, so its left edge is the h1's left edge to the pixel. Read as
  * one more stretch of body text it got skipped; as a checkpoint between
- * the lesson and what comes after it, it does not.
+ * the lesson and what comes after it, it does not — which is why those
+ * two rules are quiet ink rather than the page's hairline, RECALL is set
+ * at heading size, and each question opens on a bar in the course's ink.
  *
  * All the answers live in one `chosen` object keyed by question index —
  * one piece of state for the whole quiz, not one per question — so the

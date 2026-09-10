@@ -12,6 +12,13 @@ interface Props {
  * The line continuing, at the foot of a lesson. Two halves split by a
  * hairline. Server component.
  *
+ * This is how most readers walk a course, so it is sized like it: the
+ * stop's name is the largest signage on the page after the title, each
+ * half is a deep block rather than a line of small caps, and hovering or
+ * focusing one lights a bar in the course's own ink along its top edge.
+ * At small type in a lot of empty space it read as a footer and got
+ * scrolled past.
+ *
  * The first and last lesson of a course have only one neighbour; rather
  * than leave a gap, that half goes back to the whole line, so the row is
  * always two links wide.
@@ -26,8 +33,10 @@ export function PrevNext({ courseSlug, prev, next }: Props) {
         href={prev ? `${allStops}/${prev.slug}` : allStops}
         rel={prev ? 'prev' : undefined}
       >
-        <span className="sign-quiet">&larr; PREVIOUS STOP</span>
-        <span className="sign">{prev ? prev.title : 'ALL STOPS ON THIS LINE'}</span>
+        <span className={`sign-quiet ${styles.label}`}>&larr; PREVIOUS STOP</span>
+        <span className={`sign ${styles.title}`}>
+          {prev ? prev.title : 'ALL STOPS ON THIS LINE'}
+        </span>
       </Link>
 
       <Link
@@ -35,8 +44,10 @@ export function PrevNext({ courseSlug, prev, next }: Props) {
         href={next ? `${allStops}/${next.slug}` : allStops}
         rel={next ? 'next' : undefined}
       >
-        <span className="sign-quiet">NEXT STOP &rarr;</span>
-        <span className="sign">{next ? next.title : 'ALL STOPS ON THIS LINE'}</span>
+        <span className={`sign-quiet ${styles.label}`}>NEXT STOP &rarr;</span>
+        <span className={`sign ${styles.title}`}>
+          {next ? next.title : 'ALL STOPS ON THIS LINE'}
+        </span>
       </Link>
     </nav>
   )

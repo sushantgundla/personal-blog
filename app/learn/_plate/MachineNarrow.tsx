@@ -1,3 +1,5 @@
+import { Stage } from './Stage'
+import type { StageDoors } from './stages'
 import s from './plate.module.css'
 
 /**
@@ -34,18 +36,17 @@ import s from './plate.module.css'
  *
  * Stage 1 owns both manifolds here too — the inlet at the top and the outlet
  * at the foot. See the note in MachineWide.tsx for why.
+ *
+ * The five parts are doors into the five courses here as well, on the same
+ * terms — see Stage.tsx. Only one of the two plates is ever in the tab order,
+ * because the other is display: none and the browser takes a hidden link out
+ * of the tab order and out of the accessibility tree with it.
  */
-export function MachineNarrow() {
+export function MachineNarrow({ doors }: { doors: StageDoors }) {
   return (
-    <svg
-      viewBox="0 0 360 1060"
-      className={s.narrow}
-      aria-hidden="true"
-      focusable="false"
-      role="presentation"
-    >
+    <svg viewBox="0 0 360 1060" className={s.narrow} focusable="false" role="presentation">
       {/* ---- The spine ------------------------------------------------ */}
-      <g className={s.spine}>
+      <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M180 118V134" />
         <path className={s.flow} d="M180 206V268" />
 
@@ -63,7 +64,7 @@ export function MachineNarrow() {
       </g>
 
       {/* ---- 1. Prompt Engineering — both ends of the request --------- */}
-      <g className={s.stage} data-line="prompt-engineering">
+      <Stage id="prompt-engineering" doors={doors}>
         <rect className={s.hit} x="80" y="30" width="200" height="190" />
         <rect className={s.hit} x="110" y="806" width="140" height="90" />
 
@@ -80,10 +81,10 @@ export function MachineNarrow() {
         <path className={s.flow} d="M180 810L116 888M180 810L244 888" />
         <path className={s.flow} d="M116 888H244" />
         <path className={s.thin} d="M158 842H202M148 860H212M134 878H226" />
-      </g>
+      </Stage>
 
       {/* ---- 2. RAG --------------------------------------------------- */}
-      <g className={s.stage} data-line="rag">
+      <Stage id="rag" doors={doors}>
         <rect className={s.hit} x="248" y="294" width="112" height="200" />
 
         {/* Retrieval starts at the prompt, not at the corpus. */}
@@ -103,10 +104,10 @@ export function MachineNarrow() {
         <path className={s.kept} d="M288 366L304 344M320 366L304 344" />
         <path className={s.flow} d="M304 344V300H226" />
         <path className={s.head} d="M208 300L224 291.5V308.5Z" />
-      </g>
+      </Stage>
 
       {/* ---- 3. LLMs -------------------------------------------------- */}
-      <g className={s.stage} data-line="llms">
+      <Stage id="llms" doors={doors}>
         <rect className={s.hit} x="76" y="372" width="180" height="196" />
 
         <path className={s.thin} d="M84 380H252M84 560H252" />
@@ -125,10 +126,10 @@ export function MachineNarrow() {
         <rect className={s.plate6} x="96" y="484" width="144" height="5" />
         <rect className={s.plate6} x="96" y="512" width="144" height="5" />
         <rect className={s.plate6} x="96" y="540" width="144" height="5" />
-      </g>
+      </Stage>
 
       {/* ---- 4. Agents and Tool Use ----------------------------------- */}
-      <g className={s.stage} data-line="agents">
+      <Stage id="agents" doors={doors}>
         <rect className={s.hit} x="144" y="626" width="76" height="70" />
         <rect className={s.hit} x="20" y="296" width="52" height="380" />
 
@@ -140,10 +141,10 @@ export function MachineNarrow() {
 
         <path className={s.flow} d="M52 444L74 457V483L52 496L30 483V457Z" />
         <circle className={s.thin} cx="52" cy="470" r="6" />
-      </g>
+      </Stage>
 
       {/* ---- 5. Evals and Observability ------------------------------- */}
-      <g className={s.stage} data-line="evals">
+      <Stage id="evals" doors={doors}>
         <rect className={s.hit} x="164" y="746" width="136" height="28" />
         <rect className={s.hit} x="100" y="944" width="180" height="90" />
 
@@ -159,10 +160,10 @@ export function MachineNarrow() {
 
         <path className={`${s.flow} ${s.needleN}`} d="M180 1010L208 974" />
         <circle className={s.dot} cx="180" cy="1010" r="4.5" />
-      </g>
+      </Stage>
 
       {/* ---- Callouts ------------------------------------------------- */}
-      <g className={s.callouts}>
+      <g className={s.callouts} aria-hidden="true">
         <g className={s.callout} data-line="prompt-engineering">
           <path className={s.lead} d="M142 170H158" />
           <circle className={s.dot} cx="162" cy="170" r="3" />
@@ -210,7 +211,7 @@ export function MachineNarrow() {
       </g>
 
       {/* ---- The request ---------------------------------------------- */}
-      <g className={s.sparks}>
+      <g className={s.sparks} aria-hidden="true">
         <path
           className={s.spark}
           d="M180 118V788"

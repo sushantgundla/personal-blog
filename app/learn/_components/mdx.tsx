@@ -6,10 +6,11 @@ import styles from './mdx.module.css'
  * The component map handed to <MDXRemote> for a lesson body.
  *
  * The lesson MDX is plain markdown — no custom tags — so nothing here
- * adds new elements to the content. It only reshapes the two standard
- * ones that need real markup: a numbered h2, and a table that has to
- * scroll on a narrow screen. Everything else (p, ul, ol, blockquote,
- * pre, code) is left bare for .prose to style.
+ * adds new elements to the content. It only reshapes the standard ones
+ * that need real markup: a numbered h2, a table that has to scroll on a
+ * narrow screen, and a code block, which scrolls sideways and so has to
+ * be reachable from the keyboard as well. Everything else (p, ul, ol,
+ * blockquote, code) is left bare for .prose to style.
  *
  * Server components throughout — none of this needs the browser.
  */
@@ -66,6 +67,16 @@ function Heading2({ children, ...props }: ComponentProps<'h2'>) {
   )
 }
 
+/**
+ * A code block. .prose pre scrolls sideways rather than wrapping or
+ * widening the column, and a region that scrolls has to be operable from
+ * the keyboard — tabIndex is what lets the arrow keys reach it. The
+ * focus ring for it is in learn.css beside the scrollbar rules.
+ */
+function Pre(props: ComponentProps<'pre'>) {
+  return <pre tabIndex={0} {...props} />
+}
+
 function Table(props: ComponentProps<'table'>) {
   return (
     <div className={styles.tableScroll}>
@@ -100,6 +111,7 @@ function Anchor({ href, children, ...props }: ComponentProps<'a'>) {
 
 export const mdxComponents = {
   h2: Heading2,
+  pre: Pre,
   table: Table,
   a: Anchor,
 }

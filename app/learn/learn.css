@@ -424,7 +424,12 @@
    name, "STOP 07 / 12". A section heading here is a full sentence
    ("2. Tokens in, attention inside, and why length costs more"),
    and caps would slow the reading this column exists for. Archivo
-   at 700 with tight tracking carries the world instead. */
+   at 700 with tight tracking carries the world instead.
+
+   The margin above is the section break, so it is long — a reader
+   scanning for where one section ends and the next begins should
+   see it before reading a word. A numbered heading adds a rule and
+   its own padding on top of this, in mdx.module.css. */
 .learn-root .prose h2 {
   font-family: var(--ln-sign);
   font-weight: 700;
@@ -433,8 +438,8 @@
   letter-spacing: -0.02em;
   text-transform: none;
   color: var(--ln-ink);
-  margin-top: 2.75rem;
-  margin-bottom: 1rem;
+  margin-top: clamp(3.5rem, 7vw, 5rem);
+  margin-bottom: 1.15rem;
   scroll-margin-top: 5rem;
 }
 
@@ -634,7 +639,17 @@
    Mono earns its place here and nowhere else. A hairline box at
    2px — the one radius the bans allow outside diagram geometry —
    instead of a filled chip, because nothing in this world has a
-   background region of its own. */
+   background region of its own.
+
+   A block never wraps and never widens the column: a line longer
+   than the measure scrolls sideways inside the box. The scrollbar
+   is styled rather than left to the platform, because macOS
+   overlay scrollbars are invisible until something scrolls, and a
+   line clipped at the right edge with nothing to say it continues
+   just looks broken. Styling ::-webkit-scrollbar is also what
+   takes it out of overlay mode, so the bar is always on show. The
+   block is a tab stop as well, so it can be scrolled from the
+   keyboard and not only with a trackpad. */
 
 .learn-root .prose code {
   font-family: var(--ln-num);
@@ -652,14 +667,45 @@
   border-radius: 0;
   background: none;
   padding: clamp(1rem, 2.4vw, 1.4rem);
+  max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ln-ink-quiet) transparent;
   margin: 1.75rem 0;
   font-size: 0.875rem;
   line-height: 1.7;
   color: var(--ln-ink);
 }
 
+/* Firefox takes scrollbar-width / scrollbar-color above; these are
+   the same bar for WebKit and Blink. Square, hairline-framed, the
+   same two tokens. */
+.learn-root .prose pre::-webkit-scrollbar {
+  height: 10px;
+}
+
+.learn-root .prose pre::-webkit-scrollbar-track {
+  background: none;
+  border-top: 1px solid var(--ln-rule);
+}
+
+.learn-root .prose pre::-webkit-scrollbar-thumb {
+  background: var(--ln-ink-quiet);
+  border-radius: 0;
+}
+
+.learn-root .prose pre:focus-visible {
+  outline: 2px solid var(--ln-mark);
+  outline-offset: 2px;
+}
+
+/* inline-block plus min-width is what makes the block scroll to the
+   end of its longest line instead of stopping at the column's width,
+   and it keeps the box's right-hand padding visible once scrolled. */
 .learn-root .prose pre code {
+  display: inline-block;
+  min-width: 100%;
   border: none;
   border-radius: 0;
   padding: 0;
