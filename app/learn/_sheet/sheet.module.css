@@ -1,0 +1,1036 @@
+/* ============================================================
+   THE DETAIL SHEET — a course page, FIG. 2
+
+   The index is FIG. 1, the general arrangement of one request.
+   A course page is FIG. 2: that course's own part of the machine
+   blown up to fill the sheet, with the annotation there was no
+   room for on the general arrangement.
+
+   Same material as the plate — a cold graphite sheet on the
+   section's warm hall, double-framed, ruled into a title strip, a
+   drawing field and a notes band — and the same reveal: the
+   drawing rests in graphite, and colour is the answer to a
+   question. Hold a part and that bay alone takes the course ink.
+
+   One stylesheet, for the same reason plate.module.css is single:
+   the reveal is a :has() rule that has to name a class on the page
+   shell and a class inside the SVG in one selector.
+
+   What this file adds to the plate's vocabulary, and why:
+
+     .bay        one part of the course, drawn. FIG. 1's stages are
+                 five courses; a detail's bays are one course's own
+                 parts, so the same reveal works one level down.
+     .col        a schedule column, one per bay. A draughting
+                 schedule is the table beside a drawing that says
+                 what every numbered thing on it is; here it is what
+                 lets seventeen lessons sit under four callouts
+                 instead of being seventeen callouts.
+     .keyPlan    FIG. 1 reduced to its bones with this course boxed
+                 in its ink. A real detail sheet carries one, so a
+                 reader can see where on the machine they are.
+
+   Everything else — the five weights, the callout, the swatch, the
+   tally, the notes band — is the plate's, kept to the letter so
+   the two sheets read as one publication. The definitions are
+   restated here rather than imported, because a change to a course
+   page must not be able to reach into the index and alter it.
+   ============================================================ */
+
+.sheetWrap {
+  width: 100%;
+  padding-inline: var(--ln-gutter);
+}
+
+/* ============================================================
+   1. The sheet
+   ============================================================ */
+
+.sheet {
+  --pl-sheet: #0d1013;
+  --pl-frame: #1b2126;
+  --pl-rule: #232a30;
+  --pl-grid: rgba(216, 221, 225, 0.035);
+
+  --pl-line: #d8dde1;
+  --pl-quiet: #8b959d;
+  --pl-weak: #6f7a82;
+  --pl-faint: #4e585f;
+  --pl-spark: #ff6b2b;
+
+  --pl-stroke: var(--pl-line);
+  --pl-anno: var(--pl-quiet);
+
+  /* Nothing crosses a drawing border: the content is inset by exactly the
+     amount the inner frame is, so every band rule terminates on it. */
+  --pl-inset: clamp(10px, 1vw, 18px);
+
+  position: relative;
+  padding: var(--pl-inset);
+  border: 1px solid var(--pl-frame);
+  background: var(--pl-sheet);
+  color: var(--pl-line);
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+}
+
+/* The inner frame. A draughting sheet is bordered twice. */
+.sheet::before {
+  content: '';
+  position: absolute;
+  inset: var(--pl-inset);
+  border: 1px solid var(--pl-rule);
+  pointer-events: none;
+}
+
+/* The whiteprint. next-themes puts .light on <html>, so this swaps values
+   only and no rule below knows which mode it is in. */
+:global(.light) .sheet {
+  --pl-sheet: #e6eaec;
+  --pl-frame: #c3ccd1;
+  --pl-rule: #c9d2d6;
+  --pl-grid: rgba(23, 26, 29, 0.05);
+  --pl-line: #171a1d;
+  --pl-quiet: #4f585f;
+  --pl-weak: #79848b;
+  --pl-faint: #97a1a8;
+  --pl-spark: #c2410c;
+}
+
+/* ============================================================
+   2. The title strip
+   What the course is, what figure this is, where it sits on FIG. 1,
+   and what the syllabus adds up to.
+   ============================================================ */
+
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-bottom: 1px solid var(--pl-rule);
+}
+
+.stripCell {
+  padding: clamp(0.85rem, 1.8vw, 1.3rem) clamp(1rem, 2.2vw, 1.75rem);
+}
+
+.stripCell + .stripCell {
+  border-top: 1px solid var(--pl-rule);
+}
+
+@media (min-width: 62rem) {
+  .strip {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) auto;
+  }
+
+  .stripCell + .stripCell {
+    border-top: none;
+    border-left: 1px solid var(--pl-rule);
+  }
+}
+
+.back {
+  margin-bottom: clamp(0.7rem, 1.4vw, 1rem);
+}
+
+.backLink {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--pl-line);
+}
+
+.h1 {
+  font-family: inherit;
+  font-weight: 700;
+  /* Capped lower than the index's h1. On FIG. 1 the title is the whole
+     first viewport; here every pixel it takes is a pixel off the drawing,
+     which is what the reader came for. */
+  font-size: clamp(2rem, 1.1rem + 3.4vw, 3.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.005em;
+  color: var(--pl-line);
+  text-wrap: balance;
+}
+
+.thesis {
+  margin-top: 0.7rem;
+  font-family: inherit;
+  font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.0625rem);
+  line-height: 1.5;
+  color: var(--pl-quiet);
+  text-wrap: pretty;
+}
+
+.figLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pl-line);
+  text-wrap: balance;
+}
+
+/* What that part of the machine does, in the index's own words — read off
+   the same table FIG. 1 draws itself from, never written twice. */
+.figRole {
+  margin-top: 0.5rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--pl-quiet);
+  text-wrap: pretty;
+}
+
+/* --- The key plan --------------------------------------------
+   The whole block is the way back to FIG. 1, so the target is the
+   drawing and its caption together rather than four words. */
+
+.keyWrap {
+  margin-top: clamp(0.7rem, 1.4vw, 1rem);
+  display: block;
+  width: 100%;
+  /* Small on purpose: it is the tallest thing in the strip, and the strip
+     is what stands between the reader and the drawing. */
+  max-width: 15rem;
+  text-decoration: none;
+  border: 1px solid transparent;
+  padding: 0.375rem;
+  background-image: repeating-linear-gradient(to right, var(--pl-grid) 0 1px, transparent 1px 20px),
+    repeating-linear-gradient(to bottom, var(--pl-grid) 0 1px, transparent 1px 20px);
+  background-position: center;
+  transition: border-color 200ms var(--ln-ease);
+}
+
+.keyWrap:hover {
+  border-color: var(--pl-rule);
+}
+
+.keyPlan {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.keyLabel {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+
+.keyWrap:hover .keyLabel {
+  color: var(--pl-line);
+}
+
+.faint {
+  pointer-events: none;
+}
+
+.keyLine,
+.keyDash,
+.keyDot {
+  fill: none;
+  stroke: var(--pl-faint);
+  stroke-width: 1.25;
+}
+
+.keyDash {
+  stroke-dasharray: 5 4;
+}
+
+.keyDot {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 0.5 4;
+}
+
+/* The one inked mark on the plan. It is a box, not a highlight: a key plan
+   says "you are here", and here is a region of the general arrangement. */
+.keyBox {
+  fill: none;
+  stroke: var(--ln-line);
+  stroke-width: 1.5;
+}
+
+/* --- The quantities ------------------------------------------
+   In a title block the numbers are the second largest thing on the sheet
+   and they hang at the foot of their cell. Every one is counted in
+   page.tsx from the lessons on disk. */
+
+.stripFigures {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.tally {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: baseline;
+  column-gap: 0.55rem;
+  row-gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.tallyFig {
+  font-family: var(--ln-num), monospace;
+  font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.6rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+  color: var(--pl-line);
+}
+
+.tallyKey {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+
+/* ============================================================
+   3. The field — the detail, then the schedule under it
+   The drawing runs the full width at the top of the field and the
+   schedule's columns hang beneath it.
+
+   This used to split the field into two columns above 100rem, with
+   the drawing left and the schedule right. That was wrong, and on
+   RAG it was visibly wrong: seventeen lessons make a tall schedule,
+   the drawing's column stretched to match it, and the drawing sat
+   centred in a column twice its height with the top of the field
+   showing nothing but bare grid. Grid rows size to their content,
+   so stacking cannot do that at any lesson count — twelve or
+   seventeen, the drawing is the first thing under the strip and
+   there is nothing above it to be empty.
+   ============================================================ */
+
+.field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-bottom: 1px solid var(--pl-rule);
+}
+
+.figure + .schedule {
+  border-top: 1px solid var(--pl-rule);
+}
+
+/* Ruled paper under the detail. The grid is a texture at 3.5%, not a
+   layout: nothing snaps to it. */
+.figure {
+  display: grid;
+  align-content: start;
+  padding: clamp(0.85rem, 1.8vw, 1.6rem) clamp(0.5rem, 1.6vw, 1.5rem);
+  background-image: repeating-linear-gradient(to right, var(--pl-grid) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(to bottom, var(--pl-grid) 0 1px, transparent 1px 40px);
+  background-position: center;
+}
+
+/* The drawing does not shrink below the size its own lettering can be read
+   at, and it does not grow past the fold either — 45vh is what leaves the
+   whole of it on screen at 1440 x 800 under the rail, the page's own top
+   padding and the title strip. The ceiling is on the drawing and never on
+   the sheet, which runs the full window at every size.
+
+   Above the ceiling the drawing letterboxes and leaves a margin of bare
+   grid either side. That is a sheet margin, which is what a plate has, and
+   every drawing here is between 2.5:1 and 2.9:1 so the margin stays a good
+   deal narrower than the drawing it frames. */
+.detail {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: clamp(15rem, 45vh, 32rem);
+}
+
+/* Below 62rem the detail is not shown at all. A 900-unit drawing rendered
+   into a 320px column letters its annotation at about five pixels, and a
+   detail you cannot read the annotation on is not a detail — it is a
+   smudge. The phone gets the key plan in the strip, which is one shape and
+   survives the reduction, and the drawing's own content in words below. */
+@media (max-width: 61.9375rem) {
+  .detail {
+    display: none;
+  }
+}
+
+/* --- The drawing in words ------------------------------------
+   One node, two treatments. Beside the drawing it is the screen-reader
+   equivalent, off screen but never display: none. In place of the
+   drawing, on a narrow screen, it is the figure. */
+
+.stepsWrap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+@media (max-width: 61.9375rem) {
+  .stepsWrap {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+  }
+}
+
+.stepsLabel {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+
+.steps {
+  margin-top: 0.85rem;
+  display: grid;
+  gap: 0.7rem;
+  padding-left: 1.4rem;
+  list-style: decimal;
+}
+
+.steps li {
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--pl-line);
+  text-wrap: pretty;
+}
+
+.steps li::marker {
+  font-family: var(--ln-num), monospace;
+  font-size: 0.75rem;
+  color: var(--pl-quiet);
+}
+
+/* ============================================================
+   4. The drawing's vocabulary
+   The plate's five weights, unchanged. Three carry meaning and two
+   are drawing; a fourth meaning is not invented here. Everything
+   strokes var(--pl-stroke), so one custom property on a bay swings
+   that whole part of the detail into its course's ink.
+   ============================================================ */
+
+.flow,
+.thin,
+.hair,
+.cond,
+.obs {
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+/* Solid: the request travels here. */
+.flow {
+  stroke: var(--pl-stroke);
+  stroke-width: 2.5;
+}
+
+.thin {
+  stroke: var(--pl-stroke);
+  stroke-width: 1.5;
+}
+
+/* Texture. Fine enough to read as mass rather than as lines to count. */
+.hair {
+  fill: none;
+  stroke: var(--pl-faint);
+  stroke-width: 0.75;
+}
+
+/* Dashed: only happens when the model decides to call a tool. */
+.cond {
+  stroke: var(--pl-stroke);
+  stroke-width: 2.5;
+  stroke-dasharray: 10 8;
+}
+
+/* Dotted: watches, carries nothing. */
+.obs {
+  stroke: var(--pl-stroke);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 0.5 7;
+}
+
+.head,
+.dot {
+  fill: var(--pl-stroke);
+  stroke: none;
+}
+
+/* Kept, and thrown away. A discarded thing is struck through and drawn
+   weak — never dashed, because dashed is already spoken for. */
+.kept {
+  fill: none;
+  stroke: var(--pl-stroke);
+  stroke-width: 1.75;
+}
+
+.dropped {
+  fill: none;
+  stroke: var(--pl-weak);
+  stroke-width: 1.25;
+}
+
+/* The layers. The only filled shapes on the sheet. */
+.plate6 {
+  fill: var(--pl-stroke);
+  stroke: none;
+}
+
+.lab {
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--pl-anno);
+}
+
+/* The invisible target. transparent rather than none, or a bay would only
+   be holdable on the strokes themselves. */
+.hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.bay,
+.spine,
+.callout {
+  transition: opacity 200ms var(--ln-ease);
+}
+
+/* Custom properties do not transition, but the stroke and fill they
+   resolve to do — without this, half the reveal would jump while the
+   other half faded. */
+.flow,
+.thin,
+.cond,
+.obs,
+.head,
+.dot,
+.kept,
+.plate6,
+.lab {
+  transition: stroke 200ms var(--ln-ease), fill 200ms var(--ln-ease);
+}
+
+/* --- Callouts ------------------------------------------------
+   One ring per bay, carrying the part's own number, and the same number
+   heads that part's schedule column. Inked at rest on every device: on a
+   touch screen the reveal never fires, and without the rings the tie
+   between the drawing and the schedule would be invisible to a reader on
+   a phone. The numeral inside stays graphite, because the inks are
+   measured for a 1.25px stroke and not for 15px type. */
+
+.callouts {
+  --pl-stroke: var(--pl-quiet);
+  pointer-events: none;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--ln-line);
+  stroke-width: 1.25;
+}
+
+.lead {
+  fill: none;
+  stroke: var(--pl-quiet);
+  stroke-width: 1;
+}
+
+.num {
+  font-family: var(--ln-num), monospace;
+  font-size: 17px;
+  font-weight: 700;
+  fill: var(--pl-line);
+}
+
+/* ============================================================
+   5. The one authored moment
+   One request runs this detail once, on load, and is then gone —
+   the same event FIG. 1 opens with, at the scale of one part.
+   pathLength="1" puts the dash arithmetic in fractions of the
+   path; the gap is longer than the path, so exactly one spark is
+   ever on a line and the resting offset leaves none.
+   ============================================================ */
+
+.sparks {
+  pointer-events: none;
+}
+
+.spark {
+  --pl-d: 0.06;
+  fill: none;
+  stroke: var(--pl-spark);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: var(--pl-d) 2;
+  stroke-dashoffset: 1;
+  animation: cv-run var(--pl-dur, 2.4s) cubic-bezier(0.33, 0, 0.3, 1) var(--pl-delay, 0s) 1 both;
+}
+
+@keyframes cv-run {
+  from {
+    stroke-dashoffset: calc(2 + var(--pl-d));
+  }
+  to {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* A dial settles on its reading as the request finishes — the last beat of
+   the same event, not a second effect. The origin is set per drawing,
+   because the two dials are in different places. */
+.needle {
+  stroke-linecap: round;
+  transform-box: view-box;
+  animation: cv-swing 800ms cubic-bezier(0.16, 1, 0.3, 1) 2.6s 1 both;
+}
+
+@keyframes cv-swing {
+  from {
+    transform: rotate(-62deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+/* ============================================================
+   6. The schedule
+   One column per part, headed by the same numbered ring that part
+   carries on the drawing. Not cards: no fill, no radius, no box —
+   a rule at the head of each column and a hairline between rows,
+   which is what a schedule on a drawing is.
+   ============================================================ */
+
+.schedule {
+  padding: clamp(1rem, 2.2vw, 1.75rem) clamp(1rem, 2.2vw, 1.75rem)
+    clamp(1.25rem, 2.6vw, 2rem);
+}
+
+.scheduleHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+}
+
+.scheduleLabel {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pl-line);
+}
+
+.scheduleCount {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--ln-num), monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--pl-quiet);
+  white-space: nowrap;
+}
+
+/* The key to the read mark, shown only once something has been read —
+   before that it is a legend for a thing that is not on the page. */
+.scheduleKey {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* One column per part, whatever the count — and nothing here is sized for
+   four. auto-fit rather than a written number: the track floor is what
+   decides how many fit, empty tracks collapse, so three parts give three
+   equal columns and five give five wherever there is room for five. The
+   floor is a character-ish 13rem and the min() hands the whole width back
+   on a phone, so this is still never a fixed pixel width.
+
+   repeat(var(--n), ...) would have been the obvious way to write it and it
+   is not valid CSS: repeat() takes an integer, and a custom property in
+   that slot makes the whole declaration invalid. */
+.cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  column-gap: clamp(1.25rem, 2.2vw, 2.25rem);
+  row-gap: clamp(1.5rem, 3vw, 2.25rem);
+  list-style: none;
+}
+
+/* A rule at the head of the column, and the ink swatch sitting on it like
+   a tab on a drawing sheet. Per column rather than between columns, so it
+   stays correct at any part count and on any wrap. */
+.col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-top: clamp(0.9rem, 1.6vw, 1.25rem);
+  border-top: 1px solid var(--pl-rule);
+}
+
+.swatch {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 2.75rem;
+  height: 3px;
+  background: var(--ln-line);
+  transition: width 260ms var(--ln-ease), opacity 200ms var(--ln-ease);
+}
+
+.colHead {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.colN {
+  display: grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 1px solid var(--ln-line);
+  border-radius: 50%;
+  font-family: var(--ln-num), monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--pl-line);
+  transition: border-color 200ms var(--ln-ease);
+}
+
+.colName {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--pl-line);
+}
+
+.colFigs {
+  margin-top: 0.4rem;
+  font-family: var(--ln-num), monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--pl-quiet);
+  white-space: nowrap;
+}
+
+/* A part the drawing has not caught up with. It says so, rather than
+   sitting there looking like a callout whose numeral failed to render. */
+.undrawn {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+
+.empty {
+  margin-top: 0.9rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: var(--pl-quiet);
+}
+
+.lessons {
+  margin-top: 0.75rem;
+  width: 100%;
+  list-style: none;
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 0.5rem;
+  padding-block: 0.5rem;
+}
+
+.row + .row {
+  border-top: 1px solid var(--pl-rule);
+}
+
+/* Read, and not read. Fill against outline, never hue — and the link's own
+   label says "Read" as well, so nothing here is carried by the mark alone. */
+.mark {
+  grid-column: 1;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--pl-quiet);
+}
+
+.mark[data-read='true'] {
+  background: var(--pl-line);
+  border-color: var(--pl-line);
+}
+
+.rowN {
+  grid-column: 2;
+  font-family: var(--ln-num), monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--pl-quiet);
+}
+
+.rowLink {
+  grid-column: 3;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--pl-line);
+  text-decoration: none;
+  text-wrap: pretty;
+}
+
+/* The whole row is the door, not the four words in the middle of it. */
+.rowLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.row:hover .rowLink,
+.rowLink:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.rowMin {
+  grid-column: 4;
+  font-family: var(--ln-num), monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--pl-quiet);
+  white-space: nowrap;
+}
+
+.rowMinKey {
+  padding-left: 0.1em;
+}
+
+.rowSub {
+  grid-column: 3 / -1;
+  margin-top: 0.2rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--pl-quiet);
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   7. The notes band
+   The owner's own blurb, verbatim, under a rule at the foot,
+   labelled — the one place Inter appears on this sheet, because
+   that paragraph is his prose and not the drawing office's
+   lettering.
+   ============================================================ */
+
+.notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(1.25rem, 2.5vw, 2rem) clamp(1rem, 2.2vw, 1.75rem)
+    clamp(1.5rem, 3vw, 2.25rem);
+}
+
+@media (min-width: 62rem) {
+  .notes {
+    grid-template-columns: auto minmax(0, 1.55fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.notesLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+  white-space: nowrap;
+}
+
+.note {
+  max-inline-size: 66ch;
+  font-family: var(--ln-read);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--pl-line);
+  text-wrap: pretty;
+}
+
+.noteQuiet {
+  max-inline-size: 54ch;
+  font-family: var(--ln-read);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--pl-quiet);
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   8. Holding a part
+   The reveal, one level down from the index's. Hover or focus
+   either half of a pair — the schedule column or the bay of the
+   drawing — and that part alone takes the course ink while the
+   rest of the detail steps back.
+
+   :has() correlates the two halves because both carry the same
+   data-zone, which is the part number off disk. The values have to
+   be enumerated, because CSS cannot match one attribute against
+   another; eight is the bound, and a ninth part would simply get
+   no reveal rather than a broken one.
+
+   What is deliberately NOT dimmed is the schedule's reading
+   matter. Fading three columns of real lesson titles to light a
+   fourth is hostile, and at the opacity the bays take they would
+   fail 4.5:1 in both themes. Only the ink swatch fades and the
+   ring steps back — the two marks whose whole job is to point at
+   the drawing.
+   ============================================================ */
+
+.sheet:has([data-zone]:is(:hover, :focus-within)) .bay {
+  opacity: 0.16;
+}
+
+.sheet:has([data-zone]:is(:hover, :focus-within)) .spine,
+.sheet:has([data-zone]:is(:hover, :focus-within)) .callout {
+  opacity: 0.5;
+}
+
+.sheet:has([data-zone]:is(:hover, :focus-within)) .swatch {
+  opacity: 0.24;
+}
+
+.sheet:has([data-zone]:is(:hover, :focus-within)) .colN {
+  border-color: var(--pl-faint);
+}
+
+/* The held bay takes its course's ink, and its callout comes back with it. */
+.sheet:has([data-zone='1']:is(:hover, :focus-within)) .bay[data-zone='1'],
+.sheet:has([data-zone='2']:is(:hover, :focus-within)) .bay[data-zone='2'],
+.sheet:has([data-zone='3']:is(:hover, :focus-within)) .bay[data-zone='3'],
+.sheet:has([data-zone='4']:is(:hover, :focus-within)) .bay[data-zone='4'],
+.sheet:has([data-zone='5']:is(:hover, :focus-within)) .bay[data-zone='5'],
+.sheet:has([data-zone='6']:is(:hover, :focus-within)) .bay[data-zone='6'],
+.sheet:has([data-zone='7']:is(:hover, :focus-within)) .bay[data-zone='7'],
+.sheet:has([data-zone='8']:is(:hover, :focus-within)) .bay[data-zone='8'],
+.sheet:has([data-zone='1']:is(:hover, :focus-within)) .callout[data-zone='1'],
+.sheet:has([data-zone='2']:is(:hover, :focus-within)) .callout[data-zone='2'],
+.sheet:has([data-zone='3']:is(:hover, :focus-within)) .callout[data-zone='3'],
+.sheet:has([data-zone='4']:is(:hover, :focus-within)) .callout[data-zone='4'],
+.sheet:has([data-zone='5']:is(:hover, :focus-within)) .callout[data-zone='5'],
+.sheet:has([data-zone='6']:is(:hover, :focus-within)) .callout[data-zone='6'],
+.sheet:has([data-zone='7']:is(:hover, :focus-within)) .callout[data-zone='7'],
+.sheet:has([data-zone='8']:is(:hover, :focus-within)) .callout[data-zone='8'] {
+  opacity: 1;
+  --pl-stroke: var(--ln-line);
+  /* The strokes take the ink; the annotation only steps up to full
+     graphite. The inks were measured for a 1.25px ring and a 2.5px
+     stroke, not for a 15px label — see DESIGN.md's Colour section. */
+  --pl-anno: var(--pl-line);
+}
+
+/* The echo in the schedule: the ink that has just arrived on the drawing
+   runs the full width of that part's column, tab to edge. */
+.sheet:has([data-zone='1']:is(:hover, :focus-within)) .col[data-zone='1'] .swatch,
+.sheet:has([data-zone='2']:is(:hover, :focus-within)) .col[data-zone='2'] .swatch,
+.sheet:has([data-zone='3']:is(:hover, :focus-within)) .col[data-zone='3'] .swatch,
+.sheet:has([data-zone='4']:is(:hover, :focus-within)) .col[data-zone='4'] .swatch,
+.sheet:has([data-zone='5']:is(:hover, :focus-within)) .col[data-zone='5'] .swatch,
+.sheet:has([data-zone='6']:is(:hover, :focus-within)) .col[data-zone='6'] .swatch,
+.sheet:has([data-zone='7']:is(:hover, :focus-within)) .col[data-zone='7'] .swatch,
+.sheet:has([data-zone='8']:is(:hover, :focus-within)) .col[data-zone='8'] .swatch {
+  opacity: 1;
+  width: 100%;
+}
+
+.sheet:has([data-zone='1']:is(:hover, :focus-within)) .col[data-zone='1'] .colN,
+.sheet:has([data-zone='2']:is(:hover, :focus-within)) .col[data-zone='2'] .colN,
+.sheet:has([data-zone='3']:is(:hover, :focus-within)) .col[data-zone='3'] .colN,
+.sheet:has([data-zone='4']:is(:hover, :focus-within)) .col[data-zone='4'] .colN,
+.sheet:has([data-zone='5']:is(:hover, :focus-within)) .col[data-zone='5'] .colN,
+.sheet:has([data-zone='6']:is(:hover, :focus-within)) .col[data-zone='6'] .colN,
+.sheet:has([data-zone='7']:is(:hover, :focus-within)) .col[data-zone='7'] .colN,
+.sheet:has([data-zone='8']:is(:hover, :focus-within)) .col[data-zone='8'] .colN {
+  border-color: var(--ln-line);
+}
+
+/* ============================================================
+   9. Reduced motion
+   The request is removed outright rather than shortened. The
+   section-wide block in learn.css sets every animation to 0.01ms,
+   which would fire the spark as a one-frame flash; this takes it
+   off the sheet instead, and the needle simply starts at its
+   reading.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .spark {
+    display: none;
+  }
+
+  .needle {
+    animation: none;
+    transform: none;
+  }
+
+  .bay,
+  .spine,
+  .callout,
+  .swatch,
+  .colN,
+  .keyWrap,
+  .flow,
+  .thin,
+  .cond,
+  .obs,
+  .head,
+  .dot,
+  .kept,
+  .plate6,
+  .lab {
+    transition: none;
+  }
+}
