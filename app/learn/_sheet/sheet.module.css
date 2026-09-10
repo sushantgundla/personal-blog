@@ -95,7 +95,14 @@
   --pl-line: #171a1d;
   --pl-quiet: #4f585f;
   --pl-weak: #79848b;
-  --pl-faint: #97a1a8;
+  /* Not the plate's original #97a1a8. That sat at 2.17:1 on this sheet
+     while its dark twin sits at 2.62:1, so the faintest hairline in the
+     section — the frame that is the whole of a code block, a table edge,
+     a link's underline — came out weaker in light than in dark. This is
+     one of the few values that has to be measured against its own ground
+     rather than mirrored: #889298 puts it at 2.62:1, the same strength as
+     dark. Hairlines only; it never letters anything. */
+  --pl-faint: #889298;
   --pl-spark: #c2410c;
 }
 
