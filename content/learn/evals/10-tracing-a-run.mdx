@@ -44,6 +44,16 @@ deeper:
 
 A single request into an LLM system rarely does one thing. It retrieves, then calls a model, then calls a tool, then calls the model again to read the tool's result. Each of those is a step with its own inputs, its own outputs, and its own way of going wrong — and the pipeline as a whole succeeds or fails based on all of them, not on the one that happened to produce the final text.
 
+<Flow
+  caption="The run described above, as four spans in a row. Each one has its own inputs, its own outputs, and its own way of failing — which is exactly what a single log line saying the request completed cannot show you."
+  steps={[
+    { label: 'Retrieval call', note: 'Fetches the context the request needs' },
+    { label: 'Model call', note: 'Reads the retrieved context and decides what to do next' },
+    { label: 'Tool call', note: 'Runs against the real system, outside the model' },
+    { label: 'Model call, again', subject: true, note: 'Reads the tool result and produces the final answer' },
+  ]}
+/>
+
 Treat each step as a **span**: one record covering one unit of work, with what went in, what came out, when it started, and how long it took. A run is the tree of spans it produced, in order. That tree is the thing you actually want when something goes wrong later — not the final answer, and not a log line saying the request completed, but the sequence of steps that produced it.
 
 | Term | What it is | What it is not |
@@ -107,11 +117,57 @@ That is a context manager, not a library — it works with whatever logging sink
 
 > A trace you wish you had is not a trace. It is a run that happened once, told you nothing, and cannot be replayed to tell you anything more.
 
+<Steps
+  caption="The record from the span() context manager above, watched across its own three phases. Click through: run_id and the input are fixed the moment the span opens, output only appears once your code hands it back, and duration_ms is the last field computed, right before the line is written."
+  steps={[
+    {
+      label: 'Span opens',
+      title: 'The record starts with what is already known',
+      body: 'Before the wrapped call even runs, the record already carries run_id, a fresh span_id, kind, name, and the input arguments.',
+      facts: [
+        { label: 'output', value: 'not set yet' },
+        { label: 'duration_ms', value: 'not set yet' },
+      ],
+    },
+    {
+      label: 'Step runs',
+      title: 'Control passes to your code',
+      body: 'The context manager yields the record back to the calling code, which sets output once the wrapped call actually returns.',
+      facts: [
+        { label: 'output', value: 'set to the result' },
+        { label: 'duration_ms', value: 'not set yet' },
+      ],
+    },
+    {
+      label: 'finally block runs',
+      title: 'Duration is measured and the line is written',
+      body: 'Elapsed time is computed against the moment the span opened, added to the same record, and the whole thing is logged as one JSON line.',
+      facts: [
+        { label: 'output', value: 'unchanged from step 2' },
+        { label: 'duration_ms', value: 'computed and added' },
+      ],
+    },
+  ]}
+/>
+
 ## 3. Instrument the pipeline, not the incident
 
 The natural order most teams instrument in is backwards: add tracing to the step that just broke, ship it, wait for the next thing to break somewhere else, repeat. Each addition is reasonable on its own and the result is a pipeline with three well-traced steps and two silent ones — exactly the two that will produce the next unanswerable ticket, because the pattern that got you here has no reason to stop.
 
 The fix is to trace at the level of "a step in the pipeline," as a rule applied once, rather than "a step that has caused a problem," applied after each incident. Every retrieval call gets a span. Every model call gets a span. Every tool call gets a span. New steps get one too, as part of adding the step — not as a follow-up ticket that competes with everything else for priority and usually loses.
+
+<Compare caption="Two ways to decide which steps get a span. The naive order looks reasonable at every single step and still leaves the next unanswerable ticket sitting in the two steps nobody wrapped.">
+  <Panel label="Naive" title="Trace the step that just broke">
+
+Tracing gets added one incident at a time: a step breaks, a span goes on it, ship it, wait. The pipeline ends up with three well-traced steps and two silent ones — and the two silent ones are exactly where the next unanswerable ticket comes from.
+
+  </Panel>
+  <Panel label="What to do" title="Trace every step, as a rule">
+
+Every retrieval call, every model call, every tool call gets a span, added at the same time as the step itself. A new step inherits tracing automatically instead of waiting on a follow-up ticket that competes with everything else and usually loses.
+
+  </Panel>
+</Compare>
 
 Two things make this durable rather than a one-time cleanup:
 

@@ -64,6 +64,8 @@ The part that matters is the half people skim: **the memory tool is client-side.
 
 The default failure is writing too much. An agent that records something after every turn builds a store that takes longer to read than the task takes to do, full of things that were true once.
 
+<Figure bare caption="The same sort applied five times: the left column survives being wrong later and still being the user's own words; the right column is a log line, a re-derivable fact, or a guess nobody confirmed.">
+
 | Worth persisting | Not worth persisting |
 |---|---|
 | A stable preference, in the user's own words | A fact about the world the agent derived - derive it again, it may have moved |
@@ -72,9 +74,44 @@ The default failure is writing too much. An agent that records something after e
 | A pointer to where something lives | Credentials, tokens, personal data |
 | A constraint that applies to all future work | Anything the agent inferred but nobody confirmed |
 
+</Figure>
+
 Four rules that hold up:
 
 **Write on a decision, not on a turn.** The test is whether it will still be true next month. "The user asked for this in bullets" is an event. "The user prefers bullets" is a claim, and the gap between them is the opener's entire bug.
+
+<Steps
+  caption="The same store entry, before, during and after the run that created it. Nothing needed to go wrong for the wrong fact to end up written down."
+  steps={[
+    {
+      label: 'One brief answer',
+      title: 'A single request, answered once',
+      body: 'The user asks one question and asks for it briefly. Nothing about future requests is stated.',
+      facts: [
+        { label: 'store entry', value: 'none' },
+        { label: 'what was actually said', value: 'be brief, this once' },
+      ],
+    },
+    {
+      label: 'The write',
+      title: 'A one-off becomes a standing rule',
+      body: 'Somewhere in the run, the agent turns the request into a claim about the user and writes it to the store. Nobody reviewed the write.',
+      facts: [
+        { label: 'store entry', value: '"prefers short, bulleted answers"' },
+        { label: 'source recorded', value: 'none' },
+      ],
+    },
+    {
+      label: 'Three weeks later',
+      title: 'A new run reads it as fact',
+      body: 'The next run reads the store at the start, the way it is meant to, and finds a standing preference the user never actually gave.',
+      facts: [
+        { label: 'store entry', value: '"prefers short, bulleted answers"' },
+        { label: 'agent behaviour', value: 'greets with bullets, unasked' },
+      ],
+    },
+  ]}
+/>
 
 **Store provenance with the fact.** Who said it, when, in which run. A fact with no source cannot be audited, cannot be explained to the user who asks why the agent thinks that, and cannot be safely believed.
 
@@ -89,6 +126,19 @@ Two shapes, and they are indistinguishable once written.
 **Drift.** The agent turned a one-off into a standing rule. Nobody lied, nothing was attacked, and the store is simply wrong in a way that steers every future run a few degrees off. This is the common case by a wide margin.
 
 **Poisoning.** Content from a tool result - a web page, an inbound email, a document, a file in a repo - ends up in the store as a fact or an instruction. OWASP tracks this as **ASI06: Memory & Context Poisoning** in its Top 10 for Agentic Applications, and has a reference defence project, Agent Memory Guard, aimed squarely at it.
+
+<Compare caption="The same wrong entry in the store, reached two different ways. Only one of them is an attack, and by the time either shows up the store looks identical.">
+  <Panel label="Drift" title="Nobody attacked you">
+
+The agent generalised a one-off into a standing rule. This is the common case, and ordinary use is enough to produce it - nothing needs to go wrong on purpose.
+
+  </Panel>
+  <Panel label="Poisoning" title="Content from outside became a fact">
+
+A web page, an email or a file the agent read got stored as if the user had said it. The page that carried it can be long gone by the time the write finally fires.
+
+  </Panel>
+</Compare>
 
 Where the instruction comes from and how it gets into a model's context is the **Prompt Engineering** course's lesson *Prompt injection*, and this course's later lesson *Letting an agent touch the real world* covers limiting the damage once it lands. Neither is re-taught here. The part that belongs to memory is narrow and specific: **a persistent store turns a one-off injection into a standing instruction.** The page that carried it may be gone by the time it fires. The attack and its effect are separated in time, which is also why it does not look like an attack when you finally investigate - it looks like the model behaving oddly.
 

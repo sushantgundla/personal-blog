@@ -40,6 +40,19 @@ deeper:
 
 *Tracing a multi-step run* told you to log inputs and outputs verbatim, and that advice was correct for the fields it meant — arguments, results, timing. It did not mean every field, and it left the actual line-drawing to this lesson, because the two questions are genuinely different. That lesson asks what makes a run answerable. This one asks what makes a trace store safe to have built in the first place.
 
+<Compare caption="The rule the previous lesson left you with, and the scope this one puts on it. Structure and timing are still logged exactly as before — the change is a second pass that decides, per field, what a value is before it is written.">
+  <Panel label="Naive" title="Log inputs and outputs, verbatim">
+
+Every field a span could hold is written exactly as it arrived — a prompt, a tool argument, a model's response. It looks complete, right up until one of those fields is a user's own SSN, pasted into a chat and asked to be confirmed, now sitting in plain text in a trace viewer.
+
+  </Panel>
+  <Panel label="What to do" title="Verbatim, minus what shouldn't be kept">
+
+Structure, timing and token counts are still logged unconditionally. Free text a user controls is redacted or hashed before the write. A secret is never captured in the first place, so there is nothing to redact later.
+
+  </Panel>
+</Compare>
+
 ## 1. A trace store is a data store
 
 Once tracing works, it is tempting to treat it as a debugging scratchpad — a place that only engineers look at, only when something breaks, so ordinary data handling rules feel like they do not apply. They apply exactly as much as they do anywhere else. A trace store holding full prompts and responses from real users is a store of whatever those users typed and whatever the model returned, which includes anything they mentioned: a name, an address, a medical detail, a account number, pasted into a chat because that is what chats are for.
@@ -58,6 +71,22 @@ That last row is the whole risk. A schema constrains what can end up in a databa
 ## 2. Three categories, decided before the write
 
 Every field a span could capture falls into one of three buckets. Deciding which bucket up front, at instrumentation time, is what makes this workable — sorting it out after millions of trace rows already exist is a much worse version of the same job.
+
+<Flow
+  caption="Every field is sorted into one of three buckets before anything is written, never after — sorting it out once millions of rows already exist is the much worse version of this same job."
+  steps={[
+    { label: 'A field a span could capture', note: 'Content, timing, an identifier, a secret' },
+    {
+      label: 'Sorted into a bucket, at instrumentation time',
+      subject: true,
+      branch: [
+        'Always log — structure, timing, token counts, model id, status',
+        'Redact or hash — free text a user controls',
+        'Never log, no exception — secrets: keys, tokens, credentials',
+      ],
+    },
+  ]}
+/>
 
 **Always log.** Structure, timing, token counts, span kind, model id, tool name, status. None of this identifies a person or exposes a secret, all of it is exactly what makes a trace answerable, and none of it should ever be the thing you strip to be careful — a trace with the content redacted but the shape intact is still useful; a trace with the shape gone is not a trace at all.
 
@@ -97,6 +126,33 @@ A pattern-based scrubber like this one will miss things — an id format you did
 Two more knobs sit next to redaction, and both reduce exposure the same way redaction does — by shrinking what is kept and for how long.
 
 **Sample, don't capture everything at full detail forever.** Trace every run at the structural level — timing, status, token counts — because that is cheap and the always-log bucket is not the risk. Capture full redacted content for a percentage of runs, weighted toward the ones you actually need: errors, low eval scores, anything flagged for review. A representative slice with content is worth more than a complete set of shapes with nothing in them, and it is far less exposure than capturing every single run at full detail by default.
+
+<Dial
+  caption="One rate, three regions of exposure. The bands are illustrative, not a recommended setting — weight your own slice toward errors, low eval scores and anything flagged for review, whatever percentage that turns out to be."
+  name="percent of runs captured at full, redacted detail"
+  min={0}
+  max={100}
+  step={5}
+  start={15}
+  unit="%"
+  bands={[
+    {
+      at: 0,
+      label: 'Structure only',
+      outcome: 'Every run is traced for timing, status and token counts. Cheap, and none of it is the risk this lesson is about.',
+    },
+    {
+      at: 15,
+      label: 'Weighted sample',
+      outcome: 'Full redacted content is captured only for the runs worth debugging — errors, low eval scores, anything flagged for review.',
+    },
+    {
+      at: 100,
+      label: 'Everything, always',
+      outcome: 'A complete archive of full, redacted content for every run — more exposure than a redaction step was ever built to carry, for no debugging gain over the weighted sample.',
+    },
+  ]}
+/>
 
 **Set a retention window, and let things actually expire.** Storage being cheap is not a reason to keep data indefinitely — every day a redacted-but-imperfect field sits in the store is another day a scrubber miss is sitting there too. A 30- or 90-day window on raw content, with the structural, non-identifying fields kept longer for trend analysis like the drift checks in the previous part of this course, gives you enough history to debug last week's incident without accumulating a permanent archive of everything anyone ever typed.
 

@@ -45,6 +45,8 @@ Ask a reviewer to score an answer on a scale and you're asking them to do two th
 
 **Pairwise comparison** asks a smaller, more concrete question: given these two answers to the same input, which one is better? That's a task people (and judges) answer far more consistently, because there's no scale to invent - just a choice between two things sitting side by side. The same holds when the reviewer is a judge model rather than a human: a judge asked to compare tends to agree with human preference more closely than the same judge asked to rate each answer alone.
 
+<Figure bare caption="Reading down the rows: pairwise wins on consistency everywhere but the last one - the cost of comparing N items - which is the row that decides whether pairwise fits the task in front of you.">
+
 | | Absolute scoring (1-5, or similar) | Pairwise comparison |
 |---|---|---|
 | What it asks | How good is this, on its own | Which of these two is better |
@@ -52,6 +54,8 @@ Ask a reviewer to score an answer on a scale and you're asking them to do two th
 | Reviewer fatigue | Compounds - each score requires inventing context | Lower per judgment, but many more judgments needed to rank many items |
 | Cost to compare N items | One score each, N judgments | Grows with the number of pairs, not just N |
 | Best for | A single absolute bar you check against repeatedly (did this clear a floor) | Deciding which of a few candidates is better - a prompt edit, a model swap, a rollout decision |
+
+</Figure>
 
 Use absolute scoring where you genuinely need a floor - "did this pass," "is this safe to show a user" - and pairwise where the actual question is "which of these two should we ship."
 
@@ -64,6 +68,18 @@ The fix is the same one from the last lesson, applied again here rather than ass
 > A star rating tells you a reviewer's mood. A pairwise choice tells you their preference - as long as you don't let the slots tell you the answer first.
 
 The other real cost is scale. Comparing every pair among a set of candidates grows with the square of how many candidates you have - five candidates is ten pairs, twenty candidates is one hundred and ninety. That's fine when you're comparing two prompt versions head to head, which is the common case in this course. It stops being fine the moment someone suggests ranking a dozen candidate prompts against each other pairwise "to be thorough." Don't do that. Pick the comparison you actually need answered - usually old vs. new, one pair - and save the combinatorics for problems that genuinely require ranking many things against each other.
+
+<Scale
+  caption="The pair count on a log scale, straight from the numbers above: two versions head to head is a single pair, but the moment a dozen or twenty candidates want ranking, the count is already in the hundreds."
+  unit="pairs"
+  fromLabel="Two versions, head to head"
+  toLabel="A dozen or more candidates, ranked"
+  marks={[
+    { at: 1, label: 'Two candidates', value: '1 pair' },
+    { at: 10, label: 'Five candidates', value: '10 pairs' },
+    { at: 190, label: 'Twenty candidates', value: '190 pairs', subject: true },
+  ]}
+/>
 
 ## 3. Spending a human reviewer's attention where it changes a decision
 
@@ -95,6 +111,39 @@ def needs_human_review(question: str, answer_a: str, answer_b: str,
 sample_verdicts = ["A", "A", "B"]
 print(Counter(sample_verdicts).most_common(1)[0][1] / len(sample_verdicts))  # 0.67, flagged
 ```
+
+<Steps
+  caption="The three-run example from the code, one call at a time: two runs land on A, the third disagrees, and anything short of unanimous is what sends a case to a human."
+  steps={[
+    {
+      label: 'Run 1',
+      title: 'i = 0, order not swapped',
+      body: 'The judge sees answer A first, answer B second, and records its verdict as given.',
+      facts: [{ label: 'verdicts so far', value: '["A"]' }],
+    },
+    {
+      label: 'Run 2',
+      title: 'i = 1, order swapped',
+      body: 'The judge sees B first and A second. The result is un-swapped back to the original labels before it is recorded, so the list below is comparable across runs.',
+      facts: [{ label: 'verdicts so far', value: '["A", "A"]' }],
+    },
+    {
+      label: 'Run 3',
+      title: 'i = 2, order not swapped',
+      body: 'Back to A first, B second. This run disagrees with the first two.',
+      facts: [{ label: 'verdicts so far', value: '["A", "A", "B"]' }],
+    },
+    {
+      label: 'Tally',
+      title: 'needs_human_review returns',
+      body: 'Two of three runs agree; one does not. That is short of unanimous, so the case is routed to a human.',
+      facts: [
+        { label: 'agreement', value: '2 / 3 = 0.67' },
+        { label: 'needs_human_review', value: 'True' },
+      ],
+    },
+  ]}
+/>
 
 This is a small function doing a large amount of work: it turns "review everything" into "review the fraction that's actually ambiguous," which is usually a small slice of total volume. Write down what "better" means for your task - correctness first, tone second, whatever your rubric actually is - before a reviewer sees a single example, so that when a case does reach a human, they're applying the same standard the judges were asked to apply, not inventing a new one on the spot.
 

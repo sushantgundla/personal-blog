@@ -52,6 +52,22 @@ Put those two together and you get a check that is biased toward telling you the
 
 There is a third failure hiding in the first two, and it's the quiet one: you also decide when to stop. The moment the five examples look better, you stop trying inputs. You do not keep going looking for the sixth case that breaks it, because the point of the exercise, in your head, was to confirm the change worked - not to find out whether it didn't. That stopping rule is doing as much damage as the small sample itself.
 
+<Flow
+  caption="The step nobody skips is the last one: the moment the five cases look better, the loop stops. Nobody circles back to hunt for the sixth case that would have proven it wrong."
+  steps={[
+    { label: 'Type a few inputs', note: "Whatever is already on hand: last week's ticket, the demo case" },
+    { label: 'Run the old prompt and the new one', note: 'Compare the outputs by eye' },
+    {
+      label: 'Do the five look better?',
+      subject: true,
+      branch: ['Yes — stop testing', 'No — try different inputs'],
+    },
+  ]}
+  back={{ from: 3, to: 1, label: 'Only when the answer is no' }}
+/>
+
+<Figure bare caption="Three ways to check a change, side by side: what a check tells you depends on who chose the cases it runs on, not on how confident the result feels.">
+
 | | Eyeballing a demo | A public benchmark score | An eval set from your own traffic |
 |---|---|---|---|
 | Sample size | A handful, chosen on the spot | Fixed, often thousands | As large as you build it |
@@ -59,6 +75,8 @@ There is a third failure hiding in the first two, and it's the quiet one: you al
 | Matches your users | Rarely - you sample your own priors | Almost never - it was never about your product | By construction, since the cases came from your users |
 | What it tells you | Whether five things you already trust still work | Where a model sits against other models on their questions | Whether your system is getting better or worse on your questions |
 | What it misses | Nearly everything you did not think to try | Anything specific to your domain, tone, or workflow | Only what has not shown up in traffic yet |
+
+</Figure>
 
 ## 2. The benchmark score is the same trap in a nicer outfit
 
@@ -69,6 +87,19 @@ A benchmark is a fixed set of questions, written by researchers, published once,
 Neither problem is a scandal. It is just what a benchmark is: someone else's narrow sample, standing in for the much wider range of things your system has to get right.
 
 > A benchmark score is somebody else's five examples, run once, with a leaderboard attached.
+
+<Compare caption="Different in scale, identical in shape: neither sample was drawn from the traffic your system actually has to answer.">
+  <Panel label="A demo" title="Five cases, chosen from memory">
+
+Picked in the last five minutes, from the inputs you already trust. A pass tells you those five still work and nothing about the rest.
+
+  </Panel>
+  <Panel label="A benchmark" title="Thousands of cases, chosen once">
+
+Picked by researchers, for a general audience, years before your product existed - and old enough by now that some of it may already sit inside the training data of the models it scores.
+
+  </Panel>
+</Compare>
 
 None of this means benchmarks are worthless - they are a reasonable first filter when you are choosing between models you have never used, before you have any traffic of your own to test with. The mistake is treating a leaderboard position as evidence about your product, months into building it, instead of treating it as a rough starting point you replace with your own numbers as soon as you can.
 

@@ -47,6 +47,8 @@ One connection to make before anything else. The **Prompt Engineering** course h
 
 Sort every tool you own into three buckets before you think about anything else.
 
+<Figure bare caption="Read down a column, not across: once you know which of the three buckets a tool is in, its isolation and human-gate answers are already decided.">
+
 | | Reads | Reversible write | Irreversible |
 |---|---|---|---|
 | Examples | `search_docs`, `read_file`, `get_order` | `write_file` in a scratch dir, `draft_email`, a commit on a branch | `delete_path`, `send_email`, `charge_card`, `force_push` |
@@ -55,11 +57,26 @@ Sort every tool you own into three buckets before you think about anything else.
 | Needs a human gate | No | Rarely | Yes |
 | Retry safely in a loop | Yes | Usually | Never without an idempotency key |
 
+</Figure>
+
 Most tools want to be in the first two buckets and can be, with a little design. `delete_path` becomes "move to a trash directory". `send_email` becomes "write a draft". "Commit to `main`" becomes "commit to a branch". Each of those turns an irreversible action into a reversible one and takes the pressure off every other control in this lesson.
 
 The bucket a tool is in is a fact about your code, not a label. MCP lets a server annotate a tool as read-only, and the spec tells clients to treat those annotations as untrusted unless the server is trusted — because an annotation is a claim, and nothing in the protocol enforces it. If you are the host, classify tools yourself, in a table you maintain, and let that table decide the permissions.
 
 The other design move is the one from the injection lesson, stated from this side. Do not build the powerful tool. `run_sql(query)` is one tool that can do everything the database can do; `get_orders_for_customer(customer_id)` is one tool that can do one thing. The narrow one is more work, and it is the difference between a mistake and an incident.
+
+<Compare caption="The same database, reached two ways. The narrow tool cannot be talked into anything but the one job it was given, whatever argument or injected instruction shows up in its input.">
+  <Panel label="Naive" title="run_sql(query)">
+
+One tool that can do everything the database can do. A bad argument or an injected instruction has the whole schema to work with.
+
+  </Panel>
+  <Panel label="What to do" title="get_orders_for_customer(customer_id)">
+
+One tool that can do one thing. More work to write, and there is no query it can be handed that reaches outside one customer's orders.
+
+  </Panel>
+</Compare>
 
 ## 2. Where the tool actually runs
 
@@ -72,6 +89,21 @@ Now the second layer, and the one people skip because the first felt like enough
 | Container | Casual filesystem and process access | Seconds, and a daemon | Server-side tools you wrote |
 | gVisor | Most of the host kernel's syscall surface | Some syscall overhead | Untrusted code, shared hosts |
 | microVM | Host kernel access, via a separate kernel per workload | Hundreds of ms to boot | Running code you did not write, at all |
+
+<Plot
+  caption="Cost and what a level stops rise together, with no shortcut — the second row, a subprocess under an OS sandbox, is the cheap default this lesson keeps pointing back to for anything running locally."
+  xAxis="What it costs to run"
+  xEnds={['No added cost', 'Hundreds of ms to boot']}
+  yAxis="What it stops"
+  yEnds={['Stops nothing', 'Host kernel access']}
+  points={[
+    { label: 'Same process', x: 3, y: 3 },
+    { label: 'Subprocess + sandbox', x: 18, y: 42, subject: true },
+    { label: 'Container', x: 45, y: 58 },
+    { label: 'gVisor', x: 68, y: 82 },
+    { label: 'microVM', x: 92, y: 97 },
+  ]}
+/>
 
 The rule of thumb worth remembering: **start strong and relax deliberately.** Code the agent generated is untrusted code, even though you asked for it. Anthropic's own Sandbox Runtime is a good concrete example of the second row — it uses Seatbelt on macOS and bubblewrap plus seccomp filters on Linux to bound an ordinary process without a container at all.
 
@@ -122,6 +154,31 @@ def call_tool(name: str, args: dict, ask_human, audit) -> dict:
 ```
 
 Three things about that snippet. The path check happens **after** resolution, which is the only order that catches `../..`. The denial is returned to the model as a tool result rather than raised, so the loop can pick something else — that is the error-handling lesson applied to a permission failure. And the comment on the last line is the honest part: none of this is a sandbox. It is the policy layer from section 2, and it is worth nothing if `TOOLS[name]` shells out to a process with your file system.
+
+<Anatomy
+  caption="The same three moments from the snippet above, named in place: resolution before the check, a result handed back instead of an exception, and the comment that admits what the line above it is not."
+  label="Inside call_tool"
+  parts={[
+    {
+      text: '    resolved = (WORKSPACE / candidate).resolve()\n    if not resolved.is_relative_to(WORKSPACE):',
+      name: 'Resolve, then check',
+      note: "The only order that catches '../..' and a symlink — both look fine before resolution.",
+    },
+    { text: '\n\n' },
+    {
+      text: '    if name in NEEDS_APPROVAL and not ask_human(name, args):\n        return {"ok": False, "error": "denied by operator"}',
+      name: 'Denied, not raised',
+      note: 'A tool result the model can read and act on, so the loop can pick something else.',
+    },
+    { text: '\n\n' },
+    {
+      text: '    return TOOLS[name](**args)                 # runs inside the sandbox, not here',
+      name: 'The honest comment',
+      note: 'Nothing above this line is a sandbox. It is the policy layer from section 2, and it is worth nothing on its own.',
+      subject: true,
+    },
+  ]}
+/>
 
 For the human gate itself, two rules decide whether it works:
 
