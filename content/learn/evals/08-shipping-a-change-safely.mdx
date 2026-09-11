@@ -60,7 +60,37 @@ The three stages differ in exactly one thing: how much of a real user's outcome 
 | What it tells you | Whether outputs differ meaningfully at all, and whether the new version errors, times out, or costs oddly more | Whether real usage surfaces a problem the eval and shadow test missed | Whether the new version actually wins on the metric you chose, at a sample size you can trust |
 | Risk if something's wrong | None - no user is affected | Bounded to the canary slice | Bounded by the traffic split, but the test runs longer |
 
+<Dial
+  caption="The same escalation as the table above, drawn as one knob: turn it up and you trade safety for signal. Only the canary slice, 1-5%, is a number this lesson actually gives - the rest of the scale is illustrative, not a target to copy."
+  name="percent of traffic on the candidate"
+  min={0}
+  max={100}
+  step={1}
+  start={5}
+  unit="%"
+  bands={[
+    { at: 0, label: 'Shadow', outcome: 'The candidate runs on every request, but nobody sees its answer. Zero real users are exposed.' },
+    { at: 1, label: 'Canary', outcome: 'A small, bounded slice of real users sees the candidate.', note: 'Often 1-5%, as the table above puts it' },
+    { at: 20, label: 'Ramp', outcome: 'Enough real traffic for a genuine difference to start showing above the noise, short of the full comparison.' },
+    { at: 50, label: 'Full A/B', outcome: 'A deliberate, meaningful split, sized to actually settle whether the candidate wins.' },
+  ]}
+/>
+
 Run them in that order, not because the earlier stages are formalities, but because each one is cheaper to be wrong in than the next. Shadow traffic costs you compute and tells you if the new version is obviously broken - crashes, timeouts, wildly different output shape - with zero user impact. Canary traffic costs a small, bounded number of real users something if you're wrong, in exchange for a signal shadow mode structurally can't give you: how the new version performs when someone's actual request depends on the answer. Only once canary looks clean do you commit to a full comparison sized to actually settle the question.
+
+<Flow
+  caption="The order the lesson argues for, and why it's an order rather than a menu: each stage is cheaper to be wrong in than the one after it, so a problem the eval and shadow test missed gets caught while it can still only cost you the canary slice."
+  steps={[
+    { label: 'Shadow', note: 'Discarded before anyone sees it - zero risk if it is wrong' },
+    { label: 'Canary', note: 'A small, bounded slice of real users, often 1-5%' },
+    {
+      label: 'Clean?',
+      subject: true,
+      branch: ['Yes - commit to the full comparison', 'No - pull back; only the canary slice was ever exposed'],
+    },
+    { label: 'Full A/B', note: 'Sized to actually settle which version wins' },
+  ]}
+/>
 
 > The eval told you it should win. The rollout tells you if it did.
 
@@ -71,6 +101,19 @@ Two decisions belong before you route a single real user to the new version, not
 **Pick the real metric first.** Not the judge's score again - something closer to what the user actually experienced: task completion, whether they asked a follow-up because the first answer didn't land, a regeneration or a thumbs-down, whether they abandoned the flow. The eval score got you here; it doesn't get to also be the metric that decides whether the rollout worked, or you've just measured your proxy against itself.
 
 **Set the rollback trigger before you ramp.** Decide, in writing, what would make you pull the change back - an error rate above some level, a latency regression, the success metric dropping, cost per request spiking - and wire the check to act on it rather than waiting for someone to notice and raise an alarm. Deciding this while you're already staring at a dashboard that looks a little off is slower and more political than deciding it in advance, when nobody has a stake in the answer yet.
+
+<Compare caption="The same rollback decision, made at two different times. Only the version fixed in advance is something code can act on the instant a metric crosses it - the version in the code below runs unattended for exactly that reason.">
+  <Panel label="Decided after" title="A threshold picked while staring at a dashboard">
+
+Someone notices the numbers look a little off, and now has to decide, under pressure, whether "a little off" is bad enough to act on - with everyone who has a stake in the launch already forming an opinion.
+
+  </Panel>
+  <Panel label="Decided before" title="A threshold fixed before a single user sees the candidate">
+
+Error rate, latency, or cost limits written down before the ramp starts, so the system can pull the change back the moment a live number crosses the line, not the moment a person happens to notice.
+
+  </Panel>
+</Compare>
 
 Keep the judge and the golden set frozen for the length of the test, the same discipline as the regression gate. If you're also running an automated judge over sampled live comparisons during the rollout, changing its model or rubric mid-test means you can no longer tell whether a metric moved because the candidate got better, or because the thing measuring it did - the exact failure *How to trust a judge* spent a whole lesson on preventing.
 

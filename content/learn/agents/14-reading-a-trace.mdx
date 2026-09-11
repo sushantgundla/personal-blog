@@ -51,6 +51,44 @@ So read from the top, and at each step ask one question: **given everything befo
 
 > The last step is where you noticed the failure. The first wrong step is where it happened, and they are rarely the same step.
 
+<Steps
+  caption="The step-four example above, walked forward one step at a time. Click through and watch the check — 'given everything before it, is this step correct?' — stay yes until step 4, then stay no for everything after it."
+  steps={[
+    {
+      label: 'Steps 1–3',
+      title: 'Early steps run cleanly',
+      body: 'Right tool, right arguments, a result that matches the question. Nothing here is the bug.',
+      facts: [
+        { label: 'Given everything before it, is this step correct?', value: 'Yes' },
+      ],
+    },
+    {
+      label: 'Step 4',
+      title: 'The wrong record is fetched',
+      body: 'Right tool, but an id from the wrong entity. In isolation it looks like an ordinary tool call.',
+      facts: [
+        { label: 'Given everything before it, is this step correct?', value: 'No — this is the bug' },
+      ],
+    },
+    {
+      label: 'Steps 5–11',
+      title: 'Reasoning over the wrong record',
+      body: 'The model reads the record it was handed and reasons about it well. Every one of these steps looks reasonable, because it is — the input is just wrong.',
+      facts: [
+        { label: 'Given everything before it, is this step correct?', value: 'Consequence, not cause' },
+      ],
+    },
+    {
+      label: 'Final answer',
+      title: 'Where you noticed',
+      body: 'Confident and well formatted, and traceable back to step 4 rather than to anything wrong with this step itself.',
+      facts: [
+        { label: 'Given everything before it, is this step correct?', value: 'Wrong — but not where it happened' },
+      ],
+    },
+  ]}
+/>
+
 Three things make this go faster.
 
 **Read the arguments before the results.** Most of the time the mistake is visible in what the model asked for, not in what came back. A tool called with a date range off by a month, an id from the wrong entity, a query string no human would type — you can spot those in a second, and they explain everything downstream.
@@ -63,6 +101,8 @@ Three things make this go faster.
 
 Once you have the first wrong step, it is one of three things. The distinction matters because the three have different fixes, and you cannot prompt your way out of two of them.
 
+<Figure bare caption="The three ways a run goes wrong without ever raising, side by side. Only the rightmost column is fixed by touching the prompt — the other two live in the tool definitions and the tool itself, which is why 'the model is dumb' is rarely the right diagnosis.">
+
 | | Tool-selection mistake | Bad tool result | Reasoning mistake |
 |---|---|---|---|
 | What went wrong | Wrong tool, or right tool with wrong arguments | The tool ran and returned something wrong, stale, empty or misleading | The tool returned correct data and the model drew the wrong conclusion |
@@ -70,6 +110,8 @@ Once you have the first wrong step, it is one of three things. The distinction m
 | How to confirm | Re-read the question, then the arguments | Run the same call by hand, outside the agent | Read the result yourself and answer the question |
 | Where the fix goes | Tool description, parameter names, enums, fewer tools | The tool: its contract, its errors, its defaults | The prompt, or a verification step |
 | What will not fix it | A bigger model | Any amount of prompting | Better tool schemas |
+
+</Figure>
 
 **A tool-selection mistake** is a *Designing a tool a model can actually use* problem arriving late. The model picked `search_docs` when it needed `search_tickets`, or called the right tool with a query that could never have matched. The fix is almost always in the tool definitions: a description that says what the tool is *for* rather than what it does, narrower enums instead of free text, and fewer overlapping tools so there is less to get wrong.
 
@@ -94,6 +136,21 @@ One structured record per step, with anything long run through the `clip` from t
 | `output` | The raw result the model saw, not a summary of it |
 | `stop_reason` | Distinguishes "decided it was done" from "ran out of tokens" |
 | tokens and `ms` | Cost and latency attribution, from the previous lesson, for free |
+
+<Anatomy
+  caption="One line of the record above, with its fields named. The step number matches the step-four example from Section 1 — the values are illustrative, not a real capture."
+  label="One logged step"
+  parts={[
+    { text: '{\n  "run_id": ' },
+    { text: '"a1b2c3"', name: 'run_id', note: 'Without it you cannot pull one run out of interleaved logs' },
+    { text: ',\n  "step": ' },
+    { text: '4', name: 'step', note: 'The order steps ran in — the axis you read along', subject: true },
+    { text: ',\n  "kind": "tool", "name": "get_order"' , name: 'kind and name', note: 'Model call or tool call, and which one' },
+    { text: ',\n  "input": {"order_id": "cus_492"}', name: 'input', note: 'The exact arguments, verbatim — this is where most bugs are visible' },
+    { text: ',\n  "output": {"status": "not_found"}', name: 'output', note: 'The raw result the model saw, not a summary of it' },
+    { text: ',\n  "ms": 812\n}' },
+  ]}
+/>
 
 ```python
 import json

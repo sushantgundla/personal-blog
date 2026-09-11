@@ -54,6 +54,8 @@ None of this is malicious, and most of it is never announced in a way you would 
 
 Drift is not one mechanism, and knowing which kind you are looking at changes how fast you can confirm it.
 
+<Figure bare caption="Five ways a quality drop shows up with no commit behind it. Four are the provider's doing; the fifth only looks like drift, and the golden set is what tells the two apart.">
+
 | Cause | What is actually happening | How you would notice |
 |---|---|---|
 | Safety or policy retuning | The provider adjusts what the model refuses or hedges on | Refusal rate or hedging language changes on inputs that used to pass cleanly |
@@ -61,6 +63,8 @@ Drift is not one mechanism, and knowing which kind you are looking at changes ho
 | Serving or infrastructure changes | Quantization, batching, or hardware changes alter output distribution slightly | Small, hard-to-pin quality wobble rather than a sharp break |
 | Scheduled deprecation | An old version is retired on a published date and traffic moves to its replacement | A calendar date you can plan around, if you are watching the deprecation page |
 | Your own traffic shifting | The mix of inputs you send has changed, not the model | Golden set score is stable; live sampled scores move — check this before blaming the provider |
+
+</Figure>
 
 That last row matters because it is the one drift-shaped problem that is not drift at all. Before you conclude the provider changed something, rule out that your own users did. A new feature that sends a different kind of question, a marketing push that shifts your traffic mix, a new locale — all of these can drop your live quality numbers while your golden set, run against fixed inputs, stays flat. If the golden set has moved, the model moved. If only your live sampling has moved, look at your own traffic first.
 
@@ -77,6 +81,20 @@ Three things make this work in practice rather than becoming a dashboard nobody 
 - **Pin the dated model id**, per *Switching models safely*, so a version change on the provider's side cannot happen without you at least knowing which id you are calling — a moving alias makes this whole exercise pointless, because you would be scoring a target that already changed under the alias before your test even ran.
 - **Store the score with its date and the exact model id it ran against.** A history of numbers with no id attached cannot tell you whether a dip lines up with a version change you can find in a deprecation notice.
 - **Alert on your own baseline, not on a provider announcement.** A published changelog is a nice confirmation after the fact. It is not a detector, because plenty of what changes a model's behaviour is never published as a change at all.
+
+<Flow
+  caption="The three habits above, wired into one loop. None of it proves why the model changed — it only guarantees someone finds out on a schedule, instead of from a support ticket."
+  steps={[
+    { label: 'Pin a dated model id', note: 'A moving alias makes the whole loop pointless' },
+    { label: 'Run the golden set', note: 'Nightly or weekly, whether or not you shipped anything' },
+    { label: 'Store score, date, model id', note: 'A history with no id cannot be lined up against a version change' },
+    {
+      label: 'Compare to the recent baseline',
+      subject: true,
+      branch: ['Within tolerance — nothing happens', 'Drops 0.05 or more — the alert fires'],
+    },
+  ]}
+/>
 
 ```python
 import json
@@ -115,5 +133,41 @@ def record_and_check(score: float, model_id: str):
 ```
 
 The threshold in `ALERT_THRESHOLD` is a starting guess, not a law — set it from how noisy your own golden set score is run to run, the same way you would set any other alert threshold, and revisit it once you have a few months of history to look at.
+
+<Steps
+  caption="The same script, three runs apart. Watch the baseline field: it only exists once there is history to average, and the alert only fires once the gap actually clears ALERT_THRESHOLD. The figures are an illustration, not a measurement — count your own."
+  steps={[
+    {
+      label: 'Day 1',
+      title: 'No baseline yet',
+      body: 'The first run has nothing to compare against, so record_and_check only records.',
+      facts: [
+        { label: 'baseline', value: 'none' },
+        { label: 'score', value: '0.91' },
+        { label: 'alert', value: 'not raised' },
+      ],
+    },
+    {
+      label: 'Day 15',
+      title: 'A baseline exists',
+      body: 'Two weeks of runs give recent_baseline() something to average, and the score is still close to it.',
+      facts: [
+        { label: 'baseline', value: '0.90' },
+        { label: 'score', value: '0.89' },
+        { label: 'alert', value: 'not raised' },
+      ],
+    },
+    {
+      label: 'Day 20',
+      title: 'The score drops',
+      body: 'A gap of 0.05 or more against the baseline is exactly what ALERT_THRESHOLD is set to catch — this is the run that raises SystemExit.',
+      facts: [
+        { label: 'baseline', value: '0.90' },
+        { label: 'score', value: '0.84' },
+        { label: 'alert', value: 'raised' },
+      ],
+    },
+  ]}
+/>
 
 What this buys you is small and specific: the difference between a user finding the regression before you do, and a scheduled job finding it first. It will not tell you why the model changed, and most of the time you will never get a satisfying answer to that. It will tell you that it did, on a date you can point to, with a golden set score to back it up — which is the whole of what you actually need to decide whether to act.

@@ -44,6 +44,8 @@ Every eval case needs a grader - something that looks at the output and decides 
 
 A deterministic check is code: a schema validator, a regex, a range check, an exact-match comparison, a lookup against an allowed list. It runs in milliseconds, costs nothing beyond compute you already have, and gives the identical answer every time you run it on the identical input. An LLM judge is a model call: you send it the output, sometimes the input and a reference answer too, and a prompt describing what to check for, and it sends back a verdict.
 
+<Figure bare caption="Six questions, answered for both graders side by side. Every row the deterministic check wins is a row about certainty, not intelligence - which is exactly why it's free and the judge isn't.">
+
 | | Deterministic check | LLM-as-judge |
 |---|---|---|
 | Answers | Questions with one correct answer | Questions that require graded judgment |
@@ -53,7 +55,31 @@ A deterministic check is code: a schema validator, a regex, a range check, an ex
 | Can it be wrong | Only if you wrote the rule wrong | Yes - it can misjudge, and it can be confidently wrong |
 | Good for | Format, schema, range, exact match, presence of a required field | Tone, relevance, faithfulness to a source, whether an answer actually addresses the question |
 
+</Figure>
+
 The rule of thumb: if you could write the check as an `if` statement, write it as an `if` statement. Valid JSON, a phone number matching a pattern, a required field present, a number inside a bound, an exact string match against a known-good answer - none of that needs a model to decide. A judge call spent on a question a parser already answers is pure waste: slower, more expensive, and carrying a small but real chance of being wrong about something that was never actually uncertain.
+
+<Flow
+  caption="The fork every eval case goes through before it reaches a grader. Notice the decision itself is mechanical - a rule already tells you whether a rule can answer the question."
+  steps={[
+    { label: 'One eval case', note: 'Needs a pass or fail verdict' },
+    {
+      label: 'Can it be written as an if statement?',
+      subject: true,
+      branch: [
+        'Yes - one correct answer to check',
+        'No - a graded, contextual call',
+      ],
+    },
+    {
+      label: 'Pick the grader',
+      branch: [
+        'Deterministic check - milliseconds, free',
+        'LLM judge - a real model call',
+      ],
+    },
+  ]}
+/>
 
 This sounds obvious written down, and teams still get it backwards constantly, usually because the model is already sitting right there in the code and reaching for a second call feels like less work than writing the rule. It's the opposite. A schema check is a few lines you write once and never think about again. A judge prompt has to be written, tuned, re-checked when the underlying model changes, and paid for on every run - more work, spread out over a longer time, to answer a question that had a free answer already.
 
@@ -107,5 +133,18 @@ def judge_check(output: str, source: str) -> dict:
 ```
 
 Run the deterministic check first, on every case, since it's free. Route only what's left - the cases asking a question a rule can't answer - through the judge. That ordering alone is usually the difference between an eval run that costs a few cents and one that costs real money for no better result, because most eval sets have far more mechanically-checkable cases in them than people assume once they actually sort the pile.
+
+<Compare caption="The same eval run, ordered two ways. Routing every case through the judge pays a model call for cases a rule already answers for free; running the cheap check first spends the judge only where a rule genuinely can't decide.">
+  <Panel label="Naive" title="Every case through the judge">
+
+Each case costs a real generation call, whether or not the question had one correct answer. A few hundred cases becomes a few hundred model calls, on every run.
+
+  </Panel>
+  <Panel label="What to do" title="Cheap check first, judge what's left">
+
+The deterministic check clears every case a rule can decide, for free. Only the cases that genuinely need graded judgment reach the judge.
+
+  </Panel>
+</Compare>
 
 One more thing worth saying plainly before you lean on a judge's numbers: a judge is a model, and a model can be confidently wrong, or consistently biased in one direction, in ways a schema check structurally cannot be. Whether a particular judge's scores are worth trusting - and what to do about the ways they go wrong - is a real question with a real answer, and it's a different lesson from this one. For now, the working rule is: reach for the free, exact check first, reserve the judge for what genuinely needs a reader instead of a rule, and remember that every judge call you make is a bill, not a formality.

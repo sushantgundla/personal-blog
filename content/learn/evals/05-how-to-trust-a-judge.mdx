@@ -48,6 +48,33 @@ The comparison that matters is agreement, not "the judge got most of them right.
 
 That last part matters more than the number. A judge that passes something a human would reject - a **false positive** - is the dangerous direction, because it creates confidence in output nobody actually checked. A judge that fails something a human would accept is annoying but safe: it just means a human looks at one more case than strictly necessary. If you're grading anything where a wrong pass reaches a user unsupervised, weight your calibration set and your threshold toward catching false positives specifically, not just toward a good overall kappa.
 
+<Dial
+  caption="Cohen's kappa on the scale the lesson describes: near zero is a coin flip against your human labels, and roughly 0.6 is the conventional line for trusting a judge's verdict. A judge whose false positives reach a user unsupervised earns a stricter bar than the number alone suggests."
+  name="Cohen's kappa"
+  min={0}
+  max={1}
+  step={0.05}
+  start={0.6}
+  bands={[
+    {
+      at: 0,
+      label: 'Near chance',
+      outcome: 'Agreement no better than what two raters would get by guessing — the judge is not functioning as a second opinion.',
+    },
+    {
+      at: 0.3,
+      label: 'Weak',
+      outcome: 'Better than chance, but not enough to lean on for a decision where a wrong pass reaches a user unsupervised.',
+    },
+    {
+      at: 0.6,
+      label: 'Trustworthy',
+      outcome: 'The conventional line for leaning on the judge.',
+      note: 'Weight it toward catching false positives specifically — a wrong pass is the dangerous direction.',
+    },
+  ]}
+/>
+
 None of this needs to be elaborate to be worth doing. A hundred labeled cases and an afternoon spent reading the judge's verdicts next to a human's is enough to know whether you're looking at a genuine second opinion or a system that agrees with itself. The mistake is skipping the step entirely because the judge's scores looked plausible - plausible is not the same claim as calibrated, and only one of those two is checkable.
 
 > An unvalidated judge is not a second opinion. It's a guess that never admits doubt.
@@ -56,11 +83,15 @@ None of this needs to be elaborate to be worth doing. A hundred labeled cases an
 
 Once a judge is broadly calibrated, two specific failure modes account for most of the gap between its score and a human's. Both are structural - they come from how the judge reads the input, not from a bad rubric.
 
+<Figure bare caption="Three biases, three different repairs — swapping the order is a mechanical check you can run on every comparison; the other two need a rubric change or a different judge model, not a script.">
+
 | Bias | How it shows up | The fix |
 |---|---|---|
 | Position bias | The judge favors whichever answer it saw first (or second), regardless of content | Randomize or swap the order across comparisons; if the verdict flips with the answers, the judge was reading position, not quality |
 | Verbosity bias | Longer answers score higher even when they say less that's actually correct | Name it explicitly in the rubric ("length is not a merit"); include short-correct vs. long-wrong pairs in your calibration set so you'd notice if the judge got this wrong |
 | Self-preference bias | A judge favors output in a style close to its own, including output the same model family generated | Judge with a model from a different family than the generator - grading Claude's output with Claude, or GPT's with GPT, builds a mirror, not a judge |
+
+</Figure>
 
 Position bias is the easiest to test and the easiest to miss, because a single run of your eval set never shows it to you - you'd need the same pair scored twice, in both orders, to see the verdict move. That's worth building into the harness itself rather than treating as a one-off audit.
 
@@ -101,6 +132,22 @@ print(f"agreement (kappa): {cohen_kappa_score(human_labels, judge_labels):.2f}")
 ```
 
 A `check_position_bias` result well above zero means the judge is, at least sometimes, voting for a slot instead of an answer. A kappa printed at the bottom below your threshold means don't ship decisions on this judge's word yet - go fix the rubric or swap the judge model, then recalibrate.
+
+<Flow
+  caption="The position-bias check as code: the same pair judged twice, in both slot orders. A stable judge lands on the same winner either way; a flip means it was voting for a slot, not an answer."
+  steps={[
+    { label: 'Judge scores A, B', note: 'Answer A shown first, answer B second' },
+    { label: 'Judge scores B, A', note: 'Same pair, slots swapped' },
+    {
+      label: 'Compare the two verdicts',
+      subject: true,
+      branch: [
+        'Same winner both times — no position bias',
+        'Winner flips with the slot — position bias',
+      ],
+    },
+  ]}
+/>
 
 ## 3. Keeping a judge honest over time
 

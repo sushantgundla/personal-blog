@@ -46,6 +46,19 @@ Nothing about what a prompt change actually *is* changes between the minimal har
 
 The same logic extends past prompt text. A **model version swap** - same prompt, new model behind the same API call - is exactly as capable of changing behavior as an edited word, because the pair of prompt and model is the actual artefact, not the prompt alone. Treat an upgrade the same way: run the golden set against the new model before it goes anywhere near production traffic, not after.
 
+<Compare caption="Two different triggers, and the lesson's answer to both is identical: run the golden set and require it to pass before either one ships.">
+  <Panel label="Prompt edit" title="The wording changes">
+
+Every case in the golden set reads the new words on its next run, not just the one case the edit was aimed at.
+
+  </Panel>
+  <Panel label="Model swap" title="The model behind the call changes">
+
+Same prompt, different weights answering it. The pair of prompt and model is the actual artefact, so the swap earns the same golden-set run the wording change gets.
+
+  </Panel>
+</Compare>
+
 This is also where the two habits from earlier in the course actually pay off, rather than just sitting in a repo looking tidy. A golden set nobody runs automatically is a set someone forgets to run on a Friday. A prompt kept in git with no gate on the diff still gets reviewed by a person who's trusting their own read of the change, the same read that missed the three broken cases in the story above. The gate is what makes the habit load-bearing instead of aspirational.
 
 ## 2. Running the set in CI, and reading a diff instead of a score
@@ -53,6 +66,22 @@ This is also where the two habits from earlier in the course actually pay off, r
 The mechanics are close to what you already built, extended in three ways: it runs automatically on every relevant pull request, it compares against the last known-good run rather than against nothing, and it fails the build rather than waiting for someone to notice a number dropped.
 
 A practical shape: a CI job runs the golden set against the changed prompt or model, scores each case (deterministic checks where you can, a calibrated judge from *How to trust a judge* where you can't), and compares the aggregate against the last committed run. If the aggregate drops beyond a tolerance you set in advance, the job fails and the merge is blocked. That part is close to what teams running this in production already do - failing a pull request automatically when quality drops below a threshold, rather than relying on a reviewer to eyeball a score in a comment.
+
+<Flow
+  caption="The gate this section builds. It runs on every relevant pull request and checks against the last known-good run, so whether it passes depends on the tolerance decided in advance, not on whether anyone remembers to look."
+  steps={[
+    { label: 'Prompt or model changes', note: 'A prompt edit or a model version swap — the job treats them the same' },
+    { label: 'Golden set runs', note: 'Every case scored: a deterministic check, or a calibrated judge where you need one' },
+    {
+      label: 'Compared against the last committed run',
+      subject: true,
+      branch: [
+        'Within the tolerance set in advance — merge proceeds',
+        'Drops beyond it — the job fails and the merge is blocked',
+      ],
+    },
+  ]}
+/>
 
 The part worth doing deliberately, and the part a bare pass/fail number hides, is **which specific cases changed**. Two runs with the same aggregate score can differ in which cases pass - three regressions and three new passes look identical to a total that didn't move. Post the actual diff: which case IDs flipped, and in which direction. That's what turns "the score is fine" into something a reviewer can actually check in thirty seconds.
 
@@ -83,6 +112,52 @@ if len(result["regressions"]) > 0:
     sys.exit(1)   # fail the CI job - this is what blocks the merge
 ```
 
+<Steps
+  caption="The script above, walked through four states it can reach for a single case. Watch `regressions` and the exit code in particular — `fixes` is printed for a reviewer's benefit, but only `regressions` decides whether the build fails."
+  steps={[
+    {
+      label: 'Case regresses',
+      title: 'A pass becomes a fail',
+      body: 'baseline[case_id] was "pass" and candidate.get(case_id) comes back anything else, so this case_id is added to regressions.',
+      facts: [
+        { label: 'regressions', value: 'gains this case_id' },
+        { label: 'fixes', value: 'unchanged' },
+        { label: 'exit code', value: 'not decided yet' },
+      ],
+    },
+    {
+      label: 'Case is fixed',
+      title: 'A fail becomes a pass',
+      body: 'baseline[case_id] was "fail" and candidate.get(case_id) now reads "pass", so this case_id is added to fixes instead.',
+      facts: [
+        { label: 'regressions', value: 'unchanged' },
+        { label: 'fixes', value: 'gains this case_id' },
+        { label: 'exit code', value: 'not decided yet' },
+      ],
+    },
+    {
+      label: 'Regressions found',
+      title: 'The gate fires',
+      body: 'len(result["regressions"]) is above zero, so the job prints every regressing case_id and calls sys.exit(1).',
+      facts: [
+        { label: 'regressions', value: 'one or more case_ids' },
+        { label: 'fixes', value: 'ignored for this decision' },
+        { label: 'exit code', value: '1 — build fails, merge blocked' },
+      ],
+    },
+    {
+      label: 'No regressions',
+      title: 'The gate passes',
+      body: 'Every case that used to pass still passes. sys.exit(1) is never reached, whatever fixes turned up along the way.',
+      facts: [
+        { label: 'regressions', value: 'empty list' },
+        { label: 'fixes', value: 'ignored for this decision' },
+        { label: 'exit code', value: '0 — build succeeds' },
+      ],
+    },
+  ]}
+/>
+
 This doesn't replace the runner from *Versioning and testing prompts* - it reads the two JSON files that runner already produces. The new piece is entirely the comparison and the exit code; the golden set and the per-case runner stay exactly as they were.
 
 > A prompt edit that fixes one case and breaks three is not progress. It's redistribution.
@@ -91,12 +166,16 @@ This doesn't replace the runner from *Versioning and testing prompts* - it reads
 
 Not every case belongs in the automatic gate the same way. The table is the honest version of what each layer catches.
 
+<Figure bare caption="Two layers side by side: the regression run is fast and mechanical but only as good as the cases already sitting in the golden set; human review is slower but can catch a case that passes technically while still reading wrong.">
+
 | | Golden-set regression run | Human review |
 |---|---|---|
 | Catches | Clear pass/fail regressions on cases you already know the right answer to | A case that's technically passing but reads worse, or a new failure mode the set never anticipated |
 | Speed | Minutes, runs on every push | Slower, and doesn't scale to every change |
 | What it needs | A calibrated judge or deterministic check, per case | Someone who understands the product, looking at the actual diff |
 | Where it's wrong | Silent on anything outside the golden set's coverage | Inconsistent without a rubric - route it through *Pairwise comparison and human review that scales*, not raw eyeballing |
+
+</Figure>
 
 The gate should auto-block anything that clearly regresses - a case that passed and now fails, beyond whatever tolerance you decided in advance. It should not try to auto-approve everything else. A prompt that shifts tone on a handful of borderline cases, without technically failing any of them, is exactly the kind of change a reviewer needs to look at directly, using the diff the CI job already produced rather than re-running the whole set by hand.
 

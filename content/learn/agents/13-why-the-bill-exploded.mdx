@@ -59,6 +59,52 @@ So if each step adds roughly the same amount of text, the input tokens billed ac
 
 Those are round numbers to show the shape, not a measurement of anything. The shape is the point. Doubling the step count roughly quadruples the input bill. A run that goes to forty steps instead of twenty did not cost twice as much — it cost about four times as much, and that is before you notice it also got four times slower, since time-to-first-token is mostly the model reading your input.
 
+<Steps
+  caption="The same five rows as the table above, walked through one step at a time. Watch the second field, not the first — it is the running total that quadruples, not what any single step adds. These are the lesson's own illustrative round numbers, not a measurement — count your own for your task."
+  steps={[
+    {
+      label: 'Step 1',
+      body: 'The task, and nothing else yet.',
+      facts: [
+        { label: 'Input sent that step', value: '2k' },
+        { label: 'Total input billed so far', value: '2k' },
+      ],
+    },
+    {
+      label: 'Step 5',
+      body: 'Four rounds of tool calls and their results are now resent on every request.',
+      facts: [
+        { label: 'Input sent that step', value: '10k' },
+        { label: 'Total input billed so far', value: '30k' },
+      ],
+    },
+    {
+      label: 'Step 10',
+      body: 'The transcript has grown again, and so has what this step alone resends.',
+      facts: [
+        { label: 'Input sent that step', value: '20k' },
+        { label: 'Total input billed so far', value: '110k' },
+      ],
+    },
+    {
+      label: 'Step 20',
+      body: 'Twice the steps of step 10 — but the running total is closer to four times as large.',
+      facts: [
+        { label: 'Input sent that step', value: '40k' },
+        { label: 'Total input billed so far', value: '420k' },
+      ],
+    },
+    {
+      label: 'Step 40',
+      body: 'Twice the steps of step 20 again, and the running total has roughly quadrupled again with it.',
+      facts: [
+        { label: 'Input sent that step', value: '80k' },
+        { label: 'Total input billed so far', value: '1.6m' },
+      ],
+    },
+  ]}
+/>
+
 > A request is billed once, for what you sent. A loop is billed on every step, for everything that has already happened.
 
 This is also why cost and correctness point in the same direction here, which is rare and worth exploiting. A shorter transcript is cheaper *and* the model attends to it better. Almost every fix in this lesson improves both.
@@ -68,6 +114,19 @@ This is also why cost and correctness point in the same direction here, which is
 **The transcript you resend.** Already covered, and it is the largest one by a distance in a normal run. The variable you control is not the number of steps so much as **how much each step adds**. One step that appends a 200,000-character web page has just raised the price of every remaining step in the run. Which leads directly to the second one.
 
 **Tool results nobody trimmed.** A tool returns whatever the underlying system returns: a full HTML page, a hundred-row query result, a stack trace, a directory listing of four thousand files. If you append that verbatim, you pay for it on every subsequent step. Truncate or extract at the boundary — in your executor, before the result becomes part of the conversation. Keep the head and the tail; the tail is usually where the error message is. A tool that returns a summary and an id you can fetch the full thing with is nearly always the better design.
+
+<Compare caption="The same oversized tool result, handled at two different points. Trimming only pays off when it happens before the append — trim after, and every remaining step has already inherited the full cost.">
+  <Panel label="Naive" title="Append it verbatim, trim later">
+
+The full page, table or trace goes straight into the transcript. Every step after this one resends it in full, whether the model needed all of it or not — trimming it afterwards no longer un-spends what earlier steps already paid.
+
+  </Panel>
+  <Panel label="What to do" title="Truncate at the executor, before it is appended">
+
+The result is clipped to its head and tail — the tail is usually where the error message is — before it ever becomes part of the conversation. Every later step resends only the clipped version.
+
+  </Panel>
+</Compare>
 
 **Redundant calls.** The model calls `list_files` on a directory it already listed. It re-reads a file it read at step four, because that read is now buried under twelve steps of other output. It searches for the same thing twice with slightly different wording. None of this errors, none of it appears in your logs as a problem, and all of it costs a full round-trip plus a permanent addition to the transcript. A small cache keyed on the tool name and its arguments, scoped to one run, kills most of it in ten lines — and it is the same observation *Planning a run, and knowing when to stop* made as a stop signal, spent on the bill instead of on the ending.
 
@@ -87,6 +146,24 @@ This is also why cost and correctness point in the same direction here, which is
 Three rules make it work, and the third is the one loops break. The prefix must be byte-identical, so nothing volatile — a timestamp, a step counter, a user name — can sit above the breakpoint. Stable content goes first, volatile content last. And entries expire in minutes, so caching pays on sustained traffic and is a small loss on an occasional call. The current cache lifetimes and the exact discount are on the provider's caching page; read them there rather than anywhere else, including here.
 
 **Step limits and token budgets** are not optimisations. They are the seatbelt. A step cap bounds the worst case. A token budget bounds it better, because ten steps that each append a large page cost far more than thirty small ones. Enforce both, inside the loop, and end at the ceiling the way *Planning a run, and knowing when to stop* asked you to: return `budget_exhausted` as its own outcome, carrying the partial work and the reason, next to `finished` and `failed`. What you must never do is hand back the last thing the model said dressed as a final answer — a run that quietly gives up looks like a working feature producing bad output, which is a far more expensive problem than a run that says it ran out.
+
+<Flow
+  caption="The shape the code below runs. There are exactly two ways out — budget_exhausted or a real stop_reason — and the only way back to the top is a tool call that has not yet burned through either ceiling."
+  steps={[
+    { label: 'Send one request', note: 'The cached prefix, the tools, and the whole transcript so far' },
+    { label: 'Add usage to spent', note: 'Input tokens plus any cache write, this step' },
+    {
+      label: 'spent vs the token budget',
+      subject: true,
+      branch: ['Over — stop and return budget_exhausted', 'Under — keep going'],
+    },
+    {
+      label: 'stop_reason',
+      branch: ['tool_use — dispatch it, append the result', 'anything else — stop and return the answer'],
+    },
+  ]}
+  back={{ from: 4, to: 1, label: 'Round again on tool_use, until the budget or the step cap ends it' }}
+/>
 
 ```python
 import logging

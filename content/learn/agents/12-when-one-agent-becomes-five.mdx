@@ -51,6 +51,8 @@ You are not adding four more brains. You are cutting one context into five and a
 
 There is a second cost that never shows on an invoice. Workers cannot see each other's transcripts, so they make **silently incompatible decisions**. One picks a date format, another picks a different one. One decides the answer should be a summary, another writes bullet points. Nothing errors. The merge step receives two coherent halves of two different answers and has no way to know which assumption was right, because it never saw either agent decide.
 
+<Figure bare caption="The token-cost row is the same for two of the three shapes — orchestrator-worker and parallel fan-out both cost several times a single agent. The difference between them is not price, it's the 'runs concurrently' and 'what each part sees' rows just above it.">
+
 | | One agent | Orchestrator and workers | Parallel fan-out |
 |---|---|---|---|
 | Who picks the next step | The model, one thread | Orchestrator picks, workers execute | Your code, once, up front |
@@ -59,6 +61,8 @@ There is a second cost that never shows on an invoice. Workers cannot see each o
 | Token cost vs one agent | Baseline | Several times | Several times, but wall-clock is much lower |
 | Best at | Dependent decisions, code, anything with one thread | Broad tasks with separable branches | The same operation over many inputs |
 | Fails when | Context fills, or one task needs many tool families | Briefs are vague, so workers duplicate or drift | Subtasks were not actually independent |
+
+</Figure>
 
 > Splitting an agent splits its context. Anything two workers both needed to know is now either something you pass explicitly, or something they will each quietly guess at.
 
@@ -69,6 +73,16 @@ Almost everything worth building is one of these two, or a shallow nesting of th
 Both names appeared in *A loop, not a brain*, in the list of workflow patterns, and that is not a contradiction — it is the same test doing its job. That lesson asks who picks the next step, and the answer here is **whether the model chooses the decomposition**. When you enumerate the subtasks in your own code, this is a workflow that happens to run several contexts at once, and everything *A loop, not a brain* says about a drawable path and a known bill still holds. When an orchestrator reads the task and decides at run time how many workers there are and what each one is for, the same picture is an agent, and you have bought its unpredictability along with its flexibility.
 
 **Orchestrator-worker.** One agent owns the plan. It reads the task, decides what the separable pieces are, writes a brief for each, dispatches them, reads what comes back, and decides whether it has enough. Workers are ordinary agents with a narrow tool set and no knowledge of each other.
+
+<Flow
+  caption="The whole pattern in four stages. Workers sit in the middle seeing only their own brief; the orchestrator is the one part of the system that ever sees the whole task or all the results at once."
+  steps={[
+    { label: 'Task arrives', note: 'One instruction. Only the orchestrator sees it whole.' },
+    { label: 'Orchestrator plans', note: 'Decides the separable pieces and writes one brief per worker' },
+    { label: 'Workers run', note: 'Each sees only its own brief, its own tools, and none of the others', subject: true },
+    { label: 'Orchestrator merges', note: 'Reads what came back and decides whether it has enough' },
+  ]}
+/>
 
 The whole quality of this pattern lives in the brief. A brief that says "research the pricing" produces two workers doing the same search and neither of them answering the question. A brief that works states four things: the objective in one sentence, the exact output shape you want back, which tools to use, and the boundary — what this worker must not go and do. Anthropic's own write-up on their research system lands in the same place: their most common coordination failures were spawning workers for a task that did not need them, duplicated effort, and task descriptions too vague to act on.
 
@@ -117,6 +131,39 @@ for brief, finding in zip(briefs, fan_out(briefs)):
 ```
 
 Two things in there are load-bearing. `MAX_WORKERS` raises rather than silently dropping subtasks — a fan-out that quietly discards work is the worst kind of bug, because the output still looks complete. And each brief repeats its own boundary, because a worker that has no idea another worker exists will happily expand its scope into that worker's job.
+
+<Steps
+  caption="The same fan_out() call from the code above, at three sizes. Nothing changes gradually — it snaps from running alone, to a full pool, to a raised exception the moment briefs passes MAX_WORKERS."
+  steps={[
+    {
+      label: '1 brief',
+      title: 'Too small to fan out',
+      body: 'One subtask does not need a pool. It runs directly and returns.',
+      facts: [
+        { label: 'len(briefs)', value: '1' },
+        { label: 'path taken', value: 'run_worker(briefs[0])' },
+      ],
+    },
+    {
+      label: '5 briefs',
+      title: 'At the ceiling',
+      body: 'At or under MAX_WORKERS, every brief gets its own thread and they run at the same time.',
+      facts: [
+        { label: 'len(briefs)', value: '5' },
+        { label: 'path taken', value: 'ThreadPoolExecutor, all 5 concurrent' },
+      ],
+    },
+    {
+      label: '6 briefs',
+      title: 'Over the ceiling',
+      body: 'One brief past MAX_WORKERS raises. Deliberately: a fan-out that silently drops work is worse than one that stops.',
+      facts: [
+        { label: 'len(briefs)', value: '6' },
+        { label: 'path taken', value: 'ValueError — a batching problem, not a fan-out' },
+      ],
+    },
+  ]}
+/>
 
 ## 3. The rule, and how to know you were right
 

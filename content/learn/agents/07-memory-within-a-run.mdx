@@ -49,6 +49,15 @@ The transcript is everything you send on every step: the system prompt, the tool
 
 **Then it fills.** You hit the window and the request fails, or your harness truncates from the front and quietly deletes the oldest thing in the conversation - which, since the task and its constraints were the first thing you sent, is the task and its constraints.
 
+<Flow
+  caption="The transcript's three failure modes, in the order they actually arrive. By the time the window fills, the constraint that mattered most has already gone unread for a while."
+  steps={[
+    { label: 'Signal thins out', note: 'One sentence, buried under tool output the model reads on every step' },
+    { label: 'You pay for all of it', note: 'Every step re-sends the whole transcript so far' },
+    { label: 'Then it fills', note: 'A naive truncation drops the oldest thing first — often the task and its constraints', subject: true },
+  ]}
+/>
+
 Not everything in there is equally worth keeping:
 
 | What is in the window | Grows with | Safe to drop |
@@ -60,6 +69,19 @@ Not everything in there is equally worth keeping:
 | Tool results | Every call, and they are the biggest thing here | Yes - and this is where the tokens are |
 
 That last row is most of your context and nearly all of your growth. It is also the least valuable per token after the step that used it.
+
+<Budget
+  caption="One run, forty steps in, broken into what is actually filling the window. Tool results dwarf everything else, which is exactly why they are the first thing worth clearing. The figures are an illustration, not a measurement — count your own."
+  totalLabel="One long-running agent, forty steps in"
+  unit="tokens"
+  segments={[
+    { label: 'System prompt and tool definitions', value: 3000, note: 'Fixed, resent on every single step' },
+    { label: 'The task and its constraints', value: 300, note: 'Fixed since step one, and the part that matters most' },
+    { label: 'Model reasoning across the run', value: 14000, note: 'Grows every step' },
+    { label: 'Tool call arguments across the run', value: 6000, note: 'Grows with every call' },
+    { label: 'Tool results across the run', value: 145000, note: 'Most of the window, and the least valuable part to keep', subject: true },
+  ]}
+/>
 
 ## 2. State that lives outside the window
 
@@ -155,6 +177,52 @@ def step(messages, tools):
     # will not know where the summary starts.
     return messages + [{"role": "assistant", "content": resp.content}]
 ```
+
+<Steps
+  caption="The two triggers from the code above, watched across one long run. Clearing does the routine work at 60,000 tokens; compaction fires only once, much later, at 150,000 — the step numbers and token counts here are illustrative, not measured."
+  steps={[
+    {
+      label: 'Step 10',
+      title: 'Running normally',
+      body: 'Input tokens are climbing the way they always do in a loop — every step re-sends the transcript so far. Neither edit has fired yet.',
+      facts: [
+        { label: 'input tokens this step', value: '~38,000' },
+        { label: 'clear_tool_uses trigger (60,000)', value: 'not reached' },
+        { label: 'compact trigger (150,000)', value: 'not reached' },
+      ],
+    },
+    {
+      label: 'Step 24',
+      title: 'Tool-result clearing fires',
+      body: 'Input tokens cross the 60,000-token trigger from the code above. The oldest tool results are dropped and the last five are kept — the model still knows it called search, it just no longer carries what came back.',
+      facts: [
+        { label: 'input tokens before', value: '~61,000' },
+        { label: 'clear_tool_uses_20250919', value: 'fires — keeps last 5 tool uses' },
+        { label: 'input tokens after', value: 'drops back down' },
+      ],
+    },
+    {
+      label: 'Step 40',
+      title: 'Climbing again',
+      body: 'Clearing bought room, but the run keeps going and the transcript keeps growing from where clearing left it.',
+      facts: [
+        { label: 'input tokens this step', value: '~96,000' },
+        { label: 'clear_tool_uses_20250919', value: 'already ran once' },
+        { label: 'compact trigger (150,000)', value: 'not yet' },
+      ],
+    },
+    {
+      label: 'Step 58',
+      title: 'Compaction fires',
+      body: 'Input tokens cross the 150,000-token trigger. The response carries a compaction block, and everything before it is summarised — which is also the point the cached prefix stops matching, so the next step pays full price.',
+      facts: [
+        { label: 'input tokens before', value: '~151,000' },
+        { label: 'compact_20260112', value: 'fires — conversation summarised' },
+        { label: 'prompt cache', value: 'invalidated for the next step' },
+      ],
+    },
+  ]}
+/>
 
 The two thresholds are placeholders. Pick yours from your own runs: log input tokens per step across real tasks, see where they climb, and set the clearing trigger below the point where the window starts hurting and the compaction trigger well above it. Clearing should be doing the routine work; compaction should be rare.
 

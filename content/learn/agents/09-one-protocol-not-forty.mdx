@@ -58,6 +58,29 @@ Tools are the ones this course cares about. The wire calls are plain: `tools/lis
 
 Two standard transports. **stdio**: the host launches the server as a subprocess and they exchange newline-delimited JSON-RPC over the standard streams. **Streamable HTTP**: each message is an HTTP POST to a single endpoint, and the reply is either a JSON object or a stream scoped to that request. Local tools use the first; anything across a network uses the second. Custom transports are allowed and rare.
 
+<Flow
+  caption="One call, end to end. The model still decides which tool to use — the protocol only standardises how the client learns what is on offer and how the call crosses the wire."
+  steps={[
+    { label: 'tools/list', note: 'The client asks a server what it offers' },
+    { label: 'The model picks one', note: 'Reading the same name, description and inputSchema as any tool call', subject: true },
+    { label: 'tools/call', note: 'The client sends the JSON-RPC invocation, over stdio or Streamable HTTP' },
+    { label: 'The server runs it', note: 'And returns a result in the shape the protocol defines' },
+  ]}
+/>
+
+<Compare caption="The two standard transports, chosen by where the server runs rather than by anything the tool itself does.">
+  <Panel label="Local" title="stdio">
+
+The host launches the server as a subprocess of itself. Messages are newline-delimited JSON-RPC over the standard streams — nothing leaves the machine.
+
+  </Panel>
+  <Panel label="Networked" title="Streamable HTTP">
+
+Each message is an HTTP POST to a single endpoint, and the reply is either a plain JSON object or a stream scoped to that one request. This is the transport for anything reached across a network.
+
+  </Panel>
+</Compare>
+
 That is the whole idea. The interface is standard, so the tool is written once:
 
 | | Without a protocol | With one |
@@ -76,11 +99,28 @@ The spec is unusually honest about this. Its own security section says MCP "cann
 
 **Auth policy.** Authorization is **optional** in the spec, and only defined for HTTP transports. When you do use it, a protected MCP server acts as an OAuth 2.1 resource server and the client acts as an OAuth client; the authorization server itself is explicitly out of scope. The client discovers where to authenticate from a 401 with a `WWW-Authenticate` header pointing at protected resource metadata. For **stdio** servers the spec says the opposite — do not run this flow, take credentials from the environment. And none of that answers the question you actually have, which is *which user is this and what rows are they allowed to touch*. That check lives inside your tool.
 
+<Flow
+  caption="Two transports, two different answers for where a credential comes from — and the spec is explicit that the HTTP answer is the wrong one to reach for on stdio."
+  steps={[
+    { label: 'A tool call needs a credential', note: 'The client has to get one from somewhere' },
+    {
+      label: 'Which transport is this server on?',
+      subject: true,
+      branch: [
+        "HTTP — act as an OAuth 2.1 client, discovered from the 401's WWW-Authenticate header",
+        'stdio — take credentials from the environment; the spec says not to run the OAuth flow here',
+      ],
+    },
+  ]}
+/>
+
 **Sandboxing.** Nothing. A tool is a function running in a process on some machine with some file system and some network. The protocol carries the call; it does not care what the call can reach. That is *Letting an agent touch the real world*, and it is the reason that lesson exists.
 
 **Tool quality.** The protocol will carry a vague description perfectly faithfully. Everything in *Designing a tool a model can actually use* — narrow enums, `additionalProperties: false`, naming a tool for what it does, fewer and better-scoped tools — applies unchanged, because the model is still reading your `description` field to decide whether to call the thing.
 
 **Trust in what a server tells you.** The spec is blunt: clients **must** treat tool annotations as untrusted unless they come from a trusted server. An annotation saying a tool is read-only is a claim by whoever wrote the server. On tools it says there **should** always be a human able to deny an invocation, and that clients should show tool inputs to the user before the call.
+
+<Figure bare caption="Read it as one line down the middle: the left column is fixed by the wire format, and the right column is what decides whether any of it can be trusted.">
 
 | Standardised by the protocol | Yours |
 |---|---|
@@ -90,6 +130,8 @@ The spec is unusually honest about this. Its own security section says MCP "cann
 | Where the OAuth flow is advertised | Who the user is and what they may do |
 | The shape of a result | Whether you believe the server |
 | Transport framing | Isolation, rate limits, audit logging |
+
+</Figure>
 
 ## 3. Standing one up, and what keeps moving
 

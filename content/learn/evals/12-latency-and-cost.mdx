@@ -46,6 +46,17 @@ The average latency of your endpoint is close to the least useful number you can
 
 Say ninety-five requests out of a hundred finish in half a second and five take eight seconds — a retry, a cold cache, a longer input. The average lands around 0.8 seconds, which sounds fine, and reports nothing about the one user in twenty who waited eight seconds and is now telling a colleague the feature is broken. Percentiles fix this because they describe the tail directly instead of blending it into a number that hides it.
 
+<Bars
+  caption="The example above, redrawn as bars. The average sits low because ninety-five requests are fast — it is the p95 bar that matches what the unlucky one in twenty actually felt. These are the lesson's own illustrative numbers, not a measurement of your own traffic."
+  unit="s"
+  axis="One hundred requests, from the example above"
+  bars={[
+    { label: 'Average', value: 0.8, note: 'What a status page usually shows' },
+    { label: 'p50 (typical)', value: 0.5 },
+    { label: 'p95 (worst 5%)', value: 8, subject: true, note: 'The one in twenty telling a colleague it is broken' },
+  ]}
+/>
+
 | Metric | What it tells you | Where it goes wrong if ignored |
 |---|---|---|
 | p50 (median) | What a typical request feels like | Fine to report casually, useless for catching a bad tail |
@@ -65,6 +76,19 @@ Track it the same way: total tokens in and out per request, split by the step th
 
 - **Tokens per request**, input and output separately, since a change that inflates the prompt and a change that inflates the response are different bugs with different fixes.
 - **Cache hit rate**, if you use prompt caching for a system prompt or a repeated context block — a dropping hit rate is often the real cause behind a cost or latency regression that looks unrelated at first glance, because a cache miss silently reprocesses everything a hit would have skipped.
+
+<Compare caption="Two different regressions that both look like 'cost went up' from an average, but need different fixes because they start in different places.">
+  <Panel label="Input tokens grew" title="The prompt got bigger">
+
+Something upstream got bigger — a retrieved passage, a tool schema, more history carried into every turn. The fix is in what you send, not in the model's answer.
+
+  </Panel>
+  <Panel label="Output tokens grew" title="The response got longer">
+
+The model started writing more for the same question — a verbose edge case, an instruction that changed. The fix is in what you asked for, or in `max_tokens`, not in the prompt.
+
+  </Panel>
+</Compare>
 
 Rates and dollar figures belong in your own provider's current pricing page, not in a lesson — they move, and a number printed here would be wrong before you finish reading this sentence. What does not move is the habit: measure tokens and cache behaviour as metrics you track over time, the same way you already track quality, so a regression shows up as a graph moving instead of an invoice at the end of the month.
 
@@ -98,6 +122,45 @@ def report(history: list[RequestMetrics]) -> dict:
     }
 ```
 
+<Steps
+  caption="The same report() dict, three points in a rollout. Watch cache_hit_rate fall alongside the other three fields — that is usually the tell that a cost or latency regression traces back to a broken cache, not a slower model. The figures are an illustration, not a measurement — count your own."
+  steps={[
+    {
+      label: 'A normal day',
+      title: 'report() on healthy traffic',
+      body: 'Latency, first token, output size and cache hits all sit where they usually do.',
+      facts: [
+        { label: 'p95_latency_ms', value: '420' },
+        { label: 'p95_ttft_ms', value: '180' },
+        { label: 'avg_output_tokens', value: '310' },
+        { label: 'cache_hit_rate', value: '0.82' },
+      ],
+    },
+    {
+      label: 'A change ships',
+      title: 'The same four fields, after a release',
+      body: 'Nothing crashed and no error rate moved, so a check that only watches errors would miss this entirely.',
+      facts: [
+        { label: 'p95_latency_ms', value: '1900' },
+        { label: 'p95_ttft_ms', value: '810' },
+        { label: 'avg_output_tokens', value: '640' },
+        { label: 'cache_hit_rate', value: '0.35' },
+      ],
+    },
+    {
+      label: 'Rolled back',
+      title: 'The fields recover',
+      body: 'Reverting the change brings all four back down together, which is what confirms the release was the cause.',
+      facts: [
+        { label: 'p95_latency_ms', value: '440' },
+        { label: 'p95_ttft_ms', value: '190' },
+        { label: 'avg_output_tokens', value: '300' },
+        { label: 'cache_hit_rate', value: '0.80' },
+      ],
+    },
+  ]}
+/>
+
 This is the shape of the thing, not a library to adopt — the point is that latency, time to first token, tokens, and cache behaviour all live on one record per request, the same request your trace from *Tracing a multi-step run* already produced, so nothing here requires a second collection system next to the one you already built.
 
 ## 3. Treat both as SLOs, not a monthly surprise
@@ -105,6 +168,19 @@ This is the shape of the thing, not a library to adopt — the point is that lat
 An SLO — a service level objective — is a target you set on purpose and alert against, the same posture this course has taken toward quality since *Why “looks good to me” fails*: a number you check on a schedule, not one you learn about from a complaint. Latency and cost deserve the identical treatment, and for the identical reason — both degrade quietly, and both are cheap to catch early and expensive to catch late.
 
 Set a p95 latency target per feature, not one target for the whole system — a background summarization job and a live chat response have completely different tolerances, and a single global number will be too loose for one and too strict for the other. Set a cost-per-request ceiling the same way, scoped to what that feature can justify. Alert when either one crosses its line, exactly the way *Drift* alerts on a golden set score crossing its baseline — the mechanism is identical, only the metric changed.
+
+<Flow
+  caption="The loop Drift already used for a quality score, aimed at the two metrics this lesson adds: nothing here is measured against a line unless somebody drew that line before the release shipped."
+  steps={[
+    { label: 'Set a p95 latency target and a cost ceiling', note: 'Per feature, next to the quality bar, before anything ships' },
+    { label: 'Measure both, continuously', note: 'Not a monthly check — the same cadence as an error rate' },
+    {
+      label: 'Compare to the line',
+      subject: true,
+      branch: ['Inside budget — nothing happens', 'Crosses the line — the alert fires'],
+    },
+  ]}
+/>
 
 The habit this closes is the one the whole course opened with. A demo of five good answers told you nothing about the other five thousand. A model that scored well on a leaderboard told you nothing about your traffic. And a change that passes every quality check you have can still ship a regression, if speed and cost were never on the list of things anyone was checking. Watching them is not a lesser concern bolted onto evaluation — it is the same discipline, aimed at the two dimensions that never show up in a correctness score, and it is worth the same seriousness as everything that came before it.
 

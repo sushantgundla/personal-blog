@@ -48,6 +48,21 @@ The fix is not to remove the gate. It's to move the decision earlier, into two s
 - **Actions this run may simply never take, unattended.** If an action is irreversible and consequential enough to need a human gate in the interactive case, a scheduled run doesn't get to take it just because no one's around to say no. Some actions are correctly "never, unattended" full stop — the schedule doesn't earn an exception, it earns a queue.
 - **Actions that get queued for async approval before anything real happens.** The run reaches the point where the gate in *Letting an agent touch the real world* would fire, and instead of blocking, it writes the proposed action somewhere a human reviews it later, and stops there for that action. The run can still complete and report what it *would* do; it just doesn't do the irreversible part without a person eventually signing off.
 
+<Flow
+  caption="Where the human gate moves when there's no one to interrupt: the decision is made in code before the run starts, not asked for while it's happening."
+  steps={[
+    { label: 'The run reaches an action needing approval', note: 'The point where the interactive gate would block and wait for a person' },
+    {
+      label: 'Decided in code, in advance',
+      subject: true,
+      branch: [
+        'Unattended-never — the action does not happen, this run or any other',
+        'Queued for async approval — the run reports what it would do and stops there for that one action',
+      ],
+    },
+  ]}
+/>
+
 | | Interactive agent | Scheduled agent |
 |---|---|---|
 | Who approves an irreversible action | A person, in the moment, blocking the run | Decided in advance which actions are unattended-never; the rest go to an async approval queue |
@@ -67,6 +82,19 @@ Two separate checks catch two separate versions of this, and you need both:
 **A heartbeat.** Did this run even happen at all? A cron entry that silently stopped firing — because a deploy broke the scheduler, because a config change removed the job, because the container it lived in didn't come back up — produces no error anywhere, because there's no process left to raise one. The fix is boring and necessary: on every successful run, write a timestamp somewhere with an alert if it goes stale. This has to live outside the agent, because a dead scheduler can't be relied on to report its own death.
 
 **An outcome check.** Did the run produce what a run at this trigger should? This reuses the termination-condition thinking from *Planning a run, and knowing when to stop* — instead of checking whether the *agent* thinks it's done, check the world it was supposed to affect. If the job is "reconcile today's transactions," the check is "does today's transaction count look like a normal day's," not "did the agent return without an exception." A rate-limited partial run passes the second and fails the first, which is exactly the case that matters.
+
+<Compare caption="Two different silences, caught two different ways. Neither check stands in for the other — a monitor watching only stop_reason catches neither.">
+  <Panel label="Silence" title="What the heartbeat catches">
+
+Proves the run happened at all. A cron entry that stopped firing raises nothing, because there's no process left to raise it — a timestamp gone stale is the only thing that notices.
+
+  </Panel>
+  <Panel label="Degradation" title="What the outcome check catches">
+
+Proves the run produced what a run at this trigger should. A rate-limited partial run still returns cleanly with no error — this check compares what it actually produced against a floor for a normal day.
+
+  </Panel>
+</Compare>
 
 In code, that's two separate checks bracketing the run: before returning, compare `result.records_processed` against a floor for what a normal window produces and raise if it's short, rather than trusting that a clean return means a complete one; then, only after that check passes, write a timestamp to a durable heartbeat store keyed by job name, so a separate monitor can alert the moment that timestamp goes stale. Neither check replaces the other. The heartbeat catches the scheduler that stopped firing entirely; the outcome check catches the scheduler that fired but got a degraded run out of it. A monitor watching only `stop_reason` catches neither. The full wrapper below folds both checks in alongside the locking from section 3, since in practice they belong on the same function.
 
@@ -115,6 +143,41 @@ def run_scheduled_agent(job_name, window_key, run_fn, expected_min_records):
     HEARTBEAT_STORE[job_name] = {"run_id": run_id, "completed_at": time.time()}
     return result
 ```
+
+<Steps
+  caption="The same acquire_window_lock, met by two redelivered triggers for one window. The second is a no-op because of the lock, not because anything remembered running once already."
+  steps={[
+    {
+      label: 'Trigger A',
+      title: 'The first delivery arrives',
+      body: 'acquire_window_lock finds no existing entry for this job and window, claims it, and lets the run proceed.',
+      facts: [
+        { label: 'LOCK_STORE[(job_name, window_key)]', value: 'unset' },
+        { label: 'acquire_window_lock returns', value: 'True' },
+        { label: 'run_fn', value: 'starts' },
+      ],
+    },
+    {
+      label: 'Trigger B',
+      title: 'A redelivery for the same window',
+      body: 'The scheduler or queue redelivers before Trigger A finished. The lock is already held and inside its TTL, so this trigger is skipped rather than starting a second run.',
+      facts: [
+        { label: 'LOCK_STORE[(job_name, window_key)]', value: 'held by Trigger A' },
+        { label: 'acquire_window_lock returns', value: 'False' },
+        { label: 'run_fn', value: 'never called' },
+      ],
+    },
+    {
+      label: 'Trigger A finishes',
+      title: 'Outcome check, then heartbeat',
+      body: 'result.records_processed clears the floor, so the run does not raise. Only now does it write the heartbeat that proves this job ran.',
+      facts: [
+        { label: 'records_processed check', value: 'passed' },
+        { label: 'HEARTBEAT_STORE[job_name]', value: 'written' },
+      ],
+    },
+  ]}
+/>
 
 The TTL on the lock matters as much as the lock itself: a lock with no expiry turns one crashed run into a permanently stuck window that never gets retried by anything, trading a double-execution risk for a silent-never-runs-again risk — not an improvement.
 

@@ -53,6 +53,19 @@ Two ways engineers get it wrong, and they fail in opposite directions.
 
 **Sending everything.** You return a forty-line stack trace. The model reads a Python traceback it cannot do anything with, spends a step, and usually tries the identical call again. Anthropic's own tool-use docs put it plainly: write instructive errors, not generic ones - `Rate limit exceeded. Retry after 60 seconds.` rather than `failed`. The error text should name the problem and the next move.
 
+<Compare caption="The same failure, handled two ways. Only one of them gives the model anything to act on, and the other is the run in the opener.">
+  <Panel label="Naive" title="Return an empty result">
+
+The exception is caught and swallowed. The model reads a blank where data should be, cannot tell it apart from a genuine empty set, and fills the gap with something plausible.
+
+  </Panel>
+  <Panel label="What to do" title="Return `is_error: true`, with an instructive message">
+
+`Rate limit exceeded. Retry after 60 seconds.` names the problem and the next move, the way Anthropic's own tool-use docs recommend - not a stack trace, and not `failed`.
+
+  </Panel>
+</Compare>
+
 Where the failure came from decides who can fix it, and that is the classification worth making:
 
 | Origin | What it looks like | Who can fix it |
@@ -73,6 +86,23 @@ Note the third row. Those failures carry no information a language model can use
 | Try a different route | The world said no | The model's next step | You give up on a task another tool could finish |
 | Stop and say so | The failure is on the critical path and the routes are gone | The harness | You return an answer built on a hole |
 
+<Flow
+  caption="The choice a failed tool call forces, laid out as one branch. Which door opens depends on where the failure came from, not on how loud it is."
+  steps={[
+    { label: 'A tool call fails', note: 'The model only ever learns about it from the text in the tool_result' },
+    {
+      label: 'Where did it come from?',
+      subject: true,
+      branch: [
+        'Infrastructure — retry below the loop, invisibly',
+        'Bad arguments — return the error, let the model repair',
+        'The world said no — the model tries a different route',
+        'Critical path, no routes left — stop and say so',
+      ],
+    },
+  ]}
+/>
+
 **Retry the same call.** Backoff with jitter, two or three attempts, then surface it. The model should never see a transient failure that resolved itself.
 
 **Rewrite the arguments.** Return the validator's own message, verbatim - the field name and the constraint are exactly what the model needs. Cap it. Anthropic's docs say Claude will retry an invalid tool call two or three times on its own before apologising to the user; your cap should sit in the same neighbourhood, because past that point the model is not the thing that is wrong. Go and read your tool's description. This class of failure mostly disappears if you turn on strict tool use, which makes the API guarantee the arguments match your schema.
@@ -88,6 +118,21 @@ The fifth move is the one in the opener, and it is never correct: continue as th
 ## 3. Making it hold up over a long run
 
 **Budget failures per tool, not just per run.** Count how many times each tool has failed this run. At three, take it off the table - and tell the model you have, in the error text, so it stops planning around a tool that is gone. That is a circuit breaker scoped to a single run, and it is the difference between a bad tool costing you three steps and a bad tool costing you the whole budget.
+
+<Dial
+  caption="The same knob the code above enforces as MAX_FAILURES_PER_TOOL. Drag it to three and the tool goes quiet for the rest of the run, and the model is told why in the error text."
+  name="failures on this tool, this run"
+  min={0}
+  max={3}
+  step={1}
+  start={0}
+  bands={[
+    { at: 0, label: 'No failures yet', outcome: 'The tool behaves normally - a call is retried or its arguments are corrected as usual.' },
+    { at: 1, label: 'One failure', outcome: 'Still worth a repair attempt. Most genuinely recoverable failures are caught by here.' },
+    { at: 2, label: 'Two failures', outcome: 'One attempt left before the cap. A third failure means the tool itself is the problem, not bad luck.' },
+    { at: 3, label: 'Three failures - the cap', outcome: 'Disabled for the rest of the run. The model is told so in the error text, so it stops planning around a tool that is gone.' },
+  ]}
+/>
 
 **Leave the failed call in the transcript.** It is tempting to delete a failed call to keep the context clean. Do not. The record of "I tried that and it did not work" is the only thing stopping the model trying it again, and it is cheap. When you start clearing old tool results - the next lesson - failures are the ones to keep.
 

@@ -65,6 +65,23 @@ Unit tests on the harness logic catch most of it, but they need a `tool_use` blo
 
 Record a handful of real runs - the happy path, the tool that returns empty, the one that trips your retry ladder - as fixture files: the request that went out, and the full response, tool calls included, that came back. In a test, swap your live client for a stub that reads from the fixture instead of the network. Your executor, your budget check, and your retry logic run exactly as they would in production, against a response that is now frozen forever.
 
+<Flow
+  caption="Recording happens once, live. Everything after that is the fixture talking, and the one branch worth noticing is the right-hand one: a step the fixture never saw fails the test outright rather than quietly going back to the network."
+  steps={[
+    { label: 'Call the real model once', note: 'The happy path, or the one that trips the retry ladder' },
+    { label: 'Save the fixture', note: 'The request that went out, and the full response that came back' },
+    { label: 'Swap in RecordedClient', note: 'Stands in for the live client in every later test run' },
+    {
+      label: 'The loop asks for a step',
+      subject: true,
+      branch: [
+        'Recorded — replay it, byte for byte',
+        'Not recorded — fail loudly, never fall through to a live call',
+      ],
+    },
+  ]}
+/>
+
 What you assert on matters as much as the recording itself. Three levels, in order of how much they tell you:
 
 | Assertion level | What it checks | Catches |
@@ -109,10 +126,65 @@ def test_retries_then_gives_up(agent_fixture):
 
 `RecordedClient` is the whole trick. It has the same shape your real client call has, so `run_loop` cannot tell the difference, and it raises the moment the loop does something the fixture never anticipated - which is usually the first sign the fix you shipped changed behaviour nobody meant to change.
 
+<Steps
+  caption="The fixture from test_retries_then_gives_up, one call at a time. Watch the trace grow and the outcome stay unresolved until the ladder runs out - then click past the end of the recording to see RecordedClient refuse to guess."
+  steps={[
+    {
+      label: 'Call 1',
+      title: 'First invalid arguments',
+      body: 'RecordedClient pops the first recorded response: a refund_charge call with bad arguments. The schema check fails and the retry ladder starts.',
+      facts: [
+        { label: 'trace so far', value: 'refund_charge' },
+        { label: 'outcome', value: 'not yet decided' },
+      ],
+    },
+    {
+      label: 'Call 2',
+      title: 'Second invalid arguments',
+      body: 'Same tool, same shape of failure. The loop retries again rather than giving up after one bad call.',
+      facts: [
+        { label: 'trace so far', value: 'refund_charge, refund_charge' },
+        { label: 'outcome', value: 'not yet decided' },
+      ],
+    },
+    {
+      label: 'Call 3',
+      title: 'Third invalid arguments',
+      body: 'The ladder has a ceiling, and this is the last attempt the fixture recorded. The loop stops trying instead of retrying forever.',
+      facts: [
+        { label: 'trace so far', value: 'refund_charge x 3' },
+        { label: 'outcome', value: 'stopped_talking' },
+      ],
+    },
+    {
+      label: 'Call 4',
+      title: 'Past the end of the fixture',
+      body: 'If the loop asked for a fourth step, RecordedClient has nothing left to replay. It raises an AssertionError naming the gap, rather than quietly calling the real API.',
+      facts: [
+        { label: 'fixture', value: 'exhausted' },
+        { label: 'RecordedClient', value: 'raises, does not fall through' },
+      ],
+    },
+  ]}
+/>
+
 ## 3. What a fixture can never tell you
 
 A recorded fixture answers one question well: given this exact input, does the harness still behave the way it did when you recorded it. It cannot tell you whether the harness behaves correctly on an input nobody has recorded yet, and it will not warn you when it goes stale - a tool schema change that makes last month's recorded arguments invalid will pass every replay test right up until a real run hits it, because the fixture never re-validates itself against the current schema. Re-run and re-record fixtures whenever the tools they exercise change, the same way you would re-run a snapshot test after a deliberate UI change.
 
 Two things sit outside what replay testing can do, and both belong somewhere else rather than being bolted onto this technique. Judging whether an answer is actually *good* - not just structurally right, but a good summary, a well-reasoned recommendation - is a quality question, not a determinism question, and it wants the judging and scoring machinery an evaluation course builds, not a mocked unit test. And a model that must genuinely choose between two equally valid tools on a given input is not a bug to fix; running that case several times and asserting a pass rate rather than a single verdict is the honest way to test it, and belongs in a separate, clearly-labelled probabilistic suite so one flaky case never blocks a build the deterministic suite would otherwise pass.
+
+<Compare caption="Two kinds of test that both matter, kept apart on purpose. Folding the right-hand side into the deterministic suite means one flaky, honestly-ambiguous case can block a build that broke nothing.">
+  <Panel label="Deterministic" title="The replay suite">
+
+One fixture, one expected trace. Runs on every commit, takes seconds, and a red result means the code changed - not the model's mood that day.
+
+  </Panel>
+  <Panel label="Probabilistic" title="A separate, labelled suite">
+
+Quality judgments and genuine either-or tool choices get run several times and scored against a pass rate, not a single verdict, and live apart so a flake there never fails the deterministic build.
+
+  </Panel>
+</Compare>
 
 The practice worth keeping from all of this is small and pays for itself immediately: every time a bug like the opener's shows up in production, the fix is not finished until the exact failing exchange is captured as a fixture and wired into the deterministic suite. That fixture is not a test you wrote to feel thorough. It is the bug, preserved exactly as it happened, and it will fail again the day someone reintroduces it - which is a far cheaper way to find out than a user does.

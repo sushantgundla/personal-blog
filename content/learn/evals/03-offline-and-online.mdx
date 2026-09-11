@@ -42,6 +42,8 @@ deeper:
 
 Offline and online evals are not two competing ways of measuring the same thing. They run at different points in a change's life, against different data, and they exist to catch different kinds of failure. Neither one is optional.
 
+<Figure bare caption="Five ways the two checks differ, read across the row: offline is cheap and immediate because it reruns a fixed set it already knows the answer to; online is the only line actually looking at what is happening right now, and it pays for that with cost and a delay.">
+
 | | Offline eval | Online eval |
 |---|---|---|
 | When it runs | Before the change ships, on demand | Continuously, after the change is live |
@@ -49,6 +51,8 @@ Offline and online evals are not two competing ways of measuring the same thing.
 | What it catches | A known failure resurfacing, a clear regression on cases you already understand | A category of input, or a shift in the model or the world, nobody wrote a case for |
 | What it costs | Cheap and fast - it's the same set every time | Ongoing - it needs sampling, storage, and something scoring the sample |
 | How fast it tells you something's wrong | Immediately, before anyone outside the team is affected | After the fact - by definition, real users saw it first |
+
+</Figure>
 
 The offline set is the gate: nothing ships past it without passing. The online sample is the smoke detector: it doesn't stop anything, it tells you something is burning while it's still small enough to matter. You need the gate because you don't want to find out about a known failure from a user. You need the smoke detector because the gate can only test what someone thought to put behind it.
 
@@ -76,6 +80,17 @@ The two checks work together as a loop, not as a sequence you complete once. Bef
 
 The loop closes exactly the way the last lesson described: whatever online sampling catches becomes a new permanent case in the offline set. That's what keeps the gate from going stale. A golden set built once and never updated slowly turns into a test of last year's traffic.
 
+<Flow
+  caption="The loop this section is describing. Nothing here runs once: a real failure caught in production is turned into a permanent case, so the gate it slipped past once cannot let it through a second time."
+  steps={[
+    { label: 'Golden set gate', note: 'Runs before every change ships' },
+    { label: 'Change ships' },
+    { label: 'Production sampled', note: 'Continuously, at whatever rate you can afford to review' },
+    { label: 'A genuine failure turns up', subject: true },
+  ]}
+  back={{ from: 4, to: 1, label: 'Added to the golden set as a new permanent case' }}
+/>
+
 ```python
 import random
 
@@ -98,5 +113,20 @@ def maybe_queue_for_review(request_id: str, input_text: str, output_text: str) -
 Two percent of a busy system is still a lot of real cases every day, and unlike your golden set, it's a sample of exactly what's happening right now. When something in that queue turns out to be a genuine failure, it doesn't stay in the queue - it goes into the golden set, and the next offline run is checked against it forever.
 
 The sample rate itself is a knob, not a constant. Turn it up right after a risky change - a new model version, a rewritten system prompt, a feature that touches a lot of traffic - when you most want an early read on whether something's off. Turn it back down once the change has settled and nothing unusual has shown up. What you're buying with that percentage is review capacity spent where it's most likely to find something, not an attempt to look at everything.
+
+<Dial
+  caption="The knob from the script above. The lesson names three states for it, but the exact percentages here are an illustration, not a rule - set yours to whatever your own review capacity can absorb."
+  name="sample rate"
+  min={0}
+  max={20}
+  step={1}
+  start={2}
+  unit="%"
+  bands={[
+    { at: 0, label: 'Untouched', outcome: "Nothing is being watched, which is the exact setup this lesson opened with - a failure runs for days before anyone notices." },
+    { at: 2, label: 'Baseline', outcome: 'The rate in the script above - review capacity spent day to day, not an attempt to look at everything.' },
+    { at: 10, label: 'Right after a risky change', outcome: 'Turned up for an early read on a new model version, a rewritten prompt, or a feature touching a lot of traffic, then turned back down once things settle.' },
+  ]}
+/>
 
 That's the whole loop: offline stops you from shipping a known mistake, online tells you about the mistakes nobody knew to look for, and every real failure moves permanently from the second category into the first.
