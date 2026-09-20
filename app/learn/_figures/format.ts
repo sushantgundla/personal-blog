@@ -23,9 +23,20 @@ export function fmt(value: number): string {
   return `${negative ? '-' : ''}${grouped}${fraction ? `.${fraction}` : ''}`
 }
 
-/** A value and its unit, with the space only where there should be one. */
+/**
+ * A value and its unit, with the space only where there should be one.
+ *
+ * Three cases, not two. A currency symbol leads the figure ("$12"); a
+ * word stands off it ("12 tokens"); and a handful of symbols TRAIL it
+ * with no space at all ("12%", "40°"). The last case is why this is not
+ * simply "is it a symbol": `%` is punctuation exactly the way `$` is, so
+ * a single leading-symbol test printed "%5" on a Dial.
+ */
+const TRAILING_UNITS = new Set(['%', '\u00b0', '\u2030', '\u00b0C', '\u00b0F', '\u00d7', 'x']);
+
 export function withUnit(value: number, unit?: string): string {
   if (!unit) return fmt(value)
+  if (TRAILING_UNITS.has(unit)) return `${fmt(value)}${unit}`
   // A leading symbol sits against the figure; a word stands off it.
   if (/^[^\w\s]/.test(unit)) return `${unit}${fmt(value)}`
   return `${fmt(value)} ${unit}`

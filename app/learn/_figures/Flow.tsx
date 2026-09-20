@@ -14,7 +14,11 @@ import s from './figures.module.css'
  * The nodes are HTML, so a long label wraps instead of colliding with
  * the arrow, and the type sets at the page's own size on a phone and
  * on a monitor alike. The arrow between two nodes is the only SVG in
- * the whole kit, and it is where the plate's spark idiom lives:
+ * the whole kit, and it is where both of the plate's stroke idioms
+ * live. The arrow inks itself on: witness tick, rail and head are
+ * drawn along their own length once, staggered into reading order, so
+ * the run is a line being drawn rather than a line that was always
+ * there. Then the spark runs down the finished line:
  * pathLength="1" with a dash gap longer than the path, so exactly one
  * spark is ever on a line and the resting offset leaves none. The
  * sparks fire once, staggered along the run, and then nothing moves
@@ -81,18 +85,39 @@ export interface FlowProps {
 /** Above this many nodes a row is unreadable, so it stays a column. */
 const ROW_LIMIT = 5
 
-/** The arrow between two nodes, lying down. Carries the spark. */
+/**
+ * How long after the ink starts the spark is allowed to run down it.
+ * Slightly longer than lmf-ink's own duration, so a line is finished
+ * being drawn before anything travels along it.
+ */
+const SPARK_AFTER = 0.45
+
+/**
+ * The arrow between two nodes, lying down.
+ *
+ * Three strokes: a witness tick across the tail, the rail, and the
+ * head. Each carries pathLength="1" and inks itself on once — the
+ * plate's own idiom, and the reason one pair of keyframes can draw a
+ * 36-unit rail and a 12-unit arrowhead without knowing either length.
+ * `still` takes the whole arrow static, ink and spark together, which
+ * is what "a Flow with no motion" has to mean.
+ */
 function ArrowH({ delay, still }: { delay: number; still: boolean }) {
+  const ink = still ? s.rail : `${s.rail} ${s.inkOn}`
+  const tip = still ? s.head : `${s.head} ${s.inkOn}`
+  const at = { '--lmf-delay': `${delay}s` } as CSSProperties
+
   return (
     <svg className={s.connH} viewBox="0 0 48 12" aria-hidden="true">
-      <path className={s.rail} d="M 2 6 H 38" />
-      <path className={s.head} d="M 33 1.5 L 39 6 L 33 10.5" />
+      <path className={ink} d="M 2 2 V 10" pathLength={1} style={at} />
+      <path className={ink} d="M 2 6 H 38" pathLength={1} style={at} />
+      <path className={tip} d="M 33 1.5 L 39 6 L 33 10.5" pathLength={1} style={at} />
       {still ? null : (
         <path
           className={s.spark}
           d="M 2 6 H 38"
           pathLength={1}
-          style={{ '--lmf-delay': `${delay}s` } as CSSProperties}
+          style={{ '--lmf-delay': `${delay + SPARK_AFTER}s` } as CSSProperties}
         />
       )}
     </svg>
@@ -101,16 +126,21 @@ function ArrowH({ delay, still }: { delay: number; still: boolean }) {
 
 /** The same arrow, standing up, for the column below 46rem. */
 function ArrowV({ delay, still }: { delay: number; still: boolean }) {
+  const ink = still ? s.rail : `${s.rail} ${s.inkOn}`
+  const tip = still ? s.head : `${s.head} ${s.inkOn}`
+  const at = { '--lmf-delay': `${delay}s` } as CSSProperties
+
   return (
     <svg className={s.connV} viewBox="0 0 12 40" aria-hidden="true">
-      <path className={s.rail} d="M 6 2 V 30" />
-      <path className={s.head} d="M 1.5 25 L 6 31 L 10.5 25" />
+      <path className={ink} d="M 2 2 H 10" pathLength={1} style={at} />
+      <path className={ink} d="M 6 2 V 30" pathLength={1} style={at} />
+      <path className={tip} d="M 1.5 25 L 6 31 L 10.5 25" pathLength={1} style={at} />
       {still ? null : (
         <path
           className={s.spark}
           d="M 6 2 V 30"
           pathLength={1}
-          style={{ '--lmf-delay': `${delay}s` } as CSSProperties}
+          style={{ '--lmf-delay': `${delay + SPARK_AFTER}s` } as CSSProperties}
         />
       )}
     </svg>
@@ -166,8 +196,8 @@ export function Flow({ caption, alt, steps, back, still = false }: FlowProps) {
 
             {index < kept.length - 1 ? (
               <span className={s.conn}>
-                <ArrowH delay={0.25 + index * 0.3} still={still} />
-                <ArrowV delay={0.25 + index * 0.3} still={still} />
+                <ArrowH delay={index * 0.3} still={still} />
+                <ArrowV delay={index * 0.3} still={still} />
               </span>
             ) : null}
           </Fragment>

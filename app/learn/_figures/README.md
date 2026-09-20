@@ -83,8 +83,17 @@ you fighting the kit.
 - **Interactive means a real control.** `<Dial>` is an `<input type="range">`
   with a label; `<Steps>` is a row of `<button>`s. Both work from the keyboard
   and draw a visible focus ring.
-- **Motion happens once.** `<Flow>` runs a spark down its arrows on load and
-  then nothing moves again. Under `prefers-reduced-motion` it is removed.
+- **A figure that states a quantity looks measured.** Every rule the kit
+  measures against is graduated — a minor tick at a regular fraction of the
+  span, a longer major every few of those — and every line that states an
+  extent is terminated with a witness tick at each end. `<Budget>` is
+  dimensioned under its bar, `<Bars>` and `<Scale>` and `<Plot>` and `<Dial>`
+  carry graduated rules, `<Plot>` is drawn on ruled paper, and every plate
+  carries registration marks at its four corners. None of it is yours to turn
+  on or off: supply the data and the instruments are drawn.
+- **Motion happens once.** `<Flow>` inks its arrows in on load and then runs a
+  spark down each finished line, once. Nothing moves again. Under
+  `prefers-reduced-motion` both are removed.
 - **Nothing has a fixed pixel width and nothing caps a height.** Every figure
   fills the spread it is given, at every window size.
 

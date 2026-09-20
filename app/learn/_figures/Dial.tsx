@@ -99,6 +99,29 @@ export function Dial({
   const place = (at: number): number =>
     Math.max(0, Math.min(100, ((at - min) / (max - min)) * 100))
 
+  // Two boundaries can sit almost on top of each other -- a canary dial
+  // runs SHADOW at 0 and CANARY at 1 on a scale to 100, a gap of one
+  // percent of the rail -- and their labels then print over each other
+  // into an unreadable smear. A drawing office answers this by striking
+  // the close annotation off a longer leader onto a second row, and that
+  // is what `tight` marks here.
+  //
+  // Twelve percent is the threshold because a label is at most 7rem wide
+  // (.dialTick's max-inline-size) and a rail is rarely narrower than
+  // about 30rem, so anything closer than that can genuinely touch. It is
+  // deliberately NOT a measured value: measuring would need layout, and
+  // this has to be right in the server's HTML, before any of it exists.
+  const gaps = ordered.map((candidate, i) =>
+    i === 0 ? Infinity : place(candidate.at) - place(ordered[i - 1].at)
+  )
+  // Only every other one drops, so a run of three close boundaries
+  // alternates between the two rows instead of stacking two on the
+  // lower one and colliding all over again.
+  const tight: boolean[] = []
+  for (let i = 0; i < ordered.length; i++) {
+    tight[i] = gaps[i] < 12 && !tight[i - 1]
+  }
+
   return (
     <Figure caption={caption}>
       <div className={s.dial}>
@@ -109,7 +132,10 @@ export function Dial({
           <span className={s.dialVal}>{withUnit(value, unit)}</span>
         </div>
 
-        <div>
+        {/* The rail and everything struck against it. The graduation
+            is a background on this box: a pseudo-element on an <input>
+            is already spoken for by the track and the thumb. */}
+        <div className={s.dialRail}>
           <input
             id={id}
             className={s.dialRange}
@@ -126,12 +152,12 @@ export function Dial({
               same thing in a sentence, and the input already
               announces its own value. */}
           <div className={s.dialTicks} aria-hidden="true">
-            {ordered.map((candidate) => (
+            {ordered.map((candidate, i) => (
               <span
                 key={candidate.label}
                 className={`${s.dialTick} ${
                   candidate === band ? s.dialTickOn : ''
-                }`.trim()}
+                } ${tight[i] ? s.dialTickLow : ''}`.replace(/\s+/g, ' ').trim()}
                 style={{ insetInlineStart: `${place(candidate.at)}%` } as CSSProperties}
               >
                 <span className={s.dialTickStem} />

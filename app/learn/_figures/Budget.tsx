@@ -114,6 +114,13 @@ export function Budget({
           ))}
         </div>
 
+        {/* The extent line. A budget claims the strip above is a fixed
+            length, so the length is dimensioned: a rule with a witness
+            struck up from each end, and the figure for it at .total
+            underneath. Drawing only, hence aria-hidden — the built alt
+            already reads the whole and every share of it. */}
+        <div className={s.dim} aria-hidden="true" />
+
         <ol className={s.list}>
           {drawn.map((segment) => (
             <li key={segment.label} className={`${s.row} ${s.keyRow}`}>

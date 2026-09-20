@@ -61,6 +61,47 @@
    paper. It is a texture, never a fill of colour: every band of
    it is --lm-line on nothing.
 
+   THE INSTRUMENTS — what makes these drawings rather than boxes
+   A figure that states a quantity has to look like it was
+   measured, so the kit carries four marks and nothing else may be
+   invented on top of them.
+
+     THE GRADUATION. A rule a figure measures against is ruled off
+     the way a drawing scale is: a minor tick at a regular
+     fraction of the span and a longer major every fifth or so of
+     those. Both layers are the same repeating-linear-gradient the
+     hatch is — 1px of ink then nothing — and every stop is a
+     PERCENTAGE, never a pixel count, so one authored rule
+     graduates a 375px phone and a 2560px monitor from the same
+     source. Minor ticks take --lm-quiet and major ones --lm-line:
+     a graduation is annotation until it is a division, and that
+     is a weight difference like every other difference here.
+
+     THE WITNESS TICK. A short perpendicular struck across the end
+     of a line, which is how a drawing terminates one. It says
+     this line stops HERE on purpose rather than having run out of
+     room. Always 1px, always in the weight of the line it
+     terminates.
+
+     THE EXTENT LINE. A witness tick at each end of a thin rule
+     under the thing being measured — a dimension, in the drawing
+     office sense. <Budget> carries one under its bar, because a
+     budget's whole point is that the whole is a fixed length.
+
+     THE REGISTRATION MARK. The plate's two hairlines turn a
+     corner for a few pixels at each end. It is on .plate only,
+     it is --lm-firm like the hairline it belongs to, and it stops
+     well clear of the caption.
+
+   THE INK THAT DRAWS ITSELF ON
+   The <Flow> arrows are drawn with stroke-dasharray on a
+   pathLength="1" path, exactly as the spark above them is, so the
+   run inks in along its own length once and then holds. It is the
+   same one-shot budget the spark already has: a delay staggers
+   the arrows into reading order, `1 both` fires each of them
+   exactly once, and section 13 removes the lot. Nothing in this
+   file loops.
+
    THE RULE HIERARCHY, the lesson's own, unchanged
      1px --lm-line   a block of the figure ends here
      1px --lm-firm   an object's edge
@@ -99,8 +140,33 @@ figure.fig {
 /* The drawing itself, bracketed the way a code block and a table
    already are on this page: two hairlines, no box, no fill. */
 .fig .plate {
+  position: relative;
   padding-block: clamp(1.25rem, 3vw, 2rem);
   border-block: 1px solid var(--lm-firm);
+}
+
+/* The registration marks. Each hairline turns a corner and runs
+   0.45rem into the plate at both ends, which is how a sheet says where
+   its frame is without drawing four sides of a box. One element per
+   hairline, each carrying both of its corners on border-inline, so
+   there are two marks and not four rules. They are inside the padding
+   and above the caption, so they fight neither. */
+.fig .plate::before,
+.fig .plate::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  block-size: 0.45rem;
+  border-inline: 1px solid var(--lm-firm);
+  pointer-events: none;
+}
+
+.fig .plate::before {
+  inset-block-start: 0;
+}
+
+.fig .plate::after {
+  inset-block-end: 0;
 }
 
 /* A figure that is only a caption on somebody else's block —
@@ -240,6 +306,27 @@ figure.fig {
   to {
     stroke-dashoffset: 1;
     opacity: 0;
+  }
+}
+
+/* The stroke that draws itself on. Same pathLength="1" arithmetic as
+   the spark, so one pair of keyframes inks a 36-unit rail and a
+   12-unit arrowhead alike: dash the whole path, hold it off the end,
+   then bring it on. `both` is what keeps the line off the sheet during
+   its delay — without it every arrow would be drawn before the first
+   one starts inking. Fires once and then the drawing is a drawing. */
+.fig .inkOn {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: lmf-ink 0.42s cubic-bezier(0.4, 0, 0.2, 1) var(--lmf-delay, 0s) 1 both;
+}
+
+@keyframes lmf-ink {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -538,6 +625,28 @@ figure.fig {
   background: none;
 }
 
+/* The extent line. A budget's whole claim is that the strip above it
+   is a FIXED length, so the length is dimensioned the way a drawing
+   dimensions one: a thin rule with a witness tick struck up from each
+   end. The figure it carries is printed at .total underneath. The
+   negative margin pulls it up under the bar out of the .budget gap,
+   because a dimension belongs to the thing it measures. */
+.fig .dim {
+  position: relative;
+  block-size: 0.5rem;
+  margin-block-start: -0.6rem;
+  border-inline: 1px solid var(--lm-firm);
+}
+
+.fig .dim::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 1px;
+  background: var(--lm-firm);
+}
+
 /* The key. A swatch carrying the same texture as its segment, the
    name, and the figure — the legend-cell construction the index
    sheet already uses, one hairline between rows. */
@@ -612,10 +721,24 @@ figure.fig {
 /* The measured rule itself. Its own grid row, so a long name
    never squeezes it to nothing on a phone. */
 .fig .barTrack {
+  position: relative;
   display: block;
   grid-column: 1 / -1;
   margin-block-start: 0.4em;
   border-block-end: 1px solid var(--lm-rule);
+}
+
+/* The origin, struck. Every rule in the set is measured from the same
+   zero and a drawing says so rather than leaving it to be assumed —
+   which is also what stops a row of fills reading as a progress bar. */
+.fig .barTrack::before {
+  content: '';
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  inline-size: 1px;
+  block-size: 0.8rem;
+  background: var(--lm-firm);
 }
 
 .fig .barFill {
@@ -635,6 +758,35 @@ figure.fig {
   display: block;
   block-size: 0.5rem;
   border-block-end: 1px dashed var(--lm-firm);
+}
+
+/* The rule the whole set is measured against, graduated: a minor tick
+   every twentieth of the span, a major one at each quarter, and a
+   witness struck at each end. Both tick layers are percentages of the
+   rule, so the graduation is right at 375px and right at 2560px from
+   this one declaration — which is the whole reason a figure in this
+   kit is CSS rather than a viewBox. */
+.fig .barsRule {
+  block-size: 0.5rem;
+  margin-block-start: 0.6em;
+  border-block-start: 1px solid var(--lm-firm);
+  border-inline: 1px solid var(--lm-firm);
+  background-image:
+    repeating-linear-gradient(to right, var(--lm-line) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(to right, var(--lm-quiet) 0 1px, transparent 1px 5%);
+  background-repeat: no-repeat;
+  background-size: 100% 0.45rem, 100% 0.22rem;
+  background-position: left top;
+}
+
+/* What the two ends of that rule are worth. aria-hidden: the built
+   `alt` already reads every bar and its figure out, and a reader who
+   is listening does not need the axis twice. */
+.fig .barsEnds {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  margin-block-start: 0.35em;
 }
 
 .fig .barsAxis {
@@ -661,8 +813,40 @@ figure.fig {
 .fig .scaleLine {
   position: relative;
   block-size: 1px;
-  margin-block: 7rem 0.5rem;
+  margin-block: 7rem 1.1rem;
   background: var(--lm-line);
+}
+
+/* The two ends of the rule, witnessed: a tick struck THROUGH the line
+   at each end rather than stopping at it, which is how a dimension
+   terminates. .scaleEnds under them says what each end is worth. */
+.fig .scaleLine::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: -0.35rem;
+  block-size: 0.7rem;
+  border-inline: 1px solid var(--lm-line);
+  pointer-events: none;
+}
+
+/* The graduation, struck BELOW the line — everything the component
+   letters stands on top of it, so a tick down here can never collide
+   with a name. On a log rule these are equal ratios rather than equal
+   amounts, which is exactly what log paper is ruled in. */
+.fig .scaleLine::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 100%;
+  block-size: 0.45rem;
+  background-image:
+    repeating-linear-gradient(to right, var(--lm-line) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(to right, var(--lm-quiet) 0 1px, transparent 1px 5%);
+  background-repeat: no-repeat;
+  background-size: 100% 0.45rem, 100% 0.22rem;
+  background-position: left top;
+  pointer-events: none;
 }
 
 .fig .tick {
@@ -734,11 +918,59 @@ figure.fig {
   display: none;
 }
 
+/* The field, on ruled paper. The same repeating-linear-gradient
+   .drawing in plate.module.css rules its own paper with, in --lm-rule,
+   which is the faintest ink the sheet has and the one the hierarchy
+   already spends on a row inside an object. Ten divisions each way,
+   because both axes run 0 to 100 and ten is what those numbers ask
+   for. It is a texture and never a layout: nothing snaps to it, and
+   the dividers below are drawn on top of it at 50%. */
 .fig .plotBox {
   position: relative;
   aspect-ratio: 3 / 2;
   border-inline-start: 1px solid var(--lm-line);
   border-block-end: 1px solid var(--lm-line);
+  background-image:
+    repeating-linear-gradient(to right, var(--lm-rule) 0 1px, transparent 1px 10%),
+    repeating-linear-gradient(to bottom, var(--lm-rule) 0 1px, transparent 1px 10%);
+}
+
+/* Both axes graduated, hanging OUTSIDE the box so no tick ever lands
+   in the field where the points are. A minor at every tenth to agree
+   with the ruling, a major at the halves and quarters. .plot reserves
+   the room for the vertical one in its padding, so nothing overhangs
+   the spread at any width. */
+.fig .plotBox::before,
+.fig .plotBox::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Under the horizontal axis. */
+.fig .plotBox::after {
+  inset-inline: 0;
+  inset-block-start: 100%;
+  block-size: 0.45rem;
+  background-image:
+    repeating-linear-gradient(to right, var(--lm-line) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(to right, var(--lm-quiet) 0 1px, transparent 1px 10%);
+  background-repeat: no-repeat;
+  background-size: 100% 0.45rem, 100% 0.22rem;
+  background-position: left top;
+}
+
+/* Beside the vertical one, reading up from the origin. */
+.fig .plotBox::before {
+  inset-block: 0;
+  inset-inline-end: 100%;
+  inline-size: 0.45rem;
+  background-image:
+    repeating-linear-gradient(to bottom, var(--lm-line) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(to bottom, var(--lm-quiet) 0 1px, transparent 1px 10%);
+  background-repeat: no-repeat;
+  background-size: 0.45rem 100%, 0.22rem 100%;
+  background-position: right top;
 }
 
 .fig .divideX,
@@ -809,8 +1041,11 @@ figure.fig {
   margin-block-end: 0.5em;
 }
 
+/* Clear of the graduation hanging under the horizontal axis, which is
+   absolutely positioned and so takes no room of its own. This is the
+   first thing under the box, so the clearance belongs here. */
 .fig .axisYFoot {
-  margin-block-start: 0.35em;
+  margin-block-start: 1em;
 }
 
 /* The same facts, ruled, for a phone and for a screen reader on
@@ -830,8 +1065,11 @@ figure.fig {
 }
 
 @media (min-width: 44rem) {
+  /* The padding is the room the vertical graduation stands in. Without
+     it those ticks hang 0.45rem off the start edge of the spread. */
   .fig .plot {
     display: block;
+    padding-inline-start: 0.45rem;
   }
 
   .fig .plotSay {
@@ -866,9 +1104,37 @@ figure.fig {
 }
 
 .fig .panel {
+  position: relative;
   padding-block: clamp(1rem, 2.5vw, 1.5rem);
   border-block-start: 1px solid var(--lm-rule);
   min-inline-size: 0;
+}
+
+/* The one hairline between two panels, terminated. A short witness
+   struck across each of its ends is the only thing this component
+   gains, and it is what makes the split read as a division somebody
+   drew rather than as a border that ran out — which matters here more
+   than anywhere else in the kit, because a <Compare> has no drawing in
+   it at all and the rule IS the figure. Stacked, the witnesses stand
+   at the two ends of the rule across; side by side, at its head and
+   its foot. */
+.fig .panel + .panel::before,
+.fig .panel + .panel::after {
+  content: '';
+  position: absolute;
+  inset-block-start: -0.25rem;
+  inline-size: 1px;
+  block-size: 0.5rem;
+  background: var(--lm-firm);
+  pointer-events: none;
+}
+
+.fig .panel + .panel::before {
+  inset-inline-start: 0;
+}
+
+.fig .panel + .panel::after {
+  inset-inline-end: 0;
 }
 
 .fig .panel:first-child {
@@ -930,6 +1196,25 @@ figure.fig {
   .fig .panel + .panel {
     padding-inline-start: clamp(1.5rem, 3.5vw, 2.5rem);
     border-inline-start: 1px solid var(--lm-rule);
+  }
+
+  /* The same two witnesses, turned ninety degrees with the rule they
+     terminate. */
+  .fig .panel + .panel::before,
+  .fig .panel + .panel::after {
+    inset-block-start: auto;
+    inset-inline-start: -0.25rem;
+    inset-inline-end: auto;
+    inline-size: 0.5rem;
+    block-size: 1px;
+  }
+
+  .fig .panel + .panel::before {
+    inset-block-start: 0;
+  }
+
+  .fig .panel + .panel::after {
+    inset-block-end: 0;
   }
 
   /* Three panels rather than two, counted off the panels that are
@@ -1000,12 +1285,28 @@ figure.fig {
    panel is a standing ban and a rule under the words does the
    whole job. */
 .fig .anatMark {
-  border-block-end: 1px solid var(--lm-edge);
+  --lmf-mark: var(--lm-edge);
+  border-block-end: 1px solid var(--lmf-mark);
   padding-block-end: 0.1em;
+  /* The underline is a dimension: a witness tick rises off it at each
+     end of the run, so the mark states where the part STOPS instead of
+     fading into the character beside it. Two hard-stop gradients, the
+     same construction as the hatch, because an inline box cannot carry
+     a pseudo-element at each end. `clone` so a run that wraps is
+     witnessed on every line it occupies rather than once across the
+     whole fragment chain. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  background-image:
+    linear-gradient(to bottom, var(--lmf-mark) 0 0.25em, transparent 0.25em),
+    linear-gradient(to bottom, var(--lmf-mark) 0 0.25em, transparent 0.25em);
+  background-repeat: no-repeat;
+  background-size: 1px 0.25em;
+  background-position: left bottom, right bottom;
 }
 
 .fig .anatMarkOn {
-  border-block-end-color: var(--lm-spark);
+  --lmf-mark: var(--lm-spark);
 }
 
 /* The numeral riding on the marked run, and its twin in the key.
@@ -1078,7 +1379,40 @@ figure.fig {
   white-space: nowrap;
 }
 
+/* The rail and everything struck against it. The graduation lives on
+   this box rather than on the input, because a pseudo-element on an
+   <input> is the thumb and the track and nothing else. */
+.fig .dialRail {
+  position: relative;
+  padding-block-start: 0.6rem;
+}
+
+/* The rail is graduated. The track is a 1px line centred in a 1.75rem
+   input, so it lies 0.875rem below the input's top edge: the band is
+   struck to exactly that depth and anchored at its foot, which lands
+   every tick ON the rail and none of them past it. A minor every
+   twentieth, a major at each quarter. Without these the control is a
+   slider, and a slider is not what this figure is. */
+.fig .dialRail::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: calc(0.6rem + 0.875rem);
+  background-image:
+    repeating-linear-gradient(to right, var(--lm-line) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(to right, var(--lm-quiet) 0 1px, transparent 1px 5%);
+  background-repeat: no-repeat;
+  background-size: 100% 0.45rem, 100% 0.22rem;
+  background-position: left bottom;
+  pointer-events: none;
+}
+
+/* Positioned, and therefore painted over the graduation above: a tick
+   may run up to the rail and behind the thumb, never across the one
+   warm mark in the figure. */
 .fig .dialRange {
+  position: relative;
   inline-size: 100%;
   block-size: 1.75rem;
   margin: 0;
@@ -1155,6 +1489,16 @@ figure.fig {
   background: var(--lm-firm);
 }
 
+/* A boundary that sits too close to the one before it (see `tight` in
+   Dial.tsx) is struck off a longer leader onto a second row, the way a
+   drawing office annotates two dimensions that fall within a label's
+   width of each other. The stem grows by exactly the height of one
+   label row plus its gap, so the leader still lands on the rail and the
+   two rows stay square with each other. */
+.fig .dialTickLow .dialTickStem {
+  block-size: 1.75rem;
+}
+
 .fig .dialTickOn .dialTickStem {
   background: var(--lm-spark);
 }
@@ -1217,6 +1561,7 @@ figure.fig {
 }
 
 .fig .stepBtn {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: 0.5em;
@@ -1233,6 +1578,21 @@ figure.fig {
   border-block-end: 2px solid transparent;
   border-radius: 0;
   cursor: pointer;
+}
+
+/* Every step is struck off the rule it stands on, so the row reads as
+   a graduated index and not as a strip of tabs. The tick belongs to
+   the button rather than to the bar, so it follows its own step onto
+   the second line when a long row wraps on a phone. */
+.fig .stepBtn::before {
+  content: '';
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  inline-size: 1px;
+  block-size: 0.45rem;
+  background: var(--lm-firm);
+  pointer-events: none;
 }
 
 .fig .stepBtnN {
@@ -1307,5 +1667,18 @@ figure.fig {
 @media (prefers-reduced-motion: reduce) {
   .fig .spark {
     display: none;
+  }
+
+  /* The drawn-on stroke cannot be shortened either, and for the mirror
+     of the spark's reason. lesson.module.css keeps the DELAY and cuts
+     only the duration, so a 0.01ms draw-on still sits invisible behind
+     its own stagger for the better part of a second before snapping
+     in. The animation is removed by name — animation-duration carries
+     the !important there, animation-name does not — and the stroke is
+     put back at its finished state, which is simply the line. */
+  .fig .inkOn {
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
   }
 }

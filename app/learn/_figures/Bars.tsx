@@ -128,6 +128,22 @@ export function Bars({ caption, alt, bars, unit, max, axis }: BarsProps) {
         })}
       </ol>
 
+      {/* The rule every bar in the set was measured against, graduated,
+          with what its two ends are worth printed under it. Drawn only
+          where there is a ceiling to draw — a set of bars that are all
+          `no` has nothing to graduate. aria-hidden on both: the built
+          alt already reads every figure out, and an axis heard twice
+          is an axis in the way. */}
+      {ceiling > 0 ? (
+        <>
+          <div className={s.barsRule} aria-hidden="true" />
+          <div className={s.barsEnds} aria-hidden="true">
+            <span className={s.num}>{withUnit(0, unit)}</span>
+            <span className={s.num}>{withUnit(ceiling, unit)}</span>
+          </div>
+        </>
+      ) : null}
+
       {axis ? <div className={`${s.lab} ${s.barsAxis}`}>{axis}</div> : null}
     </Figure>
   )

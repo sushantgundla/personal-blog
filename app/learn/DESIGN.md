@@ -693,7 +693,11 @@ about the lesson's own subject, which is what the figures are for.
 One authored moment per drawing, running on a loop, and neither is an entrance
 animation. **A lesson's own moment is a reply, not an entrance:** an answered
 question's explanation rises 0.4rem as it arrives, 420ms on `--ln-ease`. A
-`<Flow>` runs a spark down its arrows once on load and then holds still.
+`<Flow>` inks its arrows in once on load — the witness tick, the rail and the
+head drawn along their own length, staggered into reading order — runs a spark
+down each finished line once behind it, and then holds still. Both are
+`pathLength="1"` with `1 both`, so they fire exactly once; `still` takes the
+whole arrow static. Nothing else in the figure kit moves at all.
 Nothing else on the page ever moves. A lesson had a different moment once — a
 ring drawing itself in on the position strip — and that went with the drawing
 it belonged to. A page of type still does not need an entrance.
@@ -762,8 +766,12 @@ arrive together; elsewhere they are instant colour and weight changes.
 shortening them — the section-wide block in `learn.css` sets every animation
 to `0.01ms`, which on a loop would fire every spark as a one-frame flash, over
 and over — puts the needle at its reading, and drops every transition. On a
-lesson the same block leaves an explanation simply already there and takes a
-`<Flow>`'s spark off the arrows.
+lesson the same block leaves an explanation simply already there, takes a
+`<Flow>`'s spark off the arrows and removes the draw-on by name — that block
+cuts the duration and keeps the delay, so a shortened draw-on would sit
+invisible behind its own stagger and then snap in, which is worse than not
+animating at all. The arrow is put back at its finished state, which is simply
+the line.
 
 No scroll reveals. The previous build staggered every card in on scroll; that is
 removed, and `Reveal` is not used in this section.
