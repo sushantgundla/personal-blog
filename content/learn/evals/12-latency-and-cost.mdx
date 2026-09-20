@@ -75,7 +75,7 @@ Cost per request behaves exactly like latency: it has a distribution, it has a t
 Track it the same way: total tokens in and out per request, split by the step that used them if a run has more than one model call, and a distribution rather than a single average. The two levers worth watching by name, both measurable without needing a price card:
 
 - **Tokens per request**, input and output separately, since a change that inflates the prompt and a change that inflates the response are different bugs with different fixes.
-- **Cache hit rate**, if you use prompt caching for a system prompt or a repeated context block — a dropping hit rate is often the real cause behind a cost or latency regression that looks unrelated at first glance, because a cache miss silently reprocesses everything a hit would have skipped.
+- **Cache hit rate**, if you use prompt caching for a system prompt or a repeated context block — a dropping hit rate is often the real cause behind a cost or latency regression that looks unrelated at first glance, because a cache miss silently reprocesses everything a hit would have skipped. Production data from mid-2026 shows that prompt caching, when it hits, delivers 60-80% input token cost reduction on multi-turn agents — but only if the cacheable prefix stays stable across requests.
 
 <Compare caption="Two different regressions that both look like 'cost went up' from an average, but need different fixes because they start in different places.">
   <Panel label="Input tokens grew" title="The prompt got bigger">

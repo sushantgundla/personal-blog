@@ -33,7 +33,16 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next-dev/types/**/*.ts"
+    ".next-dev/types/**/*.ts",
+    ".next-build/types/**/*.ts",
+    ".next-gfm/types/**/*.ts",
+    ".next-lab/types/**/*.ts",
+    ".next-ship/types/**/*.ts",
+    ".next-wf-llms/types/**/*.ts",
+    ".next-wf-prompt-engineering/types/**/*.ts",
+    ".next-wf-rag/types/**/*.ts",
+    ".next-wf-agents/types/**/*.ts",
+    ".next-wf-evals/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

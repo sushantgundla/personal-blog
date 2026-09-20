@@ -63,7 +63,7 @@ messages = [{"role": "user", "content": "How many open bugs are assigned to me?"
 
 for step in range(10):                       # a step budget, not optimism
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=1024,
         tools=TOOLS,
         messages=messages,

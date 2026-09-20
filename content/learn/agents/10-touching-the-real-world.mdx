@@ -107,6 +107,8 @@ Now the second layer, and the one people skip because the first felt like enough
 
 The rule of thumb worth remembering: **start strong and relax deliberately.** Code the agent generated is untrusted code, even though you asked for it. Anthropic's own Sandbox Runtime is a good concrete example of the second row — it uses Seatbelt on macOS and bubblewrap plus seccomp filters on Linux to bound an ordinary process without a container at all.
 
+**What production teaches:** the most common sandbox escape in 2025-2026 was not a kernel exploit or a container breakout. It was a tool that launched a subprocess without inheriting the parent's restrictions, or a network policy that allowed "just one API" which turned out to support webhooks to arbitrary URLs. Defense in depth means every layer — the policy check in your code, the sandbox around the process, the scoped credential, and the human gate on irreversible actions — assumes the layer before it will fail.
+
 Whatever level you pick, four settings do most of the work:
 
 - **Default-deny the network.** Not a blocklist. Deny all outbound traffic, then allow the named hosts the task actually needs, through a proxy that can log what was attempted. A tool that only reads your own database has no business reaching the internet, and the moment it tries you want to know.

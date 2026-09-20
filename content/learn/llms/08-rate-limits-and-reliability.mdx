@@ -147,7 +147,7 @@ client = Anthropic(max_retries=0, timeout=60.0)   # this example owns its own re
 
 RETRYABLE = {408, 409, 429, 500, 502, 503, 529}
 
-def ask(prompt: str, model: str = "claude-sonnet-5", attempts: int = 5) -> str:
+def ask(prompt: str, model: str = "claude-sonnet-4-20250514", attempts: int = 5) -> str:
     for attempt in range(attempts):
         try:
             resp = client.messages.create(

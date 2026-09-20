@@ -44,7 +44,7 @@ deeper:
 
 Every other failure in this course has a cause you can point at: a prompt you edited, a model you swapped, a rollout you shipped. Drift has none of those. The behaviour changes and your side of the system is unchanged, which is precisely what makes it hard to believe at first — the instinct is to assume you missed a deploy, not that the ground moved.
 
-It happens because the model behind a stable API name is not one fixed thing forever. A provider can retune a model for safety, adjust its serving stack, change a default, or quietly route a fraction of traffic to a new checkpoint, all without changing the endpoint you call. The name on your config file stays `claude-sonnet-5`. What answers that name six weeks from now is not guaranteed to be byte-for-byte what answered it today.
+It happens because the model behind a stable API name is not one fixed thing forever. A provider can retune a model for safety, adjust its serving stack, change a default, or quietly route a fraction of traffic to a new checkpoint, all without changing the endpoint you call. The name on your config file stays `claude-sonnet-4-20250514`. What answers that name six weeks from now is not guaranteed to be byte-for-byte what answered it today.
 
 None of this is malicious, and most of it is never announced in a way you would notice in time. A provider that retrains a safety classifier is not lying to you by skipping a blog post about it. But from your side, silence and stability look identical until something you rely on stops working — a refusal rate that used to be near zero, a tool call that used to be reliably formatted, a summary that used to hit the length you asked for. You find out from a support ticket, not a changelog.
 
@@ -128,8 +128,8 @@ def record_and_check(score: float, model_id: str):
             f"below the {baseline:.2f} baseline on {model_id}"
         )
 
-# score = run_eval_suite(golden_set, model_id="claude-sonnet-5")
-# record_and_check(score, model_id="claude-sonnet-5")
+# score = run_eval_suite(golden_set, model_id="claude-sonnet-4-20250514")
+# record_and_check(score, model_id="claude-sonnet-4-20250514")
 ```
 
 The threshold in `ALERT_THRESHOLD` is a starting guess, not a law — set it from how noisy your own golden set score is run to run, the same way you would set any other alert threshold, and revisit it once you have a few months of history to look at.

@@ -119,7 +119,7 @@ After </scratch>, output exactly one word: approve, reject, or escalate."""
 
 def decide(expense: str) -> tuple[str, str]:
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=400,          # room for the working, not just the word
         system=SYSTEM,
         messages=[{"role": "user", "content": expense}],

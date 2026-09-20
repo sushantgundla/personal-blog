@@ -119,7 +119,9 @@ Reranking is not free and the marketing rarely says so. The cost is one scoring 
 | Open cross-encoder, GPU | Your box | Fast, tens of ms | Cheapest at volume, but you now run a GPU |
 | LLM-as-reranker | A general model | Slowest and dearest | Flexible, good for odd criteria, hard to justify at scale |
 
-The hosted rerankers - Cohere's Rerank, Voyage's, Jina's - are the usual starting point because they are one API call and no infrastructure. Prices and model names move, so look them up rather than trusting a number in any tutorial, including this one.
+The hosted rerankers - Cohere's Rerank, Voyage's, Jina's - are the usual starting point because they are one API call and no infrastructure. Prices and model names move, so look them up rather than trusting a number in any tutorial, including this one. 
+
+As of 2026, attention has shifted toward **embedding models that can rerank natively**. Voyage AI's `voyage-3` and Jina's `jina-reranker-v2-base-multilingual` both support passing a query plus multiple candidates in a single call and returning relevance scores, often faster and cheaper than running a dedicated cross-encoder over the same set.
 
 **LLM-as-reranker** means prompting a general model to score or order the candidates. It is worth knowing about because it handles criteria a trained reranker never saw - "prefer passages from the current policy version", "prefer ones that give a number". It is also the most expensive option per query by a wide margin, and it adds a generation call to a latency budget that already has one. Use it for offline work, for evaluation, or when the criterion genuinely cannot be expressed any other way.
 

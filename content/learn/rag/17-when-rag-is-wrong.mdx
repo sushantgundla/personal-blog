@@ -78,7 +78,7 @@ This is a database query. If your data is in a database, write SQL. If it is in 
 
 **Long context.** Models now take very large inputs, so "just put the document in the prompt" is a real option for a single document that fits. It is simpler than a pipeline and has no retrieval step to get wrong. The trade is cost, latency and, at the far end of the window, some loss of attention to material buried in the middle. It works for one document. It does not work for a corpus - four thousand contracts do not fit in any window, and paying to read all of them per query would be absurd even if they did. Check the current context limits on the model's documentation rather than trusting a number written months ago.
 
-**Graphs.** Extract entities and relationships at index time, store them as nodes and edges, and traverse. Approaches like GraphRAG combine this with retrieval - use the graph for structure, the passages for wording. It is real work to build and maintain, so reach for it when relationship questions are the main thing your users ask, not as a default upgrade.
+**Graphs.** Extract entities and relationships at index time, store them as nodes and edges, and traverse. Approaches like **GraphRAG** (from Microsoft Research) combine this with retrieval - use the graph for structure, the passages for wording. GraphRAG goes further: it clusters the graph into communities, generates summaries for each community, and lets you query those summaries for corpus-wide reasoning that vector search cannot do ("what are the main themes in all our support tickets"). It is real work to build and maintain, so reach for it when relationship questions or global questions are the main thing your users ask, not as a default upgrade.
 
 **Agentic search.** Instead of one retrieval pass, let the model search, read what came back, and decide what to search for next. This is an agent loop - the model calls a tool, reads what came back, then decides on the next call - with search as the tool. It fits questions where you cannot write the right query up front because you do not yet know what you are looking for - "find the incident that caused this regression, then tell me who reviewed the fix". The price is several model calls and several searches per question, so latency and cost multiply, and the loop needs a hard step limit.
 
@@ -148,7 +148,7 @@ none       - not covered by our corpus
 
 def route(question):
     message = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=10,
         system=f"Pick one route for the question. Reply with the route name only.\n{ROUTES}",
         messages=[{"role": "user", "content": question}],

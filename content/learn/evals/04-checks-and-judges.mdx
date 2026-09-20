@@ -125,7 +125,7 @@ exactly? Answer with JSON: {{"pass": true or false, "quote": "the matching sente
 def judge_check(output: str, source: str) -> dict:
     """A real model call - use it only where a rule genuinely cannot decide."""
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=200,
         messages=[{"role": "user", "content": JUDGE_PROMPT.format(output=output, source=source)}],
     )

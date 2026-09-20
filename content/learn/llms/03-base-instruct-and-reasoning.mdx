@@ -199,7 +199,7 @@ question = "A shop sells pens only in packs of 7 and packs of 12. What is the la
 
 # Straight answer: no thinking tokens, cheap and fast.
 plain = client.messages.create(
-    model="claude-sonnet-5",
+    model="claude-sonnet-4-20250514",
     max_tokens=500,
     thinking={"type": "disabled"},                 # on by default on this model
     messages=[{"role": "user", "content": question}],
@@ -207,7 +207,7 @@ plain = client.messages.create(
 
 # Same model, allowed to think. It decides how far to go; effort is how hard you ask it to try.
 thought = client.messages.create(
-    model="claude-sonnet-5",
+    model="claude-sonnet-4-20250514",
     max_tokens=4000,                               # thinking is output, so it counts against this
     thinking={"type": "adaptive"},
     output_config={"effort": "high"},              # the default; low and medium spend less

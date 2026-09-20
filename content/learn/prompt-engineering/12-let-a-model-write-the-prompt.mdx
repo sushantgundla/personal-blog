@@ -97,7 +97,7 @@ Return one JSON array of 3 strings - the full replacement prompt text only."""
 
 def draft_candidates(current_prompt: str, failures: list[dict]) -> list[str]:
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=2000,
         system=DRAFTER_SYSTEM,
         messages=[{

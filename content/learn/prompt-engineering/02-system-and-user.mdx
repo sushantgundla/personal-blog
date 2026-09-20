@@ -102,7 +102,7 @@ One line per user-visible change. Plain past tense. No bullets, no headings.
 If a change has no user-visible effect, omit it entirely."""
 
 resp = client.messages.create(
-    model="claude-sonnet-5",
+    model="claude-sonnet-4-20250514",
     max_tokens=500,
     # A list of blocks, not a plain string, so the stable part can be cached.
     system=[{
@@ -171,5 +171,45 @@ The fix in every row is the same underlying move, and it is the one thing chat i
 />
 
 One caution: editing history invalidates the cache from the edit point onward, and it can confuse the user if the visible transcript and the sent transcript disagree. Keep the two in sync, or keep the differences deliberate and small.
+
+## 4. XML tags keep instructions and data separate
+
+When your prompt mixes instructions, context, examples and variable inputs, XML tags help the model parse them unambiguously. This is especially useful with long documents or multiple data sources.
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+SYSTEM = """You extract key claims from customer support tickets.
+Return one JSON object: {"claims": ["claim1", "claim2"], "sentiment": "positive|neutral|negative"}"""
+
+ticket = "The app crashes every time I upload a photo larger than 5MB. This has been broken for three weeks now and nobody has responded to my emails."
+
+resp = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=300,
+    system=SYSTEM,
+    messages=[{
+        "role": "user",
+        "content": (
+            "<ticket>\n"
+            f"{ticket}\n"
+            "</ticket>\n\n"
+            "Extract the claims and assess sentiment."
+        ),
+    }],
+)
+```
+
+The `<ticket>` tags tell the model where the data starts and ends, so instructions in the ticket text cannot be confused with your own instructions. Use consistent tag names (`<document>`, `<context>`, `<example>`) and nest them when content has hierarchy.
+
+| Without tags | With XML tags |
+|---|---|
+| Instructions and data run together in prose | Clear boundaries between each type of content |
+| User text that sounds like an instruction can confuse the model | The tags make the role of each block unambiguous |
+| Harder to template — finding where to insert variables is fragile | The insertion points are the tag contents, obvious and mechanical |
+
+> When working with multiple documents, wrap each in `<document index="1">` with `<source>` and `<document_content>` subtags. The structure helps the model track which fact came from which source.
 
 Next: what to do when describing the output still is not landing — showing it instead.

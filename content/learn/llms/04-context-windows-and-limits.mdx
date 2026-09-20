@@ -186,7 +186,7 @@ client = Anthropic()
 HANDBOOK = open("handbook.md").read()   # long, and identical on every request
 
 resp = client.messages.create(
-    model="claude-sonnet-5",
+    model="claude-sonnet-4-20250514",
     max_tokens=500,
     system=[
         {"type": "text", "text": "Answer only from the handbook below."},

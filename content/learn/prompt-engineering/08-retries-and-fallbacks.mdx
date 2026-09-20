@@ -135,7 +135,7 @@ def call_with_repair(messages, validate):
     for attempt in range(MAX_ATTEMPTS):
         try:
             resp = client.messages.create(
-                model="claude-sonnet-5",
+                model="claude-sonnet-4-20250514",
                 max_tokens=400,
                 messages=messages,      # the repair turn below is what breaks a stuck loop
             )

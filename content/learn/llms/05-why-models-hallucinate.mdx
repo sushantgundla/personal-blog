@@ -99,7 +99,7 @@ question = "What was the exact attendance figure at the 1987 IEEE conference on 
 answers = []
 for _ in range(5):
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=60,
         messages=[{"role": "user", "content": question}],
     )

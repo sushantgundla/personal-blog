@@ -46,6 +46,8 @@ To place "the refund window is fourteen days" near "how long do I have to get my
 
 Consider what a rare token actually is. `ERR_CONN_RESET` gets split by the tokeniser into fragments, those fragments get averaged into the meaning of the sentence around them, and what comes out is a vector sitting somewhere near "connection problem". So does every other chunk about connections. The chunk that literally names the error is in the neighbourhood, but it is not obviously the closest point in it.
 
+This is why hybrid search is standard for production RAG in 2026. Nearly every serious system runs dense vector search alongside a sparse keyword index (BM25 or similar) and merges the results. The two methods fail on opposite kinds of queries, so together they cover more ground than either alone.
+
 | Query | What the user wants | Dense vectors | Keyword search |
 |---|---|---|---|
 | `ERR_CONN_RESET` | The one page naming that error | Blurry - lands near "network errors" | Exact - the term is rare, so it dominates |

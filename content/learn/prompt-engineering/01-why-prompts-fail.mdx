@@ -80,7 +80,7 @@ client = Anthropic()
 TASK = "Summarise the support ticket below for the on-call engineer."
 
 resp = client.messages.create(
-    model="claude-sonnet-5",
+    model="claude-sonnet-4-20250514",
     max_tokens=300,
     messages=[{
         "role": "user",

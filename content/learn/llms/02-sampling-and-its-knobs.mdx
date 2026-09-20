@@ -144,7 +144,7 @@ client = Anthropic()
 # Older tutorials say lower this for consistency. On current models it is not yours to set.
 try:
     client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=10,
         temperature=0.2,
         messages=[{"role": "user", "content": "Say hello."}],
@@ -157,7 +157,7 @@ def self_consistent_answer(question: str, tries: int = 5) -> str:
     answers = []
     for _ in range(tries):
         resp = client.messages.create(
-            model="claude-sonnet-5",
+            model="claude-sonnet-4-20250514",
             max_tokens=20,
             messages=[{"role": "user", "content": question}],
         )

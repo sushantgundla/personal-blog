@@ -78,6 +78,7 @@ Here is the honest split.
 - **System prompt handling.** Anthropic takes a top-level `system` parameter. OpenAI puts a system or developer message inside the messages array. Google uses a system-instruction field. Same idea, three homes.
 - **Tool-calling ergonomics.** Everyone accepts JSON-Schema-shaped tool definitions and returns structured calls. They differ in whether you can force a specific tool, how several parallel calls come back, how you feed results in on the next turn, and how strictly the schema is enforced.
 - **Structured output.** Some offer a strict schema mode; some route you through forced tool use. The guarantee you get is not identical.
+- **Extended context windows.** As of mid-2026, all three frontier providers offer context windows past 200k tokens, with some reaching 1M+. But pricing per-token varies significantly at these lengths, and prompt caching is now standard across all three to make long-context practical — though the cache TTL and billing structure differ.
 - **Safety behaviour.** Refusal boundaries and the tone of a refusal differ noticeably. If your domain sits near a line — security, medical, legal, moderation, anything adversarial — this can matter more than capability. Test it on your real inputs, not on hypotheticals.
 - **Data handling and compliance.** Retention periods, whether your data can be used for training, zero-retention options, available regions, certifications. This is contractual rather than technical, and in regulated work it decides the whole question.
 - **Rate limits and how you raise them.** Different tier systems, different ceilings, different escalation paths. See *Rate limits and reliability*.
@@ -142,7 +143,7 @@ class Answer:
 
 _client = Anthropic()
 
-def complete(system: str, messages: list[dict], model: str = "claude-sonnet-5") -> Answer:
+def complete(system: str, messages: list[dict], model: str = "claude-sonnet-4-20250514") -> Answer:
     """The only function in the app that knows which provider is being called."""
     resp = _client.messages.create(
         model=model,

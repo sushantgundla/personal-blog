@@ -101,7 +101,7 @@ client = Anthropic()
 
 def ask(system: str, user: str, max_tokens: int) -> str:
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": user}],

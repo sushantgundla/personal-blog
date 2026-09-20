@@ -116,9 +116,9 @@ from anthropic import Anthropic
 client = Anthropic()
 
 # Dollars per million tokens, copied from the provider's pricing page. Keep these in config.
-RATES = {"claude-sonnet-5": {"in": 0.0, "out": 0.0}}
+RATES = {"claude-sonnet-4-20250514": {"in": 0.0, "out": 0.0}}
 
-def ask(feature: str, prompt: str, model: str = "claude-sonnet-5") -> str:
+def ask(feature: str, prompt: str, model: str = "claude-sonnet-4-20250514") -> str:
     start = time.monotonic()
     resp = client.messages.create(
         model=model,

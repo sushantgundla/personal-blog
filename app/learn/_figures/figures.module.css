@@ -219,15 +219,27 @@ figure.fig {
   stroke-linecap: round;
   stroke-dasharray: var(--lmf-d) 2;
   stroke-dashoffset: 1;
-  animation: lmf-run 1.8s cubic-bezier(0.33, 0, 0.3, 1) var(--lmf-delay, 0s) 1 both;
+  filter: drop-shadow(0 0 3px var(--lm-spark));
+  animation: lmf-run 2.2s cubic-bezier(0.4, 0, 0.2, 1) var(--lmf-delay, 0s) 1 both;
 }
 
 @keyframes lmf-run {
   from {
     stroke-dashoffset: calc(2 + var(--lmf-d));
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  20% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.9;
   }
   to {
     stroke-dashoffset: 1;
+    opacity: 0;
   }
 }
 
@@ -255,12 +267,14 @@ figure.fig {
   border: 1px solid var(--lm-firm);
   border-radius: 2px;
   min-inline-size: 0;
+  transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* The one node the figure is about. A change of rule and of
    weight — never a fill. */
 .fig .nodeOn {
   border-color: var(--lm-spark);
+  box-shadow: 0 0 0 1px var(--lm-spark);
 }
 
 .fig .nodeLab {

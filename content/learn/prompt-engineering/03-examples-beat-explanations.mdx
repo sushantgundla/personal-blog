@@ -135,7 +135,7 @@ EXAMPLES = [
 
 def note(commit: str) -> str:
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=60,
         system=SYSTEM,                 # stable, cacheable, holds the examples' rules
         messages=EXAMPLES + [{"role": "user", "content": commit}],

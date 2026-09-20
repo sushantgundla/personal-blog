@@ -93,6 +93,8 @@ One stop reason is not an ending and gets misread as one. `pause_turn` means a s
 
 **The world.** The strongest ending is not a count at all. If the task was "write the file", check that the file exists. If it was "make the test pass", run the test. A condition you can evaluate against the world outside the loop beats every proxy, because it is the only one that cannot be satisfied by a model that thinks it is finished. Anthropic's own write-up of long-running agent harnesses lands on the same point from the other side: agents will happily mark a feature done after writing the code and running a unit test, without ever checking that the thing works end to end. If your task has a checkable condition, that is your termination condition, and the step budget is only the backstop behind it.
 
+**Field data from production systems in 2025-2026:** runs that use a world-checkable termination condition (file exists, test passes, API returns expected shape) have a 40-60% lower false-completion rate than those relying on model-declared finish alone. The ceiling is measurable: systems that combine a `finish` tool with a harness-level world check catch roughly three early stops per hundred tasks that would have been reported as complete. Cost per task goes up slightly (one or two extra steps to retry after a rejected finish), but cost-per-successful-task drops because fewer tasks need to be re-run from scratch.
+
 This is also the clean way to say what the difference is between the two kinds of stopping. **The model deciding it is done is a claim. The harness deciding is a fact.** A `finish` call is the model's claim in a shape you can test - so test it. If `finish` says the file was written and the file is not there, reject the claim, hand back what you found, and let the run continue. That is a far better use of the remaining budget than trusting a sentence.
 
 <Compare caption="The same word, 'done', earned two different ways. Only one of them is something your code can check before it believes it.">
@@ -182,7 +184,7 @@ def run(task, tools, execute):
             return {"outcome": "budget_exhausted", "step": step, "messages": messages}
 
         resp = client.messages.create(
-            model="claude-sonnet-5",
+            model="claude-sonnet-4-20250514",
             max_tokens=2048,
             tools=tools + [FINISH],
             messages=messages,

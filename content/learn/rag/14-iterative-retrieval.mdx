@@ -101,7 +101,7 @@ def retrieve(query):
 def decide(question, gathered_chunks):
     """Ask: is this enough to answer and cite, or what should the next search be?"""
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=200,
         system=(
             "You are deciding whether retrieved evidence is sufficient to answer "
@@ -184,3 +184,15 @@ A loop with no stopping rule doesn't fail loudly — it just keeps searching, ke
 />
 
 Where this genuinely earns its cost: dependent multi-hop lookups, incident and audit-trail questions, anything where the next useful query only exists after you've read the last answer. Where it doesn't: anything decomposition already handles for one round's price, and anything where a single well-rewritten query already covers the ground — running a loop around a question that didn't need one is pure latency and pure spend, with no accuracy gained to show for it.
+
+## 4. When a loop isn't enough: GraphRAG
+
+Iterative retrieval works for walking a specific path (Incident 42 → PR 109 → User Sarah). It fails entirely on "global" questions like "What are the common themes across all incidents this year?" A loop cannot pull and read a thousand separate incident reports just to find the theme.
+
+For corpus-wide questions, the state-of-the-art answer is **GraphRAG**. Instead of relying on query-time loops to connect dots, GraphRAG builds the connections at index time:
+1. Pass the entire corpus through an LLM to extract entities (people, systems, concepts) and the relationships between them.
+2. Build a Knowledge Graph from those extractions.
+3. Cluster the graph into dense "communities" (e.g., a cluster of nodes all relating to database timeouts).
+4. Have an LLM write a static summary for every community.
+
+At query time, when asked a global question, you bypass vector search and the loop entirely. You just retrieve the pre-written community summaries and do a map-reduce over them to write the final answer. It costs heavily at ingestion (you are running an LLM over your whole corpus to build the graph), but it solves the sweeping, whole-dataset reasoning problems that iterative vector search structurally cannot.

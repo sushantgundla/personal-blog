@@ -171,7 +171,7 @@ for repeats in (1, 4, 16):
     prompt = filler * repeats + "\n\nReply with the single word: done."
     start = time.monotonic()
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=10,              # output pinned, so we are timing the reading
         messages=[{"role": "user", "content": prompt}],
     )

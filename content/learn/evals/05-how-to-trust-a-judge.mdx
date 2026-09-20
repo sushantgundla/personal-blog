@@ -106,7 +106,7 @@ client = Anthropic()
 def judge_pair(question: str, answer_a: str, answer_b: str) -> str:
     """Returns 'A' or 'B' - whichever the judge prefers."""
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=5,
         system="Answer with exactly one letter: A or B. Judge on correctness only.",
         messages=[{"role": "user", "content":

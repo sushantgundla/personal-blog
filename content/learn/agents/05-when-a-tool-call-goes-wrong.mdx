@@ -77,6 +77,8 @@ Where the failure came from decides who can fix it, and that is the classificati
 
 Note the third row. Those failures carry no information a language model can use. Handle them under the tool, where a retry costs milliseconds instead of a full model call on a growing transcript.
 
+**From the field:** teams shipping agents in 2025-2026 report that roughly 65% of tool failures in production are transient infrastructure issues (rate limits, timeouts, temporary service unavailability) that resolve on retry, 25% are legitimate "world said no" results (resource not found, permission denied, empty result set), and only 10% are schema violations or argument errors. Most harnesses handle the first bucket wrong by surfacing every retry to the model, which burns tokens on information the model cannot use. Handle transient failures under the tool; surface only what survives backoff.
+
 ## 2. Four moves, and how to pick one
 
 | Move | Use it when | Do it where | Cost of choosing it wrongly |

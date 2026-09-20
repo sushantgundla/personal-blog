@@ -101,7 +101,7 @@ MAX_WORKERS = 5          # a ceiling, not a target
 def run_worker(brief: str) -> str:
     """One subtask, its own context. This worker never sees the others."""
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=1000,
         system=(
             "You answer one narrow question and report only what you found. "

@@ -165,7 +165,7 @@ ALLOWED_RECIPIENTS = {"reports@example.com"}     # the real boundary
 
 def summarise(doc: str) -> str:
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=600,
         system=SYSTEM,
         messages=[{"role": "user", "content":

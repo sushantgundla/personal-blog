@@ -156,7 +156,7 @@ RECORD_INVOICE = {
 }
 
 resp = client.messages.create(
-    model="claude-sonnet-5",
+    model="claude-sonnet-4-20250514",
     max_tokens=500,
     system="Read the invoice. Use null for anything not stated. Never infer a value.",
     tools=[RECORD_INVOICE],

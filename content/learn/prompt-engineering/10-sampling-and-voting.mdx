@@ -96,7 +96,7 @@ client = anthropic.Anthropic()
 
 def classify(ticket_text):
     resp = client.messages.create(
-        model="claude-sonnet-5",
+        model="claude-sonnet-4-20250514",
         max_tokens=10,
         system="Classify the ticket urgency as low, medium, or high. Reply with one word.",
         messages=[{"role": "user", "content": ticket_text}],

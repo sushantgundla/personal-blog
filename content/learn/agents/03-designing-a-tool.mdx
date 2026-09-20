@@ -113,6 +113,8 @@ The instinct is one tool per endpoint. It is the wrong instinct, and it degrades
 | Token cost per step | The whole catalogue, every step | A short array |
 | Failure mode | Right tools, wrong order | Fewer choices to get wrong |
 
+**The field reality:** production systems that work reliably have, on average, between four and twelve tools loaded per task. Systems with thirty or more tools in context show measurably worse selection accuracy and higher costs, even when using tool-search mechanisms to filter the catalogue. The pattern that survives is: start with consolidated, task-shaped tools; reach for dynamic tool loading only when you have hundreds and usage logs prove a small working set.
+
 <Bars
   caption="The number this lesson opened with: thirty tools, one per endpoint, against four built around the jobs the agent actually does. Every tool in the array is loaded into context on every single step, whichever count you shipped."
   unit="tools"
