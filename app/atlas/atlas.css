@@ -283,18 +283,64 @@
 
 .atlas-thread {
   position: relative;
-  height: 2px;
+  height: 3px;
   background: var(--note-rule);
-  border-radius: 1px;
+  border-radius: 2px;
+  overflow: hidden;
+  /* The groove the thread is bedded into. */
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .atlas-thread-fill {
   position: absolute;
   inset: 0;
-  background: var(--note-thread);
-  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--note-thread-rgb), 0.75),
+    var(--note-thread)
+  );
+  border-radius: 2px;
   transform-origin: left;
-  transition: transform 0.7s var(--atlas-ease);
+  transition: transform 0.9s var(--atlas-ease);
+  box-shadow: 0 0 8px rgba(var(--note-thread-rgb), 0.45);
+}
+
+/* The woven tick marks along the thread, and a slow gleam travelling down
+   it — what makes it read as a security thread rather than a progress bar.
+   Both decorative; both stopped under reduced motion. */
+.atlas-thread-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.22) 0 1px,
+    transparent 1px 4px
+  );
+}
+
+.atlas-thread-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(233, 225, 210, 0.55) 50%,
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: atlasThreadGleam 4.5s var(--atlas-ease) 1.2s infinite;
+}
+
+@keyframes atlasThreadGleam {
+  0% {
+    transform: translateX(-100%);
+  }
+  55%,
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 /* The WORLD average bead sitting on the thread. */
@@ -370,22 +416,46 @@
 }
 
 /* ============================================================
-   6. Guilloché rosette — draw-on once, then a slow infinite spin
+   6. Guilloché rosette — draw-on once, then breathe
    ============================================================ */
 
 .atlas-guilloche {
   transform-origin: center;
+  filter: drop-shadow(0 0 8px rgba(var(--note-ink-rgb), 0.15));
+  transition: filter 600ms var(--atlas-ease);
 }
 
 .atlas-guilloche-path {
   fill: none;
   stroke: var(--note-ink);
-  stroke-width: 0.75;
+  /* One weight for every pass would flatten the ornament: the bezel ticks and
+     the centre medallion sit at a fraction of the main rosette's radius, and
+     at the same 0.9px they read as three rosettes competing rather than as
+     finer engraving around one. Every layer variable here defaults to the
+     single-path values this rule has always had, so the rosettes outside
+     /atlas/learn — which set none of them — are untouched. */
+  stroke-width: calc(0.9px * var(--atlas-layer-weight, 1));
+  /* Also declared on the element, not only in the draw keyframe: under
+     prefers-reduced-motion the animation is killed outright, and this is then
+     the only thing keeping the inner layers from printing at full strength. */
+  opacity: var(--atlas-layer-opacity, 1);
+  stroke-linecap: round;
   stroke-dasharray: var(--atlas-dash-length, 2000);
   stroke-dashoffset: var(--atlas-dash-length, 2000);
-  animation: atlasGuillocheDraw 800ms var(--atlas-ease) forwards, atlasGuillocheSpin 90s linear infinite;
-  animation-delay: 0s, 800ms;
-  /* atlasGuillocheSpin rotates THIS element, not the parent <svg> that
+  animation: atlasGuillocheDraw 1400ms cubic-bezier(0.16, 1, 0.3, 1) forwards,
+    atlasGuillocheBreath 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* Outermost ring first, then inward. 180ms a layer is long enough to see the
+     passes land in order and short enough that the whole ornament is finished
+     inside two seconds. Each layer's breath waits out its own draw — the same
+     stagger added on — so nothing starts rotating before it exists. */
+  animation-delay: calc(var(--atlas-layer-index, 0) * 180ms),
+    calc(1400ms + var(--atlas-layer-index, 0) * 180ms);
+  /* Give each ring a different period as well as a different direction.
+     Identical 8s periods make four counter-rotating layers look like one
+     rigid part; drifting them apart is what reads as a mechanism. Index 0
+     keeps the original 8s, so nothing outside /atlas/learn changes. */
+  animation-duration: 1400ms, calc(8s + var(--atlas-layer-index, 0) * 900ms);
+  /* atlasGuillocheBreath rotates THIS element, not the parent <svg> that
      `.atlas-guilloche`'s transform-origin above targets — an SVG child's
      own transform-origin otherwise defaults to the view-box's (0, 0),
      the top-left corner. Rotating a 400x400 circle around its corner
@@ -395,20 +465,47 @@
      every point in the spin except the very start. */
   transform-box: view-box;
   transform-origin: center;
+  filter: drop-shadow(0 0 1px rgba(var(--note-ink-rgb), 0.3));
+  transition: stroke-width 400ms var(--atlas-ease), filter 400ms var(--atlas-ease);
+}
+
+/* Hover interaction — thicken the stroke and brighten the glow */
+.atlas-note:hover .atlas-guilloche-path,
+.atlas-note:focus-within .atlas-guilloche-path {
+  stroke-width: calc(1.1px * var(--atlas-layer-weight, 1));
+  filter: drop-shadow(0 0 2px rgba(var(--note-ink-rgb), 0.5));
 }
 
 @keyframes atlasGuillocheDraw {
-  to {
+  0% {
+    stroke-dashoffset: var(--atlas-dash-length, 2000);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--atlas-layer-opacity, 1);
+  }
+  /* This animation is `forwards`, so whatever 100% says is what the layer
+     keeps for good. A flat `opacity: 1` here would quietly cancel every
+     layer's own opacity the instant the draw finished. */
+  100% {
     stroke-dashoffset: 0;
+    opacity: var(--atlas-layer-opacity, 1);
   }
 }
 
-@keyframes atlasGuillocheSpin {
-  from {
-    transform: rotate(0deg);
+/* One keyframe for all four layers, with the rotation read from the element's
+   own --atlas-layer-spin. A custom property inside a keyframe is substituted
+   per element, not per keyframe, so each path turns by its own amount and the
+   negative ones turn the other way — no @property registration, no second
+   anticlockwise keyframe, no selector matching on inline styles. The `* 1deg`
+   is there because the property carries a bare number, which rotate() will
+   not accept on its own. */
+@keyframes atlasGuillocheBreath {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
   }
-  to {
-    transform: rotate(360deg);
+  50% {
+    transform: rotate(calc(var(--atlas-layer-spin, 3) * 1deg)) scale(1.02);
   }
 }
 
@@ -584,6 +681,15 @@
   .atlas-guilloche-path {
     animation: none !important;
     stroke-dashoffset: 0 !important;
+  }
+
+  .atlas-thread-fill::before {
+    animation: none !important;
+    display: none !important;
+  }
+
+  .atlas-thread-fill {
+    transition: none !important;
   }
 
   .atlas-sheen::after {

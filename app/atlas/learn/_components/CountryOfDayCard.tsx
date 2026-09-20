@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getDeck } from '@/lib/atlas/learn/deck'
 import { buildCountryOfDay, utcDateStamp } from '@/lib/atlas/learn/questions/country-of-day'
-import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
+import { guillocheLayers } from '@/lib/atlas/guilloche'
 import { countryInk } from '@/lib/atlas/ink'
 import styles from './country-of-day.module.css'
 
@@ -54,10 +54,9 @@ export async function CountryOfDayCard() {
   if (!card) return null
 
   const ink = countryInk(card.iso3)
-  const path = guillochePath(card.iso3, { size: ROSETTE_SIZE })
-  // guillocheLength assumes the 200x200 default sampling — scale it for the
-  // size actually rendered (see lib/atlas/guilloche.ts).
-  const length = guillocheLength(card.iso3) * (ROSETTE_SIZE / 200)
+  // Four concentric passes of engraving rather than one curve; every
+  // length is already measured at ROSETTE_SIZE (see lib/atlas/guilloche.ts).
+  const layers = guillocheLayers(card.iso3, { size: ROSETTE_SIZE })
 
   return (
     <section
@@ -74,11 +73,20 @@ export async function CountryOfDayCard() {
         focusable="false"
         className={`atlas-guilloche ${styles.rosette}`}
       >
-        <path
-          d={path}
-          className="atlas-guilloche-path"
-          style={{ ['--atlas-dash-length' as string]: length }}
-        />
+        {layers.map((layer) => (
+          <path
+            key={layer.index}
+            d={layer.d}
+            className="atlas-guilloche-path"
+            style={{
+              ['--atlas-dash-length' as string]: layer.length,
+              ['--atlas-layer-index' as string]: layer.index,
+              ['--atlas-layer-weight' as string]: layer.weight,
+              ['--atlas-layer-opacity' as string]: layer.opacity,
+              ['--atlas-layer-spin' as string]: layer.spin,
+            }}
+          />
+        ))}
       </svg>
 
       <div className={styles.body}>

@@ -44,6 +44,31 @@
   z-index: 0;
   opacity: 0.28;
   pointer-events: none;
+  transition: opacity 0.45s var(--atlas-ease), transform 0.45s var(--atlas-ease);
+}
+
+.note:hover .rosette {
+  opacity: 0.44;
+  transform: scale(1.06) rotate(-2deg);
+}
+
+.note::after {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  z-index: 0;
+  /* Four corner crosshairs, drawn as clipped gradients — the registration
+     marks a printer lines the plates up against. 10px arms, no centre dot. */
+  background-image:
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule));
+  background-repeat: no-repeat;
+  background-size: 10px 1px, 1px 10px, 10px 1px, 1px 10px;
+  background-position: top left, top left, bottom right, bottom right;
+  opacity: 0.8;
 }
 
 .body {
@@ -79,6 +104,15 @@
   overflow: hidden;
   border: 1px solid var(--note-seal);
   opacity: 0.92;
+  box-shadow: 0 0 0 1px var(--note-paper), 0 0 0 2px rgba(176, 141, 87, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.45);
+  transition: transform 0.4s var(--atlas-ease), box-shadow 0.4s var(--atlas-ease);
+}
+
+.note:hover .flag {
+  transform: rotate(-4deg) scale(1.06);
+  box-shadow: 0 0 0 1px var(--note-paper), 0 0 0 2px rgba(176, 141, 87, 0.45),
+    0 3px 10px rgba(0, 0, 0, 0.55);
 }
 
 .flagImg {
@@ -114,6 +148,15 @@
 .fact {
   padding-bottom: 0.65rem;
   border-bottom: 1px dashed var(--note-rule);
+  transition: border-color 0.3s var(--atlas-ease);
+}
+
+.fact:hover {
+  border-bottom-color: rgba(var(--note-ink-rgb), 0.5);
+}
+
+.fact:hover .factHeadline {
+  color: var(--note-seal);
 }
 
 .fact:last-child {
@@ -129,6 +172,7 @@
   color: var(--note-intaglio);
   margin: 0 0 0.2rem;
   text-wrap: balance;
+  transition: color 0.3s var(--atlas-ease);
 }
 
 .factDetail {
@@ -178,7 +222,16 @@
 /* ---------------------------------------------------------- reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
-  .link {
+  .link,
+  .rosette,
+  .flag,
+  .fact,
+  .factHeadline {
     transition: none !important;
+  }
+
+  .note:hover .rosette,
+  .note:hover .flag {
+    transform: none !important;
   }
 }

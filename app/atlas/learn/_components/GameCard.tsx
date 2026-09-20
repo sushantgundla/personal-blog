@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { GameId } from '@/lib/atlas/learn/types'
-import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
+import { guillocheLayers } from '@/lib/atlas/guilloche'
 import { countryInk } from '@/lib/atlas/ink'
 import { readProgress } from '@/lib/atlas/learn/progress'
 import styles from './floor.module.css'
@@ -30,7 +30,7 @@ function hexToRgbString(hex: string): string {
  * One game, as an engraved note.
  *
  * The rosette and the ink are seeded from the game id through exactly the
- * machinery every country note uses (`guillochePath`, `countryInk`) — which
+ * machinery every country note uses (`guillocheLayers`, `countryInk`) — which
  * is why every card on the floor carries a different, balanced
  * ornament without anyone drawing one.
  *
@@ -55,10 +55,10 @@ export function GameCard({ game, title, line, href }: GameCardProps) {
   }, [game])
 
   const ink = countryInk(game)
-  const path = guillochePath(game, { size: ROSETTE_SIZE })
-  // guillocheLength assumes the 200x200 default sampling — scale it for the
-  // size actually rendered (see lib/atlas/guilloche.ts).
-  const length = guillocheLength(game) * (ROSETTE_SIZE / 200)
+  // Four concentric passes — bezel ticks, the rosette proper, a
+  // counter-rotating inner rosette and a centre medallion. Each one's length
+  // is already measured at ROSETTE_SIZE, so there is nothing to rescale here.
+  const layers = guillocheLayers(game, { size: ROSETTE_SIZE })
 
   return (
     <Link
@@ -75,11 +75,20 @@ export function GameCard({ game, title, line, href }: GameCardProps) {
         focusable="false"
         className={`atlas-guilloche ${styles.cardRosette}`}
       >
-        <path
-          d={path}
-          className="atlas-guilloche-path"
-          style={{ ['--atlas-dash-length' as string]: length }}
-        />
+        {layers.map((layer) => (
+          <path
+            key={layer.index}
+            d={layer.d}
+            className="atlas-guilloche-path"
+            style={{
+              ['--atlas-dash-length' as string]: layer.length,
+              ['--atlas-layer-index' as string]: layer.index,
+              ['--atlas-layer-weight' as string]: layer.weight,
+              ['--atlas-layer-opacity' as string]: layer.opacity,
+              ['--atlas-layer-spin' as string]: layer.spin,
+            }}
+          />
+        ))}
       </svg>
 
       <div className={styles.cardBody}>

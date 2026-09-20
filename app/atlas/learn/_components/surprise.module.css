@@ -178,6 +178,33 @@
   backface-visibility: hidden;
   /* The card is lifted off the plate, so it casts one. */
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(var(--note-ink-rgb), 0.18);
+  /* The tooth of the paper: a 3px diagonal hatch, almost subliminal, so a
+     large flat area of .face reads as engraved stock rather than a fill.
+     `background-color` first so the hatch composites over the paper. */
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(var(--note-ink-rgb), 0.028) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* The printer's registration crosshairs, one per corner — what the plates
+   are lined up against. Decorative; sits above the paper, under the type. */
+.face::after {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule));
+  background-repeat: no-repeat;
+  background-size: 11px 1px, 1px 11px, 11px 1px, 1px 11px;
+  background-position: top left, top left, bottom right, bottom right;
+  opacity: 0.75;
 }
 
 /* The inner cutting guide, printed just inside the note's own edge —
@@ -242,6 +269,8 @@
   overflow: hidden;
   border: 1px solid var(--note-seal);
   opacity: 0.92;
+  box-shadow: 0 0 0 1px var(--note-paper), 0 0 0 2px rgba(176, 141, 87, 0.3),
+    0 2px 7px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.1);
 }
 
 .flagImg {
@@ -338,6 +367,12 @@
   z-index: 0;
   opacity: 0.3;
   pointer-events: none;
+  transition: opacity 0.5s var(--atlas-ease), transform 0.5s var(--atlas-ease);
+}
+
+.flipper:hover .rosette {
+  opacity: 0.46;
+  transform: scale(1.05) rotate(-2deg);
 }
 
 /* On the reverse the same rosette is a watermark instead: centred, larger,
@@ -475,10 +510,29 @@
 }
 
 .waitingRule {
+  position: relative;
+  overflow: hidden;
   height: 0.55rem;
   background: var(--note-paper-hi);
   border: 1px solid var(--note-rule);
   animation: surprisePulse 1.5s ease-in-out infinite;
+}
+
+/* The ink running along the plate as it is charged. */
+.waitingRule::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--note-ember-rgb), 0.45) 45%,
+    rgba(var(--note-ember-rgb), 0.45) 55%,
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: surpriseInk 1.5s ease-in-out infinite;
+  animation-delay: inherit;
 }
 
 .waitingRule:nth-child(2) {
@@ -486,8 +540,16 @@
   animation-delay: 0.18s;
 }
 
+.waitingRule:nth-child(2)::after {
+  animation-delay: 0.18s;
+}
+
 .waitingRule:nth-child(3) {
   width: 52%;
+  animation-delay: 0.36s;
+}
+
+.waitingRule:nth-child(3)::after {
   animation-delay: 0.36s;
 }
 
@@ -498,6 +560,15 @@
   }
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes surpriseInk {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
 
@@ -520,13 +591,22 @@
   border: 1px solid var(--note-rule);
   padding: 0.6rem 0.9rem;
   cursor: pointer;
-  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease);
+  transition: color 0.2s var(--atlas-ease), border-color 0.2s var(--atlas-ease),
+    box-shadow 0.2s var(--atlas-ease), transform 0.12s var(--atlas-ease);
+}
+
+/* Pressed: the key actually goes into the plate. */
+.control:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
 }
 
 .control:hover:not(:disabled),
 .control:focus-visible {
   color: var(--note-ember);
   border-color: var(--note-ember);
+  box-shadow: inset 0 0 0 1px rgba(var(--note-ember-rgb), 0.15),
+    0 0 14px rgba(var(--note-ember-rgb), 0.12);
 }
 
 .control:disabled {
@@ -639,6 +719,19 @@
   .waitingRule {
     animation: none !important;
     opacity: 0.7 !important;
+  }
+
+  .waitingRule::after {
+    animation: none !important;
+    display: none !important;
+  }
+
+  .rosette {
+    transition: none !important;
+  }
+
+  .flipper:hover .rosette {
+    transform: none !important;
   }
 
   .control,

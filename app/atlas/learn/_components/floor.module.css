@@ -122,6 +122,44 @@
   border-bottom: 1px dashed var(--note-rule);
   padding: 0.3rem 0;
   opacity: 0.7;
+  /* Masked at both ends so the drift below runs out of sight rather than
+     stopping dead against the page edge. */
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+
+/* The strip creeping the way paper does coming off a press.
+
+   `text-indent`, not a transform: the dashed rules above and below are
+   borders on THIS element, so translating it would drag them off the page
+   too. text-indent shifts only the text inside the box, and the line is
+   `nowrap`, so "first line" is the whole strip.
+
+   The distance is exactly one repeat of MARGINALIA (page.tsx): the phrase
+   "THE MINT · TRAINING FLOOR" is 25 characters and the join is 5, so a
+   repeat is 30. .atlas-microtext is JetBrains Mono, so 30 characters is
+   30ch flat — and its 0.02em letter-spacing adds one more 0.02em per
+   character, hence the 0.6em. Landing on exactly one repeat is what makes
+   the loop seamless: the glyph under any given pixel at the end of a cycle
+   is the same glyph that was there at the start, so there is no jump.
+
+   A percentage cannot do this job — text-indent resolves percentages
+   against the containing block's width, not the text's, so it would drift
+   by some fraction of the page and tear on every loop.
+
+   120s reads as paper creeping; under about 40s it starts to look like a
+   scrolling banner. */
+.microStrip {
+  animation: floorDrift 120s linear infinite;
+}
+
+@keyframes floorDrift {
+  from {
+    text-indent: 0;
+  }
+  to {
+    text-indent: calc(-30ch - 0.6em);
+  }
 }
 
 /* ---------------------------------------------------------- grade seal */
@@ -157,7 +195,16 @@
   border: 2px solid var(--note-seal);
   /* Two rings with paper between them — a struck seal, not a plain circle. */
   box-shadow: inset 0 0 0 1.5px var(--note-paper), inset 0 0 0 4px var(--note-seal),
-    0 0 0 1px var(--note-rule);
+    0 0 0 1px var(--note-rule), 0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.08);
+  transition: transform 400ms var(--atlas-ease), box-shadow 400ms var(--atlas-ease);
+}
+
+.gradeBlock:hover .seal {
+  transform: rotate(-3deg) scale(1.03);
+  box-shadow: inset 0 0 0 1.5px var(--note-paper), inset 0 0 0 4px var(--note-seal),
+    0 0 0 1px var(--note-rule), 0 4px 16px rgba(0, 0, 0, 0.5),
+    inset 0 1px 3px rgba(255, 255, 255, 0.12), 0 0 20px rgba(176, 141, 87, 0.3);
 }
 
 /* Sized for the longest name on the ladder, not the shortest. Two-word
@@ -298,6 +345,12 @@
   letter-spacing: 0.06em;
   color: var(--note-intaglio-dim);
   opacity: 0.6;
+  transition: opacity 0.25s var(--atlas-ease), color 0.25s var(--atlas-ease);
+}
+
+.rank:hover {
+  opacity: 1;
+  color: var(--note-intaglio);
 }
 
 /* The rungs this row skipped over. A dashed rule with air above it, so the
@@ -387,6 +440,20 @@
   padding: 1.35rem 1.35rem 1.5rem;
   color: inherit;
   text-decoration: none;
+  transition: transform 0.35s var(--atlas-ease), box-shadow 0.35s var(--atlas-ease),
+    border-color 0.35s var(--atlas-ease);
+}
+
+.card:hover,
+.card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(var(--note-ink-rgb), 0.3);
+}
+
+.card:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 /* The inner cutting guide — the dashed rule printed just inside a note's
@@ -398,6 +465,38 @@
   border: 1px dashed var(--note-rule);
   pointer-events: none;
   z-index: 0;
+}
+
+/* Registration crosshairs in the corners, over a very fine intaglio hatch
+   — what the plates are lined up against, and the tooth of the stock.
+   Decorative; both sit under the type. */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    linear-gradient(var(--note-rule), var(--note-rule)),
+    repeating-linear-gradient(
+      45deg,
+      rgba(var(--note-ink-rgb), 0.022) 0 1px,
+      transparent 1px 3px
+    );
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  background-size: 10px 1px, 1px 10px, 10px 1px, 1px 10px, auto;
+  background-position: 14px 14px, 14px 14px, calc(100% - 14px) calc(100% - 14px),
+    calc(100% - 14px) calc(100% - 14px), 0 0;
+  opacity: 0.85;
+  transition: opacity 0.35s var(--atlas-ease);
+}
+
+.card:hover::after,
+.card:focus-visible::after {
+  opacity: 1;
 }
 
 .cardBody {
@@ -424,12 +523,13 @@
   z-index: 0;
   opacity: 0.32;
   pointer-events: none;
-  transition: opacity 0.35s var(--atlas-ease);
+  transition: opacity 0.35s var(--atlas-ease), transform 0.35s var(--atlas-ease);
 }
 
 .card:hover .cardRosette,
 .card:focus-visible .cardRosette {
   opacity: 0.7;
+  transform: scale(1.08) rotate(2deg);
 }
 
 .cardTitle {
@@ -439,6 +539,12 @@
   line-height: 1.1;
   color: var(--note-intaglio);
   margin: 0;
+  transition: color 0.35s var(--atlas-ease);
+}
+
+.card:hover .cardTitle,
+.card:focus-visible .cardTitle {
+  color: var(--note-seal);
 }
 
 .cardLine {
@@ -600,6 +706,14 @@
   padding: 0.85rem 0.9rem 0.9rem;
   background: var(--note-paper);
   border: 1px solid var(--note-rule);
+  transition: transform 0.3s var(--atlas-ease), border-color 0.3s var(--atlas-ease),
+    box-shadow 0.3s var(--atlas-ease);
+}
+
+.runCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(var(--note-ember-rgb), 0.35);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* Ruled ledger paper, behind the type. */
@@ -614,6 +728,19 @@
     to bottom,
     transparent 0 1.05rem,
     var(--note-rule) 1.05rem calc(1.05rem + 1px)
+  );
+}
+
+.runCard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 140% 120% at 50% -20%,
+    rgba(var(--note-ember-rgb), 0.03),
+    transparent 70%
   );
 }
 
@@ -646,13 +773,32 @@
   transform: rotate(-3deg);
   color: var(--note-ember);
   border: 1.5px solid var(--note-ember);
-  box-shadow: inset 0 0 0 3px rgba(var(--note-ember-rgb), 0.12);
+  box-shadow: inset 0 0 0 3px rgba(var(--note-ember-rgb), 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 300ms var(--atlas-ease), box-shadow 300ms var(--atlas-ease);
+}
+
+.runCard:hover .runStamp {
+  transform: rotate(-1deg) scale(1.05);
+  box-shadow: inset 0 0 0 3px rgba(var(--note-ember-rgb), 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.25);
 }
 
 .runStampLow {
   color: var(--note-thread);
   border-color: var(--note-thread);
-  box-shadow: inset 0 0 0 3px rgba(var(--note-thread-rgb), 0.12);
+  box-shadow: inset 0 0 0 3px rgba(var(--note-thread-rgb), 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.runCard:hover .runStampLow {
+  box-shadow: inset 0 0 0 3px rgba(var(--note-thread-rgb), 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.25);
 }
 
 /* Also the wall's pre-load placeholder, which is why it holds a line's
@@ -688,7 +834,29 @@
 
   .cardRosette,
   .dealButton,
-  .backLink {
+  .backLink,
+  .card,
+  .cardTitle,
+  .card::after,
+  .rank,
+  .runCard,
+  .runStamp,
+  .seal {
     transition: none !important;
+  }
+
+  .microStrip {
+    animation: none !important;
+  }
+
+  .card:hover,
+  .card:focus-visible,
+  .card:active,
+  .runCard:hover,
+  .gradeBlock:hover .seal,
+  .runCard:hover .runStamp,
+  .card:hover .cardRosette,
+  .card:focus-visible .cardRosette {
+    transform: none !important;
   }
 }

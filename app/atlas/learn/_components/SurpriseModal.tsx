@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import Link from 'next/link'
 import type { SurpriseCard as SurpriseCardData } from '@/lib/atlas/learn/types'
-import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
+import { guillocheLayers, type GuillocheLayer } from '@/lib/atlas/guilloche'
 import { countryInk } from '@/lib/atlas/ink'
 import styles from './surprise.module.css'
 
@@ -32,12 +32,10 @@ const FOCUSABLE = [
  * card is turned — and the draw-on animation would restart mid-flip.
  */
 function Rosette({
-  path,
-  length,
+  layers,
   watermark,
 }: {
-  path: string
-  length: number
+  layers: GuillocheLayer[]
   watermark?: boolean
 }) {
   return (
@@ -47,11 +45,20 @@ function Rosette({
       focusable="false"
       className={`atlas-guilloche ${styles.rosette} ${watermark ? styles.rosetteWatermark : ''}`}
     >
-      <path
-        d={path}
-        className="atlas-guilloche-path"
-        style={{ ['--atlas-dash-length' as string]: length }}
-      />
+      {layers.map((layer) => (
+        <path
+          key={layer.index}
+          d={layer.d}
+          className="atlas-guilloche-path"
+          style={{
+            ['--atlas-dash-length' as string]: layer.length,
+            ['--atlas-layer-index' as string]: layer.index,
+            ['--atlas-layer-weight' as string]: layer.weight,
+            ['--atlas-layer-opacity' as string]: layer.opacity,
+            ['--atlas-layer-spin' as string]: layer.spin,
+          }}
+        />
+      ))}
     </svg>
   )
 }
@@ -310,10 +317,9 @@ export function SurpriseModal({ onClose }: SurpriseModalProps) {
   // lands there is no country yet, so the room's own seed stands in.
   const seed = card?.iso3 ?? 'surprise'
   const ink = countryInk(seed)
-  const rosette = guillochePath(seed, { size: ROSETTE_SIZE })
-  // guillocheLength assumes the 200x200 default sampling — scale it for the
-  // size actually rendered (see lib/atlas/guilloche.ts).
-  const rosetteLength = guillocheLength(seed) * (ROSETTE_SIZE / 200)
+  // Four concentric passes of engraving rather than one curve; every
+  // length is already measured at ROSETTE_SIZE (see lib/atlas/guilloche.ts).
+  const rosetteLayers = guillocheLayers(seed, { size: ROSETTE_SIZE })
 
   const provenanceLine = card
     ? `${card.provenance.source}${card.provenance.year ? ` · ${card.provenance.year}` : ''}`
@@ -387,7 +393,7 @@ export function SurpriseModal({ onClose }: SurpriseModalProps) {
             >
               {/* ------------------------------------------- the face */}
               <div className={styles.face} aria-hidden={flipped}>
-                <Rosette path={rosette} length={rosetteLength} />
+                <Rosette layers={rosetteLayers} />
                 <div className={styles.faceScroll}>
                   <div className={styles.faceTop}>
                     <span className="atlas-serial">SERIAL · {card.iso3}</span>
@@ -427,7 +433,7 @@ export function SurpriseModal({ onClose }: SurpriseModalProps) {
 
               {/* ---------------------------------------- the reverse */}
               <div className={`${styles.face} ${styles.back}`} aria-hidden={!flipped}>
-                <Rosette path={rosette} length={rosetteLength} watermark />
+                <Rosette layers={rosetteLayers} watermark />
                 <div className={styles.faceScroll}>
                   <div className={styles.faceTop}>
                     <span className="atlas-serial">THE REVERSE</span>

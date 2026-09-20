@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
+import { guillocheLayers } from '@/lib/atlas/guilloche'
 import { countryInk } from '@/lib/atlas/ink'
 import { SurpriseModal } from './SurpriseModal'
 import floor from './floor.module.css'
@@ -57,10 +57,9 @@ export function SurpriseCard() {
   }, [open])
 
   const ink = countryInk(SEED)
-  const path = guillochePath(SEED, { size: ROSETTE_SIZE })
-  // guillocheLength assumes the 200x200 default sampling — scale it for the
-  // size actually rendered (see lib/atlas/guilloche.ts).
-  const length = guillocheLength(SEED) * (ROSETTE_SIZE / 200)
+  // Four concentric passes of engraving rather than one curve; every
+  // length is already measured at ROSETTE_SIZE (see lib/atlas/guilloche.ts).
+  const layers = guillocheLayers(SEED, { size: ROSETTE_SIZE })
 
   return (
     <>
@@ -78,11 +77,20 @@ export function SurpriseCard() {
           focusable="false"
           className={`atlas-guilloche ${floor.cardRosette}`}
         >
-          <path
-            d={path}
-            className="atlas-guilloche-path"
-            style={{ ['--atlas-dash-length' as string]: length }}
-          />
+          {layers.map((layer) => (
+            <path
+              key={layer.index}
+              d={layer.d}
+              className="atlas-guilloche-path"
+              style={{
+                ['--atlas-dash-length' as string]: layer.length,
+                ['--atlas-layer-index' as string]: layer.index,
+                ['--atlas-layer-weight' as string]: layer.weight,
+                ['--atlas-layer-opacity' as string]: layer.opacity,
+                ['--atlas-layer-spin' as string]: layer.spin,
+              }}
+            />
+          ))}
         </svg>
 
         <div className={floor.cardBody}>
