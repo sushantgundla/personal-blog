@@ -539,6 +539,86 @@
 }
 
 /* ============================================================
+   5b. Drawing-office furniture
+   A title block, two dimension lines and two detail bubbles —
+   the marks a drawing office adds around a plate that are not
+   the machine itself. Pure line work, in --pl-faint: never the
+   spark's ink, and never a fourth stroke weight.
+   ============================================================ */
+
+.titleBlock {
+  pointer-events: none;
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+}
+
+.tbCell {
+  fill: none;
+  stroke: var(--pl-faint);
+  stroke-width: 1.25;
+}
+
+.tbKey {
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--pl-quiet);
+  stroke: none;
+}
+
+.tbVal {
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--pl-line);
+  stroke: none;
+}
+
+.dim {
+  pointer-events: none;
+}
+
+.dimLine,
+.dimTick {
+  fill: none;
+  stroke: var(--pl-faint);
+  stroke-width: 1.25;
+}
+
+.dimLabel {
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--pl-quiet);
+}
+
+.detailBub {
+  fill: none;
+  stroke: var(--pl-faint);
+  stroke-width: 1.25;
+}
+
+.detailLeader {
+  fill: none;
+  stroke: var(--pl-faint);
+  stroke-width: 1;
+}
+
+.detailLab {
+  font-family: var(--pl-face), 'Archivo', Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--pl-quiet);
+}
+
+/* ============================================================
    6. The authored moment, on a loop
    One request runs the machine, a beat of rest follows, and the
    next one goes after it. Seven sparks on seven paths, staged

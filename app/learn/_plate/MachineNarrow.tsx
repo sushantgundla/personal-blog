@@ -50,7 +50,7 @@ import s from './plate.module.css'
  */
 export function MachineNarrow({ doors }: { doors: StageDoors }) {
   return (
-    <svg viewBox="0 0 360 1060" className={s.narrow} focusable="false" role="presentation">
+    <svg viewBox="0 0 360 1180" className={s.narrow} focusable="false" role="presentation">
       {/* ---- The spine ------------------------------------------------ */}
       <g className={s.spine} aria-hidden="true">
         <path className={s.flow} d="M180 118V134" />
@@ -214,6 +214,53 @@ export function MachineNarrow({ doors }: { doors: StageDoors }) {
             5
           </text>
         </g>
+      </g>
+
+      {/* ---- The context window, dimensioned --------------------------
+          One dimension, under the inlet comb, witness ticks planted on
+          the same two x-coordinates the comb's widest rung already
+          uses — the drafting convention of hanging a dimension off an
+          edge that is already drawn rather than inventing a new one. */}
+      <g className={s.dim} aria-hidden="true">
+        <path className={s.dimTick} d="M136 100V116" />
+        <path className={s.dimTick} d="M224 100V116" />
+        <path className={s.dimLine} d="M136 108H224" />
+        <text className={s.dimLabel} x="230" y="112" textAnchor="start">
+          CONTEXT WINDOW
+        </text>
+      </g>
+
+      {/* ---- The title block -------------------------------------------
+          Narrow has no room for a SCALE row, so it drops out here —
+          wide keeps it. Three rows, ruled like the rest of the sheet. */}
+      <g className={s.titleBlock} aria-hidden="true">
+        <rect className={s.tbCell} x="60" y="1054" width="62" height="36" />
+        <rect className={s.tbCell} x="122" y="1054" width="178" height="36" />
+        <rect className={s.tbCell} x="60" y="1090" width="62" height="36" />
+        <rect className={s.tbCell} x="122" y="1090" width="178" height="36" />
+        <rect className={s.tbCell} x="60" y="1126" width="62" height="36" />
+        <rect className={s.tbCell} x="122" y="1126" width="178" height="36" />
+
+        <text className={s.tbKey} x="70" y="1076">
+          TITLE
+        </text>
+        <text className={s.tbVal} x="132" y="1076">
+          ONE REQUEST, END TO END
+        </text>
+
+        <text className={s.tbKey} x="70" y="1112">
+          SHEET
+        </text>
+        <text className={s.tbVal} x="132" y="1112">
+          1 OF 1
+        </text>
+
+        <text className={s.tbKey} x="70" y="1148">
+          REV
+        </text>
+        <text className={s.tbVal} x="132" y="1148">
+          A
+        </text>
       </g>
 
       {/* ---- The request ----------------------------------------------

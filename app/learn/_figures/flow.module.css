@@ -1,0 +1,131 @@
+/* ============================================================
+   <Flow> additions — terminals, junctions, corner ticks, stage rail
+
+   A separate module from figures.module.css (owned by another
+   pass at the same time). Every class here is scoped by CSS
+   Modules, so none of it collides with .prose's bare-element
+   rules (p, ul, ol, li, a, code, hr) — nothing in this file is
+   rendered as one of those tags. Same token set as the kit:
+   --lm-firm for hairlines and marks (the plate frame's own
+   colour), --lm-quiet for the small annotation numerals,
+   --lm-spark for the one subject tick on the rail. No shadow, no
+   blur, no gradient as colour, no radius above 2px, no motion.
+   ============================================================ */
+
+/* The node becomes the positioning context for its own terminal
+   number and junction dots, and carries its four corner ticks as
+   background images rather than extra elements — an L of two
+   1px lines, just inside the border, at each corner. */
+.node {
+  position: relative;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--lm-firm), var(--lm-firm)),
+    linear-gradient(var(--lm-firm), var(--lm-firm)),
+    linear-gradient(var(--lm-firm), var(--lm-firm)),
+    linear-gradient(var(--lm-firm), var(--lm-firm)),
+    linear-gradient(var(--lm-firm), var(--lm-firm)),
+    linear-gradient(var(--lm-firm), var(--lm-firm)),
+    linear-gradient(var(--lm-firm), var(--lm-firm)),
+    linear-gradient(var(--lm-firm), var(--lm-firm));
+  background-size:
+    0.55rem 1px,
+    1px 0.55rem,
+    0.55rem 1px,
+    1px 0.55rem,
+    0.55rem 1px,
+    1px 0.55rem,
+    0.55rem 1px,
+    1px 0.55rem;
+  background-position:
+    top 2px left 2px,
+    top 2px left 2px,
+    top 2px right 2px,
+    top 2px right 2px,
+    bottom 2px left 2px,
+    bottom 2px left 2px,
+    bottom 2px right 2px,
+    bottom 2px right 2px;
+}
+
+/* The schematic key: 1, 2, 3 in document order, set just inside
+   the corner tick so the node reads like a numbered part. */
+.term {
+  position: absolute;
+  inset-block-start: 0.5em;
+  inset-inline-start: 0.85em;
+  font-family: var(--lm-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--lm-quiet);
+  pointer-events: none;
+}
+
+/* Junction marks — a small filled square where the arrow leaves
+   or enters the node's own border. Square, not round: nothing in
+   the kit takes a radius above 2px. */
+.dotIn,
+.dotOut {
+  position: absolute;
+  inline-size: 4px;
+  block-size: 4px;
+  background: var(--lm-firm);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.dotIn {
+  inset-block-start: -2px;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+
+.dotOut {
+  inset-block-end: -2px;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+
+/* The stage rail — one hairline under the whole run with a tick
+   per node, so a reader sees how many stages there are without
+   counting boxes. The subject's tick is the only warm mark. */
+.rail {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-block-start: 0.85rem;
+  padding-block-start: 0.35rem;
+  border-block-start: 1px solid var(--lm-firm);
+}
+
+.railTick {
+  inline-size: 1px;
+  block-size: 0.4rem;
+  background: var(--lm-quiet);
+  transform: translateY(-0.35rem);
+}
+
+.railTickOn {
+  block-size: 0.65rem;
+  background: var(--lm-spark);
+  transform: translateY(-0.6rem);
+}
+
+/* Above 46rem the run is a row, so the dots switch to the node's
+   left/right edges — the same breakpoint figures.module.css uses
+   to turn <Flow> from a column into a row. */
+@media (min-width: 46rem) {
+  .dotIn {
+    inset-block-start: 50%;
+    inset-inline-start: -2px;
+    transform: translateY(-50%);
+  }
+
+  .dotOut {
+    inset-block-start: 50%;
+    inset-inline-start: auto;
+    inset-inline-end: -2px;
+    transform: translateY(-50%);
+  }
+}

@@ -2,6 +2,7 @@ import { Fragment } from 'react'
 import type { CSSProperties } from 'react'
 import { Figure } from './Figure'
 import s from './figures.module.css'
+import f from './flow.module.css'
 
 /**
  * <Flow> — labelled nodes joined by arrows.
@@ -176,7 +177,12 @@ export function Flow({ caption, alt, steps, back, still = false }: FlowProps) {
       <div className={s.flow} style={cols} data-many={many ? 'true' : undefined}>
         {kept.map((step, index) => (
           <Fragment key={`${index}-${step.label}`}>
-            <div className={`${s.node} ${step.subject ? s.nodeOn : ''}`.trim()}>
+            <div className={`${s.node} ${f.node} ${step.subject ? s.nodeOn : ''}`.trim()}>
+              <span className={f.term} aria-hidden="true">
+                {index + 1}
+              </span>
+              {index > 0 ? <span className={f.dotIn} aria-hidden="true" /> : null}
+              {index < kept.length - 1 ? <span className={f.dotOut} aria-hidden="true" /> : null}
               <span className={s.nodeLab}>{step.label}</span>
               {step.note ? <span className={s.nodeNote}>{step.note}</span> : null}
 
@@ -223,6 +229,15 @@ export function Flow({ caption, alt, steps, back, still = false }: FlowProps) {
             </div>
           </>
         ) : null}
+      </div>
+
+      <div className={f.rail} aria-hidden="true">
+        {kept.map((step, index) => (
+          <span
+            key={`${index}-rail`}
+            className={`${f.railTick} ${step.subject ? f.railTickOn : ''}`.trim()}
+          />
+        ))}
       </div>
     </Figure>
   )

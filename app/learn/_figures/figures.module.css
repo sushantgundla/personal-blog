@@ -351,17 +351,24 @@ figure.fig {
   align-content: start;
   gap: 0.35em;
   padding: 0.9em 1em;
-  border: 1px solid var(--lm-firm);
+  border: 1px solid var(--lm-line);
   border-radius: 2px;
   min-inline-size: 0;
   transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* The one node the figure is about. A change of rule and of
-   weight — never a fill. */
+   weight — never a fill. The hatch is the same texture idiom
+   <Budget> rules its bars with (section 4), just at a low alpha
+   of --lm-spark so it reads as a mark on the node, not a fill of
+   colour under whatever text sits on top of it. */
 .fig .nodeOn {
   border-color: var(--lm-spark);
-  box-shadow: 0 0 0 1px var(--lm-spark);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--lm-spark) 14%, transparent) 0 1px,
+    transparent 1px 7px
+  );
 }
 
 .fig .nodeLab {
@@ -372,6 +379,14 @@ figure.fig {
   color: var(--lm-line);
   text-wrap: pretty;
   overflow-wrap: break-word;
+}
+
+/* Ruled off the label only where a node actually has both: the
+   adjacent combinator means a bare node (no note) never grows a
+   rule under a label that would have nothing to divide from. */
+.fig .nodeLab + .nodeNote {
+  padding-block-start: 0.5em;
+  border-block-start: 1px solid var(--lm-firm);
 }
 
 .fig .nodeNote {
@@ -435,11 +450,21 @@ figure.fig {
   block-size: 2.25rem;
 }
 
-.fig .rail,
-.fig .head {
+.fig .rail {
   fill: none;
   stroke: var(--lm-firm);
   stroke-width: 1.5;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+/* The arrowhead reads heavier than the shaft it sits on, the way
+   a drawn arrow is — same idea as a node's own edge, up from
+   --lm-firm to --lm-line so the mark at the point actually lands. */
+.fig .head {
+  fill: none;
+  stroke: var(--lm-line);
+  stroke-width: 2;
   stroke-linecap: butt;
   stroke-linejoin: miter;
 }

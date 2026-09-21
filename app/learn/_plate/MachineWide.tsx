@@ -57,13 +57,15 @@ import s from './plate.module.css'
  * words instead — in the legend's role lines, the notes band and the
  * screen-reader description in page.tsx.
  *
- * Geometry is hand-authored in a 1600 x 680 viewBox. It is not assembled
+ * Geometry is hand-authored in a 1600 x 760 viewBox — the last 80 units are
+ * a blank strip added for the title block, clear of the machine itself. It
+ * is not assembled
  * from library shapes and it is not generated: every junction, arrowhead
  * and lattice line is placed.
  */
 export function MachineWide({ doors }: { doors: StageDoors }) {
   return (
-    <svg viewBox="0 0 1600 680" className={s.wide} focusable="false" role="presentation">
+    <svg viewBox="0 0 1600 760" className={s.wide} focusable="false" role="presentation">
       {/* ---- The spine: the parts that belong to no single course ------
           The axis the request runs along, the junction where everything
           is assembled, and the answer leaving. These dim a little under a
@@ -340,6 +342,71 @@ export function MachineWide({ doors }: { doors: StageDoors }) {
             5
           </text>
         </g>
+      </g>
+
+      {/* ---- Drawing-office furniture -----------------------------------
+          A title block, two dimension lines and two detail bubbles — the
+          marks a drawing office adds around a plate, not the machine
+          itself. All decorative, all static, all aria-hidden.
+
+          Neither extent carries a label of its own: the plate already
+          names both of the things they measure ("Context window" over
+          the token strip, "Layers" over the stack), and a dimension
+          that repeats the label beside it is just the same words twice. */}
+      <g className={s.titleBlock} aria-hidden="true">
+        <rect className={s.tbCell} x="1210" y="676" width="370" height="76" />
+        <path
+          className={s.tbCell}
+          d="M1210 695H1580M1210 714H1580M1210 733H1580M1280 676V752"
+        />
+        <text className={s.tbKey} x="1220" y="689">
+          Title
+        </text>
+        <text className={s.tbVal} x="1290" y="689">
+          One request, end to end
+        </text>
+        <text className={s.tbKey} x="1220" y="708">
+          Sheet
+        </text>
+        <text className={s.tbVal} x="1290" y="708">
+          1 of 1
+        </text>
+        <text className={s.tbKey} x="1220" y="727">
+          Scale
+        </text>
+        <text className={s.tbVal} x="1290" y="727">
+          Not to scale
+        </text>
+        <text className={s.tbKey} x="1220" y="746">
+          Rev
+        </text>
+        <text className={s.tbVal} x="1290" y="746">
+          A
+        </text>
+      </g>
+
+      <g className={s.dim} aria-hidden="true">
+        {/* Under the token strip and the junction it feeds. */}
+        <path className={s.dimLine} d="M242 392H558" />
+        <path className={s.dimTick} d="M242 384V400M558 384V400" />
+
+        {/* Across the seven plates of the stack. */}
+        <path className={s.dimLine} d="M690 176H960" />
+        <path className={s.dimTick} d="M690 164V176M960 164V176" />
+      </g>
+
+      <g aria-hidden="true">
+        <circle className={s.detailBub} cx="1015" cy="178" r="9" />
+        <path className={s.detailLeader} d="M1007 183L958 213" />
+        <text className={s.detailLab} x="1030" y="181">
+          Detail A
+        </text>
+
+        <circle className={s.detailBub} cx="390" cy="475" r="10" />
+        <path className={s.detailLeader} d="M400 478L466 555" />
+        <text className={s.detailLab} x="404" y="479">
+          Detail B
+        </text>
       </g>
 
       {/* ---- The request ----------------------------------------------
