@@ -1,0 +1,161 @@
+---
+title: "Trimming a prompt that grew"
+subtitle: "Prompts only gain lines. Use the harness to find the ones that no longer earn their place."
+part: 4
+minutes: 7
+why: "You open the system prompt for your ticket classifier to add one more rule, and it takes two screens to reach the bottom. Half of it is shouted rules written for a model you stopped using, three examples nobody has read since spring, and a step plan the current model would write better itself. Nobody dares delete anything, because nobody knows which line is holding the thing up. The harness from *Versioning and testing prompts* can answer that question. This lesson runs it in reverse: remove one block at a time, and keep the deletions the score never notices."
+wins:
+  - "Expect a prompt to grow, because every failure gives a reason to add a line and nothing gives a reason to remove one."
+  - "Treat shouted rules, don't-lines, step plans and old verification lines as suspects on a newer model, not as known deletions."
+  - "Remove one block at a time, run the same cases with repeats, and keep a deletion only when the score stays inside the run-to-run wobble."
+  - "Write one case per rule before you delete it; a rule that no case covers is unmeasured, not safe."
+  - "Trim per model, and move any format or safety rule into code before you let it leave the prompt."
+quiz:
+  - q: "Why does a prompt seem only ever to grow?"
+    options: ["Newer models need more instructions every year", "Long prompts are cached for free, so nobody has a reason to cut", "Every failure gives a reason to add a line, and nothing ever gives a reason to remove one"]
+    answer: 2
+    explain: "An added rule has a failing case behind it, while a rule that is no longer needed produces no failure, so it just stays."
+  - q: "You delete one block and your twenty cases score the same as before. What can you say?"
+    options: ["Only that none of your twenty cases needs it; it may still guard a case you have not written", "The block was useless, so similar blocks can go too", "The model must have been ignoring the block all along"]
+    answer: 0
+    explain: "An unchanged score clears the block only against the cases you have, which is why each rule needs a case of its own."
+  - q: "As of October 2026 the vendor's guide says that on some newer models, rules shouted with CRITICAL or NEVER tend to..."
+    options: ["Be followed more reliably, so keep them", "Be ignored, so they are harmless to keep", "Over-trigger, so plain wording is the fix"]
+    answer: 2
+    explain: "The guide reports that prompts written to shout down an ignored rule began to over-trigger once the models followed the system prompt more closely."
+  - q: "A rule in your prompt is true about nine times in ten. The sensible move is to..."
+    options: ["Make it stronger, so the tenth case is covered too", "Delete it, because a rule that is sometimes wrong cannot be trusted", "Write down when it applies, so the tenth case is left out"]
+    answer: 2
+    explain: "A rule with no stated edge misfires where it does not belong, and one speaker from the Claude Code team described rewriting a rule of this kind to say when."
+  - q: "You trimmed a prompt to twelve lines on your current model, and a smaller, cheaper model is next. The safest move is to..."
+    options: ["Run the same cases on that model, because the long version may be the one it needs", "Carry the twelve lines over, since shorter is always better", "Go back to the long version everywhere, since longer is always safer"]
+    answer: 0
+    explain: "A prompt is measured against one model, and no published data shows that a big model's prompt carries over to a small one."
+deeper:
+  - { label: "Willison — a fireside chat with the Claude Code team", href: "https://simonwillison.net/2026/Jul/21/cat-and-thariq/" }
+  - { label: "Anthropic — prompting best practices", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" }
+  - { label: "Anthropic — prompting Claude Sonnet 5.5", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5" }
+  - { label: "Meincke et al. — The decreasing value of chain of thought", href: "https://arxiv.org/abs/2506.07142" }
+  - { label: "Husain and Shankar — AI evals FAQ", href: "https://hamel.dev/blog/posts/evals-faq/" }
+---
+
+This is not a lesson about short prompts for their own sake, and it is not a way to save tokens. A short prompt that fails your cases is worse than a long one that passes. The harness from *Versioning and testing prompts* can tell you whether an edit helped. It can just as easily tell you whether a line still earns its place.
+
+## 1. Prompts only grow, and some lines go stale
+
+Every failure adds a line. Nothing removes one. The evidence is lopsided: a rule you add has a failing ticket behind it, so it feels earned, while a rule you could delete has nothing behind it. No case fails because a line is unnecessary. After a year the prompt is sediment: fixes for failures the current model no longer has, in a style an older model needed.
+
+In July 2026, two members of Anthropic's Claude Code team said in an informal conversation, relayed by Simon Willison, that they had cut their agent's system prompt by about 80 percent for their newest models, dropped the examples, and now keep one prompt per model. Their reasoning: the old prompt over-constrained the model. Weigh it as an anecdote: one product, one team, no published evaluation, and not a target to copy. What transfers is the habit: a prompt belongs to a model, so re-check it when the model changes.
+
+Which lines are the suspects? The vendor's own guides name several, as of October 2026.
+
+<Figure bare caption="Habits the vendor's guides say have gone stale on some current models, as of October 2026. This is a list of suspects to test, not a list of deletions: the guide says model-named advice was measured on that model.">
+
+| Habit | What the vendor's guide says |
+|---|---|
+| Shouted rules (CAPS, CRITICAL) | Models that follow the system prompt more closely over-trigger on them; plain wording is the fix (*Why prompts fail*) |
+| Anti-laziness wording | Listed as wording to dial back when you move to newer models |
+| Don't-rules | State what to do instead of what to avoid; the Claude Code team added that negative rules pull hard and can clash with other instructions |
+| Hand-written step plans | A general "think thoroughly" is preferred, because the model's own reasoning often goes beyond the plan you would write |
+| A verification line | On Opus 5 the model checks itself, and an old verification line causes over-verification |
+
+</Figure>
+
+One more suspect needs no model name. A rule that is true nine times in ten misfires on the tenth. One of the two speakers gave an example: an "always verify the front end" rule that held about 90 percent of the time, which the team rewrote to say when to run the app (again an anecdote). Ask of every rule, "when is this wrong?" If you can name the case, write the edge into the rule. If you cannot, it is a candidate to cut. *Examples beat explanations* has the same dispute about examples, with the same answer: test it.
+
+> A line stays in the prompt because a case needs it, not because someone once added it.
+
+## 2. Remove one block at a time
+
+The method is ablation, and it is the harness from *Versioning and testing prompts* used backwards.
+
+1. Split the prompt into blocks that each do one job. Leave the core (task, labels, reply format) alone; you are testing what grew around it.
+2. Pin the model, effort and thinking mode, then run the full prompt twice. The gap between the runs is your noise, and it sets how big a move you may believe.
+3. Remove one block, run the same cases with the same repeats, and read the share right every time.
+4. Keep a deletion when the score stays inside the noise. Restore any block whose removal moves it further.
+5. Put the survivors together and run once more. Two blocks can each look free alone and still be needed together, because each covers for the other.
+
+Score the share right every time, not the average: a deletion can leave the average alone while making single cases flaky. A June 2025 Wharton study, on older models and one science benchmark, found questions that were not answered the same way every time even at temperature 0. So at twenty cases, one case moving is probably wobble. Read that case before you trust the count.
+
+Here is that lesson's classifier a year on: eight lines of core and six blocks around them, forty in all.
+
+<Figure bare caption="An illustration, not a measurement: one ablation pass over a forty-line prompt, five repeats per case. Most blocks do not move the score. The billing rule does, so it stays.">
+
+| Run | Lines in the block | Right every time (of 20) | Reading |
+|---|---|---|---|
+| Full prompt | 40 (all) | 17 | The baseline |
+| Full prompt, again | 40 (all) | 16 | The wobble is one case |
+| Without the shouted rules | 6 | 17 | No move: cut |
+| Without the step plan | 5 | 18 | Inside the wobble: cut |
+| Without the three examples | 12 | 17 | No move: cut |
+| Without the repeated format reminders | 3 | 16 | Inside the wobble: read the case that flipped, then cut |
+| Without the billing-or-bug rule | 4 | 11 | Six cases lost: keep |
+| Without the forwarded-thread rule | 2 | 17 | No move: cut (but see section 3) |
+
+</Figure>
+
+Cutting everything that did not move leaves twelve lines. Run that prompt once more as a whole. If it lands inside the noise of 16 or 17, you have a prompt a third the size that measures the same on your cases. If not, restore blocks one at a time until it does.
+
+The bill is small for a one-word label: eight runs of twenty cases at five repeats is at most 800 short calls, and each variant pays its own cache write (*Prompt layout and the cache*). It also shows what trimming is for: a stable prefix is cached, so the lines you cut were cheap to carry (as of October 2026). The gain is behaviour and clarity.
+
+## 3. The script, a rule it deleted, and when to leave it alone
+
+The prompt file from *Versioning and testing prompts* now holds named blocks, and `SYSTEM` is still their join, so that lesson's run script keeps working. The parameter spellings below are copied from vendor docs as of October 2026, not run here, so try them on your SDK version first.
+
+```python
+# prompts/classify_ticket.py — the same file, with the prompt held as named blocks
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+EFFORT = "high"
+THINKING = {"type": "between_tools"}   # thinking off: a label needs none
+BLOCKS = {   # one job each, in prompt order; shortened here, the real ones run to the table's line counts
+    "core": "Classify the ticket: billing, bug, feature_request or other. Reply with the label only.",
+    "emphasis": "CRITICAL: NEVER guess. ALWAYS answer.",
+    "steps": "First read the ticket, then list its problems, then pick.",
+    "examples": open("prompts/examples.txt").read(),   # twelve lines: three worked tickets
+    "reminders": "Remember: the label only. No punctuation.",
+    "billing_or_bug": "A charge the customer says is wrong is billing, even if they call it a bug.",
+    "forwarded_thread": "If the ticket quotes an earlier email thread, label the newest message only.",
+}
+SYSTEM = "\n\n".join(BLOCKS.values())   # evals/run.py imports this, unchanged
+
+# evals/ablate.py
+import json
+
+from anthropic import Anthropic
+
+from prompts.classify_ticket import BLOCKS, EFFORT, MODEL, THINKING
+
+client = Anthropic()
+REPEATS = 5
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+def run_case(system: str, case: dict) -> str:   # the same call as before, with the prompt passed in
+    resp = client.messages.create(
+        model=MODEL, max_tokens=20, thinking=THINKING, output_config={"effort": EFFORT},
+        system=system, messages=[{"role": "user", "content": case["input"]}],
+    )
+    if resp.stop_reason != "end_turn":
+        return f"[{resp.stop_reason}]"   # the case fails and the run goes on
+    return text_of(resp).strip().lower()
+
+def right_every_time(blocks: dict, cases: list[dict]) -> int:
+    system = "\n\n".join(blocks.values())
+    return sum(all(run_case(system, c) == c["expected"] for _ in range(REPEATS)) for c in cases)
+
+cases = json.load(open("evals/tickets.json"))
+print("full prompt:", right_every_time(BLOCKS, cases), "and again:", right_every_time(BLOCKS, cases))
+for name in BLOCKS:
+    if name != "core":   # the task itself is not on trial
+        rest = {k: v for k, v in BLOCKS.items() if k != name}
+        print(f"without {name}:", right_every_time(rest, cases))
+```
+
+**A failure the harness missed.** In the table, the forwarded-thread rule scored the same without it, so it went. It scored the same because none of the twenty cases was a forwarded thread. Picture a few weeks later: customers forward long threads with a new bug report on top, and the quoted refund talk underneath pulls tickets into `billing`. The twenty never asked. The fix is one case per rule before you delete anything. For each block, find the real ticket that made someone add it, or write one, and run it without the line. A rule whose case still passes is cleared. A rule with no case is not cleared, only unmeasured: leave it, or write the case first. List what you removed in the commit message, so the next regression can find the old text.
+
+**When not to use it.** Do not trim before the harness exists; deleting by taste is just editing by feel. Do not carry a trimmed prompt to another model. A smaller or older model may still need the long version, and the same conversation admitted there is no hard data on whether a big model's prompt lifts a small one. The **LLMs** course has the migration recipe in *Switching models safely*. Never delete a format or safety rule that only the prompt enforces; move it into code first, as a schema (*Structured outputs in practice*), a validator (*Validating what comes back*) or a gate on untrusted text (*Containing prompt injection*). And skip all this for a prompt that is already ten lines.
+
+Be honest about how little this proves. The case for leaner prompts here is one team's report, plus a claim in the same post that another vendor's guide agrees, which was not checked here. You are getting a method, not a target.
+
+Next: trimming is a search with one move, which is to delete a block. *Let a model write the prompt* gives the search more moves, and lets a model propose them.
