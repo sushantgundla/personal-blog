@@ -1,0 +1,186 @@
+---
+title: "Measuring the whole answer"
+subtitle: "Run the same questions with no documents, your retrieval and the right documents, then read the gaps to see what to fix first."
+part: 4
+minutes: 7
+why: "Last week your recall@5 went from 0.71 to 0.84. This week the support queue looks the same and the dashboard says answer quality moved by half a point. Nobody can say whether retrieval did not matter, whether the model ignores what you hand it, or whether the half point is noise. A good retrieval score from 'Measuring retrieval' is a ceiling, not a result. This lesson gives you a three-way test: ask the same questions with no documents, with your pipeline and with the correct documents, and read the gaps. You will also learn the distractor test, how big a difference you can trust, and what to watch once real users arrive."
+wins:
+  - "Score the same questions three ways: no documents, your pipeline, the gold chunks."
+  - "Drop the easy questions before you judge what retrieval adds."
+  - "Read oracle minus real as retrieval headroom, and what is left above oracle as the generation ceiling."
+  - "Add near-miss passages and track the abstain rate beside accuracy."
+  - "Trust only gaps larger than your own rerun noise, and keep a cost scorecard beside quality."
+quiz:
+  - q: "Why remove the easy questions before judging what retrieval adds?"
+    options: ["They make the eval set too slow to run, so the full test cannot finish in one sitting", "The model already gets them right with no documents", "Easy questions have no gold chunks, so they cannot be labelled or scored at all"]
+    answer: 1
+    explain: "A question the model gets right with no documents says nothing about retrieval. Keeping it only pulls the average towards a number that never moves."
+  - q: "Oracle accuracy is 79 and the real pipeline scores 62 on the same 100 questions. What does the 17-question gap measure?"
+    options: ["The error rate of the judge, measured by rerunning it on the same frozen answers", "How far your prompt wording is from the best possible prompt for this model", "Retrieval headroom: right with gold chunks, missed with yours"]
+    answer: 2
+    explain: "Same model, same prompt, same judge. The only thing that changed between the two runs is which passages arrived, so the gap is what better retrieval could still win."
+  - q: "Why track the abstain rate when you add near-miss passages to the prompt?"
+    options: ["Models differ in saying the answer is absent or answering anyway, and each needs its own fix", "Abstaining is always a bug, so a healthy pipeline keeps the abstain rate at exactly zero", "It lowers the cost of each judge call by shortening the replies the judge has to read"]
+    answer: 0
+    explain: "Saying the documents do not answer the question is the right output when retrieval failed. A confident wrong answer is the failure. Accuracy alone blends the two."
+  - q: "Two pipelines differ by 1.5 points on a 200-question set, and rerunning the same pipeline moves its score by about 1 point. What do you conclude?"
+    options: ["Ship the higher one, since any measured gain counts and the cost of waiting is real", "Treat it as noise until a larger gap or more questions say otherwise", "Switch to a different judge and ignore the rerun, since the rerun spread is only a distraction"]
+    answer: 1
+    explain: "A gap inside your own rerun spread cannot be told apart from luck. Measure the spread first, then compare."
+  - q: "Why report accuracy per segment, such as easy and hard, before you average?"
+    options: ["Averages are harder to compute once the eval set grows past a hundred questions", "Judges score small segments more fairly than they score one large total", "A real gain on a few hard questions can vanish into the average"]
+    answer: 2
+    explain: "If most questions never needed retrieval, a good change moves the average a little. The segment where it applies shows the real size of the gain."
+deeper:
+  - { label: "Loison et al. - ViDoRe V3, retrieval and generation scored together", href: "https://arxiv.org/abs/2601.08620" }
+  - { label: "Chroma - Context Rot, how longer inputs hurt answers", href: "https://www.trychroma.com/research/context-rot" }
+  - { label: "Ragas - the faithfulness metric", href: "https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/faithfulness/" }
+  - { label: "BrowseComp-Plus - the oracle and real-retriever runs for agents", href: "https://texttron.github.io/BrowseComp-Plus/" }
+---
+
+## 1. Three runs of the same questions
+
+Retrieval metrics tell you whether the right chunk reached the prompt, not whether the model used it. Take the eval set from *Measuring retrieval* and run every question three ways.
+
+| Mode | The model sees | What the score tells you |
+|---|---|---|
+| none | The question only | What the model already knows |
+| real | The top k from your pipeline | What your users get today |
+| oracle | The gold chunks you labelled | The best this model and prompt can do with perfect retrieval |
+
+The none run also sorts your questions. One study, ViDoRe V3 (April 2026 version, a benchmark of questions over document pages), called a question easy when any of six models answered it correctly with no documents at all. That made 48.6 percent of the questions easy, close to half. An easy question cannot show retrieval helping or failing; it only pads the average. Judge retrieval on the hard ones.
+
+If an answer needs several documents, label two levels: evidence documents that support each step, and gold documents that hold the answer. BrowseComp-Plus (August 2025) did this, at about 6.1 and 2.9 per question. Your oracle run hands over all of them.
+
+The oracle sets the ceiling. In BrowseComp-Plus one model (GPT-4.1, as of August 2025) scored about 93 percent given every labelled positive document, and about 15 percent when it searched with BM25, five results per call. In ViDoRe V3 the best real pipeline sat about 10 points under the oracle on hard questions. Both are single studies; measure your own.
+
+Here is an invented set of 100 questions, made up to show how to read the runs.
+
+| Run | Correct of 100 | How to read it |
+|---|---|---|
+| none | 38 | 38 easy questions, 62 hard |
+| real | 62 | 24 hard questions answered because of retrieval |
+| oracle | 79 | 17 more would be right with perfect retrieval |
+| a perfect score | 100 | 21 are wrong even with the right chunks |
+
+<Bars
+  caption="Correct answers out of 100 in each mode. The numbers are an illustration, not a measurement - count your own. The gap from real to oracle is the most retrieval can still give you."
+  max={100}
+  axis="Correct answers, out of 100 questions"
+  bars={[
+    { label: 'No documents', value: 38 },
+    { label: 'Your pipeline', value: 62 },
+    { label: 'Gold chunks', value: 79, subject: true },
+  ]}
+/>
+
+Oracle minus real is 17: the retrieval headroom. A hundred minus oracle is 21: the generation ceiling, questions this model and prompt miss even with the right chunks in front of them. The example assumes the 38 easy questions stay right in every mode; check that on your own set.
+
+| What you see | What is broken | Try first |
+|---|---|---|
+| Real far below oracle | Retrieval | Chunking, hybrid search, rewriting, a reranker |
+| Oracle itself low | Generation, or the labels | The prompt, k, the model; then re-read the gold chunks and references |
+| Gap smaller than your rerun noise | Nothing you can read yet | More questions, or a repeat run |
+
+The code scores only the hard questions, so for the example it reports 24 of 62 for real and 41 of 62 for oracle, not the 62 and 79 above. The answer and judge calls are stubs for your own client.
+
+```python
+import os
+
+ANSWER_MODEL = os.environ["ANSWER_MODEL"]  # set to a current model
+JUDGE_MODEL = os.environ["JUDGE_MODEL"]    # a different model family from ANSWER_MODEL
+
+def answer(model, question, passages):
+    """Call your LLM client with the question and passages. Return the reply."""
+    raise NotImplementedError
+
+def judge(model, question, reply, reference):
+    """Return 'correct', 'wrong' or 'abstain' by comparing reply with reference."""
+    raise NotImplementedError
+
+# questions and retrieve come from your own eval set and search
+def evaluate(questions, mode, retrieve=None):
+    """questions: dicts with q, reference, gold (chunk texts) and segment."""
+    verdicts = []
+    for item in questions:
+        if mode == "none":
+            passages = []
+        elif mode == "oracle":
+            passages = item["gold"]
+        else:  # "real"
+            passages = retrieve(item["q"])
+        reply = answer(ANSWER_MODEL, item["q"], passages)
+        verdicts.append(judge(JUDGE_MODEL, item["q"], reply, item["reference"]))
+    return verdicts
+
+def report(questions, verdicts, easy):
+    """easy: indexes the none run got right. Only the rest are scored."""
+    hard = [i for i in range(len(questions)) if i not in easy]
+    if not hard:
+        return {}
+    by_segment = {}
+    for i in hard:
+        by_segment.setdefault(questions[i]["segment"], []).append(verdicts[i] == "correct")
+    return {
+        "accuracy": sum(verdicts[i] == "correct" for i in hard) / len(hard),
+        "abstain_rate": sum(verdicts[i] == "abstain" for i in hard) / len(hard),
+        "by_segment": {s: sum(v) / len(v) for s, v in by_segment.items()},
+    }
+
+none = evaluate(questions, "none")
+easy = {i for i, v in enumerate(none) if v == "correct"}
+for mode in ("real", "oracle"):
+    print(mode, report(questions, evaluate(questions, mode, retrieve), easy))
+```
+
+> Run the same questions with no documents, with your documents and with the right documents. The gaps between the three scores are your to-do list.
+
+## 2. Distractors, faithfulness and a noisy judge
+
+The oracle prompt is clean; your real prompt never is. Two more runs show what noise costs: the gold chunks plus the other top-k chunks your pipeline returns, and the gold chunks plus near-misses, meaning same topic and wrong detail, such as last year's policy. Score each as correct, wrong or abstain.
+
+Chroma's July 2025 report (a vendor study of 18 models, with no RAG pipeline in it) found that one near-miss passage lowered accuracy and four lowered it more. Models also differed in whether they said the answer was not there or answered with confidence; that is version-specific, so test yours. Its focused prompt held hand-picked facts, so that gain is an upper bound. The method is how you pick k: sweep k through 3, 5 and 10, and keep the smallest value where answer accuracy stops rising, not where recall does. *Reranking* explains why a smaller k matters.
+
+When retrieval failed, "the documents do not answer this" is the right output, as *Citations and grounding* argues; an invented answer is the failure. Accuracy blends the two, so print both.
+
+Libraries score pieces of this. As of October 2026 the Ragas docs (library version 0.4.3, January 2026) define faithfulness as the share of claims in the answer that the retrieved context supports, and context recall as the share of claims in a reference answer that the retrieved context supports. Both use a model to check claims, so both carry the judge noise below. Faithfulness compares the answer with the context, not the truth: a fluent answer built from the wrong chunk scores well. That is why you also need reference answers.
+
+Every number above comes from a judge model, and a judge wobbles. In ViDoRe V3, five reruns of the judge on fixed outputs moved the score by a standard deviation of about 0.2 points. Five reruns of the whole pipeline moved it by about 0.9, measured on two of the hardest corpora. Our rule of thumb, not the authors': ignore gaps under about twice the whole-pipeline spread, roughly 2 points there. Your spread will differ, so rerun the judge five times on frozen answers, rerun the pipeline three times, and use your own numbers. Then check the judge against a human on 30 answers; *Deterministic checks and LLM-as-judge* and *How to trust a judge* show how.
+
+A judge also likes its own family. Panickssery et al. (2024) found GPT-4 (as of 2024) rated its own outputs higher, and Yang et al. (April 2026) tested 20 models and found stronger ones were not reliably less biased. Use a judge from a different family than the model that wrote the answers.
+
+## 3. The average that hides the gain
+
+The failure to know by name is the diluted gain. A team scores 200 questions, 160 of them easy. A new reranker lifts the hard questions from 12 right of 40 to 16. The headline barely moves, and the change is shelved.
+
+<Compare caption="One real gain, read two ways. The counts are invented, and the second reading is still only four questions, so grow the hard set before you trust it.">
+  <Panel label="Naive" title="One average over all 200">
+
+172 of 200 right becomes 176. That is 86.0 to 88.0 percent, a 2-point move, no more than rerun noise could produce. It reads as nothing.
+
+  </Panel>
+  <Panel label="What to do" title="Score the 40 hard questions">
+
+12 of 40 becomes 16. That is 30 to 40 percent, a 10-point move on the questions retrieval can affect. It is a signal worth a bigger sample.
+
+  </Panel>
+</Compare>
+
+Cursor's November 2025 post (vendor-reported) describes the same shape in a live test: the overall effect of semantic search was small because not every request needs search, and larger in big codebases. Segment before you average: easy and hard, query type, corpus.
+
+An offline set is frozen, so it cannot see what users start asking. Pair it with a live signal: how often the user asks again straight away, or how much of the answer they keep. Cursor tracked dissatisfied follow-ups and how much agent-written code survived. Proxies move for other reasons, so read them for direction; *Offline evals and online evals* covers the pairing.
+
+Keep a cost scorecard beside quality, because a better answer that is twice as slow is a trade, not a win. *Latency and cost as first-class metrics* goes deeper.
+
+| Measure | Why it sits next to quality |
+|---|---|
+| p50 and p95 latency per stage | Users feel the slow tail, and often the rerank and model call |
+| Tokens per query, in and out | k and chunk size set the bill; count tokens, not prices |
+| Search calls per run | BrowseComp-Plus (August 2025): a stronger retriever cut calls and spend |
+| Model calls per eval run | The eval has a cost too |
+
+What the eval costs: 100 questions, three modes, one answer call and one judge call each is 600 model calls. The two distractor modes make it 1,000. Five judge reruns over the 300 first answers add 1,500 judge calls, once. Cache the answers.
+
+When not to use it. With fewer than about 30 questions there are too few hard ones to read as a ratio; read every answer by hand. With no ground truth you cannot build gold chunks or references, so label first, or compare none against real and read the answers that differ. If almost every question is easy, retrieval may not be what your traffic needs; *When RAG is the wrong tool* covers that.
+
+A score for the whole answer tells you whether it is right, not whether each claim traces to a passage. That check is the subject of *Citations and grounding*.
