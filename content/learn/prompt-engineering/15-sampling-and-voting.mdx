@@ -1,9 +1,9 @@
 ---
 title: "Sampling and voting"
-subtitle: "When there's no error to catch, run it more than once and let the answers disagree with each other."
+subtitle: "When there is no error to catch, run it more than once and let the answers disagree with each other."
 part: 3
 minutes: 7
-why: "You rate each incoming ticket's urgency from one to five. Every check from *Validating what comes back* passes: the digit is in range, the shape is right. It's still wrong on the borderline tickets, and nothing failed, so *Retries and fallbacks* has nothing to react to. The call came back well-formed, confident and wrong. This lesson gives you a lever for that case: ask the same question several times and count what comes back."
+why: "You rate each incoming ticket's urgency from one to five. Every check from *Validating what comes back* passes: the digit is in range, the shape is right. It is still wrong on the borderline tickets, and nothing failed, so *Retries and fallbacks* has nothing to react to. The call came back well-formed, confident and wrong. This lesson gives you a lever for that case: ask the same question several times and count what comes back."
 wins:
   - "Reach for voting when there is no error to retry against — a judgment call on a borderline case."
   - "Run the calls in parallel, so you pay in tokens but not in waiting."
@@ -44,7 +44,7 @@ Every reliability tool so far reacts to something: a schema violation, a timeout
 
 *Retries and fallbacks* works because a failure carries a message you can attach to the next attempt. A ticket rated `urgency: 2` when it deserved a `4` carries nothing. It is an integer in range and a plausible reading of an ambiguous ticket. Your code cannot tell that anything went wrong.
 
-So the question is what calling again could buy you. More than it seems. Generation draws from a distribution rather than always taking the top token, and *Sampling, and the knobs providers are taking away* in the **LLMs** course explains the mechanism. Whether you can still set the temperature depends on the provider and the model, so check yours. Where you can, a low value narrows the spread without removing it. The Wharton team (Meincke and colleagues, June 2025, older models) ran every question 25 times at temperature 0. They report "100 percent correct" and "mostly correct" as separate measures because the two differ.
+So the question is what calling again could buy you. More than it seems. Generation draws from a distribution rather than always taking the top token, and *Sampling, and the knobs providers are taking away* in the **LLMs** course explains the mechanism. Whether you can still set the temperature depends on the provider and the model, so check yours. Where you can, a low value narrows the spread without removing it. The Wharton team (Meincke and colleagues, June 2025, older models) ran every question 25 times at temperature 0, and questions still flipped between runs. They report "100 percent correct" and mostly correct as separate measures because the two differ.
 
 Five calls to one prompt are five independent draws. If the model is merely noisy on a ticket, the noise shows up as disagreement, and disagreement is something you can count.
 
@@ -63,7 +63,7 @@ Five calls to one prompt are five independent draws. If the model is merely nois
 
 ## 2. Counting the votes
 
-How you combine answers depends on their shape. **Closed answers vote cleanly.** A label, an enum, a digit from one to five, yes or no: take the most common one. This is self-consistency, from Wang et al.'s paper on chain-of-thought. The idea is that wrong derivations scatter, while right ones tend to land on the same answer. **Open prose does not vote.** Five summaries are five different good paragraphs, with no majority among them. Picking the best needs a judge, which is a different technique and belongs to the **Evals** course.
+How you combine answers depends on their shape. **Closed answers vote cleanly.** A label, an enum, a digit from one to five, yes or no: take the most common one. This is the counting idea behind self-consistency, from Wang et al.'s paper on chain-of-thought, here without the reasoning chain. The idea is that wrong derivations scatter, while right ones tend to land on the same answer. **Open prose does not vote.** Five summaries are five different good paragraphs, with no majority among them. Picking the best needs a judge, which is a different technique and belongs to the **Evals** course.
 
 Use an odd N so that two labels cannot split evenly. With three or more labels a tie is still possible, which is why the rule below asks for more than half of N, not merely the most.
 
@@ -104,7 +104,7 @@ def vote(ticket: str, n: int = 5):
     return (winner if top > n / 2 else None), counts   # None means escalate
 ```
 
-The parameter spellings come from the vendor docs as of October 2026 and were not run here, so try them on your SDK version first. The pool is doing the work: five calls fired together, not five in a row. The majority line is the rule you set in advance. It folds ties, three-way splits and mostly spoiled ballots into one outcome, and that outcome is a person or a stronger model, never a coin flip.
+The parameter spellings come from the vendor docs as of October 2026 and were not run here, so try them on your SDK version first. The pool is doing the work: five calls fired together, not five in a row. The majority line is the rule you set in advance. It folds ties, three-way splits and mostly spoiled ballots into one outcome, and that outcome is a person or a stronger model, never a coin flip. Errors are not caught here: an API error inside `pool.map` propagates and kills the vote, and *Retries and fallbacks* covers them.
 
 <Flow
   caption="The path through vote(). Ballots that fail a check are dropped, and the tally ends in exactly one of two places: a winner or an escalation. No step is a retry."
@@ -158,7 +158,7 @@ Five votes cost five times the tokens, billed whether they agree or not. What yo
 
 **The failure case is the third run in the figure.** Voting measures how much the draws disagree, not whether they are right. When the model lacks a fact, the miss is correlated: every draw makes it, and the vote confirms it with a straight face. The fix is in the prompt, or in an example of the policy, as in *Examples beat explanations*. More votes do not help. Treat a unanimous result as "no noise detected", and keep a sample of unanimous cases in your tests.
 
-Scoring a vote needs care. The Wharton authors warn that averages and "right at least once" are poor yardsticks for a system that is called once, since the user gets one answer. Run vote() several times on each test case and look at how stable each case is. A case where the winner flips between runs is still borderline, whatever the average says. *Versioning and testing prompts* is where that harness lives.
+Score a vote by how stable each case is across repeated runs of vote(), not by an average, since the user gets one answer; *Versioning and testing prompts* is where that harness lives.
 
 **When not to use it.**
 
@@ -168,8 +168,8 @@ Scoring a vote needs care. The Wharton authors warn that averages and "right at 
 - You are close to your rate limits. Five votes spend five times the request and token budget.
 - The model is confidently wrong. That calls for a better prompt, not more draws.
 
-There is also a rival to test. For a hard closed question, one call at higher effort may beat five votes at default, or the reverse. The vendor's steering page offers effort as the first lever but publishes no comparison, and none of the sources used here measures one, so run both on your own cases. Changing effort between calls also breaks the cache, so set it once per conversation.
+There is also a rival to test. For a hard closed question, one call at higher effort may beat five votes at default, or the reverse. The vendor's steering page offers effort as the first lever but publishes no comparison, and none of the sources used here measures one, so run both on your own cases. The effort arm needs thinking back on and a larger max_tokens, because between_tools only accepts high effort or lower. Changing effort between calls also breaks the cache, so set it once per conversation.
 
-Voting buys a disagreement signal, and a modest hit rate gain on cases where the model was close. It is a reliability tool, not a guarantee of correctness. Say that in the postmortem before someone else does.
+Voting buys a disagreement signal. It is a reliability tool, not a guarantee of correctness. Say that in the postmortem before someone else does.
 
 Next: you now have several tools and need to know whether a change helped, so *Versioning and testing prompts* opens Part 4 with the harness.
