@@ -1,66 +1,66 @@
 ---
 title: "Sampling, and the knobs providers are taking away"
-subtitle: "Temperature, top-p, and top-k explained — and why the frontier models are quietly refusing to let you touch them."
+subtitle: "Temperature, top-p, and top-k explained — and why some current models no longer let you set them."
 part: 1
 minutes: 7
-why: "You set temperature to 0.2, the way every sampling tutorial on the internet tells you to, because you wanted your extraction step to stop rephrasing the same field two different ways on two different runs. The API sent back a 400: temperature is deprecated for this model. You went looking for the replacement knob and there was not one — just a note that the model now accepts one value and rejects everything else. Every guide you can find still describes temperature as the dial you turn for creativity, and none of them mention that a model can now flatly refuse to be told what value to use. This lesson explains what temperature, top-p, and top-k actually did to a model's output, why the labs are removing your hand from them, and what to reach for instead."
+why: "You port an old extraction script to a current Claude model. It sets temperature to 0.2, the way every sampling tutorial says, so the same field stops coming back phrased two ways. The call fails. Depending on your SDK you get a 400 from the API, or a TypeError before any request leaves your machine. Either way there is no replacement knob, only a note to steer with prompting. And the habit behind it, temperature 0 for identical output, was never a promise. This lesson explains what temperature, top-p, and top-k actually do to a model's output, where they are now locked, as of Oct 2026, and what to use in their place."
 wins:
   - "Read temperature as a rescaling of the probability distribution before sampling, not a mood dial."
   - "Expect top-p's cutoff to widen and narrow with the model's own confidence; top-k's does not."
-  - "Stop reaching for temperature 0 for determinism — it was never a guarantee, and current frontier models will not even accept it."
-  - "On a model where the sampler is locked, get consistency from validation and prompting, not from a knob."
-  - "Get more reliable answers on reasoning-shaped tasks with self-consistency — sample several times, keep the answer that recurs."
+  - "Do not rely on temperature 0 for identical output. It was never a guarantee, and some models you call will reject it, so write code that does not depend on it."
+  - "Where the sampler is locked, get consistency from validation and prompting, and read each model's page for which knobs it accepts."
+  - "On tasks with one right answer, try self-consistency: sample several times, keep the answer that recurs, and check on your own task that it pays."
 quiz:
   - q: "What does the temperature parameter actually do to a model's output?"
     options: ["It changes how many layers of the network run", "It rescales the probability distribution over the next token before one is sampled", "It changes the maximum number of tokens the model may generate"]
     answer: 1
-    explain: "Temperature divides the logits before the softmax step, flattening or sharpening the distribution — it has nothing to do with network depth or output length."
+    explain: "Temperature divides the logits before the softmax step, flattening or sharpening the distribution. It has nothing to do with network depth or output length."
   - q: "Why does top-p (nucleus) sampling sometimes draw from only one or two tokens and other times from fifty?"
-    options: ["It alternates on a fixed schedule to add variety", "Its cutoff adapts to the shape of the distribution — a confident prediction narrows it, an uncertain one widens it", "It always samples from a fixed count set in advance"]
-    answer: 1
-    explain: "Nucleus sampling keeps the smallest set of tokens whose probabilities add up to p, so the width of that set tracks how sure the model is, unlike a fixed count."
-  - q: "You call one of Claude's current models with temperature=0 twice, same prompt. What should you expect?"
-    options: ["Byte-identical output every time, guaranteed", "The request is rejected — the model now accepts only its default value", "It works, but only while extended thinking is switched off"]
-    answer: 1
-    explain: "Models released after Claude Opus 4.6 accept a temperature of 1.0 for backward compatibility and reject every other value with a 400."
-  - q: "Why don't providers just always take the single highest-probability token (greedy decoding)?"
-    options: ["Greedy decoding is not something a transformer can do", "It is slower per token than sampling", "Greedy text tends to degenerate into bland, repetitive loops"]
+    options: ["It alternates on a fixed schedule to add variety", "It always samples from a fixed count set in advance", "Its cutoff is set by cumulative probability, so a confident prediction keeps few tokens and an uncertain one keeps many"]
     answer: 2
-    explain: "Always taking the top choice produces duller, more repetitive text than sampling from a well-chosen subset of likely tokens — the finding that motivated nucleus sampling."
-  - q: "The self-consistency trick for improving accuracy on a reasoning-shaped task is..."
-    options: ["Setting temperature to exactly 0 before the call", "Sampling the same prompt several times and keeping the answer that comes up most often", "Running extended thinking twice and averaging the token counts"]
+    explain: "Nucleus sampling keeps the smallest set of tokens whose probabilities add up to p, so the width of that set tracks how sure the model is. A fixed count does not."
+  - q: "As of Oct 2026, you send temperature=0.2 to claude-sonnet-5-5 over the raw REST API. What does Anthropic's documentation say happens?"
+    options: ["The request is rejected with a 400, because a non-default value is not accepted on Claude 4.7 and later models", "It works, and the output becomes deterministic", "It works, but the value is silently ignored"]
+    answer: 0
+    explain: "The model-deprecations page lists temperature, top_p, and top_k as deprecated on Claude 4.7 and later, with a 400 for a non-default value. Check the page, because the boundary moves with each release."
+  - q: "Why was temperature 0 never a guarantee of identical output from a hosted model?"
+    options: ["The API clamps temperature 0 up to a small positive value", "Batching and floating-point order can change the numbers, and serving bugs can change which token wins", "The model reseeds its weights on every call"]
     answer: 1
-    explain: "Several independent samples voting on an answer catches the cases where any single sample went down a wrong path, without needing a sampling knob at all."
+    explain: "Arithmetic order on shared hardware can shift near-ties, and Anthropic's postmortem described a 16-bit versus 32-bit precision mismatch that could drop the top token at temperature 0. It also described a separate approximate top-k bug. Weights do not change between calls."
+  - q: "Which task is a poor fit for self-consistency voting?"
+    options: ["Choosing one label from four for a support ticket", "Working out a number from a word problem", "Writing a one-paragraph product summary"]
+    answer: 2
+    explain: "Voting needs answers you can compare. Five different paragraphs are five different essays, not five ballots on one question."
 deeper:
   - { label: "Holtzman et al. — The Curious Case of Neural Text Degeneration (nucleus sampling)", href: "https://arxiv.org/abs/1904.09751" }
-  - { label: "Anthropic — Messages API reference (temperature, top_p, top_k)", href: "https://platform.claude.com/docs/en/api/messages" }
-  - { label: "Anthropic — troubleshooting extended thinking", href: "https://platform.claude.com/docs/en/build-with-claude/thinking-troubleshooting" }
-  - { label: "Exploring the Impact of Temperature on Large Language Models", href: "https://arxiv.org/abs/2506.07295" }
+  - { label: "Wang et al. — Self-Consistency Improves Chain of Thought Reasoning in Language Models", href: "https://arxiv.org/abs/2203.11171" }
+  - { label: "Anthropic — model deprecations (the sampling-parameters row and the model status table)", href: "https://platform.claude.com/docs/en/about-claude/model-deprecations" }
+  - { label: "Anthropic Engineering — A postmortem of three recent issues (September 2025)", href: "https://www.anthropic.com/engineering/a-postmortem-of-three-recent-issues" }
 ---
 
-Every model, at the very end of a forward pass, does the same odd thing. It takes everything it has read and turns it into a list of numbers — one per token in its vocabulary — and then something has to turn that list into an actual next word. That something is sampling, and it is a genuinely separate piece of the pipeline from the model itself. It used to be a piece you could tune. Increasingly, it is not.
+At the end of every forward pass a model holds a list of scores, one per token in its vocabulary, and something has to turn that list into a single next word. That something is sampling. It is a separate step from the model itself, and until recently you could tune it. On some models you now cannot, and this lesson sorts out which ones.
 
 ## 1. A forward pass ends in a distribution, not a word
 
-The last layer of the network produces one number per vocabulary entry, called a **logit**. A softmax function turns that list into probabilities that add up to one. Nowhere in this does the model output a word — it outputs a distribution over every word it knows, and a separate decision procedure has to pick one entry from it.
+The last layer of the network produces one number per vocabulary entry, called a **logit**. A softmax function turns that list into probabilities that add up to one. The model never outputs a word. It outputs a distribution over every word it knows, and a separate rule picks one entry from it.
 
-The simplest procedure is **greedy decoding**: always take the single highest-probability token. It sounds like the obviously correct choice, and it is not. Text produced this way is duller and more repetitive than text sampled from the distribution properly, a finding formalised by Holtzman and colleagues under the name "neural text degeneration." Greedy decoding chases the single safest word at every step, and the safest word, repeated, is a loop.
+The simplest rule is **greedy decoding**: always take the highest-probability token. It sounds obviously right, and it is not. Holtzman and colleagues showed that text chosen purely by likelihood comes out bland and repetitive, a problem they named neural text degeneration. The safest word, taken every step, turns into a loop.
 
-> Greedy decoding does not fail by being wrong. It fails by being boring — the same safe phrase, over and over, because the top token is nearly always the safe one.
+> Greedy decoding does not fail by being wrong. It fails by being boring.
 
-So real serving stacks sample from the distribution instead of always taking the top entry. That reintroduces a different problem: sampling from the *full* distribution means occasionally drawing one of the thousands of nearly-zero-probability tokens in the tail, which produces the kind of nonsense word that makes an answer look broken. The three knobs in the next section exist to manage that trade-off — enough randomness to avoid the loop, not so much that the tail gets drawn from.
+So real serving stacks sample. That brings the opposite risk: now and then you draw a near-zero token from the tail, and the answer looks broken. The three knobs below manage that trade.
 
 <Flow
-  caption="The path from one forward pass to one chosen token. Greedy always takes the top branch and loops on the safest word; sampling properly risks the tail, which is exactly what the three knobs in the next section are built to manage."
+  caption="The path from one forward pass to one chosen token. Greedy always takes the top branch and loops on the safest word; sampling properly risks the tail, which is what the three knobs are built to manage."
   steps={[
     { label: 'Forward pass', note: 'One logit per vocabulary entry' },
     { label: 'Softmax', note: 'Turns the logits into probabilities that add up to one' },
     {
-      label: 'Decision procedure',
+      label: 'Decision rule',
       subject: true,
       branch: [
         'Greedy — always the single highest-probability token',
-        'Sample properly — draw from the distribution, tail included',
+        'Sample — draw from the distribution, tail included',
       ],
     },
   ]}
@@ -68,28 +68,39 @@ So real serving stacks sample from the distribution instead of always taking the
 
 ## 2. Three knobs on the same distribution
 
-All three act before or during sampling, and all three answer a version of the same question: how much of that probability list is fair game?
+All three act before or during sampling, and all three answer the same question: how much of that probability list is fair game?
 
 | Knob | What it changes | Narrow setting | Wide setting | Where it goes wrong |
 |---|---|---|---|---|
-| Temperature | Rescales every logit before the softmax runs | Near 0: sharpens toward greedy | Above 1: flattens toward uniform, often incoherent | Turned down to fix *wrong* answers — that is an accuracy problem, not a sampling problem |
-| Top-k | Keeps a fixed count of the highest-probability tokens, discards the rest | k = 1: identical to greedy | Large k: rarely constrains anything | A fixed count ignores how confident the model actually is on this particular token |
-| Top-p (nucleus) | Keeps the smallest set of tokens whose probabilities add up to p | Low p: narrow, and adapts to confidence | p near 1: barely constrains | Set alongside top-k without checking which one binds first, so one silently overrides the other |
+| **Temperature** | Rescales every logit before the softmax runs | Near 0: sharpens toward greedy | Above 1: flattens toward uniform, often incoherent | Turned down to fix *wrong* answers. That is an accuracy problem, not a sampling one |
+| **Top-k** | Keeps a fixed count of the highest-probability tokens | k = 1: identical to greedy | Large k: rarely constrains anything | A fixed count ignores how confident the model is on this token |
+| **Top-p** (nucleus) | Keeps the smallest set of tokens whose probabilities add up to p | Low p: narrow | p near 1: barely constrains | Set alongside top-k without checking which binds first |
 
-Temperature and top-k are the older, blunter tools. Temperature rescales the *whole* distribution by the same amount regardless of shape — a model that is extremely sure of the next token and a model that is genuinely torn between five options both get squeezed by the identical factor. Top-k fixes a headcount that has no relationship to how peaked or flat the distribution actually is; k = 40 throws away nothing useful when the model is confident, and lets in forty options when it should really only be choosing between three.
+Temperature and top-k are the blunter tools. Temperature squeezes the whole distribution by one factor, whether the model is sure or torn. Top-k fixes a headcount with no link to the shape. Top-p fixes that: its cutoff is cumulative probability, so it narrows when the model is confident and widens when it is not.
 
-Top-p was built to fix exactly that. Because its cutoff is defined by cumulative probability rather than a fixed count or a fixed rescaling, it automatically narrows when the model is confident and widens when it is not. That is why many serving stacks favour it over the older knobs: it responds to what the model itself is telling you about its own uncertainty at that specific step, instead of applying the same treatment everywhere.
+A worked example makes this concrete. Take one step with five candidate tokens, logits 3, 2, 1, 0 and -1. At temperature 1 the softmax gives about 64, 23, 9, 3 and 1 percent. Divide every logit by 0.5 first and the top token rises to about 87 percent; divide by 2 and it falls to about 43. Top-p at 0.9 then keeps three tokens, two, or four. On a confident step (logits 6, 2, 1, 0, -1) the same p keeps one, while a top-k of 3 would keep three on both.
 
-None of the three, and this is the part worth sitting with, has anything to do with whether the answer is *correct*. They govern variety and fluency, not accuracy. A wrong answer sampled at a low temperature is still wrong — it is just wrong the same way every time.
+<Figure bare caption="One step, worked by hand. The numbers are an illustration of the arithmetic, not a measurement from any model: compute your own with a softmax and a loop.">
 
-## 3. Why the labs are removing the knobs, and what replaces them
+| Step | Temperature | Share of each token, top to fifth (%) | Kept by top-p 0.9 |
+|---|---|---|---|
+| Torn between options (logits 3, 2, 1, 0, -1) | 1.0 | 64, 23, 9, 3, 1 | 3 tokens |
+| The same step | 0.5 | 87, 12, 2, under 1, under 1 | 2 tokens |
+| The same step | 2.0 | 43, 26, 16, 10, 6 | 4 tokens |
+| Confident (logits 6, 2, 1, 0, -1) | 1.0 | 97, 2, 1, under 1, under 1 | 1 token |
 
-Here is the part that has changed recently enough that most write-ups on this topic have not caught up. Anthropic's models released after Claude Opus 4.6 accept exactly one value for temperature — 1.0, kept only for backward compatibility — and reject every other value with a 400. `top_p` and `top_k` are restricted the same way. When extended thinking is switched on, the API enforces this directly: thinking requires the default temperature, full stop. OpenAI made the equivalent move on its reasoning line. The knob most tutorials treat as universal is being taken out of your hands on exactly the models built to reason carefully.
+</Figure>
 
-The reasoning is not arbitrary. A model that generates a long chain of intermediate steps before answering has been tuned, internally, for how that exploration should behave. A caller flattening or sharpening the distribution mid-chain — usually while trying to make the *final* answer more consistent — can quietly wreck the reasoning that produces it. Rather than let people do that to themselves by habit, the labs removed the option.
+None of the three has anything to do with whether the answer is *correct*. They govern variety and fluency. A wrong answer at a low temperature is still wrong; it is just wrong more consistently.
+
+## 3. Some knobs are now locked, and what to use instead
+
+As of Oct 2026, Anthropic's model-deprecations page lists `temperature`, `top_p`, and `top_k` as deprecated on Claude 4.7 and later models. On those models a non-default value returns a 400 error, and the page says to leave the parameters out and steer with prompting. The migration guide for the current Sonnet model agrees, and adds that Sonnet 4.6 and earlier, and Haiku 4.5, still accept them. Neither page gives a reason or states the default value, so omit the argument rather than assuming a number.
+
+Other providers are less clear. OpenAI's reasoning guide and Google's thinking guide, as of Oct 2026, do not mention temperature at all. One preprint, [*What Aggregate Scores Miss*](https://arxiv.org/abs/2608.17719), says three OpenAI models take no temperature setting, but that is a single source, unconfirmed against an OpenAI page. Read each model's parameter list, and keep sampling settings in a per-model table, not hard-coded into the call. Self-hosted engines are different again: as of Oct 2026, Hugging Face's text-generation-inference still lists temperature scaling, top-p, and top-k among its features, though its docs now call it maintenance mode and point to vLLM, SGLang, llama.cpp and MLX. The *Running a model yourself* lesson covers that route.
 
 <Dial
-  caption="One knob, four regions. None of them has anything to do with whether the answer is correct — they govern variety and fluency, and a wrong answer at a low temperature is just wrong the same way every time."
+  caption="One knob, four regions, from always taking the top token to a tail reachable enough to wreck the sentence. Drag the dial and read what each region does to the distribution."
   name="temperature"
   min={0}
   max={2}
@@ -100,7 +111,7 @@ The reasoning is not arbitrary. A model that generates a long chain of intermedi
       at: 0,
       label: 'Greedy',
       outcome: 'Always the single highest-probability token.',
-      note: 'Duller and more repetitive than sampling properly — the safest word, repeated, is a loop.',
+      note: 'Duller and more repetitive than sampling properly. The safest word, repeated, is a loop.',
     },
     {
       at: 0.3,
@@ -110,7 +121,7 @@ The reasoning is not arbitrary. A model that generates a long chain of intermedi
     {
       at: 0.9,
       label: 'As trained',
-      outcome: 'The default, and the only value current Anthropic reasoning models accept.',
+      outcome: 'The default setting. On the newest Anthropic models, as of Oct 2026, it is the only setting that works.',
     },
     {
       at: 1.3,
@@ -120,12 +131,14 @@ The reasoning is not arbitrary. A model that generates a long chain of intermedi
   ]}
 />
 
-It costs you less than it looks like, because the thing you were probably using it for — a guarantee of identical output — was never real. Temperature 0 has always been an approximation of determinism, not a guarantee of it. Floating-point arithmetic on a GPU is not strictly associative, and production serving batches your request together with other people's, so identical inputs can still land in slightly different numerical company from one call to the next. If your system depended on temperature 0 producing the same string forever, it was already depending on something no provider ever promised.
+**The failure you will meet first is a ported script.** Code written for an older model passes `temperature=0.2`. Point it at a current id and it breaks, in one of two ways. The Python SDK from version 1.0 on has removed the three arguments from its request type, so the call raises a `TypeError` before anything is sent; I saw exactly that on version 1.15.0 in Oct 2026. An SDK or a raw HTTP call that still accepts the argument gets the 400 instead. The fix is the same: delete the argument.
 
-So what do you reach for instead? For **consistency**, stop trying to suppress variation at the sampler and catch it downstream: validate the output against a schema, and treat a case that flips between two runs as a sign that prompt is genuinely ambiguous rather than noise to filter away. For **accuracy on a reasoning-shaped task**, use **self-consistency**: run the same prompt several times and keep the answer that shows up most often. It recovers much of what a cooler temperature used to buy on tasks with one right answer, without touching a knob that, on the model you are calling, may simply no longer exist.
+The quieter failure is code that leaned on temperature 0 to mean "same input, same output", such as a test that compares two replies. That was never promised. Floating-point arithmetic on a GPU is not strictly associative, and your request is batched with other people's, so the numbers can differ slightly between calls. Infrastructure can be at fault too. Anthropic's September 2025 postmortem describes two separate bugs. A 16-bit versus 32-bit precision mismatch, found in December 2024, could drop the highest-probability token at temperature 0. A different approximate top-k step, exposed in August 2025, returned wrong results for some batch sizes. That is one vendor's account of its own bugs, but it shows how many layers sit between "temperature 0" and the token you get. The *Timeouts, fallbacks, and failures that look like success* lesson tells the rest of that story.
+
+What to do instead depends on what you wanted. For **consistency**, catch variation after the call: validate the output against a schema, and treat a case that flips between runs as a sign the prompt is ambiguous, not as noise to suppress. For **accuracy on a task with one right answer**, use **self-consistency**: run the same prompt several times and keep the answer that recurs. Wang and colleagues reported clear gains this way on arithmetic and commonsense benchmarks, with models from 2022.
 
 <Flow
-  caption="The shape of self-consistency: not a single call with a tuned knob, but several independent calls whose answers get tallied — the vote does the work the knob used to do."
+  caption="The shape of self-consistency: not one call with a tuned knob, but several independent calls whose answers are tallied. The vote does the work the knob used to do."
   steps={[
     { label: 'Same prompt', note: 'Sent independently, no sampling knob touched' },
     { label: 'One sample', note: 'A separate call each time' },
@@ -135,38 +148,46 @@ So what do you reach for instead? For **consistency**, stop trying to suppress v
   back={{ from: 2, to: 1, label: 'Run again, several times, before tallying' }}
 />
 
+**When voting does not apply.** It needs short answers you can compare, such as a label or a number; open prose gives you five essays and no majority. It costs about five times the tokens of one call. It cannot fix an error the model makes every time, because the same wrong answer wins the vote. And models that already reason before answering may gain less from it; whether that holds for your model and task is untested here, so measure it before you pay for it.
+
 ```python
-from anthropic import Anthropic, APIStatusError
 from collections import Counter
+from anthropic import Anthropic, APIStatusError
+
+# Check the models page for a current id; as of Oct 2026 this one is active.
+MODEL = "claude-sonnet-5-5"
 
 client = Anthropic()
 
-# Older tutorials say lower this for consistency. On current models it is not yours to set.
+# Older tutorials say lower temperature for consistency. On this model it is not yours to set.
 try:
     client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=10,
+        model=MODEL,
+        max_tokens=50,
         temperature=0.2,
         messages=[{"role": "user", "content": "Say hello."}],
     )
-except APIStatusError as err:
-    print(err.status_code, "-", err.message)   # 400 - temperature is deprecated for this model
+except (TypeError, APIStatusError) as err:
+    # Python SDK 1.x: TypeError, before any request. An SDK that still accepts it: a 400.
+    print(type(err).__name__, "-", err)
 
-# The replacement lever for consistency is not a smaller number. It is more samples.
+def ask(question: str) -> str:
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=4096,                     # covers any thinking plus the answer
+        output_config={"effort": "low"},
+        messages=[{"role": "user", "content": question + " Reply with the number only."}],
+    )
+    # Read the reply by block type: a thinking block may come first.
+    return next(b.text for b in resp.content if b.type == "text").strip()
+
 def self_consistent_answer(question: str, tries: int = 5) -> str:
-    answers = []
-    for _ in range(tries):
-        resp = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=20,
-            messages=[{"role": "user", "content": question}],
-        )
-        answers.append(resp.content[0].text.strip())
+    answers = [ask(question) for _ in range(tries)]
     return Counter(answers).most_common(1)[0][0]   # the answer that showed up most often
 
 print(self_consistent_answer(
-    "A shop sells eggs in boxes of 6 and 9. What is the largest number of eggs you cannot buy exactly?"
+    "A shop sells eggs only in boxes of 6 and 7. What is the largest number of eggs you cannot buy exactly?"
 ))
 ```
 
-The first call demonstrates the wall you will hit the first time you port an old script to a current model. The second is the actual fix: five cheap calls and a `Counter`, buying back the reliability a locked sampler no longer will.
+Run it with an `ANTHROPIC_API_KEY` set. The first call prints `TypeError - Messages.create() got an unexpected keyword argument 'temperature'` on the current Python SDK, or a 400 message on an SDK that still accepts the argument. The second prints a number; the right answer is 29. The voting half was not run against the live API when this was written, so run it before you trust it.
