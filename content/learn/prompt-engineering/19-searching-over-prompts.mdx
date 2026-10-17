@@ -3,13 +3,13 @@ title: "Searching over prompts"
 subtitle: "Run the drafting round many times, and keep three sets apart so the score you report is still true."
 part: 4
 minutes: 7
-why: "You ran one round from *Let a model write the prompt*, the winner beat the old prompt on your cases, and you shipped it. A month later you want a second round, then a third, and each time you peek at the same held-back cases to decide whether to carry on. By round five the held-back score is the best of five tries, not a measurement, and the prompt that looked like 90 percent is really 80. This lesson is the loop that makes many rounds worth running, and the bookkeeping that stops it from fooling you."
+why: "You ran one round from Let a model write the prompt, the winner beat the old prompt on your cases, and you shipped it. A month later you want a second round, then a third, and each time you peek at the same held-back cases to decide whether to carry on. By round five the held-back score is the best of five tries, not a measurement, and the prompt that looked like 90 percent is really 80. This lesson is the loop that makes many rounds worth running, and the bookkeeping that stops it from fooling you."
 wins:
   - "Run the drafting round as a loop: pick a parent, test three cases, reflect, keep the child only if it beats its parent on those three."
   - "Give the reflector the why behind each miss as text, because a sentence tells it which rule broke and a score does not."
   - "Keep a pool of prompts, not one winner, so a candidate that wins cases the others lose survives."
   - "Split the cases three ways: learn, select and test, and read the test set once, after the loop stops."
-  - "Skip the search below about fifty cases, without a clean pass or fail check, or before you have read the failures yourself."
+  - "Skip the search below about fifty cases (sixty is the floor for three sets, not a comfortable size), without a clean pass or fail check, or before you have read the failures yourself."
 quiz:
   - q: "In a prompt search, which set may be read only once, after the loop has stopped?"
     options: ["The learn set, the cases the reflector is shown", "The selection set, which scores every child", "The test set, held back to report the final result"]
@@ -23,8 +23,8 @@ quiz:
     options: ["The cost of the run, since fewer prompts are scored", "The order of the cases in the selection set", "A prompt with a lower average that is the only one passing a few hard cases"]
     answer: 2
     explain: "The best average often comes from the easy cases, while the fix for a rare failure lives in a prompt that looks worse overall."
-  - q: "You have twenty cases in total. Why is a search a poor fit?"
-    options: ["One or two cases of gain is noise, and no cases are left to hold back", "The drafting model refuses to write prompts from fewer than fifty examples", "A search needs at least a thousand cases before its first call can run"]
+  - q: "You have twenty cases to split three ways. Why is a search a poor fit?"
+    options: ["One or two cases of gain are noise, and no cases are left to hold back", "The drafting model refuses to write prompts from fewer than fifty examples", "A search needs at least a thousand cases before its first call can run"]
     answer: 0
     explain: "The paper behind this lesson used over a hundred cases per set on most tasks, and on twenty cases each case moves the score by five points."
   - q: "What can a prompt search not find for you?"
@@ -73,7 +73,7 @@ Keep a pool, not a single winner. The paper keeps any candidate that is best on 
 
 The last lesson used two sets. A loop needs three. The **learn** set is the cases the reflector may see. The **select** set scores every child and decides which prompts stay in the pool, so the loop reads it over and over. The **test** set is touched once, after the loop stops. Each decision made with a set bends the prompt toward it, so only a set that decided nothing can report a true number.
 
-Sixty cases, twenty per set, is what the sample below uses, and it is a toy: one miss moves a score five points, so a gain of one or two cases is noise. The paper's runs used over a hundred cases per set, with one maths task at 45. Husain and Shankar (September 2026) advise hand-annotating at least thirty failing outputs before any loop runs, a rule of thumb with no study behind it.
+Sixty cases, twenty per set, is what the sample below uses, and it is a toy: sixty is the floor for three sets, not a comfortable size. One miss moves a score five points, so a gain of one or two cases is noise. The paper's runs used over a hundred cases per set, with one maths task at 45. Husain and Shankar (September 2026) advise hand-annotating at least thirty outputs before any loop runs, a rule of thumb with no study behind it.
 
 The parameter spellings below are copied from vendor docs as of October 2026, not run here, so try them first. The parent weighting is a simple stand-in for the paper's rule: a case few prompts pass counts for more.
 
@@ -87,6 +87,7 @@ from pydantic import BaseModel
 from prompts.classify_ticket import EFFORT, MODEL as CLASSIFIER, SYSTEM, THINKING   # pinned with the prompt
 
 client = Anthropic()
+# the drafter; CLASSIFIER is the model being tuned
 MODEL = "claude-sonnet-5-5"   # as of October 2026
 ROUNDS = 40   # your budget; every accepted child costs a full selection run
 
@@ -123,7 +124,8 @@ def pick(pool: dict[str, list[bool]]) -> str:
               for p, r in pool.items()}   # a case few prompts pass is worth more
     return random.choices(list(weight), weights=list(weight.values()))[0]
 
-cases = json.load(open("evals/tickets.json"))   # 60 cases: id, input, expected, note, split
+cases = json.load(open("evals/tickets.json"))   # the same file, regrown to 60 cases and re-split three ways
+# 60 cases: id, input, expected, note, split
 learn, select, test = ([c for c in cases if c["split"] == s] for s in ("learn", "select", "test"))
 
 pool = {SYSTEM: passes(SYSTEM, select)}   # prompt -> pass or fail on each selection case
@@ -167,6 +169,6 @@ B passes everything the seed does and one more, and D is worse than both, so a p
 
 As of February 2026, on small and mid-size models, the method added about 9.6 to 12.2 aggregate points over a baseline, and beat a reinforcement-learning run on five of six tasks with far fewer rollouts; RL still won on the maths task. No Claude model was tested, and whether the gains carry over is unknown. Each score is one configuration, with no confidence interval.
 
-**When not to use it.** Below about fifty cases, where you cannot spare three sets. When there is no clean pass or fail check, or no way to say why a case failed; the paper did not test that. Before you have read the failing outputs by hand. For a prompt that already passes, or a script nobody will touch again. And after a model change you still re-run the harness from *Versioning and testing prompts*, because the search found a prompt for one model and one metric, not for ever.
+**When not to use it.** Below about fifty cases, where you cannot spare three sets; sixty is the floor for three sets, not a comfortable size. When there is no clean pass or fail check, or no way to say why a case failed; the paper did not test that. Before you have read the failing outputs by hand. For a prompt that already passes, or a script nobody will touch again. And after a model change you still re-run the harness from *Versioning and testing prompts*, because the search found a prompt for one model and one metric, not for ever.
 
 That is the course. A prompt is an instruction you test: stable parts first, a hard job split into steps, examples shown, thinking set on purpose, output pinned to a schema, every reply checked, votes taken where they pay, retries and refusals handled, untrusted text contained, the whole thing in git behind real cases, lines taken back out, and only then a model, and a loop, to propose the next edit. Every step has one shape: make a change, measure it on cases you did not tune on, and keep it only if it held.
