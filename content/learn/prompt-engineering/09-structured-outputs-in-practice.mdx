@@ -59,13 +59,13 @@ The catch is that the schema language it enforces is a subset. These are the gap
 
 </Figure>
 
-There are also limits across a whole request: 20 strict tools, 24 optional parameters, and 16 parameters with union types. Go past any of them and you get a 400 reading "Schema is too complex for compilation". The vendor's own advice maps to a design rule. Make every field required and give the absent case an explicit `null`, rather than leaving fields optional. Flatten nesting. Mark only the tools that matter as strict.
+There are also limits across a whole request: 20 strict tools, 24 optional parameters, and 16 parameters with union types. A nullable field (`["string","null"]`) is a union, so it counts toward the 16-union cap, and nulling every field in a large schema can hit it. Go past any of the limits and you get a 400 reading "Schema is too complex for compilation". The vendor's own advice maps to a design rule. Make every field required and give the absent case an explicit `null`, rather than leaving fields optional. Flatten nesting. Mark only the tools that matter as strict.
 
 Three costs come with it. The first request with a new schema pays extra latency while the grammar compiles; the grammar is then cached for 24 hours, keyed by the schema's structure, and the vendor gives no figure for the delay. The API also injects a system prompt describing the format, which you are billed for. And changing the format invalidates the prompt cache for that conversation, so pick a schema and keep it. The vendor publishes no accuracy numbers for any of this, so measure on your own cases.
 
 ## 2. A worked example: the ticket, end to end
 
-Take the support-ticket triage from *Validating what comes back*. The schema is a Pydantic model, with the 1-to-5 range written as `Field(ge=1, le=5)`, which the decoder cannot hold. The SDK helper `parse` handles that gap. It sends a version of the schema with those constraints stripped out and written into the field description, then validates the reply against your original model afterwards, on the client. The model is nudged by the description; the SDK enforces the real rule after the fact.
+Take a support-ticket triage; the next lesson picks the same ticket up. The schema is a Pydantic model, with the 1-to-5 range written as `Field(ge=1, le=5)`, which the decoder cannot hold. The SDK helper `parse` handles that gap. It sends a version of the schema with those constraints stripped out and written into the field description, then validates the reply against your original model afterwards, on the client. The model is nudged by the description; the SDK enforces the real rule after the fact.
 
 ```python
 import logging
@@ -108,7 +108,7 @@ def triage(text: str) -> Ticket:
     return ticket
 ```
 
-The parameter spellings are copied from the vendor docs as of October 2026, not run here, so try them on your SDK version first. One more unknown: the vendor pages this lesson was written from do not say whether `parse` raises or hands back an empty `parsed_output` on a refused or cut-off reply. Keep the `stop_reason` check where it is, and do not assume the call throws for you.
+The parameter spellings are copied from the vendor docs as of October 2026, not run here, so try them on your SDK version first. One more unknown: the vendor pages do not say whether `parse` raises or hands back an empty `parsed_output` on a refused or cut-off reply. Keep the `stop_reason` check where it is, and do not assume the call throws for you.
 
 The sample shows three jobs with three owners. The decoder owns the shape and the closed set of categories. The SDK owns the range, afterwards. Your code owns the owner lookup and the quote search, and nothing else can, which is the argument of *Validating what comes back*.
 
@@ -121,7 +121,7 @@ The sample shows three jobs with three owners. The decoder owns the shape and th
       subject: true,
       branch: [
         'end_turn — go on and parse',
-        'max_tokens — failed; raise the cap or ask for less',
+        'max_tokens — failed; raise the cap, ask for less, or lower effort',
         'refusal — do not parse; see Stop reasons and refusals',
       ],
     },
@@ -133,14 +133,14 @@ The sample shows three jobs with three owners. The decoder owns the shape and th
 
 **A refusal.** Current Claude models run classifiers, and a declined request comes back as a normal HTTP 200 with `stop_reason` set to `refusal` (as of October 2026). The body may not match your schema. A property that asks for the model's reasoning can cause one yourself, which *Output contracts* warns about. What to do with each refusal category is the subject of *Stop reasons and refusals*.
 
-**A cut-off.** Thinking tokens count against `max_tokens`, and the vendor reports that at low or medium effort the model occasionally thinks until it hits the cap (as of October 2026). Output that stops mid-object is incomplete and does not match the schema. The parse error is the lucky outcome. The dangerous one is a forgiving parser, or a streaming consumer that hands you each finished item as it goes, so a 50-item list stops at item 38 and nothing raises. Those numbers are an illustration. Treat `max_tokens` as failed whatever the body looks like, and in this course that means raise the cap or ask for less, then call again.
+**A cut-off.** Thinking tokens count against `max_tokens`, and the vendor reports that at low or medium effort the model occasionally thinks until it hits the cap (as of October 2026). Output that stops mid-object is incomplete and does not match the schema. The parse error is the lucky outcome. The dangerous one is a forgiving parser, or a streaming consumer that hands you each finished item as it goes, so a 50-item list stops at item 38 and nothing raises. Those numbers are an illustration. Treat `max_tokens` as failed whatever the body looks like, and in this course that means raise the cap, ask for less, or lower effort if the answers were over-thought, then call again.
 
 **Case drift.** An enum closes the set, but case is not guaranteed, as of October 2026. Claude can change a letter after a space, so a value with a space in it, such as `needs review`, can arrive as `needs Review`, with no error and no special stop reason. A raw string comparison then misses without a sound. Compare case-insensitively, and never define two values that differ only by case. The SDK path above rejects the drifted value loudly, because the client-side check runs against your original model, though that behaviour is inferred from the vendor's description, not confirmed.
 
 > The schema guarantees the shape of a finished answer, not that you received one.
 
-**When not to use it.** It does not work with citations or with a prefilled assistant message, and both return a 400. It does not suit a recursive or very large schema, where the limits above push you toward splitting the work. The schema is cached on the vendor's side for up to 24 hours, so keep protected health information out of property names, enum values and patterns. It exists only on listed models and platforms, so check yours; on Amazon Bedrock it is available only through the legacy integration, as of October 2026. And skip it for free-form text, or when you need a real function call, which is tool use with `strict`.
+**When not to use it.** Citations return a 400, and prefill is not supported. It does not suit a recursive or very large schema, where the limits above push you toward splitting the work. The schema is cached on the vendor's side for up to 24 hours, so keep protected health information out of property names, enum values and patterns. It exists only on listed models and platforms, so check yours; on Amazon Bedrock it is available only through the legacy integration, as of October 2026. And skip it for free-form text, or when you need a real function call, which is tool use with `strict`.
 
-When you cannot constrain the output, you are back on the ladder from *Output contracts*. One trick from the vendor's Sonnet 5.5 guide is worth having: if the model writes drafts before the final JSON, parse the last JSON value in the text blocks, not the first brace to the last brace. Forced tool choice has its own dated note: as of September 2026 it returns a 400 on `claude-sonnet-5-5`, so keep `tool_choice` on `auto` with `strict: true` and tell the model in the prompt when to call the tool.
+When you cannot constrain the output, you are back on the ladder from *Output contracts*. Parsing drafts is covered in *Stop reasons and refusals*. Forced `tool_choice` is no way out either, since it returns a 400 on `claude-sonnet-5-5` (as of September 2026); the full note is in *Output contracts*.
 
 Next: the decoder has done its half, and *Validating what comes back* is the half it cannot.
