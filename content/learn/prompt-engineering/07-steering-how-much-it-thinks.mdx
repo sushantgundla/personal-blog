@@ -59,7 +59,7 @@ It is soft guidance, not a token budget, so there is no number of thinking token
 
 </Figure>
 
-One more fact, from the vendor's thinking page: thinking is adaptive. A turn can have no thinking block, at any level, so do not write code that expects one. In a tool loop, later requests that only process tool results can skip it.
+One more fact, from the vendor's thinking page, as of October 2026: thinking is adaptive. A turn can have no thinking block, at any level, so do not write code that expects one. In a tool loop, later requests that only process tool results can skip it.
 
 **Prompt wording comes second.** The vendor offers sentences for both directions: a line saying thinking adds latency so use it only for multistep problems, or "think carefully" on a task that needs it. They are wording-sensitive, and the direction that matters most does not hold up. In its own testing, as of October 2026, the vendor reports that a system-prompt request to think less does not reliably reduce thinking on Sonnet 5.5, and telling Haiku 5.5 to answer directly did not stop it thinking. Its advice is to lower effort instead. Effort is calibrated; a sentence is not.
 
@@ -67,7 +67,7 @@ Whatever you change, compare with and without it on a sample of real traffic: ho
 
 ## 2. A worked example: an invoice that needs working out
 
-Take an invoice that has to come back as one amount due: line items, a volume discount on some of them, then tax on the discounted total. It returns as JSON through a schema, per *Output contracts*. That is the awkward case. The only visible output is the object, so every bit of working has to happen in thinking, and at low or medium effort the model often skips it. The vendor reports lost accuracy on multi-step tasks of this kind.
+Take an invoice that has to come back as one amount due: line items, a volume discount on some of them, then tax on the discounted total. It returns as JSON through an enforced schema (the `output_config.format` setting, which *Output contracts*, the next lesson, explains). That is the awkward case. The only visible output is the object, so every bit of working has to happen in thinking, and at low or medium effort the model often skips it. The vendor reports lost accuracy on multi-step tasks of this kind.
 
 The cheap fix is one line at the end of the system prompt. The vendor's Sonnet 5.5 guide gives it as "Think the problem through before you answer". The sample below runs the three settings over your own cases and prints accuracy beside thinking tokens per call.
 
@@ -144,7 +144,7 @@ Thinking is billed as output, at its full internal size, whatever you choose to 
 <Compare caption="Two ways to get less thinking out of Sonnet 5.5. Only the second is the vendor's recommendation, and neither replaces measuring.">
   <Panel label="Naive" title="Ask in the prompt">
 
-"Don't deliberate" in the system prompt. The vendor reports it does not reliably cut thinking on Sonnet 5.5, and it adds a rule the model may weigh against your other ones.
+"Don't deliberate" in the system prompt. The vendor reports it does not reliably cut thinking on Sonnet 5.5, and, the course's inference rather than a vendor claim, it adds a rule the model may weigh against your other ones.
 
   </Panel>
   <Panel label="What to do" title="Lower the effort">
