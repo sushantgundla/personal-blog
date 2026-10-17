@@ -1,79 +1,71 @@
 ---
 title: "What you actually pay for"
-subtitle: "Per-token billing, the three levers that move it, and how to see the bill before it arrives."
+subtitle: "Per-token billing, the levers that move it, and how to see the bill before it arrives."
 part: 2
 minutes: 7
-why: "The prototype cost a few pounds a week, so nobody thought about it. Then it launched, and the first real invoice was a number you had to explain in a meeting. You went looking for the expensive prompt and could not find one, because there is not one — the money went somewhere you were not looking, and you had no per-request record to prove it either way. This lesson tells you how the meter actually runs, which three levers move it and in what order, where the spend really hides in a working app, and how to instrument it so the invoice is a confirmation rather than a surprise."
+why: "You moved the app to a newer model, and the price per token did not change. The next invoice was a third higher anyway. You went looking for the expensive prompt and could not find one, because there was not one. Each request now held more tokens, a hidden thinking step ran by default, and you had no per-request record to prove it either way. This lesson shows how the meter runs, which levers move it and in what order, where the spend hides in a working app, and how to log it so the invoice confirms what you already knew."
 wins:
-  - "Expect output tokens to cost several times input, and cap them with `max_tokens`."
-  - "Cut context first — it is the largest and least risky saving available."
-  - "Route easy requests to the small model and keep the frontier one for hard ones."
-  - "Send anything that can wait through the batch API for a large discount."
-  - "Log `usage` on every request, tagged with the feature, so cost is a query not a guess."
+  - "Expect output tokens to cost several times input, and count thinking tokens as output."
+  - "Cut context first. It is the largest and least risky saving available."
+  - "Send easy requests to a smaller model, and send anything that can wait through a batch API."
+  - "Compare models by cost per finished task, not price per token, and measure again after every model change."
+  - "Log `usage` on every request, tagged with the feature, so cost is a query and not a guess."
 quiz:
-  - q: "Output tokens cost more than input tokens mainly because..."
-    options: ["Each output token is a separate pass through the model, while input is processed in roughly one pass", "Output has to be stored on the provider's servers", "Output tokens are bigger chunks of text"]
-    answer: 0
-    explain: "Generation is sequential, so it is far more compute per token than reading the prompt, and the price reflects that."
-  - q: "In a typical chat app, the biggest slice of the bill is usually..."
-    options: ["The system prompt", "The carefully written few-shot examples", "The conversation history resent on every turn"]
-    answer: 2
-    explain: "Turn thirty pays for turns one to twenty-nine again, so cost per turn climbs the whole way through a session."
-  - q: "A batch API trades..."
-    options: ["Accuracy for a lower price", "Latency for a large discount", "Context window size for a lower price"]
+  - q: "The price per token is unchanged, but the bill rose by a third after a model upgrade. Which is a likely cause?"
+    options: ["The provider quietly raised its output rate", "The same text now splits into more tokens, and the model may think before it answers", "Cached prefixes are now billed as output"]
     answer: 1
-    explain: "You give up an immediate answer and streaming, and get a substantial cut on both input and output in return."
-  - q: "You raise your retrieval `top_k` from 5 to 20 to be safe. The likely effect is..."
-    options: ["Higher cost and often worse answers, because irrelevant text competes for attention", "Higher cost and better answers", "No change, since only the matched chunks are billed"]
+    explain: "A newer tokenizer can turn the same text into more tokens, and thinking adds output tokens you never see. Neither changes the price list."
+  - q: "Thinking tokens that the API does not return to you are billed..."
+    options: ["As output tokens, even though you cannot read them", "As input tokens, because you did not write them", "Not at all, because they are not in the response"]
     answer: 0
-    explain: "Every chunk is billed as input and the fifteen weak ones actively pull the answer around."
-  - q: "The right place to read what a single request actually cost is..."
-    options: ["The monthly invoice, broken down by day", "An estimate from `len(prompt) / 4`", "The `usage` object on the response, logged per request"]
+    explain: "Anthropic's thinking page says the tokens spent reasoning are billed as output tokens even when the text is omitted, and they count toward `max_tokens`."
+  - q: "Which statement about charging more for long prompts is safe to build on?"
+    options: ["Every provider charges more past 200,000 tokens", "No current provider charges more for long prompts", "It depends on the model, so read the pricing page for the exact one you call"]
     answer: 2
-    explain: "The response reports exactly what you were billed for, including cache hits, at the moment you can still attribute it to a feature."
+    explain: "As of Oct 2026 some models include the whole window at one rate and others step up past a length. A rule for all models would already be wrong."
+  - q: "The right place to read what a single request actually cost is..."
+    options: ["The monthly invoice, broken down by day", "The `usage` object on the response, logged per request", "An estimate from `len(prompt) / 4`"]
+    answer: 1
+    explain: "The response reports what you were billed for at the moment you can still attribute it to a feature. The invoice arrives weeks later, and the character estimate is wrong for most tokenizers."
+  - q: "A batch API trades..."
+    options: ["Accuracy for a lower price", "Context window size for a lower price", "An immediate answer for a large discount"]
+    answer: 2
+    explain: "You give up the instant reply and streaming. Anthropic's page says a batch can take up to 24 hours (as of Oct 2026), and in return both input and output are cheaper."
 deeper:
-  - { label: "Anthropic — pricing", href: "https://www.anthropic.com/pricing" }
-  - { label: "Anthropic — batch processing", href: "https://platform.claude.com/docs/en/build-with-claude/batch-processing" }
-  - { label: "Anthropic — prompt caching", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-caching" }
-  - { label: "OpenAI — pricing", href: "https://openai.com/api/pricing/" }
+  - { label: "Anthropic pricing: per-token rates, cache and batch multipliers, tokenizer note", href: "https://platform.claude.com/docs/en/about-claude/pricing" }
+  - { label: "OpenAI pricing: input, cached input and output rates, with service tiers", href: "https://developers.openai.com/api/docs/pricing" }
+  - { label: "Google Gemini API pricing: standard, batch, flex and priority modes, with dated price changes", href: "https://ai.google.dev/gemini-api/docs/pricing" }
+  - { label: "What Aggregate Scores Miss: item-level regressions in commercial LLM API migrations (preprint, Aug 2026)", href: "https://arxiv.org/abs/2608.17719" }
 ---
 
-Model cost is one of the few parts of this stack that behaves like a utility meter: it is completely predictable once you know what is being metered, and completely opaque until then. This lesson is about reading the meter. Exact prices change, so nothing here quotes a number you could hold me to — what does not change is the shape, and the shape is enough to make every decision.
+Model cost behaves like a utility meter: predictable once you know what is metered, opaque until then. Prices also move inside a quarter. As of Oct 2026 Google's pricing page lists some rates that roughly double on a stated date, and Anthropic's says a planned rise for one model will not happen. So this lesson teaches ratios and where to look, and quotes no price.
 
-## 1. The unit is the token, and not all tokens cost the same
+## 1. The unit is the token, and the meter has more than one rate
 
-Billing is per token, quoted per million tokens, and split into at least two rates.
+Billing is per token, quoted per million tokens, and split into at least two rates. **Input** is everything you send. **Output** is everything the model generates. Output costs more because your prompt is read in roughly one pass, while every output token is its own pass. As of Oct 2026 output is five times input on every current Anthropic model, and about five to eight times on the Google text models.
 
-**Input** is everything you send. **Output** is everything the model generates. Output usually costs several times input — the exact multiple varies by provider and model, and the pricing page is the only honest source. The reason it costs more is mechanical: your prompt is read in roughly one pass, while every output token is its own full pass through the model. It is far more compute per token, and the price says so.
+Around those two sit other line items. The names differ by provider; the shape does not.
 
-Around those two sit a handful of other line items. The names differ by provider; the shape does not.
-
-| Line item | Typically |
+| Line item | Typically (as of Oct 2026) |
 |---|---|
 | Input tokens | The base rate |
 | Output tokens | Several times the input rate |
-| Thinking / reasoning tokens | Billed as output |
-| Cache write | Slightly more than a plain input token |
-| Cache read | A large discount on the input rate |
-| Batch requests | A substantial discount, both directions |
-| Long-context tier | Some providers charge more above a length threshold |
+| Thinking tokens | Billed as output, even when the text is not returned |
+| Cache write and read | A 5-minute write costs 1.25 times input, a 1-hour write 2 times, and a read a small fraction of it |
+| Batch | About half price on Anthropic, Google and OpenAI |
+| Long context | Depends on the model: some include the full window at one rate, others charge more past a length |
+| Tool use | Hidden prompt tokens added to the request; web search is charged per search on top |
 
-Two more things worth internalising. Within one family, the small model and the frontier model can differ by roughly an order of magnitude per token — that gap is the single largest lever on this page. And image or audio input is metered in tokens too, usually a lot of them, so a screenshot is not the cheap little attachment it looks like.
+Three things move the meter without any change to the price list.
 
-## 2. The three levers, in the order that pays
+- **The tokenizer.** Anthropic says its models from 4.7 on make about 30% more tokens for the same text (as of Oct 2026). Count with the provider's token-counting endpoint for your model.
+- **Images.** Anthropic counts an image in 28-pixel patches, so a 1000 by 1000 image is about 1,300 tokens, and some models use up to about three times more for the same image (as of Oct 2026).
+- **The spread inside one family.** The dearest and cheapest current Anthropic models differ by up to 100 times on input (as of Oct 2026). That gap is the biggest lever on the page.
 
-**Lever one: shorter context.** You pay for every input token on every turn, so this compounds in a way nothing else does. Trim the system prompt to what earns its place. Prune tool schemas — long descriptions on twelve tools are resent every single request. Retrieve passages instead of pasting documents. Summarise or drop old conversation turns. This is usually both the biggest saving and the safest, because shorter context often *improves* accuracy at the same time.
-
-**Lever two: a smaller model.** Most requests in a real app are easy: classify, route, extract fields, rewrite a sentence, decide whether something needs escalating. Those do not need the frontier model. Send them to the small one in the same family and keep the expensive model for the requests that genuinely need it. A router is a modest amount of complexity and often removes most of the bill. Prove it with a test set per route before you ship, so you are trading cost for measured quality rather than hoping.
-
-**Lever three: prompt caching.** If a long prefix repeats across requests, cache it. It cuts latency as well as cost, and it takes an afternoon. The rules that make it work are in *Context windows and their limits*.
-
-**And the one that is not a lever but a seatbelt:** `max_tokens`. Cap the output on every call. It is one line on the expensive side of the meter, and it turns an unbounded worst case into a bounded one.
-
-Separately from all three, there is **batch**. If the work can wait — nightly enrichment, a backfill, an eval run, bulk classification of a table — submit it as a batch job instead of thousands of live calls and take the discount. You give up an immediate answer and you give up streaming; results come back within hours. For anything that is not in front of a waiting user, that is not a real cost.
+**A worked example.** Read a request in input-equivalents, using the five-times ratio. Say it sends 2,000 input tokens and gets 500 back. The cost is 2,000 + 500 × 5 = 4,500 input-equivalents. Output is a fifth of the tokens and more than half of the cost. The figures are illustrative arithmetic on a dated ratio, not a measurement, so run it with your own counts.
 
 <Flow
-  caption="The three levers, tried in the order they pay off. Context is pulled first because it is both the biggest saving and the one least likely to cost you anything in accuracy."
+  caption="The levers, tried in the order they pay off. Context is pulled first because it is both the biggest saving and the one least likely to cost you accuracy. The caching detail lives in its own lesson."
   steps={[
     { label: 'Shorten the context', note: 'Trim the system prompt, prune tool schemas, retrieve instead of paste', subject: true },
     { label: 'Send it to a smaller model', note: 'Easy requests rarely need the frontier model' },
@@ -81,17 +73,30 @@ Separately from all three, there is **batch**. If the work can wait — nightly 
   ]}
 />
 
-## 3. Where the money actually goes, and how to see it
+## 2. The levers, in the order that pays
 
-The intuition is nearly always wrong. People tune the clever prompt, which is four hundred tokens. The bill is elsewhere.
+**Lever one: shorter context.** You pay for every input token on every turn, so this compounds as nothing else does. Trim the system prompt. Prune tool schemas, since twelve long descriptions are resent on every request. Retrieve passages instead of pasting documents. Summarise or drop old turns. It is usually the biggest and safest saving, because shorter context often improves accuracy too.
 
-- **Resent conversation history.** The most common surprise by a distance. Turn thirty resends turns one to twenty-nine, so cost per turn rises through the session. A long support chat can cost more than fifty separate questions.
-- **Stuffed retrieval.** Someone set `top_k` to 20 to be safe, each chunk is 800 tokens, and now every request carries 16,000 tokens of mostly irrelevant text. It costs money and hurts accuracy simultaneously — a rare combination, and always worth hunting for.
-- **Retries and agent loops.** A call retried three times is billed four times. An agent loop without a hard step cap is an unbounded bill with a friendly interface.
-- **A fat system prompt and fat tool schemas.** Small in isolation, resent on every request, and usually not cached because nobody thought to.
+**Lever two: a smaller model.** Most requests in a real app are easy: classify, route, extract a field. Send those to the small model in the same family and keep the expensive one for hard cases. Prove it with a test set per route before you ship.
+
+**Lever three: prompt caching.** If a long prefix repeats across requests, cache it. The prices, the rules and the traps are in *Caching and batch: the two big discounts*.
+
+**The seatbelt: `max_tokens`.** Cap the output on every call. As of Oct 2026, on models where thinking runs by default (Sonnet 5.5 adapts; Sonnet 4.6 and earlier start with it off), the cap covers thinking and the answer together, so set it with room, or the answer is cut off after the model has spent its allowance reasoning. *Thinking and effort, model by model* shows how to size it.
+
+**Batch.** If the work can wait, such as nightly enrichment, a backfill or an eval run, submit it as a batch job. As of Oct 2026 Anthropic says most batches finish within an hour, you can read results once the batch ends or at 24 hours, whichever comes first, and a request still unfinished at 24 hours expires and is not billed. You give up the instant reply and streaming, and take about half off.
+
+**When these levers do not apply.** Batch is wrong for anything a user is waiting on. A router does not pay below a volume where its test set costs more than it saves. Cutting context does little when the bill is mostly output and thinking, so check the split first.
+
+## 3. Where the money goes, a failure case, and how to see it
+
+People tune the clever prompt, which is four hundred tokens. The bill is elsewhere.
+
+- **Resent conversation history.** The most common surprise. Turn thirty resends turns one to twenty-nine, so cost per turn rises through the session.
+- **Stuffed retrieval.** Someone set `top_k` to 20 to be safe, each chunk is 800 tokens, and every request now carries 16,000 tokens, most of them irrelevant. It costs money and hurts accuracy.
+- **Retries and agent loops.** A call retried three times is billed four times. An agent loop with no hard step cap is an unbounded bill with a friendly interface. *Rate limits and reliability* covers the retry side.
 
 <Scale
-  caption="Three of the four culprits above, placed on a log rule by roughly how many tokens each one adds to a single request. The jump from a short message to a stuffed retrieval is on the order of a thousand times, before a single price is even applied. The figures are an illustration, not a measurement — count your own."
+  caption="Four things that fatten a single request, placed on a log rule by roughly how many tokens each adds. The jump from a short message to a stuffed retrieval is on the order of a thousand times, before a single price is applied. The figures are an illustration, not a measurement: count your own."
   unit="tokens"
   fromLabel="A short message"
   toLabel="A stuffed request"
@@ -103,11 +108,28 @@ The intuition is nearly always wrong. People tune the clever prompt, which is fo
   ]}
 />
 
-> Almost nobody's bill is their prompt. It is the history they resend and the documents they stuff.
+**A failure case: the same price, a bigger bill.** Take the request from section 1 and move it to a current model on the same provider. Two things can change at once, and neither shows on the price list.
 
-You cannot fix any of that from an invoice, because an invoice tells you the total after the month is over. Every provider returns a **usage object on every response**. Log it, and cost becomes a query.
+<Compare caption="The same request before and after a model swap, in input-equivalents at an output rate five times input. The figures are illustrative arithmetic: the 30% comes from Anthropic's tokenizer note, and the 400 thinking tokens are an assumed example.">
+  <Panel label="Before" title="The old model">
 
-Log these, per request: a request id, the feature or route that made the call, the model, input tokens, output tokens, cache read and write tokens, latency, and the cost you computed from them. Then you can group by feature, by user, by day, and answer *what costs money* in thirty seconds. Alert on cost per request and cost per user per day, not just on the monthly total — a per-request alert fires while you can still do something about it.
+2,000 input tokens and 500 output tokens. The cost is 2,000 + 500 × 5 = **4,500**.
+
+  </Panel>
+  <Panel label="After" title="The newer model, same price per token">
+
+The same text is 30% more tokens: 2,600 in, and 650 of visible answer. Thinking now runs by default on this model (as of Oct 2026, it depends on the model) and adds 400 hidden output tokens. The cost is 2,600 + (650 + 400) × 5 = **7,850**, which is 74% more.
+
+  </Panel>
+</Compare>
+
+The effect can run the other way. One preprint (Aug 2026) tracked mean total tokens per request across successive models from a single provider. On one hard maths set the mean fell from about 8,100 to about 4,150. On an instruction-following set, a different pair rose from about 1,400 to about 1,850. It covers one provider and three benchmarks, so the shares are not rates for your app. The lesson is that tokens per task moves with the model, so measure it again after every swap.
+
+> A price list tells you what a token costs. Only your own log tells you how many tokens a task takes.
+
+An invoice gives you the total after the month is over. Every provider returns a **usage object** on every response, so log it and cost becomes a query. Record the feature that made the call, the model, the input, cache and output tokens, why generation stopped, latency and the computed cost. Then group by feature, user and day, and alert on cost per request, not only on the monthly total.
+
+Field names differ by provider, and the adapter should map them. The example uses Anthropic's. Note that `input_tokens` counts only the text after the last cache breakpoint, so total input is `input_tokens` plus the cache read and cache creation counts.
 
 ```python
 import time, logging
@@ -115,42 +137,45 @@ from anthropic import Anthropic
 
 client = Anthropic()
 
-# Dollars per million tokens, copied from the provider's pricing page. Keep these in config.
-RATES = {"claude-sonnet-4-20250514": {"in": 0.0, "out": 0.0}}
+MODEL = "claude-sonnet-5-5"  # check the models page; as of Oct 2026
 
-def ask(feature: str, prompt: str, model: str = "claude-sonnet-4-20250514") -> str:
+# Per million tokens. Copy from the pricing page for your model on the day, and keep them in config.
+RATES = {MODEL: {"in": 0.0, "out": 0.0, "cache_read": 0.0, "cache_write": 0.0}}
+
+def ask(feature: str, prompt: str, model: str = MODEL) -> str:
     start = time.monotonic()
     resp = client.messages.create(
         model=model,
-        max_tokens=500,                    # the seatbelt on the expensive side
+        max_tokens=4000,                   # the seatbelt: thinking and the answer share it
         messages=[{"role": "user", "content": prompt}],
     )
     u, r = resp.usage, RATES[model]
-    cost = (u.input_tokens * r["in"] + u.output_tokens * r["out"]) / 1_000_000
+    read = u.cache_read_input_tokens or 0
+    wrote = u.cache_creation_input_tokens or 0
+    cost = (u.input_tokens * r["in"] + read * r["cache_read"]
+            + wrote * r["cache_write"] + u.output_tokens * r["out"]) / 1_000_000
     logging.info(
-        "llm feature=%s model=%s in=%d out=%d cost=%.5f secs=%.2f",
-        feature, model, u.input_tokens, u.output_tokens, cost, time.monotonic() - start,
+        "llm feature=%s model=%s in=%d cached=%d out=%d stop=%s cost=%.5f secs=%.2f",
+        feature, model, u.input_tokens, read, u.output_tokens,
+        resp.stop_reason, cost, time.monotonic() - start,
     )
-    return resp.content[0].text
+    return next((b.text for b in resp.content if b.type == "text"), "")
 ```
 
 <Anatomy
-  caption="The one line every request logs. feature is the field worth marking — group by it once and the call costing ten times what you assumed finds itself."
+  caption="The one line every request logs. The feature field is the one to mark: group by it once and the call costing ten times what you assumed finds itself. The out count includes thinking, and stop tells you when the cap cut an answer short."
   label="One log line"
   parts={[
     { text: 'llm feature=' },
     { text: '%s', name: 'feature', note: 'What you group cost by', subject: true },
-    { text: ' model=' },
-    { text: '%s', name: 'model' },
-    { text: ' in=' },
-    { text: '%d', name: 'input tokens' },
+    { text: ' model=%s in=%d cached=' },
+    { text: '%d', name: 'cache read tokens', note: 'Cheap input; a zero means the cache missed' },
     { text: ' out=' },
-    { text: '%d', name: 'output tokens' },
-    { text: ' cost=' },
-    { text: '%.5f', name: 'cost, computed from the usage object' },
-    { text: ' secs=' },
-    { text: '%.2f', name: 'latency' },
+    { text: '%d', name: 'output tokens, thinking included' },
+    { text: ' stop=' },
+    { text: '%s', name: 'stop reason', note: 'max_tokens means the cap cut the answer' },
+    { text: ' cost=%.5f secs=%.2f' },
   ]}
 />
 
-The important argument is `feature`. Tag every call with the thing that made it, and the first time you group that log by feature you will find one costing ten times what you assumed. It is nearly always one of the same two culprits: a chat history nobody trims, or a retrieval step that quietly grew.
+With the rates left at zero, each call prints one line whose cost reads `0.00000`. Fill the rates from the pricing page and it becomes a real number. Expect `out` to be larger than the words in the answer whenever thinking is on, and `stop=max_tokens` to mean you should raise the cap. The first time you group that log by feature you will find one costing ten times what you assumed, nearly always a chat history nobody trims or a retrieval step that quietly grew.
