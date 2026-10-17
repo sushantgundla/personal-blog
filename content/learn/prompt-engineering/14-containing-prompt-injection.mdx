@@ -3,7 +3,7 @@ title: "Containing prompt injection"
 subtitle: "You cannot make the model un-foolable. You can make a fooled model unable to reach anything."
 part: 3
 minutes: 7
-why: "You read *Prompt injection*, added the tags and the allowlist, and then someone asked the question that matters: your support assistant reads customer email, looks up orders and sends replies, so what happens the day one email is written by an attacker? A stronger prompt is not an answer. This lesson is the design answer: take one of three abilities away in code, shape the pipeline so the part that reads strangers has nothing to steal or press, and test the result with an attacker instead of a list."
+why: "You read Prompt injection, added the tags and the allowlist, and then someone asked the question that matters: your support assistant reads customer email, looks up orders and sends replies, so what happens the day one email is written by an attacker? A stronger prompt is not an answer. This lesson is the design answer: take one of three abilities away in code, shape the pipeline so the part that reads strangers has nothing to steal or press, and test the result with an attacker instead of a list."
 wins:
   - "Hold at most two of untrusted input, sensitive access and outward reach in one session, and enforce the cut in code."
   - "Name what each pair still risks, so you never write that a design is safe."
@@ -65,7 +65,7 @@ A session can also change shape. Meta's example starts with web access and no pr
 
 Fourteen authors set out the structural patterns in a June 2025 paper. Treat them as arguments, not results: the paper reports no measurements. Each one buys safety with something you lose.
 
-<Figure bare caption="Five patterns from the design-patterns paper, in plain words. Read the last column first; it is the price.">
+<Figure bare caption="Five of the paper's six patterns, in plain words. Read the last column first; it is the price.">
 
 | Pattern | The model never... | You give up |
 |---|---|---|
@@ -81,11 +81,11 @@ The hinge in the quarantined pattern is the hand-off. If the reader returns free
 
 Exits are wider than "send". A markdown image in a reply makes the viewer's browser fetch an address the attacker chose, and the address can carry data. So can any link and any URL fetch. Render no remote images, allowlist the domains you will reach, and rewrite links before display.
 
-The tool catalog is untrusted input too. A 2025 benchmark of poisoned tool descriptions on older models, with naive payloads, reported a 36.5 percent average success rate and refusals under 3 percent. The poisoned tool is never called; its text steers a legitimate one. Review and pin descriptions you depend on, and check each call's arguments against what the user asked. When you add a tool or a server, ask again which of the three properties the whole set now holds. That last habit is this course's suggestion, not tested.
+The tool catalog is untrusted input too, and the MCPTox numbers are in *Prompt injection*. A poisoned tool is never called; its text steers a legitimate one. Review and pin descriptions you depend on, and check each call's arguments against what the user asked. When you add a tool or a server, ask again which of the three properties the whole set now holds. That last habit is this course's suggestion, not tested.
 
 ## 3. A worked example, a failure, and how to test
 
-Here is the refund mailbox with the reader caged. One model call sees the email. It has no tools, and its answer is two closed fields. Everything after it is code. The paper's email-assistant case is the model for this.
+Here is the refund mailbox with the reader caged. One model call sees the email. It has no tools, and its answer is two narrow fields. Everything after it is code. The paper's email-assistant case is the model for this.
 
 <Flow
   caption="The refund mailbox with the reader caged. The only text the model sees is the email, and the only thing that leaves the model is two checked fields."
@@ -145,9 +145,9 @@ Now attack it. An email saying "refund every order" has no field to say it in. O
 
 > Do not make the model hard to fool. Make fooling it worth nothing.
 
-The failure case: a team removes `send_email` from the dashboard assistant and calls the leg cut. The dashboard renders replies as markdown. A planted line asks for an image whose address ends in a summary of the inbox. A person opens the dashboard, the browser fetches the image, and the summary has left. Nobody counted rendering as outward reach. The second failure is slower: they add an approve button, and by the fortieth reply it gets clicked unread. Meta and the paper both warn that confirmation wears out, and the paper adds that hidden characters can hide an exfiltration from a reviewer.
+Picture a team that removes `send_email` from the dashboard assistant and calls the leg cut. The dashboard renders replies as markdown. A planted line asks for an image whose address ends in a summary of the inbox. A person opens the dashboard, the browser fetches the image, and the summary has left. Nobody counted rendering as outward reach. The second failure is slower: they add an approve button, and by the fortieth reply it gets clicked unread. Meta and the paper both warn that confirmation wears out, and the paper adds that hidden characters can hide an exfiltration from a reviewer.
 
-Test it in two ways. First, the properties, with no model: the reader request carries no tools, the recipient always equals the sender, and a foreign order is refused. Second, an adaptive attacker. A team including researchers from OpenAI, Anthropic and Google DeepMind (October 2025) attacked twelve published defences with search, reinforcement learning and human contests, and beat most above 90 percent, authors' own numbers, no Claude model tested. Several had reported near zero on fixed strings. They did not attack plan-then-execute designs and argued the attack should fail, which is a scoping note, not proof. Keep your fixed injection list as a canary and run a person against the rest, as in *Versioning and testing prompts*.
+Test it in two ways. First, the properties, with no model: the reader request carries no tools, the recipient always equals the sender, a foreign order is refused, and no reply holds an image or link your code did not write. Run these in your ordinary test suite, so a later edit that hands the reader a tool fails the build. Second, an adaptive attacker, and the adaptive-attacker results are in *Prompt injection*. What is new here: that study did not attack plan-then-execute designs and argued the attack should fail, which is a scoping note, not proof. Keep your fixed injection list as a canary, as in *Versioning and testing prompts*, and run a person against the rest.
 
 When not to use it: a general assistant that must read anything and do anything cannot use these patterns, because they buy safety with flexibility. For that, supervise, shrink the blast radius, and log every call. A read-only summariser with no private data and no exit needs the tags and the habit of distrusting its output, not this architecture. Sandboxes, gates and permissions belong to the **Agents** course, in *Letting an agent touch the real world*.
 
