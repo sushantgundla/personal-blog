@@ -55,9 +55,9 @@ There are four rungs between "I would like JSON" and "this response cannot be th
   ]}
 />
 
-Most people stop at rung 1, get burned, and write a parser. Rung 2 costs a few tokens and fixes most of the drift on a small task. Rung 4 is the one that deletes the parser, and as of October 2026 it comes in two forms: a JSON output format (`output_config.format`), or `strict: true` on a tool definition.
+Most people stop at rung 1, get burned, and write a parser. Rung 2 costs a few tokens and often fixes the drift on a small task. Rung 4 is the one that deletes the parser, and as of October 2026 it comes in two forms: a JSON output format (`output_config.format`), or `strict: true` on a tool definition.
 
-One dated warning, because older copies of this lesson taught otherwise. Forcing a tool call with `tool_choice` used to be the standard route to a guaranteed shape. As of September 2026 that request returns a 400 on `claude-sonnet-5-5`; it still works on some older models, so check the one you pin. Where you want a real function call, keep `tool_choice` on `auto`, add `strict: true`, and tell the model in the prompt when the tool applies. The guarantee comes from `strict` or the output format, not from tool use itself.
+One dated warning: forcing a tool call with `tool_choice` used to be the standard route to a guaranteed shape. As of September 2026 that request returns a 400 on `claude-sonnet-5-5`; it still works on some older models, so check the one you pin. Where you want a real function call, keep `tool_choice` on `auto`, add `strict: true`, and tell the model in the prompt when the tool applies. The guarantee comes from `strict` or the output format, not from tool use itself.
 
 The caveat that matters more than any of this: **a guaranteed shape is not a guaranteed answer.** The schema says `total_minor_units` is an integer. It does not say it is *the* integer on the invoice. Structure and truth are separate problems, and the schema only solves the first.
 
@@ -80,9 +80,9 @@ An enum collapses most of that into one line. It also forces you to decide what 
 
 </Figure>
 
-Two rows need a note. First, **an enum closes the set but not the case.** The vendor documents that Claude can change a letter after a space even under enforcement, as of October 2026: a value like `"on hold"` can arrive as `"on Hold"`, with no error and no special stop reason. The failure case: your `if row["status"] == "on hold"` quietly never fires, and held invoices flow on as if they were fine. So compare case-insensitively, never define two values that differ only by case, and prefer values with no spaces, such as `on_hold`. That last habit is mine, not the vendor's: it removes the page's own example, not the warning.
+An enum closes the set but not the case; compare case-insensitively. *Structured outputs in practice* shows the failure.
 
-Second, **numeric ranges and string lengths are not expressible**, as of October 2026: no `minimum`, `maximum` or length bounds in the enforced subset. Say the range in the description, and check it in code, which is the subject of *Validating what comes back*.
+The decoder cannot enforce numeric ranges or string lengths; *Structured outputs in practice* has the table of what it drops, and *Validating what comes back* has the check.
 
 The `confidence` row is on almost every first draft. A model's self-reported score is generated like every other token and is not calibrated against anything. A quote you can search the source for is worth far more, because your code can verify it.
 
@@ -110,7 +110,7 @@ The `confidence` row is on almost every first draft. A model's self-reported sco
   ]}
 />
 
-Name that first field `source_quote`, not `reasoning`. A field called `reasoning`, `trace` or `thinking` can draw a `reasoning_extraction` refusal on current Claude models, which is billed in some categories (as of October 2026). A quote or a short explanation is fine.
+Name that first field `source_quote`, not `reasoning`. A field called `reasoning`, `trace` or `thinking` can draw a `reasoning_extraction` refusal on Sonnet 5.5 and other current Claude models, and that category is billed even when no output arrives (as of September 2026). A quote or a short explanation is fine.
 
 **Define what unknown looks like.** This stops invention. A model asked for a field the document does not contain will produce a plausible value, because plausible text is the only thing it makes. Give it a legal way to say nothing: `null` for absent, not an empty string and not `"N/A"` beside `"unknown"`. Where unknown is a category, put it in the enum, because a four-value decision with no escape hatch is a three-value decision plus a guess.
 
@@ -159,6 +159,6 @@ invoice = json.loads(text_of(resp))   # no fence to strip, no regex
 
 Nothing in that prompt asks nicely for anything. Every rule that could have been a sentence is a field name, a type, an enum or a `null`, and the system prompt exists only for the one rule a schema cannot express: what to do about missing values.
 
-**When not to use a contract.** Skip it for free-form text, such as a reply email, where forcing fields strips the writing. Skip it when you need a real function call, which is tool use with `strict`, not an output format. Be careful when the task needs working out. With JSON as the only text, the working can happen only in thinking, and Anthropic's Sonnet 5.5 guide reports that at low or medium effort the model often skips it and accuracy drops on multi-step tasks (vendor-reported, no numbers). A closing line telling it to think the problem through, or a higher effort, is the vendor's fix. *Steering how much it thinks* has the detail.
+**When not to use a contract.** Skip it for free-form text, such as a reply email, where forcing fields strips the writing. Skip it when you need a real function call, which is tool use with `strict`, not an output format. Be careful when the task needs working out. With JSON as the only text, the working can happen only in thinking, and Anthropic's Sonnet 5.5 guide reports, as of October 2026, that at low or medium effort the model often skips it and accuracy drops on multi-step tasks (vendor-reported, no numbers). A closing line telling it to think the problem through, or a higher effort, is the vendor's fix. *Steering how much it thinks* has the detail.
 
 Next: the shape is now the decoder's job, and *Structured outputs in practice* covers the schema limits, the SDK helper, and what still gets past the contract.
