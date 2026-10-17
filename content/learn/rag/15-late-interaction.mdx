@@ -1,0 +1,181 @@
+---
+title: "Late interaction: one vector per token"
+subtitle: "Keep a small vector for every token and let each word of the query find its best match, instead of squeezing a passage into one point."
+part: 3
+minutes: 8
+why: "A user asked for the return deadline on laptops. The page that answers it is in your index, and it ranks seventh. A page about returns in general and a page about laptops in general both sit closer to the question than the one paragraph that holds both ideas. One vector per chunk has to average every topic in the chunk into a single point, and an average hides the sentence that matters. This lesson teaches the design that keeps a small vector for every token and lets each word of the question find its own evidence. You will score a passage by hand, work out the storage bill for 10 million chunks, and learn the cheap way to try it without changing your index."
+wins:
+  - "Describe late interaction as one vector per token, scored by MaxSim at query time."
+  - "Compute MaxSim by hand: the best match for each query token, then add them up."
+  - "Estimate the storage bill as chunks, times vectors per chunk, times dimensions, times bytes."
+  - "Start by rescoring a short list from your current first stage, with no new index."
+  - "Never compare raw MaxSim scores across models or across queries of different length."
+quiz:
+  - q: "What does MaxSim compute for one query and one passage?"
+    options: ["The cosine between the average of the query vectors and the average of the passage vectors", "For each query token the best cosine among the passage tokens, then the sum of those best values", "One relevance score from a single pass over the query and passage glued together"]
+    answer: 1
+    explain: "Each query token picks its own best match inside the passage, and the picks are added. Averaging first would throw away the detail the design exists to keep."
+  - q: "A team indexes 10 million chunks at about 125 token vectors each and is shocked by the size of the index. What explains it?"
+    options: ["Late-interaction models need a much larger vector dimension than dense models", "MaxSim writes a score for every query and passage pair to disk", "Storage grows with vectors per chunk, so the index is many times larger than one vector per chunk"]
+    answer: 2
+    explain: "Chunks times vectors per chunk times dimensions times bytes. A hundred or so vectors per chunk multiplies the bill by about that much, even at a small dimension."
+  - q: "Why is a score cutoff of 12, tuned on one late-interaction model, unsafe elsewhere?"
+    options: ["MaxSim adds one cosine per query token, so the scale depends on query length and on the model", "Late-interaction models return negative scores that flip the order", "Cutoffs only work with cross-encoders"]
+    answer: 0
+    explain: "A longer query adds more terms to the sum, and different models encode queries with different token counts. Compare scores only within one model and one query."
+  - q: "What is the cheapest way to try late interaction on an existing single-vector pipeline?"
+    options: ["Re-embed the whole corpus into token vectors and move to a new store", "Swap the cross-encoder for a larger dense model", "Rescore the top candidates from your current first stage with a late-interaction model and keep your index"]
+    answer: 2
+    explain: "Rescoring needs token vectors only for the short list, and they can be thrown away after scoring. Nothing about your index or store changes."
+  - q: "Which situation is a poor fit for late interaction?"
+    options: ["Long documents where one paragraph decides relevance", "A small corpus where hybrid search and a cross-encoder already put the right chunk first", "Data unlike what your dense model was tuned on"]
+    answer: 1
+    explain: "A small corpus is cheap to rerank, and a strong reranker may already close the gap. An extra stage then adds storage and moving parts for nothing you can measure."
+deeper:
+  - { label: "Santhanam et al. - ColBERTv2, late interaction with compression", href: "https://arxiv.org/abs/2112.01488" }
+  - { label: "Hugging Face - Multi-vector models in Sentence Transformers", href: "https://huggingface.co/blog/multi-vector-encoder" }
+  - { label: "Pinecone - Cascading retrieval with multi-vector representations", href: "https://www.pinecone.io/blog/cascading-retrieval-with-multi-vector-representations/" }
+  - { label: "Qdrant - Vectors (multivectors section)", href: "https://qdrant.tech/documentation/concepts/vectors/#multivectors" }
+---
+
+## 1. Three ways a query can meet a passage
+
+A single-vector model, the kind every earlier lesson used, squeezes each chunk into one point and the query into another. The two never meet. The cross-encoder from *Reranking* reads query and passage together, which is accurate and cannot be precomputed. Late interaction sits between them. It encodes query and passage separately, but keeps one small vector for every token instead of pooling them. The query meets the passage only at scoring time, and the meeting is cheap: arithmetic on vectors that already exist.
+
+| | Single-vector | Late interaction | Cross-encoder |
+|---|---|---|---|
+| Stored per chunk | One vector | One vector per token | Nothing |
+| Query meets passage | Never | At scoring, by arithmetic | Inside the model, every time |
+| Work per candidate at query time | One dot product | A small grid of dot products | One model pass |
+| Usual job | First stage | Rescoring, or first stage in a store built for it | Final rerank of tens |
+
+The score is called MaxSim, from the 2020 ColBERT paper by Khattab and Zaharia. For each query token, find the passage token it matches best and keep that one cosine. Then add the kept values up. Take the query "laptop return deadline" and the passage "Electronics may be returned within 30 days". Pretend a model has turned each token into a 2-d vector (real ones have about 128 numbers; two lets you check with a pencil). Every number below is invented.
+
+| Query token | electronics (3, 2) | returned (1, 2) | within (-3, 1) | 30 (1, -2) | days (-1, 5) |
+|---|---|---|---|---|---|
+| laptop (4, 1) | **0.94** | 0.65 | -0.84 | 0.22 | 0.05 |
+| return (1, 3) | 0.79 | **0.99** | 0.00 | -0.71 | 0.87 |
+| deadline (-2, 3) | 0.00 | 0.50 | 0.79 | -0.99 | **0.92** |
+
+<Steps
+  caption="The same sum, one query token at a time, reading the bold cells above. The vectors and cosines are invented so that you can check them, not a measurement."
+  steps={[
+    {
+      label: 'laptop',
+      body: 'No word says laptop, but electronics sits close to it.',
+      facts: [
+        { label: 'Best passage token', value: 'electronics' },
+        { label: 'Best cosine', value: '0.94' },
+        { label: 'Running total', value: '0.94' },
+      ],
+    },
+    {
+      label: 'return',
+      body: 'The passage says returned, a near-perfect match.',
+      facts: [
+        { label: 'Best passage token', value: 'returned' },
+        { label: 'Best cosine', value: '0.99' },
+        { label: 'Running total', value: '1.93' },
+      ],
+    },
+    {
+      label: 'deadline',
+      body: 'Nothing says deadline, but days is about a time limit.',
+      facts: [
+        { label: 'Best passage token', value: 'days' },
+        { label: 'Best cosine', value: '0.92' },
+        { label: 'Running total', value: '2.85' },
+      ],
+    },
+  ]}
+/>
+
+Now score the desk passage from *Reranking*, "Our returns desk is open on weekdays", the same way. It has one perfect match, 1.00 for "return" against "returns". But nothing in it is close to "laptop" or "deadline", whose best cells are 0.59 and 0.57. The total is 2.16 against 2.85. One strong word cannot carry a passage, because every part of the question has to find something.
+
+> A single vector averages a passage into one point. Late interaction lets each word of the question go and find its own evidence.
+
+## 2. Where it helps, and what it costs
+
+It tends to help on long passages where one paragraph decides relevance, on questions with several requirements, and on data unlike what a dense model was tuned on. The evidence is mixed. A Hugging Face post from August 2026 (vendor-reported) compares a matched pair from LightOn: a dense model and a late-interaction model with the same size, backbone and training data. On thirteen small datasets the late-interaction model averaged about one nDCG point higher and lost on four, including FiQA2018, a finance question set. A long-document test in the same post showed a far wider gap in its favour. So: competitive on average, clearly better on long documents, not better everywhere.
+
+### What it costs
+
+At index time you pay one encoder pass per passage, as with a dense model, plus storage. At query time you pay one pass for the query, then a grid of dot products per candidate: 50 candidates, 125 vectors each, a 12-token query is 50 x 12 x 125 = 75,000 dot products.
+
+Storage is the bill that surprises people. In the same post, one small corpus came out at about 125 token vectors per passage, about 42 times the size of a 384-dimension dense model on the same passages, and several times even the largest dense model it tried. One corpus, one machine, vendor-reported. Scale it yourself. Ten million chunks, 125 vectors each, 128 numbers per vector, 4 bytes per number is 640 GB. One 1,024-number dense vector per chunk is about 41 GB, close to the size worked out in *Vector databases*.
+
+<Bars
+  caption="Index size for 10 million chunks, by arithmetic from stated assumptions (125 vectors of 128 float32 numbers per chunk; 1,024 float32 numbers for dense), not a measurement. Pooling by 3 is taken as exactly a third of the vectors."
+  unit="GB"
+  max={640}
+  axis="Gigabytes"
+  bars={[
+    { label: 'One dense vector per chunk', value: 41 },
+    { label: 'Every token vector stored', value: 640, subject: true },
+    { label: 'Same, pooled by a factor of 3', value: 213 },
+    { label: 'Rescore a short list', value: null, no: 'none stored' },
+  ]}
+/>
+
+Three levers shrink the bill. Compress each vector: ColBERTv2 (2022) stores a nearest centroid plus a small residual, which its authors report shrinks the index several times over. Pool tokens: merge each passage's most similar vectors. The token-pooling paper (September 2024) reports about half the vectors with almost no loss. Or fix the count: ConstBERT (ECIR 2025) encodes every passage as the same number of vectors whatever its length.
+
+Speed at scale is the gap. PLAID (2022, from the ColBERT authors, tested at over a hundred million passages) and MUVERA (2024, NeurIPS, from Google, which approximates the score with one vector per passage) report their own numbers. A search in October 2026 found no independent latency or recall figure at over a hundred million passages. One independent study of PLAID at MS MARCO scale (2024) found its settings finely balanced.
+
+## 3. Three ways to use it, and when to skip it
+
+| Pattern | What you store | Good when | Watch for |
+|---|---|---|---|
+| Rescore a short list | Nothing new | Your first stage has the right chunk in the top few hundred, badly ordered | Each candidate is encoded per query unless cached, and caching brings back the storage bill |
+| Index in a store that supports MaxSim | Every token vector | The first stage misses the chunk altogether | The storage bill, and your store's version |
+| Approximate engine such as PLAID or MUVERA | Compressed or re-encoded vectors | Very large corpora | Lost recall: in one Hugging Face test, a store's MUVERA mode dropped a correct passage from the top 50 |
+
+As of October 2026 the Qdrant docs (multivectors, from v1.10) and the Weaviate docs (from v1.29) describe MaxSim support. The Hugging Face post says Elasticsearch and OpenSearch can rescore with MaxSim but cannot retrieve with it. Check your own store. In a full stack it sits between the first stage and an optional cross-encoder, narrowing about 1,000 candidates to 100 (an illustration from Pinecone's May 2025 post, not a measurement).
+
+Start with rescoring. The same post calls it "considerably cheaper per candidate" than a cross-encoder but gives no latency figure, so measure it. The code below ran on Sentence Transformers v6.1 (as of October 2026), with the small teaching model all-MiniLM-L6-v2 (as of October 2026) as stage one and LightOn's LateOn (as of August 2026) as stage two.
+
+```python
+# pip install -U sentence-transformers
+import os
+from sentence_transformers import MultiVectorEncoder, SentenceTransformer, util
+
+# Set both to current checkpoints. Passing similarity_fn_name="meanmaxsim"
+# to MultiVectorEncoder gives scores on a bounded scale.
+dense = SentenceTransformer(os.environ["DENSE_MODEL"])
+late = MultiVectorEncoder(os.environ["LATE_MODEL"])
+
+passages = [
+    "Our returns desk is open on weekdays from 9am until 5pm.",
+    "Electronics may be returned within 30 days of delivery.",
+    "Laptop batteries are covered by a two year warranty.",
+    "Clothing can be exchanged in store with a receipt.",
+    "Gift cards are not refundable and never expire.",
+    "Opened software is not eligible for return.",
+]
+query = "how long do I have to return a laptop"
+
+# Stage one: the single-vector search you already have.
+doc_vecs = dense.encode_document(passages, convert_to_tensor=True)
+q_vec = dense.encode_query(query, convert_to_tensor=True)
+hits = util.semantic_search(q_vec, doc_vecs, top_k=4)[0]
+shortlist = [passages[h["corpus_id"]] for h in hits]
+
+# Stage two: token vectors for the shortlist only, thrown away afterwards.
+scores = late.similarity(late.encode_query([query]), late.encode_document(shortlist))[0]
+for i in scores.argsort(descending=True).tolist():
+    print(f"{scores[i].item():7.3f}  {shortlist[i]}")
+
+#  11.091  Electronics may be returned within 30 days of delivery.
+#  11.030  Laptop batteries are covered by a two year warranty.
+#  10.930  Opened software is not eligible for return.
+#  10.870  Our returns desk is open on weekdays from 9am until 5pm.
+```
+
+The comments show the output of one run. The order matched the dense order, and the four scores sit within a quarter of a point. That bunching is normal, and it feeds the first failure.
+
+**The score that looks like a similarity.** MaxSim adds one cosine per query token, so the total grows with the query. The same post saw it across models: one query scored about 11 on one model and 12.8 to 27 on ColBERTv2, which pads queries to 32 tokens. So never set a cutoff from one model's scores, never compare scores across queries, and never mix two models in one index. Divide by the query length, or rank within one query only.
+
+**The call that fails silently.** These models are asymmetric, hence separate query and document calls. The ColBERT-Zero paper (February 2026, the authors' own runs) is about training: a prompt mismatch between pre-training and fine-tuning cost about 1.3 points on BEIR. The same logic suggests that encoding a query with the document call will hurt too. I did not measure it, but never do it. And the quiet one: a 5,000-passage pilot stores a few hundred megabytes, so nobody sees the 640 GB coming.
+
+When not to use it. Adopt it after hybrid search and a reranker, and only if your eval set from *Measuring retrieval* shows the right chunk is missing or badly ordered. Skip it for a corpus of a few thousand chunks, where a cross-encoder is cheap and already good; when a strong reranker has closed the gap; when your store cannot do MaxSim and the corpus is too big to rescore; and when your data resembles the sets where the dense model won. Do not train one: the ColBERT-Zero authors report hundreds of GPU-hours for the full recipe, so use released checkpoints.
+
+The same design appears for page images, where a model keeps a vector per image patch instead of per token. *Retrieving pages as images* covers when that beats parsing.
