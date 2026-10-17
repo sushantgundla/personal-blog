@@ -1,0 +1,198 @@
+---
+title: "Permissions that travel with the data"
+subtitle: "Getting who-can-see-what into the index, keeping it true as it changes upstream, and asking the source before anything reaches the model."
+part: 2
+minutes: 7
+why: "A user left a project team last week. Their manager pulled them from the shared folder in the source system. IT confirmed it, and the folder's sharing dialog shows them gone. They can still ask the internal search bot about that folder and get a straight answer, citations included. Nobody misconfigured anything. The index never heard that access changed, because nothing was watching. The lesson on metadata and filtering told you to enforce permissions in the query, never in the prompt. This lesson is the half around it: getting the permission bits into the index, keeping them true, and adding a second check at the source for the moments the index is wrong."
+wins:
+  - "Write allowed_group_ids onto every chunk at ingestion, and resolve a user's groups at query time."
+  - "Patch permission fields when access changes. Never re-embed, because the vector comes from the text."
+  - "Sync permissions on their own clock, and fail loudly when a sync run fails."
+  - "Confirm the survivors with a live check at the source, over-fetch so k survives, and fail closed."
+  - "Test revocation by removing access and searching, with the sync running and with it stopped."
+quiz:
+  - q: "A user loses access to a folder in the source system. Search still returns documents from it. What is the most likely cause?"
+    options: ["The index's permission metadata was never told the access changed", "The vector index does not support filtering", "The user's query embedding is stale"]
+    answer: 0
+    explain: "The filter can only check what the index was told. If nothing synced the revocation, the old metadata is still there and still passes."
+  - q: "Why store group or role IDs on a chunk instead of a list of individual users allowed to see it?"
+    options: ["Group IDs take less storage than user IDs", "Vector search cannot filter on user IDs", "Group membership is resolved fresh at query time, so only the more stable group-to-document link needs to live in the index"]
+    answer: 2
+    explain: "People move between groups constantly. Keeping only the group link in the index leaves query-time resolution to handle the part that changes often."
+  - q: "A live check at the source runs on every candidate. What can it fix, and what can it not?"
+    options: ["It removes documents the user lost access to, but cannot surface a document the user was just granted", "It fixes stale grants and missing grants alike", "It fixes missing grants only, because the source is always right"]
+    answer: 0
+    explain: "The check only removes. A document the stale index never offered as a candidate never reaches the check, so a new grant still waits for the sync."
+  - q: "The source system's API times out during a live check on one candidate. What should the code do?"
+    options: ["Treat the candidate as visible so the user still gets an answer", "Fall back to the index's cached groups for that candidate", "Drop the candidate and log the failure"]
+    answer: 2
+    explain: "A check that cannot confirm access has not confirmed it. Failing open turns every source outage into an exposure."
+  - q: "A document goes from public to restricted. Only its permission changed. What should the pipeline do?"
+    options: ["Re-embed every chunk of the document", "Patch the stored permission fields on its chunks and keep the vectors", "Nothing, because the text did not change"]
+    answer: 1
+    explain: "A vector comes from the text, which is unchanged. The permission is a stored field, and leaving the old value in place is the leak."
+deeper:
+  - { label: "Pang et al. - Zanzibar: Google's Consistent, Global Authorization System", href: "https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/" }
+  - { label: "Google Drive API - permissions.list", href: "https://developers.google.com/workspace/drive/api/reference/rest/v3/permissions/list" }
+  - { label: "Microsoft ISE - Propagating SharePoint document permissions to search", href: "https://devblogs.microsoft.com/ise/sharepoint-doc-level-access/" }
+  - { label: "AWS - Rethinking access control for RAG (vendor announcement, unmeasured)", href: "https://aws.amazon.com/blogs/machine-learning/rethinking-access-control-for-rag-with-amazon-quick-and-amazon-bedrock/" }
+---
+
+## 1. The index has its own idea of who can see what
+
+Every access-controlled corpus has two sources of truth about permissions, and they drift apart the moment nobody is watching. One lives in the system of record: sharing settings, group membership in your identity provider, a row-level policy. The other lives in your index, as metadata you wrote onto each chunk at ingestion. *Metadata and filtering* covers the query-time half, a store filter that a model cannot talk its way around. None of that helps if the metadata is wrong.
+
+It goes wrong constantly, because a permission is a fact about a relationship that keeps changing: a person joins a team, a folder is reshared, a contractor's access expires, a document moves from a restricted space to a public one. The source updates instantly. Your index updates only when something tells it to.
+
+| | Source system | Search index |
+|---|---|---|
+| Where the true permission lives | Here | A copy, made at ingestion time |
+| Updates on | Every access change, immediately | Whatever your sync job runs |
+| Who notices when they disagree | Nobody, until someone is exposed or blocked | Nobody, unless you are checking |
+
+The gap between those columns is where the incident happens. The filter runs as written. The value it checks was true a week ago.
+
+> A permission filter is only as correct as the metadata it reads. Stale metadata behind a perfect filter is still a leak.
+
+## 2. Getting the bits in: model relationships, not a snapshot
+
+The naive approach writes a list of user IDs onto each chunk. It works on day one and rots from day two, because it must be rewritten whenever group membership changes near the document, and nothing tells you that happened.
+
+The fix is to separate the relationship from its resolution, as Google's Zanzibar paper (2019) does: it stores facts like "this group can view this document" and works out who is in the group when it answers a check. Write the group or role onto the chunk once, and resolve the user's current groups live, from whatever your identity provider says now. The filter becomes a set intersection. Microsoft's engineering blog (April 2026) describes the same shape for SharePoint, plus user IDs for direct shares; keep those in their own field.
+
+```python
+# ingestion time: write the relationship, not a snapshot of who holds it
+def build_chunk_metadata(document, chunk):
+    return {
+        "doc_id": document.id,
+        "source_url": document.url,                  # lets a live check find the source later
+        "allowed_group_ids": document.acl.group_ids,
+        "visibility": document.acl.visibility,       # "restricted" | "org"
+        "acl_synced_at": now_utc(),
+    }
+
+# layer 1, inside the query: groups resolved fresh, then intersected
+def is_visible(meta, user_groups):
+    if meta["visibility"] == "org":
+        return True
+    return bool(set(meta["allowed_group_ids"]) & user_groups)
+
+# layer 2, after the query: ask the source about the survivors, in rank order
+def confirm_live(user, hits, source, k):
+    kept = []
+    for hit in hits:
+        try:
+            ok = source.can_read(user, hit.meta["doc_id"])
+        except Exception:
+            ok = False                               # fail closed: no answer is not a yes
+        if ok:
+            kept.append(hit)
+        if len(kept) == k:
+            break
+    return kept
+```
+
+<Flow
+  caption="The query path the code runs. The cheap index filter fetches a wide candidate set, then the live check asks the source about each survivor. Only what it confirms reaches the model."
+  steps={[
+    { label: 'Index filter', note: 'Chunk groups, intersected with the user\'s live groups; fetch 4k' },
+    {
+      label: 'Live check',
+      subject: true,
+      branch: [
+        'source confirms - the chunk is kept',
+        'source denies, errors or times out - the chunk is dropped',
+      ],
+    },
+    { label: 'Top k to the model', note: 'Fewer than k only if too few candidates survive' },
+  ]}
+/>
+
+Nested groups are harder than the code lets on. If your identity provider expands the chain of team, department and org role, the intersection works unchanged; if not, walk the chain yourself. Test three levels, because a one-level demo hides the leak.
+
+A permission change is a metadata update. Patch the stored fields on every chunk of the document and leave the vectors alone, because a vector comes from text and the text did not change. Notion's write-up (February 2026) patches permissions as span metadata for the same reason; *Keeping the index fresh without paying twice* shows the plan that sends the patch.
+
+## 3. Keeping it true: a sync clock, then a live check
+
+Content and permissions should not share a sync schedule. A blog post a day stale is an inconvenience. A revoked user still retrieving a document is an incident.
+
+| Approach | Latency | What it catches |
+|---|---|---|
+| Full re-crawl of every document's ACL, nightly | Up to 24 hours | Everything, eventually - far too slow to be the only defence |
+| The source's change feed or webhook, where it reports permission edits | Seconds to low minutes | Keeps the index right, if the source emits the event at all |
+| A live check at the source on each query | Immediate, at a per-query cost | Stale grants, whatever state the index is in |
+
+Do not assume a source tells you. As of October 2026, Microsoft's SharePoint webhook documentation says a notification only says a list changed; you then ask for the change log. An AWS post from the same month (vendor-reported) says Confluence sends no event when group membership changes. Test your source with a real permission edit, and where nothing fires, poll the group-membership API on a short interval. Fail loudly when a sync run fails: a silent skip looks like success, so treat "we do not know if this ACL is current" as "this ACL is wrong."
+
+**The live check.** The index is a cache, so it can be wrong. The same AWS post announces a two-stage design for Amazon Quick and Amazon Bedrock Knowledge Bases (as of October 2026): the cached filter narrows the field, then the source is asked about each survivor. Cache narrows, live check confirms. It is a vendor announcement with no latency, call count or failure behaviour published, so read it as a design, not a result. It has four edges:
+
+- It costs one source call per candidate per query, so latency and API quota scale with candidates and traffic.
+- It is a post-filter, so it shares the fewer-than-k failure from *Metadata and filtering*. Over-fetch so k survive.
+- It must fail closed, or a source outage becomes an open door.
+- It fixes stale grants, not stale denials. A document the user was just given never became a candidate, so the check never sees it.
+
+**A worked example.** All numbers are invented. A user lost access to one document this morning, and the sync has not run since. Two of their top five chunks come from it. Assume 100 ms per source call and 50 queries a second.
+
+| Setup | Fetched | Source calls | Reach the model | Result |
+|---|---|---|---|---|
+| Index filter only | 5 | 0 | 5 | Two revoked chunks leak |
+| Live check, fetch 5 | 5 | 5 | 3 | Safe, but the answer is thin |
+| Live check, fetch 20, keep the first 5 that pass | 20 | 7 in rank order, or 20 in parallel | 5 | Safe, with the full k |
+
+In rank order the seven calls take about 700 ms and 350 calls a second reach the source. In parallel the wait is about 100 ms and 1,000 calls a second reach it. You choose between latency and quota. Two cheaper moves: cache a verdict for one request only, and, as an inference rather than a tested result, run the check after reranking on the top few.
+
+**The failure to name: failing open.** The source returns a rate-limit error in a busy hour, the code catches the exception and carries on, and every chunk the check could not confirm goes to the model. That is why the `except` branch sets `ok = False`. If the check empties the set, the right output is "the documents do not answer this," as in *Citations and grounding*, never a fall back to unchecked text.
+
+**When not to use it.** Skip it when the corpus is low-sensitivity, when a fast event feed meets a freshness target you can defend, or when the source has no cheap "can this user read this" call. Weigh the credential too: a service account that can act as any user is itself something to scope and audit.
+
+<Steps
+  caption="The revocation test, one state at a time. The last two steps matter most: with the sync stopped, only the live check stands between a stale index and the user."
+  steps={[
+    {
+      label: 'Revoke',
+      title: 'In the source system',
+      body: 'Pull a test user from the folder. The source shows them gone at once.',
+      facts: [
+        { label: 'source system', value: 'access removed' },
+        { label: 'search index', value: 'still holds the old allowed_group_ids' },
+      ],
+    },
+    {
+      label: 'Wait',
+      title: 'Your stated freshness target elapses',
+      body: 'Wait as long as you promised, no longer.',
+      facts: [
+        { label: 'search index', value: 'synced, if the job ran' },
+      ],
+    },
+    {
+      label: 'Search',
+      title: 'As that user',
+      body: 'Query as the revoked user. Reading the sync code is not a test.',
+      facts: [
+        { label: 'document returned', value: 'fail - the sync was never checked' },
+        { label: 'document withheld', value: 'pass' },
+      ],
+    },
+    {
+      label: 'Stop the sync',
+      title: 'Pause the job, then revoke a second user',
+      body: 'The index is now stale on purpose.',
+      facts: [
+        { label: 'search index', value: 'still allows the document' },
+        { label: 'live check', value: 'the only defence left' },
+      ],
+    },
+    {
+      label: 'Search again',
+      title: 'As the second user',
+      body: 'Withheld means the live check works. Returned means it is missing, or it fails open.',
+      facts: [
+        { label: 'document returned', value: 'fail' },
+        { label: 'document withheld', value: 'pass' },
+      ],
+    },
+  ]}
+/>
+
+Write the freshness target down: "revoked access is reflected in search within five minutes" can be audited, and "we sync permissions periodically" cannot. The live check also protects documents, not facts: an answer that blends verified passages with what the model already knows is outside it.

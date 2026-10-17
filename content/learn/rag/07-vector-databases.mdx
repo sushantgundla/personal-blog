@@ -1,0 +1,158 @@
+---
+title: "Vector databases"
+subtitle: "What one actually is, and the ladder of options you should climb only as far as you need to."
+part: 2
+minutes: 7
+why: "Every RAG tutorial opens by making you sign up for a vector database, so you did. Now you run a service, pay for it and debug its client library, all for eight thousand chunks that an array in memory would search in the blink of an eye. Or the opposite: you stayed on the array, the corpus grew a hundredfold, and one tenant's search quietly started returning two results instead of five. This lesson says what a vector database adds over an array, what each rung of the ladder costs, and which signals tell you it is time to climb. You will work out the storage bill by hand and see one failure that catches Postgres users."
+wins:
+  - "Start with a numpy array and a dot product; it is correct, not a toy."
+  - "Reach for pgvector when your data already lives in Postgres."
+  - "Work out index size as chunks, times dimensions, times bytes, for one vector per chunk."
+  - "Move to a dedicated or object-storage store only for a reason you can measure."
+  - "Keep retrieval behind one search function and one upsert function so the store can change."
+quiz:
+  - q: "Beyond fast nearest-neighbour search, what does a vector database mainly add?"
+    options: ["Better embeddings than you would get from an API", "A different similarity measure that is more accurate", "An index, metadata filtering, and the ordinary database chores: persistence, updates and deletes"]
+    answer: 2
+    explain: "The maths is the same everywhere. What you buy is the index, the filtering and the boring operational machinery."
+  - q: "A corpus has 10 million chunks, one 1,024-number float32 vector each. Roughly how much memory do the raw vectors take?"
+    options: ["About 41 GB, before the index adds its own overhead", "About 410 MB", "About 4 TB"]
+    answer: 0
+    explain: "1,024 numbers at 4 bytes is 4,096 bytes per vector. Times 10 million is about 41 GB. The index comes on top."
+  - q: "A pgvector query with an HNSW index, WHERE tenant_id = $2 and LIMIT 5 sometimes returns fewer than five rows. Why?"
+    options: ["Postgres cannot combine a WHERE clause with vector search", "The index scan fetches its candidates first and the filter runs afterwards, so many candidates are thrown away", "The embedding dimension does not match the column"]
+    answer: 1
+    explain: "With the default ef_search of 40, a tenant holding 10 percent of the rows leaves about 4 candidates on average. Iterative scans, partial indexes or partitions fix it."
+  - q: "What does an object-storage, usage-billed vector store trade for paying for usage instead of idle capacity?"
+    options: ["A slower first query to a namespace that is not cached, which can take much longer than a warm one", "It cannot filter by tenant", "Its vectors cannot be exported"]
+    answer: 0
+    explain: "The data lives in object storage and is cached on first use, so the first query to a cold namespace pays several round trips. Warm queries are fast."
+  - q: "Committing to a specific vector store on day one is risky mainly because..."
+    options: ["Vector stores cannot run locally for development", "Vectors become locked in a proprietary format that cannot be exported", "You take on a service, a client library and a bill before you know your access patterns, and swapping later touches everything"]
+    answer: 2
+    explain: "The cost is operational and architectural. A thin retrieval interface keeps the choice cheap to revisit."
+deeper:
+  - { label: "pgvector - README (types, indexes, filtering, iterative scans)", href: "https://github.com/pgvector/pgvector" }
+  - { label: "turbopuffer - Architecture (object storage, namespaces, caching)", href: "https://turbopuffer.com/docs/architecture" }
+  - { label: "Notion - Two years of vector search (case study, self-reported)", href: "https://www.notion.com/blog/two-years-of-vector-search-at-notion" }
+  - { label: "Qdrant - Documentation", href: "https://qdrant.tech/documentation/" }
+---
+
+A vector database is not a new kind of maths. The scoring is the same dot product everywhere. What differs is the index that avoids doing it a million times, the filtering that runs alongside it, and how much of your week it takes to operate.
+
+## 1. What you are actually buying
+
+Strip the marketing off and a vector store is four things stacked together.
+
+| Layer | What it does | Could you build it? |
+|---|---|---|
+| Similarity scoring | Dot product or cosine over float arrays | Yes - one line of numpy |
+| An index | Finds near neighbours without scanning everything (*Indexes and the trade you are making*) | Not well, and not quickly |
+| Metadata and filtering | Stores fields beside each vector and filters during search (*Metadata and filtering*) | Yes, badly; the interaction with the index is the hard part |
+| Database chores | Persistence, updates, deletes, backups, replication, access control | Yes, and you will regret it |
+
+Rows two and four are the actual product, and neither matters at small scale. With a few thousand vectors you do not need an index, and with a corpus you rebuild from source in five minutes you do not need durability. That is why the honest advice is a ladder, not a recommendation.
+
+## 2. The ladder
+
+**Rung one: an array in your process.** Load the vectors into one `(n, d)` array, score with a matrix multiply, take the top k. It is exact, because it compares against every vector, and it has no service, no client library and no network hop. You can print the scores when something looks wrong, which is worth more during development than any feature on this page. Pickle the array beside a list of chunk texts and you have persistence. Embedded libraries sit on the same rung: as of October 2026, sqlite-vec (a SQLite extension that calls itself pre-v1) and the open-source library of LanceDB, which runs inside your process. Most internal tools never need to leave it.
+
+The size is arithmetic, and the arithmetic assumes **one vector per chunk**. A 1,024-number float32 vector is 1,024 x 4 = 4,096 bytes.
+
+<Scale
+  caption="Raw vector memory at 1,024 dimensions and one float32 vector per chunk, on a log rule. Arithmetic from stated assumptions, not a measurement; the index adds overhead. Half precision, as in pgvector's halfvec type, halves the bytes per number."
+  unit="GB"
+  min={0.01}
+  max={100}
+  fromLabel="A small tool"
+  toLabel="A large corpus"
+  marks={[
+    { at: 0.033, label: '8,000 chunks', value: '33 MB' },
+    { at: 4.1, label: '1 million chunks', value: '4.1 GB' },
+    { at: 20.5, label: '10 million, half precision', value: '20 GB' },
+    { at: 41, label: '10 million chunks', value: '41 GB', subject: true },
+  ]}
+/>
+
+Eight thousand chunks are 33 MB, so the first service you sign up for solves a problem you do not have. Ten million are 41 GB. A model that keeps a vector per token multiplies every mark by its vectors per chunk, a bill *Late interaction: one vector per token* works out.
+
+**Rung two: pgvector.** If your data is already in Postgres, this is the natural next step. As of October 2026 the extension is at version 0.8.7. Vectors sit beside your users, documents and permissions, so filters and joins are plain SQL, and a document and its vector update in one transaction. Nothing new to operate.
+
+```sql
+-- pgvector 0.8.x: schema, index, and a filtered nearest-neighbour query
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE chunks (
+  id         bigserial PRIMARY KEY,
+  doc_id     text NOT NULL,
+  tenant_id  text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  body       text NOT NULL,
+  embedding  vector(1024) NOT NULL          -- must match your model's dimensions
+);
+
+CREATE INDEX ON chunks USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX ON chunks (tenant_id);
+
+-- Without this line the filter below runs AFTER the index scan (see the failure case).
+SET hnsw.iterative_scan = strict_order;
+
+-- <=> is cosine distance, so smaller is closer. Order by it and take the top 5.
+SELECT id, doc_id, body, 1 - (embedding <=> $1) AS similarity
+FROM chunks
+WHERE tenant_id = $2
+ORDER BY embedding <=> $1
+LIMIT 5;
+```
+
+The dimension is fixed in the schema, so changing embedding model means an `ALTER TABLE` and a full re-embed, the migration *Changing the embedding model underneath a live index* walks through. The README also says a `vector` column can be indexed up to 2,000 dimensions; a bigger model needs `halfvec`, which indexes up to 4,000.
+
+**The failure case: the tenant that gets four results.** With an approximate index, the filter runs after the index scan. The scan collects its candidate list, 40 long by default, and only then checks `tenant_id`. The README's arithmetic: a condition matching 10 percent of rows leaves about 4 candidates. A tenant holding 1 percent of the table leaves 0.4, so the query usually returns nothing, with no error. Since version 0.8.0, `hnsw.iterative_scan` keeps the scan going until enough rows survive, up to a cap (`hnsw.max_scan_tuples`, 20,000 by default). Partial indexes for big tenants, or partitioning by tenant, are the other fixes. *Metadata and filtering* explains why the filter must be part of the search.
+
+**Rung three: a dedicated server.** Qdrant, Weaviate and Milvus are well-known examples as of October 2026, self-hosted or managed. You climb here for reasons you can state: tens of millions of vectors, sustained write throughput, filtering Postgres does badly, sharding, or a team that wants the operations handled.
+
+**Rung four: object storage, billed on usage.** turbopuffer is one example, as of October 2026. It keeps vectors in cloud object storage and caches what you query on local disk. You pay for use rather than for machines sitting up, and each namespace, an independent index you create per tenant, replaces hand-written sharding.
+
+Notion described this path in February 2026, as one company's self-reported account. Their earlier provider billed for uptime, so over-provisioning was costly and they wrote routing code to avoid re-sharding. Moving to usage billing cut cost by 50 percent from peak usage, they say, and a namespace per index later let them delete the routing code. They changed the embedding model in the same migration, so the speed-up cannot be credited to the store alone. The pattern carries over; the savings may not.
+
+The trade is the cold start. turbopuffer's architecture page (vendor-reported, as of October 2026) gives the first query to an uncached namespace of 1 million documents about 0.9 seconds at the median, against about 14 milliseconds once warm.
+
+## 3. Choosing between them, and when to move
+
+<Figure bare caption="The four rungs on five questions worth asking before you climb. The fit row is a rule of thumb, not a measurement; the corpus-size table in the indexes lesson is the better guide. Ops burden and cost shape change most between the free rungs and the paid ones.">
+
+| | Array or embedded library | pgvector | Dedicated server | Object storage, usage-billed |
+|---|---|---|---|---|
+| Where it runs | In your process | Your existing Postgres | A service you deploy, or a managed one | Someone else's cloud |
+| Rough fit (rule of thumb) | Up to tens of thousands | Hundreds of thousands to millions, with care | Millions and up | Millions and up, many tenants |
+| Filtering | Whatever you write | Full SQL, joins to your own tables | Strong, purpose-built | A namespace per tenant, plus attribute filters |
+| Ops burden | None | None beyond Postgres | Real if self-hosted, low if managed | Low |
+| Cost shape | Free | Whatever Postgres already costs | Servers and memory, or a monthly plan | Per use, plus a cold start |
+
+</Figure>
+
+HNSW wants the vectors in RAM, so the memory figure above, not query volume, is usually what forces a move. The signals are specific, and none of them is "it feels small-scale":
+
+- Search latency at your real corpus size exceeds your budget, measured, not guessed.
+- Vectors no longer fit comfortably in the memory you have.
+- You need concurrent writes and deletes without rebuilding an index.
+- You need filtering your current rung does badly, as in the failure case.
+
+Whatever rung you are on, keep the interface thin: one module exposing `search(query, k, filters) -> list[Chunk]`, one exposing `upsert(chunks)`, and a delete. A job that keeps the corpus fresh, as in *Keeping the index fresh without paying twice*, needs nothing else.
+
+<Compare caption="Whether the codebase calls the store's own client or one thin interface decides what climbing a rung costs later.">
+  <Panel label="Naive" title="Call the store's client directly">
+
+Every part of the codebase that needs a nearest neighbour imports the store's SDK. Moving from pgvector to a dedicated store means rewriting every one of those call sites.
+
+  </Panel>
+  <Panel label="What to do" title="One thin search and upsert">
+
+Everything talks to `search` and `upsert` and knows nothing about what is behind them. Climbing a rung is one file, an afternoon, and a re-index.
+
+  </Panel>
+</Compare>
+
+**When not to climb.** Stay on rung one if you can rebuild the corpus from source in minutes, it holds tens of thousands of chunks, and one process serves the queries. Stay on rung two while Postgres runs your product and no signal above has fired. Skip rung four for one tenant with a small corpus and steady traffic: you take on a cold start and another moving part to save money you were not spending. Skip rung three if no one will be on call for it. On any rung, a store that keeps a vector per token needs its own check, which belongs to *Late interaction: one vector per token*.
+
+> Adding a vector database is an optimisation. Do it when a measurement tells you to, and pick the rung that matches your corpus rather than the one that matches your ambitions.

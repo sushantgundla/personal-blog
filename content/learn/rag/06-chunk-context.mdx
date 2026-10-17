@@ -1,0 +1,170 @@
+---
+title: "Giving each chunk its context"
+subtitle: "A chunk cut out of its document forgets what it refers to, and there are five ways to put that back, from free to one model call per chunk."
+part: 1
+minutes: 7
+why: "A user asks for the liability cap on data breach claims. The contract is in your index. The paragraph that answers it reads 'The limit above does not apply to claims under section 9', and it ranks fourteenth, because those words say nothing about liability or breaches. Your embedding model is fine. The chunk lost what it refers to the moment you cut it out of its document. This lesson lays out five ways to put that context back, from a title line that costs nothing to a model call per chunk, and what the evidence says about each. You will count the calls for a corpus of 10,000 documents, see how a generated line goes wrong, and learn to compare chunkers fairly on your own queries."
+wins:
+  - "Explain why a bare chunk loses what it refers to, and where that bites."
+  - "Place five ways of adding context on a ladder from free to costly."
+  - "Count LLM calls for per-chunk context as documents times chunks per document."
+  - "Spot-check generated context lines against the source before they reach the index."
+  - "Compare chunkers by changing one thing at a time on your own eval set."
+quiz:
+  - q: "Why does the bare chunk 'The limit above does not apply to claims under section 9' rank poorly for 'liability cap for data breach claims'?"
+    options: ["Short chunks always embed badly, whatever they say", "The vector can only encode the words in the chunk, and neither liability nor breach appears in them", "Cosine similarity ignores words such as limit and claims"]
+    answer: 1
+    explain: "An embedding model reads only the text it is given. What the chunk refers to lives elsewhere in the document, so the vector never saw it."
+  - q: "Which way of adding context needs no LLM call and no change of embedding model?"
+    options: ["Writing a context line for every chunk with an LLM", "Late chunking with a long-context embedding model", "Putting the document title and section heading at the top of each chunk"]
+    answer: 2
+    explain: "The header line is text your parser already produced. Late chunking changes how the embedding model is run, and the LLM line costs a call per chunk."
+  - q: "Why is Anthropic's 49% fewer failed retrievals not a rule for your system?"
+    options: ["It was vendor-reported, on one embedder, with a BM25 index working alongside it, so it says little about dense search on your data", "It was measured only on reranked results, and you may not rerank", "It stops holding once a corpus passes a few thousand chunks"]
+    answer: 0
+    explain: "The figure combined contextual embeddings with contextual BM25 in one vendor setup. A later dense-only study found per-chunk context rarely beat simpler prefixes. Measure on your own data."
+  - q: "A corpus has 10,000 documents of 40 chunks each. How many LLM calls does a context line per chunk need, against one summary per document?"
+    options: ["10,000 for both, since the documents are the same", "40,000 against 10,000", "400,000 against 10,000"]
+    answer: 2
+    explain: "Per-chunk context scales with chunks: 10,000 times 40 is 400,000 calls. A document summary scales with documents."
+  - q: "You are comparing two chunkers on your own data. What should stay fixed?"
+    options: ["Nothing, since a fair test lets every part vary", "The eval set, the embedder and the metric, so that only the chunker changes", "Only the chunk size"]
+    answer: 1
+    explain: "If two things change you cannot say which one moved the score. In one study the best method also flipped between embedders and between metrics, so re-test when either changes."
+deeper:
+  - { label: "Anthropic - Introducing Contextual Retrieval", href: "https://www.anthropic.com/news/contextual-retrieval" }
+  - { label: "Caspari et al. - When is complex chunking worth it? (arXiv)", href: "https://arxiv.org/abs/2608.16586" }
+  - { label: "Jina AI - Late chunking in long-context embedding models", href: "https://jina.ai/news/late-chunking-in-long-context-embedding-models/" }
+  - { label: "Voyage AI docs - Contextualized chunk embeddings", href: "https://docs.voyageai.com/docs/contextualized-chunk-embeddings" }
+---
+
+## 1. A chunk forgets what it refers to
+
+Chunk 31 of a services contract reads: "The limit above does not apply to claims under section 9." Which limit? Which claims? A reader holding the whole contract knows that section 8 caps liability and section 9 covers data breaches. The vector for chunk 31 knows none of it, because an embedding model reads only the text it is given.
+
+The user searches for "liability cap for data breach claims". The chunk that answers that question shares almost no words with it, so search ranks it far down, and the model tells the user the cap applies to everything.
+
+This bites wherever meaning lives outside the paragraph: contracts and policies ("the above", "such claims"), manuals ("repeat for the other side"), tables that continue on the next page with no header row. *Chunking* gave you the cheapest repair, a header line on every chunk. This lesson covers what to do when that is not enough.
+
+Here is the same chunk embedded three ways, scored against the query. The scores are invented to show the order of events, not measured.
+
+| What gets embedded | Cosine to the query | Rank among 400 chunks |
+|---|---|---|
+| The bare chunk | 0.31 | 14 |
+| Header line, then the chunk | 0.52 | 3 |
+| Context line, header line, then the chunk | 0.74 | 1 |
+
+The header line helps because "Limitation of liability" matches "liability cap". It cannot supply "data breach", which only a reader of section 9 knows.
+
+<Anatomy
+  caption="What actually gets embedded for chunk 31. The sentence in the middle is written by a model that read the whole contract. The scores in the table above are invented for illustration."
+  label="One chunk, ready to embed"
+  parts={[
+    {
+      text: 'Services Agreement - 8. Limitation of liability\n',
+      name: 'Header line',
+      note: 'Free: the title and section heading, as in Chunking',
+    },
+    {
+      text: 'This chunk is from section 8 of the Acme services agreement. The liability cap there does not apply to data breach claims, which section 9 covers.\n',
+      name: 'Context line',
+      note: 'One model call, with the whole document in view',
+      subject: true,
+    },
+    {
+      text: 'The limit above does not apply to claims under section 9.',
+      name: 'The original chunk',
+      note: 'Unchanged, and still the text you show and cite',
+    },
+  ]}
+/>
+
+> Every way of giving a chunk its context moves the same information into the vector. They differ in what they charge for the move.
+
+## 2. Five rungs, from free to costly
+
+| Rung | What it adds | What it needs | What you pay in |
+|---|---|---|---|
+| 1. Header line | Title and section heading | Titles your parser already found | Nothing |
+| 2. Summary prefix | A summary of the whole document on every chunk | One LLM call per document | Calls, one per document |
+| 3. Context line | A sentence placing this chunk in its document | The document and the chunk, per chunk | Calls, one per chunk |
+| 4. Late chunking | Document-wide context inside token vectors, then averaged per chunk | A long-context embedding model | Memory while indexing |
+| 5. Contextualized embedder | A vector per chunk, computed with its neighbours in view | A hosted model that takes a document's chunks together | Whole-document tokens, and lock-in |
+
+**Rung 3** is Contextual Retrieval, which Anthropic published in September 2024. For each chunk you give a model the whole document and the chunk, and ask for a sentence or two that place it. You put the answer in front of the chunk before embedding. In Anthropic's setup the BM25 index sees the same text. Prompt caching lets you pay to read the document once, since it is the same for every chunk.
+
+**Rung 4**, late chunking (Jina, 2024, arXiv 2409.04701), swaps two steps. Instead of cutting and then embedding, you run the whole document through a long-context embedding model, then cut the token vectors at your chunk boundaries and average each piece. Every token vector was computed with the full document in view, so each average carries it. No LLM and no training are needed. *Late interaction: one vector per token* keeps every token vector; late chunking averages them into one per chunk. The whole document must fit the embedder's window (the model in Jina's tests took 8,192 tokens, as of August 2024).
+
+**Rung 5** does the same job inside the model. You send a document's chunks together, and it returns one vector per chunk. As of June 2026, voyage-context-4 from Voyage AI is the current model of this kind. Its docs (as of October 2026) give a 32,000-token window when you do the chunking yourself, 120,000 tokens per request with its server-side chunking, and bill overlap tokens as input. As of October 2026 it is offered as a hosted API (Voyage, MongoDB Atlas) and as a SageMaker model package on AWS Marketplace that runs in your own AWS account; the docs checked describe no on-premises option. Queries must be embedded with the same model as the documents, because vectors from different models do not mix. Changing models later means re-embedding every document, so keep the source text and not only the chunks (see *Changing the embedding model underneath a live index*).
+
+### What the evidence says
+
+Anthropic's own test (vendor-reported, September 2024) averaged four kinds of corpus with one embedder and scored the top 20 chunks. The failure rate fell from 5.7% to 2.9% with context on both the embeddings and the BM25 index. That is the 49% headline, and it needed both indexes. Adding a reranker took the failure rate lower still.
+
+A preprint from August 2026 (Caspari and colleagues, accepted at CIKM 2026 according to the paper) compared eight chunking methods, with dense search only: three small open embedders, no BM25, no reranker, up to a million documents. *Chunking* gives its title-prefix result. The new findings are these. The LLM-written line rarely won significantly. Late chunking fell about 6 to 9 points of Recall@100 (did the right chunk make the top 100) behind at a million documents on one corpus, and needed a lot of memory while indexing. The same caveats apply: the study scored whole documents rather than passages, and its corpora have titles.
+
+Voyage's own post (June 2026) reports a small gain over its previous contextualized model (vendor-reported); its large percentages are against older single-vector models.
+
+## 3. What it costs, and how to decide
+
+Take 10,000 documents of 40 chunks each, and a document of about 8,000 tokens (invented numbers). A context line per chunk is 400,000 calls. A summary per document is 10,000. A header line is none.
+
+<Bars
+  caption="Model calls needed to index the same corpus, by arithmetic from the stated assumptions: 10,000 documents of 40 chunks each. An illustration, not a measurement."
+  unit="calls"
+  max={400000}
+  axis="LLM calls at index time"
+  bars={[
+    { label: 'Header line', value: null, no: 'none' },
+    { label: 'Summary prefix', value: 10000 },
+    { label: 'Context line per chunk', value: 400000, subject: true },
+  ]}
+/>
+
+Without caching, every call re-reads its document: 400,000 times 8,000 is 3.2 billion input tokens. With caching, each document is written once (80 million tokens) and then read from cache, which is billed at a lower rate. The default cache lifetime is five minutes (as of October 2026), so generate all of one document's lines back to back. A document shorter than the model's minimum cacheable length (512 tokens on the newest Claude models and up to 4,096 on others, as of October 2026) is not cached, and no error tells you so.
+
+```python
+# pip install anthropic
+import os
+import anthropic
+
+client = anthropic.Anthropic()
+MODEL = os.environ["LLM_MODEL"]  # set to a current model
+
+ASK = """<chunk>
+{chunk}
+</chunk>
+Write one or two sentences that place this chunk within the whole document,
+so that a search for it finds it. Name the document, the section, and anything
+the chunk refers to. State only what the document says. Reply with the
+sentences and nothing else."""
+
+def header_line(title: str, section: str) -> str:
+    return f"{title} - {section}\n"                      # rung 1: free
+
+def context_line(doc: str, chunk: str) -> str:           # rung 3: one call
+    reply = client.messages.create(
+        model=MODEL,
+        max_tokens=150,
+        messages=[{"role": "user", "content": [
+            {"type": "text", "text": f"<document>\n{doc}\n</document>",
+             "cache_control": {"type": "ephemeral"}},    # same doc, many chunks
+            {"type": "text", "text": ASK.format(chunk=chunk)},
+        ]}],
+    )
+    return reply.content[0].text.strip()
+
+def to_embed(title, section, doc, chunk):
+    line = context_line(doc, chunk)                      # store it in its own field
+    return header_line(title, section) + line + "\n" + chunk
+```
+
+Three more costs hide behind the code. Overlap tokens are embedded twice and billed that way. Chunks times vectors per chunk sets the index size. And one edit anywhere in a document can change what every line should say, so the safest policy is to regenerate that document's lines, and to budget for it. The chunker must also be deterministic, or every run regenerates every line.
+
+**The failure to name: the confident context line.** The model writes "Liability for data breach is unlimited" when the contract only says the general cap does not apply, and section 9 sets a cap of its own. That sentence is now part of the vector. Search ranks chunk 31 first for "unlimited liability", and a user acts on it. Nothing errored. Before you index the corpus, read 50 generated lines against their sources, keep each line in its own field so you can inspect it, and decide whether the model sees it or only the vector does. Tell the model in the prompt to state only what the document says, and repeat the check when you change the prompt or the LLM.
+
+**How to decide.** Freeze the eval set from *Measuring retrieval* and change only the chunker. Pick the metric for the stage as *Measuring retrieval* explains; nDCG@10 is a score for the whole ordering, defined there. Try rung 1 first, then the next rung only if the right chunk is still missing. Re-test when the embedder changes, since in the preprint the winner flipped between embedders and between metrics. Ignore gaps under a point.
+
+**When not to use it.** Skip the per-chunk line when chunks are short and self-contained, such as FAQ pairs, glossary entries or product attributes. Skip it when the header line already closes the gap on your eval set, when the corpus is small, or when a call per chunk is more than you can afford. Skip rung 4 when documents exceed the embedder's window, and rung 5 when you must run it outside your cloud account (the docs checked describe no on-premises option) or cannot afford a full re-embed on a model change.
+
+Context lines cannot repair a table that was parsed into soup or a cut in the wrong place; those belong to *Parsing documents before you chunk them* and *Chunking*. What these methods change is the vector, and a vector needs a home. *Vector databases* starts with the size of that bill.

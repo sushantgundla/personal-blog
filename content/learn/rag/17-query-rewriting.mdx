@@ -1,0 +1,157 @@
+---
+title: "Query rewriting"
+subtitle: "Fix the query before you search - expand it, split it, turn it into a fake answer, or make a follow-up stand on its own."
+part: 3
+minutes: 8
+why: "A user types PTO carryover into your handbook search and gets nothing useful, because every page says annual leave. Another asks how refunds differ from exchanges and gets the refund page only. In chat, a third says what about the second one, which as a search string means nothing at all. Your retrieval looked fine in testing because you typed queries the way the documents are written. Users do not. This lesson covers four rewrites worth knowing, what each one costs on every query, a worked example with numbers, and the way a rewrite quietly loses the answer."
+wins:
+  - "Rewrite the query before retrieval when the user's words differ from the corpus's."
+  - "Split a multi-part question into separate retrievals and merge the results."
+  - "Use HyDE only when questions look nothing like the passages that answer them."
+  - "Resolve a follow-up into a standalone query before searching in a chat app."
+  - "Keep the original query in the mix so a bad rewrite cannot lose the answer."
+quiz:
+  - q: "What does HyDE embed?"
+    options: ["A hypothetical answer the model writes, because answers look more like passages than questions do", "The user's question, with synonyms appended", "The top retrieved passage, fed back in for a second search"]
+    answer: 0
+    explain: "HyDE has the model write a plausible answer and searches with that, which closes the shape gap between a question and a passage."
+  - q: "In a chat app, why must a follow-up be rewritten before retrieval?"
+    options: ["Because the vector index cannot store conversation history", "Because 'what about the second one' carries no meaning on its own, so its embedding points nowhere useful", "Because embedding models have a token limit for questions"]
+    answer: 1
+    explain: "The meaning lives in earlier turns, and the retriever only sees the string you pass it."
+  - q: "A question is split into 3 sub-queries. Each returns 10 chunks of about 200 tokens, and you do not rerank. About how many retrieval tokens reach the prompt?"
+    options: ["About 600", "About 2,000", "About 6,000"]
+    answer: 2
+    explain: "3 queries times 10 chunks times 200 tokens is 6,000, three times what one search would send. This is why decomposition usually travels with a reranker."
+  - q: "A user asks about the 2023 refund policy and the rewrite drops the year. What is the cheapest protection?"
+    options: ["Search with both the original and the rewrite and fuse the two lists", "Raise max_tokens on the rewrite call", "Switch to a larger embedding model"]
+    answer: 0
+    explain: "A bad rewrite then costs some ranking, not the answer, because the original query still votes for the right document."
+  - q: "You have fifty internal acronyms that docs spell out in full. What is the best first step?"
+    options: ["Add HyDE to every query", "A lookup table that expands each acronym, with no model call", "Re-embed the corpus with a larger model"]
+    answer: 1
+    explain: "A table fixes fifty query classes for the price of a file, with no added latency and no drift. Add a model call only for what the table cannot cover."
+deeper:
+  - { label: "Gao et al. - HyDE, precise zero-shot dense retrieval", href: "https://arxiv.org/abs/2212.10496" }
+  - { label: "Ma et al. - Query rewriting in retrieval-augmented LLMs", href: "https://aclanthology.org/2023.emnlp-main.322/" }
+  - { label: "Elastic - Search with synonyms", href: "https://www.elastic.co/docs/solutions/search/full-text/search-with-synonyms" }
+  - { label: "Anthropic - prompt engineering overview", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview" }
+---
+
+## 1. The gap between the question and the corpus
+
+*Chunking* chunked your documents and *Choosing an embedding model* picked the model that embeds them. Both improve the corpus side of the match. This lesson is the other side.
+
+A retriever compares one string to a corpus. If that string describes the need badly, no index tuning helps. User queries describe it badly in four specific ways.
+
+| What the user typed | Why retrieval struggles | The fix |
+|---|---|---|
+| "PTO carryover" | Docs say "annual leave", never "PTO" | Expansion |
+| "how does refund differ from exchange" | Two topics, rarely in one chunk | Decomposition |
+| "why is my build slow" | Docs never phrase anything as a question | HyDE |
+| "what about the second one?" | No meaning without the previous turns | Conversational rewriting |
+
+All four are one problem: the string you searched with is not the string that would have found the answer. So change the string first.
+
+> Retrieval is only as good as the query it is given. If the search is failing, the query is a suspect, not just the index.
+
+## 2. The four rewrites
+
+**Expansion.** Add terms the answer is likely to contain: synonyms, spelled-out acronyms, the formal word for a colloquial one. `PTO carryover` becomes `PTO paid time off annual leave carryover rollover`. This helps the keyword half of hybrid search most, because BM25 matches literal terms and more of the right terms directly raises its chances. The 2023 Query2doc paper had a model write a short pseudo-passage and append it to the query, and reported gains for both BM25 and dense retrievers. On the dense side, piling on words can also pull the embedding toward a general topic, so test it rather than assume.
+
+The cheap version needs no model: a synonym table and an acronym table for your domain. Fifty internal acronyms is fifty query classes fixed for the price of a file, and search engines ship this feature, such as the synonym sets in Elasticsearch (as of October 2026). Do that before you add a model call.
+
+**Decomposition.** Split a multi-part question into one query per part, retrieve for each, then merge the results. RRF from *Hybrid search* works as the merge. Use it when the question holds "and", "versus", "difference between", or two nouns from different parts of your docs. Chunks were split by topic, so a chunk covering both halves of a comparison usually does not exist. One search returns one side, and the model answers half the question with full confidence.
+
+The bill is context, not just latency. Take 3 sub-queries at 10 chunks of about 200 tokens each (invented sizes): 6,000 tokens reach the prompt, against 2,000 for one search. Either rerank down with *Reranking* or pay for the context.
+
+**HyDE.** The name is Hypothetical Document Embeddings. Have the model write a plausible answer, then embed and search with that instead of the question. The reason is a shape mismatch. Your corpus is made of statements and your queries are questions. "Why is my build slow?" and "Build times increase when the dependency cache is invalidated on every run" concern the same thing but differ in length, grammar and vocabulary. A hypothetical answer reads like a passage, so it lands nearer real passages.
+
+The answer need not be right. The HyDE paper (December 2022) expects the document to contain "false details" and relies on the encoder landing near real passages anyway. That is a bet, so test it on your corpus.
+
+<Flow
+  caption="The shape mismatch, closed in three steps. Embedding the hypothetical answer instead of the question is the entire trick."
+  steps={[
+    { label: 'The question', note: '"Why is my build slow?"' },
+    { label: 'Model writes a hypothetical answer', note: 'Plausible, not necessarily correct' },
+    { label: 'Embed the hypothetical answer', note: 'It reads like a passage, not a question' },
+    { label: 'Search with that embedding', subject: true, note: 'Lands nearer the real passages' },
+  ]}
+/>
+
+HyDE costs a full generation call before the search starts, so it is the most expensive of the four. It pays where questions and passages differ most, such as technical documentation and research papers. It pays less on FAQ-shaped corpora, which are already made of questions.
+
+**Conversational rewriting.** This is the one most chat apps get wrong, and the one with the clearest payoff. "What about the second one?" is clear to a human reading the thread and empty as a search query. Its embedding points at nothing, so you retrieve near-noise and blame the index. Before retrieving, rewrite the latest message into a query that stands alone, using the conversation to resolve every pronoun and implicit reference. The code uses the Anthropic Messages API (as of October 2026).
+
+```python
+import os
+import anthropic
+
+client = anthropic.Anthropic()
+MODEL = os.environ["LLM_MODEL"]  # set to a current, small, fast model
+
+history = (
+    "User: which regions support same-day delivery?\n"
+    "Assistant: London and Manchester."
+)
+question = "what about the second one?"
+
+message = client.messages.create(
+    model=MODEL,
+    max_tokens=100,
+    system=(
+        "Rewrite the user's latest message as a standalone search query. "
+        "Resolve every pronoun and implicit reference using the conversation. "
+        "Keep every entity, date and number. If the message is already "
+        "standalone, return it unchanged. Return the query only."
+    ),
+    messages=[{"role": "user", "content": f"{history}\nUser: {question}"}],
+)
+
+print(message.content[0].text)
+# Typical output, not a recorded run; wording varies by model:
+# -> "same-day delivery in Manchester"
+```
+
+<Compare caption="The same follow-up, searched two ways. The raw message carries no meaning outside the conversation; the rewrite carries all of it.">
+  <Panel label="Naive" title="Search the follow-up as typed">
+
+"what about the second one?" has no meaning outside the thread, so retrieval returns near-noise.
+
+  </Panel>
+  <Panel label="What to do" title="Search the rewritten query">
+
+"same-day delivery in Manchester" resolves the reference before the string reaches the retriever.
+
+  </Panel>
+</Compare>
+
+Two details. The instruction to return a standalone query unchanged stops the model mangling good queries. And `max_tokens` is small on purpose: a search query is a few words, and a low cap makes it hard for the model to start explaining itself.
+
+## 3. Choosing, and the way it goes wrong
+
+| Technique | Extra model calls | Extra retrievals | Best for | Skip when |
+|---|---|---|---|---|
+| Synonym or acronym table | 0 | 0 | Known domain vocabulary | You have no fixed jargon |
+| Expansion by model | 1 | 0 | Vocabulary mismatch, keyword-heavy corpora | Latency is tight |
+| Decomposition | 1 | 2 to 4 | Comparisons and multi-part questions | Questions are single-topic |
+| HyDE | 1 (a generation) | 0 | Questions unlike passages | FAQ-shaped corpora |
+| Conversational rewriting | 1 | 0 | Any multi-turn chat | Single-shot search box |
+
+If you build one, build conversational rewriting. It is not the cleverest, but without it a chat interface is broken from turn two onwards.
+
+**What it costs.** The rewrite sits in front of retrieval, and retrieval sits in front of generation, so the user waits for all three. Measure the added latency on your own stack; a small fast model keeps it down, since a rewrite needs no deep reasoning. Money is one extra call per query, on every query, forever.
+
+**The failure case: silent drift.** A rewrite is a model output, so it can be wrong, and a wrong rewrite fails silently. The user asks about the 2023 refund policy, the rewrite becomes "refund policy", and you retrieve the 2019 version and answer confidently from it. Nothing errors and the logs look healthy.
+
+Here is how keeping the original contains it (invented ranks). The original query ranks the 2023 page first and the 2019 page fourth. The rewrite ranks the 2019 page first and the 2023 page second. With RRF at k = 60, the 2023 page scores 1/61 + 1/62, about 0.0325. The 2019 page scores 1/64 + 1/61, about 0.0320. The right page wins by a hair. That is insurance, not a guarantee, but the rewrite alone would have put the wrong page on top.
+
+Three habits contain drift:
+
+- **Keep the original.** Retrieve with both the original and the rewrite, and fuse the two lists.
+- **Log both.** Store the original and the rewrite side by side. When someone reports a bad answer, you want to see what you actually searched for.
+- **Instruct against invention.** Tell the rewriter to preserve every entity, date, number and constraint, and to add nothing the conversation does not imply.
+
+**When not to use it.** Skip rewriting when queries already look like the documents: error codes, part numbers and exact titles, where BM25 already ranks the answer first. Skip it on a single-shot search box with strong hybrid search, and when the latency budget has no room for a model call. Try the lookup table first.
+
+When an agent writes its own queries, as in *Retrieval as a tool the agent calls*, rewriting becomes the agent's job: the retriever receives whatever the agent writes. Whichever route you take, rewriting feels like an improvement and sometimes is not, so *Measuring retrieval* is how you find out.

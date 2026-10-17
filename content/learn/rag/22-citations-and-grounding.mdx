@@ -1,0 +1,209 @@
+---
+title: "Citations and grounding"
+subtitle: "Give every chunk an id, require the answer to cite it, then check the quoted span really appears where the model said it did."
+part: 4
+minutes: 7
+why: "The answer looks right. The tone is confident, the details are specific, and you have no idea whether any of it came from your documents. Reading every response yourself does not scale past a demo. The fix is small and it turns a judgement call into an automatic check: give each chunk a stable id, make the model cite the id and quote the words it used, then verify in code that the words are in that chunk. This lesson covers the prompt, the check, what to do when nothing was retrieved, and the one thing a citation still cannot prove."
+wins:
+  - "Put a stable id on every chunk in the prompt, and require it in the answer."
+  - "Verify in code that the quoted span appears in the chunk that was cited."
+  - "Make 'the documents do not answer this' an explicit output, including when retrieval returns nothing."
+  - "Log the cited ids and count failures, so a bad answer traces to a passage."
+  - "Remember a citation proves the passage exists, not that the claim is right."
+quiz:
+  - q: "Why give each chunk an id in the prompt?"
+    options: ["It reduces the token count of the passages", "It makes the model reason more carefully about each one", "It gives the answer something checkable to point at, so verification becomes code"]
+    answer: 2
+    explain: "An id turns 'did it make this up?' into a lookup you can automate on every response."
+  - q: "What does verifying a citation actually check?"
+    options: ["That the quoted span appears in the chunk that was cited", "That the answer is factually true", "That the chunk was ranked first by retrieval"]
+    answer: 0
+    explain: "It is a string check against the source text - useful, cheap, and narrower than truth."
+  - q: "A permission check removes every retrieved passage before the prompt is built. What should the user see?"
+    options: ["An answer from the model's own knowledge, marked as unverified", "The exact failure line: the documents provided do not answer this", "A retry with the permission filter switched off"]
+    answer: 1
+    explain: "An empty set is a real case. Falling back to unchecked text turns a safe refusal into a leak."
+  - q: "The cited passage says refunds are available within 14 days for members. The answer quotes 'within 14 days' and drops 'for members'. What does the check say?"
+    options: ["It passes: the quoted words are in the chunk, though the claim is wrong for non-members", "It fails, because the check compares the claim against the passage for meaning", "It fails, because the cited id was never in the prompt"]
+    answer: 0
+    explain: "The check matches strings, not meaning. Quote the whole sentence so the qualifier travels with the claim."
+  - q: "As of October 2026, what do Anthropic's built-in citations guarantee about each citation?"
+    options: ["That the claim it is attached to is true", "That the cited passage is the best one in the corpus", "That it points at a real span of a document you sent, not that the span supports the claim"]
+    answer: 2
+    explain: "The API parses the citation, so the pointer is valid. Whether the passage supports the sentence is still your check."
+deeper:
+  - { label: "Anthropic - Citations in the Messages API", href: "https://platform.claude.com/docs/en/build-with-claude/citations" }
+  - { label: "Liu et al. - Evaluating verifiability in generative search engines", href: "https://arxiv.org/abs/2304.09848" }
+  - { label: "Gao et al. - Enabling LLMs to generate text with citations (ALCE)", href: "https://aclanthology.org/2023.emnlp-main.398/" }
+  - { label: "Chroma - Context Rot, with distractor results", href: "https://www.trychroma.com/research/context-rot" }
+---
+
+## 1. An id is a handle
+
+Put an id next to each passage and ask the model to cite it. Start with the ids, because a bad id makes everything downstream useless.
+
+| Id style | Example | Verdict |
+|---|---|---|
+| Position in this prompt | `[3]` | Bad - means nothing once the prompt is gone |
+| Random per query | `[a4f9]` | Bad - untraceable in logs |
+| Document plus chunk index | `[msa-2024#7]` | Good - stable, finds the passage again |
+| Content hash | `[c8f21a]` | Good for dedupe, unreadable in an answer |
+| Human-readable slug | `[refund-policy-digital]` | Good - and users can read it |
+
+The test: six months from now, someone pastes a cited id into a search box. Does it find the exact passage? If not, the citation is decoration.
+
+Store the id with the chunk at index time, beside the metadata from *Metadata and filtering*, and carry it through retrieval and reranking untouched. It is the same string in your index, prompt, logs and UI.
+
+The prompt format only needs to be easy to parse, because your verifier will parse it:
+
+```text
+[refund-policy-digital] Refunds on digital goods are available within 14 days of purchase.
+
+[refund-policy-physical] Physical goods may be returned within 30 days if unopened.
+```
+
+> A citation is not a promise from the model. It is a handle you can pull on in code.
+
+## 2. The prompt, including permission to fail
+
+Three instructions do most of the work, and the third is the one people leave out.
+
+**Answer only from the passages below.**
+
+**After each claim, cite the id it came from, and quote the words you used.** The quote is what makes checking possible. Without it you can confirm the id exists; with it you can confirm the id supports the words.
+
+**If the passages do not answer the question, say exactly that and stop.** A model with no permitted way to fail will not fail - it will produce something. Naming the failure output, with exact words, turns confident invention into a signal you can count and alert on.
+
+| Vague | Specific |
+|---|---|
+| "Do not make things up" | "If the passages do not contain the answer, reply exactly: The documents provided do not answer this." |
+| "Cite your sources" | "After each claim, put the chunk id in square brackets, and quote the supporting words in double quotes." |
+| "Be accurate" | "Do not combine facts from different passages into a single claim." |
+
+The last row matters most: a model that takes half a fact from each of two chunks and cites both has two valid citations and a claim that is in neither.
+
+The failure branch has two cases beyond a plain miss. First, the set can be empty. A live permission check, as in *Permissions that travel with the data*, or a metadata filter can remove every passage. The only correct output is then the failure line; code that quietly retries without the filter turns a refusal into a leak. Second, near-miss passages make abstaining harder. Near-miss passages hurt models unevenly, as Chroma's vendor study found, so test yours and count the refusals; *Measuring the whole answer* shows how.
+
+### Let the API do the pointing
+
+As of October 2026, Anthropic's Messages API can return citations itself. You mark a document block, or a `search_result` block whose `source` is your chunk id, with `"citations": {"enabled": true}`, and the text blocks of the reply carry a list of citations.
+
+| You send | Citation type | It points at |
+|---|---|---|
+| Plain text document | `char_location` | A character range |
+| PDF | `page_location` | A page range |
+| `search_result` block | `search_result_location` | Your `source` string and a block range |
+
+The docs say the API parses the citations, so each pointer is guaranteed valid, and `cited_text` does not count toward output tokens. That removes both the regex and the output cost of typed quotes. Two limits from the same docs: citations with structured outputs return a 400 error, and a scanned PDF with no extractable text cannot be cited. A valid pointer is still only a pointer, so the rest of this lesson applies unchanged.
+
+## 3. Verifying, and what it cannot tell you
+
+Here is the check for the prompt-based route. It splits the answer into sentences, pulls each quoted span and the id after it, and confirms the words are in that chunk. The answers are hand-written, so no model produced this output.
+
+```python
+import re
+
+chunks = {
+    "policy-14": "Refunds on digital goods are available within 14 days of purchase.",
+    "policy-15": "Physical goods may be returned within 30 days if unopened.",
+}
+
+def normalise(text):
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+def verify(answer):
+    results = []
+    for sentence in re.split(r"(?<=[.!?\]])\s+(?=[A-Z])", answer):
+        cites = re.findall(r'"([^"]+)"\s*\[([^\]]+)\]', sentence)
+        if not cites:
+            results.append(("UNCITED", sentence))
+        for quote, chunk_id in cites:
+            chunk = chunks.get(chunk_id)
+            if chunk is None:
+                results.append(("UNKNOWN_ID", chunk_id))
+            elif normalise(quote) not in normalise(chunk):
+                results.append(("BAD_QUOTE", f"{chunk_id}: {quote}"))
+            else:
+                results.append(("OK", chunk_id))
+    return results
+
+print(verify('Digital goods: "available within 14 days of purchase" [policy-14].'))
+print(verify('Digital goods: "refundable for 14 days" [policy-14].'))
+print(verify('Opened items: "returned within 60 days" [policy-99].'))
+print(verify('Digital goods: "available within 14 days of purchase" [policy-14]. Physical returns are free.'))
+# -> [('OK', 'policy-14')]
+# -> [('BAD_QUOTE', 'policy-14: refundable for 14 days')]
+# -> [('UNKNOWN_ID', 'policy-99')]
+# -> [('OK', 'policy-14'), ('UNCITED', 'Physical returns are free.')]
+```
+
+Normalising whitespace and case matters, because models reflow text. For heavily formatted corpora, strip punctuation too, or use a fuzzy ratio with a high threshold.
+
+<Steps
+  caption="Four responses run through the same check. Only the last one, where the id was really in the prompt and the quoted words are really inside that chunk, is one you can ship without a person reading it first."
+  steps={[
+    {
+      label: 'Unknown id',
+      title: 'Cited id was never in the prompt',
+      body: 'The chunk was never sent, so there is nothing to check the quote against. This is invention.',
+      facts: [
+        { label: 'cited', value: '[policy-99]' },
+        { label: 'verdict', value: 'FAIL - block the answer' },
+      ],
+    },
+    {
+      label: 'Bad quote',
+      title: 'Quote not found in the cited chunk',
+      body: 'The id is real, but the quoted words are not in policy-14. The model paraphrased or blended.',
+      facts: [
+        { label: 'cited', value: '[policy-14]' },
+        { label: 'verdict', value: 'FAIL - block, or retry once' },
+      ],
+    },
+    {
+      label: 'No citation',
+      title: 'A claim with no citation at all',
+      body: 'The check has no id to look up, so it can neither confirm nor deny the sentence.',
+      facts: [
+        { label: 'cited', value: 'none' },
+        { label: 'verdict', value: 'flag in UI, or strip it' },
+      ],
+    },
+    {
+      label: 'Verified',
+      title: 'Everything checks out',
+      body: 'The id was in the prompt, and the quoted words are inside it, whitespace and case aside.',
+      facts: [
+        { label: 'cited', value: '[policy-14]' },
+        { label: 'verdict', value: 'ship it, log the id' },
+      ],
+    },
+  ]}
+/>
+
+What to do on a failure is a product decision, and the rate is worth counting. Here is one invented day of logs, 400 answers.
+
+| Result | Answers | Share | Response |
+|---|---|---|---|
+| Verified | 352 | 88% | Ship, log the ids |
+| Unknown id | 12 | 3% | Block |
+| Bad quote | 21 | 5.25% | Block, or retry once |
+| Uncited claim | 15 | 3.75% | Flag or strip the sentence |
+
+Retrying the 33 blocked answers once adds 33 calls to 400, about 8 percent more. The check is a string comparison, so it adds no model call. The quotes cost output: five claims with 20-word quotes add about 100 words to every answer, which is the argument for the built-in `cited_text`, as it costs no output tokens. Track the 88 percent: it moves when you change the prompt, the model or the chunk size, and a drop is worth an alert.
+
+Citations are also a feature. Show the cited passage beside the answer, as a link or a side panel, and the reader can check you instead of trusting you. Bug reports then arrive with the passage attached.
+
+### The failure to name: the true quote, the wrong claim
+
+Verification proves one narrow thing: the quoted words exist in the cited chunk. Suppose policy-14 really says refunds on digital goods are available within 14 days of purchase, for members only. The model answers "Digital goods are refundable within 14 days" and quotes "within 14 days of purchase" [policy-14]. Every quoted word is present, the check passes, and a non-member is told something false.
+
+Three habits narrow the gap. Ask for the whole sentence in the quote, so the qualifier sits beside the claim. Treat cross-passage claims, heading-only passages and superseded documents as known holes: all pass the check, and the last is a metadata problem. For high-stakes answers add a second check: a model given one claim and its passage, asked whether the passage supports it. That is one call per claim, so 5 claims on 400 answers is 2,000 calls, and the judge is noisy; *Measuring the whole answer* shows how to measure it.
+
+How big is the gap? An April 2023 audit of four commercial generative search engines found that, on average, 51.5 percent of sentences were fully supported by their citations and 74.5 percent of citations supported their sentence. Those engines are old, so read the numbers as the shape of the problem. Retrieval matters too: in one August 2025 agent study (BrowseComp-Plus), swapping BM25 for a stronger embedder raised every tested model's citation precision.
+
+Page images break the quote check, because there is no text to match. Cite the page number and show the page. Do not promise region-level pointers: models boxing the supporting region did very poorly in ViDoRe V3. *Retrieving pages as images* covers the rest.
+
+**When not to use it.** Skip the quote check when nobody will look: a low-stakes brainstorm gains nothing from the extra output and the blocked answers. It fits badly when an answer is a computation or a summary of many passages, because no single span supports it; cite the source ids and let a person or a judge read it. If you need strict JSON with Anthropic's built-in citations, you cannot have both as of October 2026, so put the ids in a field and verify them yourself.
+
+What you have bought is the removal of the crudest failure, text with no source, and every remaining answer is traceable to a passage a human can read in seconds. That is not correctness. Correctness needs the evaluation in *Measuring the whole answer*, and for anything consequential it still needs a person.

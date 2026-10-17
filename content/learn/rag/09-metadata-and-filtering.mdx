@@ -1,0 +1,170 @@
+---
+title: "Metadata and filtering"
+subtitle: "The half of retrieval that is not semantic, including the half that is a security boundary."
+part: 2
+minutes: 7
+why: "You asked for the top 10 chunks for this tenant and got 3, or none, and the query looked fine. Or worse - a user saw a paragraph from a document they were never allowed to open, because the only thing standing between them and it was a sentence in the system prompt. Both come from the same misunderstanding: treating filters as a refinement of similarity search rather than as a constraint on it. This lesson shows you where the filter has to run, what to store so you can filter at all, and which filters must be enforced by the database and never by the model."
+wins:
+  - "Filter before or during the search, never on the results afterwards."
+  - "Expect post-filtering to return fewer than k, sometimes zero."
+  - "Enforce permissions in the query, never in the prompt."
+  - "Store tenant, source, date, type and permissions at index time."
+  - "Blend recency as a score adjustment, not as a hard date cutoff."
+quiz:
+  - q: "You run a top-10 vector search and then drop everything not matching tenant_id in your application code. The failure mode is..."
+    options: ["You often return fewer than 10 results, and sometimes none, with no error", "Results from the wrong tenant leak through", "Latency doubles"]
+    answer: 0
+    explain: "The search picked its 10 before the filter ran, so anything the filter removes is simply gone and nothing refills the list."
+  - q: "Permission filtering belongs..."
+    options: ["In an instruction telling the model to ignore documents the user cannot see", "In a post-processing step that redacts sensitive text from the answer", "In the retrieval query itself, as a hard constraint the database enforces"]
+    answer: 2
+    explain: "A retrieved chunk is already exposed; only a constraint the store enforces can stop it being retrieved in the first place."
+  - q: "The main risk of a very selective pre-filter over an HNSW index is..."
+    options: ["It returns results from outside the filter", "The graph walk can wander into filtered-out regions and come back with poor recall or too few hits", "It disables cosine similarity"]
+    answer: 1
+    explain: "The index was built over all vectors, so a narrow filter can leave the traversal with few valid neighbours; stores handle this with filter-aware traversal, iterative scans or a fallback to an exact scan."
+  - q: "Which metadata is impossible to recover later if you do not capture it at index time?"
+    options: ["The length of the chunk in tokens", "The cosine similarity to a given query", "The source URL, document version and ingestion timestamp for that specific chunk"]
+    answer: 2
+    explain: "Provenance is a property of the moment you ingested, and once the source document has changed or moved, it cannot be reconstructed."
+  - q: "A good way to favour recent documents is..."
+    options: ["Filter out anything older than 90 days", "Combine the similarity score with a decay term based on age, so old but highly relevant chunks can still win", "Re-embed old documents so their vectors score lower"]
+    answer: 1
+    explain: "A hard cutoff throws away correct answers that happen to be old; a decay term expresses a preference rather than a rule."
+deeper:
+  - { label: "pgvector - filtering with HNSW and iterative index scans", href: "https://github.com/pgvector/pgvector" }
+  - { label: "Qdrant - filtering and payload indexes", href: "https://qdrant.tech/documentation/search/filtering/" }
+  - { label: "PostgreSQL - row security policies", href: "https://www.postgresql.org/docs/current/ddl-rowsecurity.html" }
+  - { label: "Weaviate - how filtering works with the vector index", href: "https://docs.weaviate.io/weaviate/concepts/filtering" }
+---
+
+Similarity gets the attention, but it is about half of what a retrieval query does. The other half is structured and boring: this tenant, this language, this document type, published after this date, visible to this user. None of it is fuzzy, all of it has to be exactly right, and one item is a security boundary.
+
+## 1. Where the filter runs decides whether it works
+
+Three places a filter can happen, and they are not interchangeable.
+
+| Approach | What happens | Result |
+|---|---|---|
+| **Post-filter** | Search the whole index for top k, then discard non-matching rows in your code | Fewer than k results, often zero. Silent. |
+| **Pre-filter** | Restrict to matching rows first, then search among them | Correct count, correct rows |
+| **Filtered search** | Push the filter into the index so it is applied during traversal | Correct, and fast at scale |
+
+Post-filtering is the trap, because it is the natural way to write the code. Ask for 10, filter, and now you have 2. Nothing errored. The user sees a thin answer. Take 50 tenants of similar size, with results spread evenly across them (an invented, simple case). A top 10 then holds 10 / 50 = 0.2 of your tenant's chunks on average, so most queries come back empty.
+
+The fix is to put the filter in the query. In SQL that is a `WHERE` clause next to the `ORDER BY` on distance; in a dedicated store it is the filter argument in the search call. Either way the store, not your application, decides how to combine the constraint with the index.
+
+<Compare caption="Same constraint, two different places to apply it. Only the right-hand version lets the store return the k you asked for; post-filtering fails silently, with no error when the count comes back short.">
+  <Panel label="Naive" title="Post-filter: search, then discard">
+
+Ask the store for the top k, then drop rows that fail the constraint in your own code. The store picked its k without knowing the constraint, so whatever the filter removes is gone.
+
+  </Panel>
+  <Panel label="What to do" title="Pre-filter or filtered search: constrain first">
+
+Push the constraint into the query itself. The store combines it with the index, so it can return the count you asked for.
+
+  </Panel>
+</Compare>
+
+Combining the two is hard, and a `WHERE` clause does not make that go away. An HNSW graph was built over every vector, so a narrow filter means the walk keeps reaching nodes it must reject. Stores differ: some keep filter-aware structures (as of October 2026, Weaviate's docs name ACORN as its default filter strategy since v1.34), and some fall back to an exact scan when few rows match.
+
+Postgres with pgvector looks safe and is not. As of October 2026, its README says the filter runs after the index scan: with the default `hnsw.ef_search` of 40, a condition matching 10% of rows leaves about 4 rows on average, not 10. Since version 0.8.0 you can turn on iterative index scans, which keep scanning until enough rows pass. The query below never returns a row it should not; whether it returns 10 depends on those settings. Count the rows on real data.
+
+```sql
+-- Constraints and similarity in one query. Returns up to 10; with an HNSW
+-- index it can return fewer unless iterative scans are on (see above).
+SELECT id, doc_id, body,
+       1 - (embedding <=> $1) AS similarity
+FROM chunks
+WHERE tenant_id  = $2                             -- hard boundary
+  AND allowed_group_ids && $3                     -- hard boundary: any of the user's groups
+  AND lang       = $4
+  AND doc_type   = ANY($5)
+  AND published_at <= now()
+ORDER BY embedding <=> $1
+LIMIT 10;
+
+-- Recency as a preference, not a cutoff: blend similarity with age decay.
+-- Sorting by a computed score cannot use the HNSW index: it scores every matching row.
+SELECT id, body,
+       (1 - (embedding <=> $1))
+         - 0.15 * (1 - exp(-EXTRACT(epoch FROM now() - updated_at) / (86400 * 180)))
+       AS score
+FROM chunks
+WHERE tenant_id = $2 AND allowed_group_ids && $3
+ORDER BY score DESC
+LIMIT 10;
+```
+
+The second query is a starting point. The 180-day time constant and the 0.15 weight are yours to set, by trying a couple of values against real queries.
+
+<Dial
+  caption="The decay term from the query above, felt as a knob. The bands are illustrative - the 180-day time constant and the 0.15 weight are yours to tune against real queries, not fixed here."
+  name="chunk age"
+  min={0}
+  max={730}
+  step={10}
+  start={0}
+  unit="days"
+  bands={[
+    { at: 0, label: 'Fresh', outcome: 'No decay penalty yet - similarity alone decides the ranking.' },
+    { at: 90, label: 'A few months old', outcome: 'The penalty is about 0.06, enough that a fresher, slightly weaker match can start to outrank it.' },
+    { at: 180, label: 'One time constant', outcome: 'The penalty is about 0.095 of the 0.15 maximum - an old chunk needs a clear similarity edge to still win.' },
+    { at: 365, label: 'A year old', outcome: 'The penalty is about 0.13, close to the full 0.15 - only a chunk that is clearly the best match survives being this old.' },
+  ]}
+/>
+
+## 2. Permissions are not a preference
+
+Everything above is about quality. This part is about not having an incident.
+
+If a chunk is retrieved, it is exposed. The model reads it, and the answer can quote or leak it. Even if the answer is clean, retrieved chunks are usually logged, traced and shown in a citations panel. No later step makes an unauthorised chunk safe.
+
+So: **the permission filter is part of the retrieval query, enforced by the store.** Not a line in the system prompt, not a check on the generated answer. A prompt instruction is a suggestion to a probabilistic system; a `WHERE` clause is a constraint.
+
+<Flow
+  caption="What happens after a chunk is retrieved. Nothing downstream can undo it - the enforcement branch has to be decided before the query runs, not after."
+  steps={[
+    { label: 'Retrieval query runs', note: 'Against the store, with whatever constraints it was given' },
+    {
+      label: 'The permission check',
+      subject: true,
+      branch: [
+        'Enforced by the store - only permitted chunks come back',
+        'Left to a prompt instruction - the chunk comes back regardless',
+      ],
+    },
+    { label: 'Whatever comes back is exposed', note: 'In the context window, usually logged, and often shown in a citations panel' },
+  ]}
+/>
+
+| Where the check lives | Is it a control? |
+|---|---|
+| `WHERE` clause or store filter in the retrieval query | Yes |
+| Postgres row-level security on the chunks table | Yes, and it survives a forgotten `WHERE` (not if the app connects as the table owner) |
+| A separate index or collection per tenant | Yes, and the strongest isolation available |
+| An instruction in the system prompt | No |
+| Checking the model's answer afterwards | No - the data was already read |
+
+A permission check run on retrieved chunks before the model sees them is still a post-filter, with the same fewer-than-k failure, so fetch more candidates than you need; *Permissions that travel with the data* covers where such a check fits. Two practical notes. First, permissions change and vectors do not: if access is derived from groups that change often, store the group ids on the chunk and resolve the user's groups at query time, rather than baking a user list into the row. Second, decide what an empty result means. A user who may see nothing should get "I could not find anything", and your logs should record that the filter emptied the candidate set, or you cannot tell a permissions bug from a retrieval bug.
+
+> A filter that protects data is a database constraint. If it lives in a prompt, it is not a control, it is a wish.
+
+## 3. What to store, and store it now
+
+Metadata you did not capture at index time is usually gone. The source has moved or been edited, and no reprocessing will tell you what it said when you ingested it. A metadata column costs little next to a 1024-dimension vector, so store more than you think you need.
+
+| Field | Why | Recoverable later? |
+|---|---|---|
+| `tenant_id`, `allowed_group_ids` | Security boundary | Sometimes, painfully |
+| `source_url`, `doc_id`, `doc_title` | Citations, and users trust answers they can check | No, once the source moves |
+| `doc_version`, `text_hash`, `meta_hash` | Detecting what changed; the two hashes drive incremental re-indexing | No |
+| `ingested_at`, `updated_at` | Recency ranking, staleness alerts | No |
+| `doc_type`, `lang`, `section_path` | Everyday filtering, and debugging | Only by reprocessing |
+| `chunk_index`, `parent_id` | Small-to-big retrieval, neighbour expansion | Only by re-chunking |
+| `embedding_model` | Knowing which vectors are stale during a model migration | No |
+
+People leave out the last row and regret it: without it, a half-finished re-embed leaves a table you cannot reason about.
+
+Filter columns need an index like any other: a `tenant_id` with no B-tree index makes filtered search slow in a way that looks like the vector index's fault (Qdrant's docs, as of October 2026, say the same of payload indexes). A filter matching a handful of rows is best answered by an exact scan; one matching nearly every row may as well not exist. Do not build the full permission machinery for a single-tenant corpus with no access rules, and keep a hard date cutoff for real rules, such as a policy that took effect on a set day.

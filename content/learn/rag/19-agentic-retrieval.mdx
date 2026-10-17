@@ -1,0 +1,150 @@
+---
+title: "Retrieval as a tool the agent calls"
+subtitle: "Hand the model a search tool and let it decide when to search and what to ask, then cap the rounds and keep the results lean."
+part: 3
+minutes: 8
+why: "A teammate asks an internal assistant why checkout fails for gift cards. Your pipeline runs one search, sends five chunks, and the answer cites the refund policy. A coding agent given the same question runs a search, spots a function name in a snippet, searches for that name, opens two files and cites a config flag. Nobody wrote that sequence. The model chose it, one tool call at a time. This lesson is about handing retrieval to the model as a tool: when that beats a fixed pipeline, how many searches to expect, which tools to offer, and how to fence the loop so one hard question cannot eat the budget."
+wins:
+  - "Choose between up-front and just-in-time retrieval, and know why most systems mix both."
+  - "Expect the number of searches to depend on the model and its effort setting."
+  - "Keep hybrid search and reranking under the tool, because a better retriever means fewer wasted calls."
+  - "Offer a lexical search, a semantic search and a read tool, with the permission check inside each."
+  - "Cap rounds and tokens, treat repeats as thrash, and judge the loop on a frozen corpus."
+quiz:
+  - q: "What separates just-in-time retrieval from the up-front retrieval of earlier lessons?"
+    options: ["The model keeps light handles such as ids and loads data by tool call as it works", "It swaps vector search for keyword search and keeps the rest of the pipeline", "It puts the whole corpus into the prompt so that no search is needed at all"]
+    answer: 0
+    explain: "Up front, your code picks the context before the model starts. Just in time, the model keeps handles and pulls in what it needs, one tool call at a time."
+  - q: "In one study, GPT-5 averaged over twenty searches per hard question while two small open models searched fewer than twice. What does this show?"
+    options: ["Those models were given a lower round cap than the other models in the study", "Those models had a weaker retriever behind the search tool than the rest", "How many searches an agent runs depends mostly on the model and its effort setting"]
+    answer: 2
+    explain: "Some models barely search even when told to, and raising one model's reasoning effort moved it from about 2 searches to about 18. Your cap only limits the top."
+  - q: "In the same study a dense retriever replaced BM25 under the same agents. What happened?"
+    options: ["Agents searched far more, since there was more to find", "Accuracy rose and the number of searches usually fell a little", "Nothing changed, because the agent rewrites every query anyway"]
+    answer: 1
+    explain: "A better retriever raised accuracy for every agent tested and usually cut search calls, so the index under the tool still matters."
+  - q: "Why offer lexical and semantic search as two tools instead of one?"
+    options: ["So that every query pays for both searches and the model merges the results", "Because a model cannot call a hybrid search tool that fuses the two lists", "Exact names suit lexical search, plain words suit semantic, and the agent picks per query"]
+    answer: 2
+    explain: "A fused hybrid search is a fine single tool to start with. Two tools hand the choice to the agent, which can try the exact name first and ask in plain words second."
+  - q: "Why cap both rounds and total tokens on an agent-driven retrieval loop?"
+    options: ["Each call re-reads everything gathered so far, so cost outgrows the call count and a stuck run never stops itself", "Vector databases refuse more than a fixed number of queries per minute, so the loop must stay under it", "Agents lose the ability to call search after about twelve rounds, whatever you configure"]
+    answer: 0
+    explain: "In the invented example, 5 calls read about 15,000 tokens and 25 calls read about 273,000. A cap is the only reliable stop for a run that never converges."
+deeper:
+  - { label: "Chen et al. - BrowseComp-Plus, a fixed-corpus benchmark for search agents", href: "https://arxiv.org/abs/2508.06600" }
+  - { label: "Anthropic - Effective context engineering for AI agents", href: "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" }
+  - { label: "Cursor - Improving agent with semantic search (vendor post)", href: "https://cursor.com/blog/semsearch" }
+  - { label: "Subramanian et al. - Keyword search is all you need (AWS authors, preprint)", href: "https://www.amazon.science/publications/keyword-search-is-all-you-need-achieving-rag-level-performance-without-vector-databases-using-agentic-tool-use" }
+---
+
+## 1. Two ways to get context to the model
+
+Every lesson so far retrieved **up front**. Your code rewrites the query, searches, reranks and hands the model a fixed set of chunks, and the model never chooses. The other style is **just in time**. The model starts with the question and a few light handles - file paths, document ids, saved queries - and calls tools to load what it needs as it goes. Anthropic's engineering essay on context (September 2025) describes it this way and says its coding tool, Claude Code (as of September 2025), works like that, with commands such as grep and file reads.
+
+*Iterative retrieval* covered a loop you write, with a decide step and a cap. Here the loop belongs to the model, and your code supplies the tools and the fence. How to design a tool and how the loop itself runs are the Agents course: *Designing a tool a model can actually use* and *A loop, not a brain*.
+
+<Compare caption="The same question handled two ways. Neither side wins everywhere: the left is predictable, the right can follow a trail.">
+  <Panel label="Up front" title="Your pipeline picks the context">
+
+One search, one model call, a cost you can predict. It fails when the first search misses, because nothing gets a second try.
+
+  </Panel>
+  <Panel label="Just in time" title="The model picks, call by call">
+
+It can follow a trail: search, read, then search for a name it just learned. Each round is a model call, so it is slower and its cost varies.
+
+  </Panel>
+</Compare>
+
+Most real systems mix the two: a little context up front, such as a project summary, and the rest on demand. The essay notes that cues such as file names and dates help the agent judge how and when to use a file. A wiki with titled, dated pages gives it names to search for; a flat pile of untitled chunks gives it nothing. The essay also admits the cost: "runtime exploration is slower than retrieving pre-computed data."
+
+> Up front, your code decides what the model sees. Just in time, the model decides, and your code decides what it is allowed to reach.
+
+## 2. The model sets the pace, and the retriever still decides
+
+How many searches will the agent run? Not a number you set. A study from August 2025, BrowseComp-Plus, fixed a corpus of about 100,000 web pages and 830 very hard multi-clue questions, so agent and retriever could be varied one at a time. GPT-5 (as of August 2025) averaged over 20 searches per question. Two small open models averaged under one and under two, although they were told to search. Raising the reasoning effort of an open-weight model, gpt-oss-120B (as of August 2025), moved it from about 2 searches to about 18. Rounds are a property of the model and its setting. These are puzzle-like questions, so read the direction, not the counts.
+
+Retrieval quality still decides the outcome. Swapping BM25 for a dense retriever, Qwen3-Embedding-8B (as of August 2025), raised GPT-5's accuracy from 55.9% to 70.1% and trimmed its searches from 23.2 to 21.7. A smaller model, GPT-4.1 (as of August 2025), went from 14.6% to 35.4%. Given only the labelled evidence documents, it reached 93.5%, so finding documents, not reading them, was the bottleneck. The study tested neither hybrid fusion nor a reranker, so it says a better index helps, not by how much. Keep *Hybrid search* and *Reranking* behind the search tool.
+
+## 3. Tools, a trace, and the fence
+
+The evidence for which tools to offer is mixed, and mostly from preprints and vendors:
+
+| Finding | Source | How far to trust it |
+|---|---|---|
+| Semantic search plus grep beat grep alone; the gain was larger in big repositories | Cursor, November 2025 | Vendor-reported, no sample sizes, code not prose |
+| An agent with only keyword tools reached over 90% of RAG scores on five document sets scored with RAGAS | AWS authors, December 2025 preprint ([arXiv 2602.23368](https://arxiv.org/abs/2602.23368)), using Claude 3 Sonnet (as of December 2025) | Own runs, corpus sizes not stated, no latency or cost |
+| No single retrieval family won every task; agent runs missed every needed file on 27% to 35% of samples | Agent Retrieval Bench, July 2026 | Preprint, 427 samples from 25 code repositories |
+
+Read together, the evidence says keyword tools alone may be enough on some corpora. The AWS paper states no corpus sizes, so take it as a reason to try the cheap version first. Add semantic search when the corpus is large or the wording varies. In Cursor's online test the code-retention gain was 0.3% overall and 2.6% on repositories of 1,000 or more files, which is why you should segment your results.
+
+Offer lexical and semantic search as two tools, not one. Exact names, error codes and identifiers suit lexical search, plain-words questions suit semantic search, and the agent picks per query. One fused hybrid search is a fine first tool. Add a **read** tool. In BrowseComp-Plus results were cut to 512 tokens, and a tool that fetched whole documents lifted GPT-4.1 from 35.4% to 43.6%, while a small open model barely used it. Return lean results, and check permission inside the tool, never in the prompt.
+
+```python
+# The tools only. The loop that calls them belongs to the Agents course.
+# `index` stands for your existing hybrid + rerank pipeline.
+def search_tool(mode, use):
+    return {"name": f"search_{mode}",
+            "description": use + " Snippets are cut off: call read for the full text.",
+            "input_schema": {"type": "object", "required": ["query"], "properties": {
+                "query": {"type": "string"},
+                "k": {"type": "integer", "minimum": 1, "maximum": 10}}}}
+
+SEARCH_LEXICAL = search_tool("lexical", "Exact names, error codes and identifiers.")
+SEARCH_SEMANTIC = search_tool("semantic", "Questions in plain words.")
+READ_TOOL = {
+    "name": "read",
+    "description": "Read lines start to end of one document by id, at most 120 lines.",
+    "input_schema": {"type": "object", "required": ["doc_id", "start", "end"], "properties": {
+        "doc_id": {"type": "string"}, "start": {"type": "integer"}, "end": {"type": "integer"}}},
+}
+
+# `user` and `seen` come from your code, never from the model's arguments,
+# so the model cannot widen its own access.
+def search(mode, query, k=5, *, user, seen):
+    hits = index.search(query, mode=mode, k=min(k, 10), groups=user.groups)
+    fresh = [h for h in hits if h.id not in seen]
+    seen.update(h.id for h in fresh)
+    if not fresh:
+        return "No new results. Change the query or answer from what you have."
+    return "\n".join(f"{h.id} | {h.title} | {h.updated:%Y-%m-%d}\n  {h.text[:240]}..." for h in fresh)
+
+def read(doc_id, start, end, *, user):
+    doc = index.get(doc_id, groups=user.groups)
+    if doc is None:
+        return "Not found."
+    start = max(start, 1)
+    return "\n".join(doc.text.splitlines()[start - 1 : min(end, start + 119)])
+```
+
+Here is an invented trace for "why does checkout fail for gift cards?" over a wiki and a code repository.
+
+| # | Tool call | Result | What the agent does next |
+|---|---|---|---|
+| 1 | search_semantic, the question | wiki-340 Gift card FAQ, wiki-212, wiki-87 | The FAQ mentions gc_balance_check, but explains nothing |
+| 2 | search_lexical, "gc_balance_check" | code-1189 gift.py, code-0412 flags.yaml | Opens the code first |
+| 3 | read code-1189, lines 40 to 90 | With gc_check_enabled false, every gift card is rejected | Needs the flag value |
+| 4 | read code-0412, lines 1 to 40 | gc_check_enabled is false in production | Needs the reason |
+| 5 | search_lexical, "gc_check_enabled" | wiki-501 release notes: switched off during a vendor migration | Stops: code and release note agree, so it cites both |
+
+<Flow
+  caption="One round of the loop. The model chooses the tool; your code runs it, checks permission, trims the result and counts the round."
+  steps={[
+    { label: 'The model', note: 'Reads the question and everything gathered so far' },
+    {
+      label: 'Picks a tool',
+      branch: ['search_lexical or search_semantic', 'read - one document', 'none - it answers'],
+    },
+    { label: 'Your code', note: 'Permission check, lean result, round counted', subject: true },
+  ]}
+  back={{ from: 3, to: 1, label: 'Round again, until the model answers or your cap stops it' }}
+/>
+
+**What it costs.** Five calls look cheap, but every turn re-reads everything gathered so far. Assume 500 tokens for the question and instructions and 800 per tool result (both invented). Turn n reads 500 + 800 x (n - 1) tokens, so six turns read 15,000 in all, against about 1,500 for one search that sends five 200-token chunks. A run of 25 near-duplicate calls takes 26 turns and reads about 273,000 tokens, 18 times the trace above. Prompt caching can discount the repeated prefix; measure your own bill. *Why the bill exploded* covers the pattern.
+
+**Two named failures.** The agent that never reads: five searches, no read call, and a confident answer built on a snippet cut mid-sentence. Say in the tool description that snippets are cut off, and count read calls per run. The agent that never stops: 25 near-duplicate searches. The `seen` set above turns repeats into "No new results", the thrash check from *Iterative retrieval* moved into the tool. Add a hard cap, say 12 rounds or 80,000 tokens read in total (invented; 12 rounds make 13 turns and read about 69,000 here, so the token cap guards bigger results). On a question nobody wrote down, such as "which customers will the next pricing change affect", the run ends at round 12 with "not found" and the queries it tried. Clear old results as the run grows: *What the loop remembers within one run* covers it, and *Planning a run, and knowing when to stop* covers the budget.
+
+**Measuring it.** Evaluate offline on a frozen corpus, as BrowseComp-Plus does, so a score change is the agent's and not the data's. Online, watch a downstream signal and split by corpus size or question type, since the average hides the lift. *Measuring retrieval* and *Measuring the whole answer* cover the method.
+
+**When not to use it.** Skip it when one search answers the question, as in an FAQ lookup: the pipeline is cheaper and faster. Skip it on latency-bound paths, where every round is a model call plus a search. Skip it when your corpus has no names or structure to steer by, because exploration then spends context on dead ends. Skip it when you need predictable cost. *When RAG is the wrong tool* places this among the other options.
