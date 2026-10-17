@@ -9,7 +9,7 @@ wins:
   - "Read approximate search as a recall-for-speed dial that you control."
   - "Tune HNSW with ef_search at query time, no rebuild needed."
   - "Tune IVF with nprobe, and remember it needs training data to build."
-  - "Measure recall against exact search on a sample before you trust any default."
+  - "Measure index recall against exact search on a sample before you trust any default."
 quiz:
   - q: "Exact nearest-neighbour search over a million vectors is..."
     options: ["Correct by construction, but its cost grows with the corpus", "Impossible without an index, because the scan is too slow to run", "Less accurate than HNSW because it does not use a graph to navigate"]
@@ -30,7 +30,7 @@ quiz:
   - q: "The right way to know your index settings are good enough is..."
     options: ["Run a sample of real queries through both exact and approximate search and compare the overlap of the top k", "Use the defaults, which are tuned by the library authors", "Raise ef_search until queries feel slow, then back off"]
     answer: 0
-    explain: "Exact search is the ground truth, so measuring recall against it turns tuning into a number rather than a feeling."
+    explain: "Exact search is the ground truth, so measuring index recall against it turns tuning into a number rather than a feeling."
 deeper:
   - { label: "Malkov and Yashunin - HNSW, the original paper", href: "https://arxiv.org/abs/1603.09320" }
   - { label: "FAISS - guidelines to choose an index", href: "https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index" }
@@ -121,9 +121,9 @@ Default to HNSW. Reach for IVF when memory is the binding constraint, usually co
 
 > Approximate search is not a worse kind of search. It is the same search with a dial on it, and the dial is only dangerous when you do not know where it is set.
 
-## 3. Measure recall, then tune
+## 3. Measure index recall, then tune
 
-Take a sample of real queries. Run each one through exact search to get the true top k. Run it through your index. Compare the overlap. Say the true top 10 for one query are ten rows, and the index returns eight of them plus two strangers: recall@10 for that query is 8 / 10 = 0.8. Average that over a few hundred queries and you have your **recall@k**, the number you tune against.
+Take a sample of real queries. Run each one through exact search to get the true top k. Run it through your index. Compare the overlap. Say the true top 10 for one query are ten rows, and the index returns eight of them plus two strangers: recall@10 for that query is 8 / 10 = 0.8. Average that over a few hundred queries and you have your **index recall@k**, the number you tune against. It scores the index against exact search, not the system against the right answer. That is a different measure from the recall@k of *Measuring retrieval*, which counts the queries whose right chunk lands in the top k.
 
 ```python
 # pip install numpy
@@ -147,16 +147,16 @@ def measure(index, queries, ann_search, k=10):
 # search(q, k, ef_search=...): your store's own call
 for ef in (10, 40, 100, 200, 400):
     r, ms = measure(index, sample_queries, lambda q, k: search(q, k, ef_search=ef))
-    print(f"ef_search={ef:<4} recall@10={r:.3f}  {ms:.1f} ms/query")
+    print(f"ef_search={ef:<4} index recall@10={r:.3f}  {ms:.1f} ms/query")
 ```
 
 Recall typically climbs steeply, then flattens, while latency keeps climbing. You want the elbow - the point past which you pay real milliseconds for a fraction of a percent.
 
 Two things the sweep teaches:
 
-- Measure at the `k` you actually use. Recall@10 and recall@50 are different numbers, and the sweep should use the `k` your reranker consumes.
-- Recall against exact search is not the same as your system being good. It only measures whether the index found what brute force would have found. If exact search itself misses the right chunk, the problem is upstream in embeddings or chunking, and no index setting will help.
+- Measure at the `k` you actually use. Index recall@10 and index recall@50 are different numbers, and the sweep should use the `k` your reranker consumes.
+- Index recall is not the same as your system being good. It only measures whether the index found what brute force would have found. If exact search itself misses the right chunk, the problem is upstream in embeddings or chunking, and no index setting will help.
 
-**When not to tune at all.** If exact search fits your latency budget, skip the index and this section. If a filter leaves only a few thousand rows, an exact scan over them often beats the graph, as *Metadata and filtering* explains. And once recall at your `k` is high enough that misses are rare, stop: the remaining errors are more likely in chunking or embeddings than in the index.
+**When not to tune at all.** If exact search fits your latency budget, skip the index and this section. If a filter leaves only a few thousand rows, an exact scan over them often beats the graph, as *Metadata and filtering* explains. And once index recall at your `k` is high enough that misses are rare, stop: the remaining errors are more likely in chunking or embeddings than in the index.
 
-Re-measure after your corpus changes substantially. Index quality is a function of the data in it, so settings that gave 0.98 recall at 100,000 vectors are a claim about a corpus you no longer have. *Measuring retrieval* applies the same habit to the whole retriever, not only the index.
+Re-measure after your corpus changes substantially. Index quality is a function of the data in it, so settings that gave 0.98 index recall at 100,000 vectors are a claim about a corpus you no longer have. *Measuring retrieval* applies the same habit to the whole retriever, not only the index.
