@@ -1,0 +1,160 @@
+---
+title: "Stop reasons and refusals"
+subtitle: "An HTTP 200 means a reply arrived, not that you got an answer. Sort every reply before you use it."
+part: 3
+minutes: 7
+why: "You validated the output, added a schema, and the dashboard stayed green. Then a nightly batch of two hundred tickets wrote nine rows with a blank urgency, and a week of billing showed charges for requests that returned nothing. No exception was raised in either case: the rows were replies that stopped early, and the charges were refusals that your prompt had invited. This lesson is the field you read before you touch the body, and the four outcomes it sorts a reply into."
+wins:
+  - "Read stop_reason before you parse, and treat anything other than a finished reply as not yet an answer."
+  - "Treat max_tokens as failed even when the text parses; raise the cap, or lower effort if the answers were over-thought."
+  - "Expect a refusal as a normal HTTP 200, check its category, and throw away any partial output."
+  - "Never ask for the model's reasoning in the answer text or in a field; that is a prompt bug you wrote."
+  - "Pick blocks by type, because block zero may be an empty thinking block and a reply can have no visible text."
+quiz:
+  - q: "Your code parses a reply with no error. What is still unproven?"
+    options: ["Whether the reply finished, because stop_reason may say it was cut off or refused", "Whether the field names are spelled correctly", "Whether the model used the right language"]
+    answer: 0
+    explain: "A parse tells you the text was well formed, and a tolerant parser can make a cut-off reply look fine."
+  - q: "A request is declined by the safety classifiers. How does that arrive?"
+    options: ["As an HTTP 429 you can retry with backoff", "As a 400 invalid_request_error naming the policy", "As a normal HTTP 200 with stop_reason set to refusal"]
+    answer: 2
+    explain: "Nothing is thrown, so a client that only catches exceptions will treat the empty or partial body as a result."
+  - q: "Which prompt is most likely to draw a reasoning_extraction refusal, as of October 2026?"
+    options: ["Return one short quote that supports the answer", "Describe in one sentence what you did", "Write your full reasoning in a trace field before the answer"]
+    answer: 2
+    explain: "Asking for the reasoning verbatim or in a fixed field is the pattern the vendor names, while a short explanation or evidence is fine."
+  - q: "At medium effort a call ends with max_tokens and no text. The sensible first move is..."
+    options: ["Raise the cap if the answers needed the reasoning, or lower effort if they were over-thought", "Send the same request again until one finishes", "Remove the schema so the reply is shorter"]
+    answer: 0
+    explain: "Thinking tokens count against the cap, so the two real fixes are more room or less thinking, and an identical resend changes neither."
+  - q: "Why is reading resp.content[0].text unsafe on Sonnet 5.5?"
+    options: ["It is removed from the SDK", "The first block is always a tool call", "The first block can be an empty thinking block"]
+    answer: 2
+    explain: "Collect the text blocks by type instead, and treat a reply with none as its own outcome."
+deeper:
+  - { label: "Anthropic — refusals and fallback", href: "https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback" }
+  - { label: "Anthropic — stop reasons", href: "https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons" }
+  - { label: "Anthropic — prompting Claude Sonnet 5.5", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5" }
+  - { label: "Anthropic — what is new in Sonnet 5.5", href: "https://platform.claude.com/docs/en/models/sonnet-5-5/whats-new-sonnet-5-5" }
+  - { label: "Anthropic — structured outputs", href: "https://platform.claude.com/docs/en/build-with-claude/structured-outputs" }
+---
+
+This is not a lesson about HTTP errors, which your client library already raises. It is about the replies that come back successfully and still are not answers. *Validating what comes back* checked the content. This lesson checks that there is any content to check.
+
+## 1. Read the stop reason before the body
+
+Every reply carries a `stop_reason`, the model's account of why it stopped writing. It is the cheapest check you have, and it is the one that tells you whether the body is finished. As of October 2026 the vendor's list is short.
+
+<Figure bare caption="The stop reasons on the vendor's page, and what each asks of your code. The first row is the only one that means you have an answer.">
+
+| `stop_reason` | Meaning | Your move |
+|---|---|---|
+| `end_turn` | The model finished | Go on and parse |
+| `max_tokens` | The cap was reached | Failed; fix the cap or the effort |
+| `refusal` | A classifier declined | Read the category; section 2 |
+| `tool_use` | The model wants a tool run | Run it and send the result back |
+| `stop_sequence` | One of your stop strings fired | Read which one |
+| `pause_turn` | A server-side tool loop hit its limit | Send the content back to continue |
+| `model_context_window_exceeded` | The context window filled | Treat as truncated |
+
+</Figure>
+
+**`max_tokens` is a failure even when the text parses.** A reply cut after the closing brace of the third item still parses. The vendor says to treat the stop as failed whatever the body looks like. Thinking tokens count against the cap and thinking is on by default on Sonnet 5.5, so a cap sized for a short answer is often too small. The vendor also reports that with a schema at low or medium effort the model occasionally thinks until it hits the cap (as of October 2026). The documented fixes are two: raise the cap if the answers needed the reasoning, lower the effort if they were over-thought. *Steering how much it thinks* has the dials.
+
+**A finished reply can still be empty.** Two shapes catch people. The first block may be an empty `thinking` block, so `resp.content[0]` is not your text. And as of October 2026 the vendor notes that Haiku 5.5 at `xhigh` effort, in multi-turn chat, can put the whole answer in thinking and return no visible text. Pick blocks by type, as the helper below does, and count "no text" as an outcome of its own.
+
+When you cannot use a schema, the vendor's Sonnet 5.5 guide describes a different trap: the model often drafts in the text and writes the JSON last. Parse the last JSON value, not the span from the first brace to the last, which swallows the drafts. The vendor's method is to scan for each `{` or `[`, parse one value, skip past it, and keep the final one. They report nearly every response became usable, with no counts.
+
+## 2. A refusal is a normal reply
+
+Current Claude models run classifiers that can decline a request. The result is HTTP 200 with `stop_reason` set to `refusal` and a `stop_details` object holding a `category` and an `explanation` (as of October 2026). Both can be null. The page lists five categories, with Haiku 5.5 listing four and no `reasoning_extraction`.
+
+<Figure bare caption="The refusal categories and what to do with each. Billing is the vendor's rule as of September 2026 and, in its words, may change.">
+
+| `category` | Billed if refused before any output | What to do |
+|---|---|---|
+| `cyber` | No | Fallback to another model is documented; benign security work can trigger it |
+| `frontier_llm` | Yes | Fallback is documented; benign ML work can trigger it |
+| `reasoning_extraction` | Yes | Fix your prompt; there is no fallback |
+| `bio` | Yes | No fallback named in the sources read here; do not loop |
+| `general_harms` | No | No fallback named in the sources read here; do not loop |
+
+</Figure>
+
+Three rules cover most of it. **Discard partial output.** A refusal can land mid-stream after some text has gone out, and the vendor says to treat that text as incomplete. **Do not resend the same request to the same model.** The vendor's Haiku 5.5 page says an identical resend usually refuses again, and the same logic probably holds elsewhere. The way out the vendor documents is a different Claude model, either through server-side fallback (beta, the Claude API only, not Haiku 5.5) or through SDK middleware or a retry you write. The Sonnet 5.5 notes report that the server-side form covers `cyber` and `frontier_llm`. The detail belongs to *Retries and fallbacks*. **Remember that you pay.** A refusal before any output is billed for `frontier_llm`, `reasoning_extraction` and `bio`, not for `cyber` or `general_harms`, and mid-stream refusals bill the input plus whatever streamed. Every refusal counts against your rate limit.
+
+`reasoning_extraction` is the one you cause: it comes from a prompt that asks for the reasoning inside the output, such as a `<thinking>` section or a `trace` field. *Thinking out loud* walks through that case. The wording can hide in a system prompt, a skill or a tool description, so search all three. A short explanation or the evidence behind a result is fine. To see how it reasoned, read the `thinking` blocks. The vendor does not say whether ordinary "show your working" phrasing trips the classifier, and this lesson does not know either.
+
+> A reply that parsed has only told you it was well formed. The stop reason tells you whether it was finished.
+
+## 3. One wrapper, four outcomes
+
+Put the sorting in one place so that no caller can skip it. This wrapper turns any reply into one of four outcomes. The call uses the SDK helper from *Structured outputs in practice*. The parameter and attribute names come from the vendor docs as of October 2026 and were not run here, so confirm that your SDK version exposes `stop_details` before you rely on it.
+
+```python
+import logging
+from dataclasses import dataclass
+from anthropic import Anthropic
+from pydantic import BaseModel, Field
+
+client = Anthropic()
+log = logging.getLogger(__name__)
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+class Ticket(BaseModel):   # the triage model from Validating what comes back
+    urgency: int = Field(ge=1, le=5)
+    owner: str | None
+    quote: str
+
+@dataclass
+class Result:
+    outcome: str                    # ok | truncated | refused | empty
+    text: str = ""
+    category: str | None = None
+
+def classify(resp) -> Result:
+    if resp.stop_reason == "refusal":
+        details = getattr(resp, "stop_details", None)   # may be null, and so may category
+        return Result("refused", category=getattr(details, "category", None))
+    if resp.stop_reason in ("max_tokens", "model_context_window_exceeded"):
+        return Result("truncated")
+    if resp.stop_reason != "end_turn":
+        raise ValueError(f"unhandled stop_reason: {resp.stop_reason}")
+    text = text_of(resp)
+    return Result("ok", text) if text.strip() else Result("empty")
+
+resp = client.messages.parse(
+    model=MODEL,
+    max_tokens=2000,   # thinking is on by default and counts against this
+    system="Triage the ticket. Use null for an owner the text does not name.",
+    messages=[{"role": "user", "content": ticket_text}],
+    output_format=Ticket,
+)
+result = classify(resp)
+if result.outcome == "ok":
+    ticket = resp.parsed_output   # then check owner and quote, as in the previous lesson
+else:
+    log.error("outcome=%s category=%s raw=%r", result.outcome, result.category, text_of(resp))
+```
+
+The `ValueError` is deliberate. If a stop reason shows up that you did not plan for, you want a loud failure on day one, not a silent default. Each outcome then maps to one action.
+
+<Figure bare caption="What each outcome should do next. Only the first row reaches your validator.">
+
+| Outcome | What happened | Action |
+|---|---|---|
+| `ok` | Finished, with text | Validate and use it |
+| `truncated` | Cap or window reached | Raise `max_tokens`, or lower effort; never use the body |
+| `refused` | Classifier declined | By category: fix the prompt, fall back to another model, or give up |
+| `empty` | Finished, no visible text | Read the blocks by type; check effort and display settings |
+
+</Figure>
+
+**The failure this prevents.** Say a batch job of two hundred tickets runs at medium effort. Nine replies stop at `max_tokens` just after the `urgency` field, and a repair library closes the object so each one parses (the counts are an illustration). Without the check, those nine rows enter your table with a blank. A second, quieter version: a team adds a `<thinking>` section to its prompt, some calls start drawing billed refusals, and the team reads it as random flakiness and retries. Each retry draws the same refusal and is billed again. The `refused` outcome with its category would have named the cause in the first log line.
+
+**When not to use all this.** A prototype does not need a taxonomy: `if resp.stop_reason != "end_turn": raise` is the whole feature, and it already beats most code. Do not retry `bio` or `general_harms` in a loop, and, in this course's view, do not reword a request until the classifier lets it through, because that is probing a safety system and you are billed for some of the attempts. Fixing a `reasoning_extraction` prompt is different: there the fault is your own request, and the vendor's remedy is to read the reasoning from thinking blocks instead. Fallback is not free either: the fallback model sees the same data, and a refusal that came first can be billed on top.
+
+Next: every reply now lands in one of four outcomes, and *Retries and fallbacks* decides which of them deserve another call.
