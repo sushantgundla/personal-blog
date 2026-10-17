@@ -2,55 +2,57 @@
 title: "What a model is made of"
 subtitle: "Frozen numbers, one repeated attention step, and two training stages. That is the whole product."
 part: 1
-minutes: 8
-why: "You picked the bigger model because bigger sounded safer, and it came back slower, dearer, and no better at your actual job. Then someone asked whether it learns from the prompts you send it, and you were not certain either way. Both questions live one level below the API, in what the thing is made of. This lesson opens the box just far enough — the frozen weights, the step that makes long prompts expensive, and the training stage that really decides how a model behaves — so your next model choice is reasoned instead of guessed."
+minutes: 7
+why: "You picked the bigger model because bigger sounded safer, and it came back slower, dearer, and no better at your actual job. Then your token estimate, made with a rule of thumb, came out well short once you moved to a newer model. And someone asked whether the model learns from the prompts you send it, and you were not certain either way. All three questions live one level below the API, in what the thing is made of. This lesson opens the box just far enough, so your next model choice is reasoned instead of guessed."
 wins:
-  - "Pin the exact model version string — new weights are a new model, not an update."
-  - "Read parameter count as a cost and memory signal, never as a quality score."
-  - "Budget in tokens, not words — a token is a word fragment, and long prompts cost more than the extra words suggest."
-  - "Blame training data and post-training, not architecture, when two same-size models differ."
+  - "Pin the exact model id, and keep a test running, because the weights under an id never change but the serving code around them can."
+  - "Read parameter count as a memory and cost signal, never as a quality score."
+  - "Count tokens with the provider's own counter for the model you will call, not with a words-to-tokens rule of thumb."
+  - "Put letter-level and exact-arithmetic work in code, because the model sees tokens and not characters."
   - "Choose a model by testing it on your own task, because no spec sheet predicts that."
 quiz:
   - q: "During normal serving, the numbers inside a model change..."
-    options: ["Slowly, as it learns from the requests it handles", "Never — they are frozen when training finishes", "Only once the context window fills up"]
+    options: ["Slowly, as it learns from the requests it handles", "Never. They are frozen when training finishes", "Only once the context window fills up"]
     answer: 1
     explain: "Serving is read-only arithmetic over a fixed file; nothing you send is written back into the weights."
-  - q: "A model is bad at counting the letters in a word because..."
-    options: ["The word usually arrives as one token, and the model never sees the letters inside it", "Counting is switched off by the API", "The word is too rare to have appeared in training"]
+  - q: "You estimated 100,000 tokens for a prompt on one model, and now you are moving to another. What should you do?"
+    options: ["Count it again with the new model's own counter, because the same text can give a different number", "Keep the estimate, because a token count is a property of the text", "Multiply the word count by four thirds, which works for every model"]
     answer: 0
-    explain: "The tokenizer hands the model numbers, not characters, so letter-level work belongs in your code rather than in the prompt."
+    explain: "Each model family ships its own tokenizer, so the same text can split into a different number of tokens; a rule of thumb cannot stand in for the counter."
   - q: "You double the length of your prompt. The attention work roughly..."
     options: ["Stays the same", "Doubles", "Quadruples"]
     answer: 2
     explain: "Attention compares every token with every other token, so the number of pairs grows with the square of the length."
-  - q: "Two models with the same architecture and the same parameter count behave differently mainly because of..."
-    options: ["The programming language of the serving stack", "Their training data and their post-training", "How many accelerators serve them"]
+  - q: "You pinned a model id and its answers still drifted last week. Which explanation fits what the provider documents?"
+    options: ["The weights were quietly updated under the same id", "The serving code around the weights can change, even when the weights do not", "A pinned id is only a pointer to the newest version"]
     answer: 1
-    explain: "Architecture is largely shared and largely public; what differs is what they read and how they were tuned afterwards."
-  - q: "A base model is the output of..."
-    options: ["Pre-training only, before any instruction tuning", "Preference tuning on ranked answers", "Compressing a larger model to run on less memory"]
-    answer: 0
-    explain: "Pre-training produces a text continuer; every instruction-following habit is added later."
+    explain: "Anthropic says the weights under an id stay fixed, while the router, safety classifiers and sampling logic around them can change, so keep a small test running."
+  - q: "Two models have the same architecture and parameter count but behave differently. The main cause is..."
+    options: ["The programming language of the serving stack", "How many accelerators serve them", "Their training data and their post-training"]
+    answer: 2
+    explain: "Architecture is largely shared and public; what differs is what each model read and how it was tuned afterwards."
 deeper:
+  - { label: "Anthropic: token counting, with the endpoint and the tokenizer note", href: "https://platform.claude.com/docs/en/build-with-claude/token-counting" }
+  - { label: "Anthropic: model IDs and versioning, including weights versus serving infrastructure", href: "https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions" }
   - { label: "Attention Is All You Need (the transformer paper)", href: "https://arxiv.org/abs/1706.03762" }
-  - { label: "Training Compute-Optimal Large Language Models (Chinchilla)", href: "https://arxiv.org/abs/2203.15556" }
-  - { label: "Training language models to follow instructions with human feedback", href: "https://arxiv.org/abs/2203.02155" }
-  - { label: "Tiktokenizer — paste text and watch it split into tokens", href: "https://tiktokenizer.vercel.app/" }
+  - { label: "Training language models to follow instructions with human feedback (the post-training paper)", href: "https://arxiv.org/abs/2203.02155" }
 ---
 
-You can rent one of these for a fraction of a cent and never think about what it is. That works right up until you have to choose between two of them, or explain to someone why the small one is worse at your task, or work out why adding a few thousand words to a prompt cost more than a few thousand words should. This lesson opens the box far enough to answer those.
+You can rent one of these for a fraction of a cent and never think about what it is. That works until you must choose between two of them, or work out why a few thousand extra words cost more than you budgeted. This lesson opens the box far enough to answer those.
 
 ## 1. It is a file of frozen numbers
 
-A model is a large array of numbers called **weights**. Training sets those numbers. Serving reads them. Once a model is shipped, the file does not change — not while it answers you, not after a long conversation, not ever.
+A model is a large array of numbers called **weights**. Training sets those numbers. Serving only reads them. Once a model ships, the file does not change, not while it answers you and not after a long conversation.
 
-Everything you notice about a model follows from that:
+Three things follow:
 
-- **It cannot learn from your conversation.** Whatever you send is arithmetic input for one request and then it is gone. Whether your data is *stored* or later used for training is a policy question about the provider, and a completely different question from this one.
+- **It cannot learn from your conversation.** What you send is input for one request and then it is gone. Whether your data is *stored*, or later used for training, is a policy question about the provider. It is a different question from this one.
 - **There is no lookup table inside.** Facts are not rows it reads. They are patterns baked into the numbers, which is why it can be confidently wrong about one.
-- **An updated model is a different file.** Behaviour can shift between versions — a prompt that worked may not, and an output format may drift. Pin the exact version string in your code rather than a floating alias, and re-run your tests when you move.
+- **An updated model is a different file.** Anthropic says the weights under a model id never change, and that an update ships under a new id (as of Oct 2026). So pin the full id in your code and re-run your tests when you move.
 
-**Parameter count** is simply how many numbers are in that file, quoted in billions. It is the number everyone reaches for, and it is worth knowing exactly what it buys.
+Pinning has a limit. The same page says the serving code around the weights (the router, the safety classifiers, the sampling logic) can change under an unchanged id, so behaviour can shift slightly without a new file. Keep a small test running after you ship. *Timeouts, fallbacks, and failures that look like success* covers how that shows up.
+
+**Parameter count** is how many numbers are in the file, quoted in billions. It is the figure everyone reaches for, so it helps to know exactly what it buys.
 
 | Parameter count predicts | Parameter count does not predict |
 |---|---|
@@ -59,54 +61,50 @@ Everything you notice about a model follows from that:
 | The ceiling on how much it could have memorised | How good its tool calling or JSON output is |
 | Whether it fits on hardware you own | How current its knowledge is |
 
-Two things make this less useful than it looks. First, closed providers mostly do not publish parameter counts at all, so for frontier models the number is not available to compare with. Second, even where it is published, training data and post-training move quality more than size does. A well-trained smaller model beating a larger, older one is not an upset. It is the normal case.
+**When this does not apply.** Two cases break the table. First, closed providers mostly do not publish parameter counts (as of Oct 2026, from what I could see; I did not survey every provider), so for those models there is nothing to compare. Second, in a **mixture-of-experts** model only a slice of the network works on each input. The total count then sets the memory you need, while the active slice sets the speed. *What fits on a GPU* works through what that means for hardware. In both cases, quality is better judged by testing than by counting.
 
 ## 2. Tokens in, attention inside, and why length costs more
 
-Before any arithmetic can happen, your text has to become numbers. A **tokenizer** cuts the string into chunks called **tokens** and looks each chunk up in a fixed vocabulary to get an integer. That list of integers is what the model receives. It never sees your string. The answer comes back the same way in reverse: the model picks a number, the tokenizer turns it back into a chunk of text.
+Before any arithmetic, your text has to become numbers. A **tokenizer** cuts the string into chunks called **tokens** and looks each chunk up in a fixed vocabulary to get an integer. The model receives only those integers. The answer comes back the same way in reverse.
 
 <Flow
-  caption="The round trip a request actually makes. The model in the middle never sees your words — only the integers the tokenizer hands it — and the same lookup runs in reverse to turn its answer back into text."
+  caption="The round trip a request makes. The model in the middle never sees your words, only the integers the tokenizer hands it, and the same lookup runs in reverse on the way out."
   steps={[
-    { label: 'Your text', note: 'A string, not yet visible to the model as words' },
-    { label: 'Tokenizer', note: 'Cuts the string into chunks and looks each one up in a fixed vocabulary' },
-    { label: 'Integers', note: 'The only thing the model actually receives', subject: true },
-    { label: 'The model', note: 'Reads and predicts entirely in these numbers' },
+    { label: 'Your text', note: 'A string, not yet numbers' },
+    { label: 'Tokenizer', note: 'Cuts it into chunks and looks each one up in a fixed vocabulary' },
+    { label: 'Integers', note: 'The only thing the model receives', subject: true },
+    { label: 'The model', note: 'Reads and predicts in these numbers' },
     { label: 'Tokenizer, in reverse', note: 'Turns the predicted numbers back into text' },
     { label: 'Your answer' },
   ]}
 />
 
-A token is usually a few characters. Sometimes it is a whole common word, more often it is a fragment of a longer one. The cuts are not where a reader would put them:
+A token is usually a few characters. Sometimes it is a whole common word, more often a fragment of a longer one. The cuts are not where a reader would put them:
 
 | What you write | How it tends to split |
 |---|---|
-| `the`, `and`, `is` | One token each — common words sit in the vocabulary whole |
-| `unfathomable` | Several tokens, broken into fragments you would not have chosen |
-| `token` and ` token` (with a leading space) | Two different tokens — the space belongs to the word after it |
-| `1234567` | Digit groups that ignore place value, so arithmetic starts out mangled |
-| Japanese, Arabic, Hindi | Far more tokens than the character count suggests, so the same meaning costs more |
+| `the`, `and`, `is` | One token each, because common words sit in the vocabulary whole |
+| `unfathomable` | Several tokens, in fragments you would not have chosen |
+| `token` and ` token` (leading space) | Two different tokens, because the space belongs to the word after it |
+| `1234567` | Digit groups that ignore place value |
+| Japanese, Arabic, Hindi | Often more tokens than the character count suggests, depending on the tokenizer |
 
-For ordinary English the rule of thumb is roughly four characters per token, or about three tokens per four words. Treat it as a rule of thumb and nothing firmer: every model family ships its own tokenizer with its own vocabulary, so the same sentence counts differently on each. Paste your own text into a tokenizer such as [Tiktokenizer](https://tiktokenizer.vercel.app/) and watch the cuts appear. Ten seconds of that does more than any description.
+**How many tokens is my text?** There is no safe rule of thumb. Every model family ships its own tokenizer, and providers change them. As of Oct 2026, Anthropic says its newer tokenizer gives about 30% more tokens for the same text than its older one, so a million tokens now holds roughly 555,000 words where it once held about 750,000 (those two figures imply nearer 35%, so count with the provider's tool). The fix is to ask the provider. Anthropic offers a token-counting endpoint, and as of Oct 2026 it is free to call (it has its own rate limit). The count is an estimate, and the real figure can differ by a small amount. The code at the end of this lesson uses it.
 
-Two consequences matter, and both show up in production.
+To watch the cuts happen, try [Tiktokenizer](https://tiktokenizer.vercel.app/). It is a third-party page, and I could confirm only that it lists an OpenAI tokenizer, so its counts will not match Claude's. Use it to see the idea, not to budget.
 
-**The model is blind to letters.** A word usually arrives as a single number, not as a row of characters, so counting the letters in a word, reversing a string, checking a spelling or adding two long numbers exactly are all things it has no clean way to do. It will answer anyway, and it will sometimes be wrong in a way that looks careless. Push that work into code — a tool call, a few lines of Python, a calculator — instead of asking the model to look at something it cannot see.
+**Failure case: the model cannot see letters.** Ask a model how many times *r* appears in "raspberry". The word arrives as a few tokens, not as a row of characters, so the model has no clean way to count inside it. It can answer "2" with complete confidence. The same blindness hits reversing a string, checking a spelling and adding two long numbers exactly. Push that work into code, such as a tool call or a few lines of Python, instead of asking the model to look at something it cannot see.
 
-**Tokens are the unit you are billed in, and the unit latency scales with.** Input and output are priced per token, rate limits are counted in tokens, and the wait before the first word appears is mostly the model reading your input tokens. So tokens, not words and not characters, are the thing you budget. Everything below is about why that budget stretches faster than you expect.
+Tokens are also the unit you are billed in and rate-limited in, and the wait before the first word is mostly the model reading your input tokens. So you budget in tokens, not words.
 
-The architecture that consumes those tokens is a **transformer**: a stack of identical blocks, each doing two things in turn — an attention step, then a small network applied to each token on its own.
+The architecture that consumes those tokens is a **transformer**: a stack of identical blocks, each doing an attention step and then a small network applied to each token on its own. In attention, every token scores itself against every other token and takes in a weighted blend of what is relevant. Stack that step dozens of times and each token has absorbed its context. That is how the model knows that *it* means the database and not the query.
 
-Attention is the part worth understanding. In one line: **every token looks at every other token and pulls in whatever is relevant to it.**
-
-Slightly deeper, because the shape of the cost falls out of it. Each token produces three vectors — a query (what am I looking for), a key (what do I offer), and a value (what I would contribute). The model scores every query against every key, turns those scores into weights that add up to one, and gives each token a weighted blend of the other tokens' values. Stack that step dozens of times and the representation of each token has absorbed the context around it. That is how the model knows that *it* in your sentence refers to the database and not the query.
-
-Now count the comparisons. Every token against every other token, so `n` tokens means about `n²` pairs.
+Now count the comparisons. Every token against every other token means `n` tokens give about `n²` pairs.
 
 > Attention compares every token with every other token. Double the prompt, and you roughly quadruple that part of the work.
 
 <Bars
-  caption="The pair count from the rule above, plotted at 1x, 2x and 4x an illustrative prompt length. The figures are the squares the rule predicts, not a measurement — the caveats below explain why real latency lands short of this curve."
+  caption="The pair count from that rule at 1x, 2x and 4x an illustrative prompt length. These are the squares the rule predicts, not a measurement; real latency lands short of this curve."
   axis="Attention pairs, relative to a 1x prompt"
   bars={[
     { label: '1x tokens', value: 1 },
@@ -115,67 +113,53 @@ Now count the comparisons. Every token against every other token, so `n` tokens 
   ]}
 />
 
-Two honest caveats, because you will measure this and it will not be a clean curve. The per-token network in each block grows linearly, not quadratically, and it dominates at short lengths. And serving stacks fight the quadratic hard — cached keys and values, batching, attention kernels written for the hardware. Real latency lands somewhere between linear and quadratic. But it is never flat, and the direction never reverses.
-
-The practical consequences:
-
-- **A long prompt is slow before it is anything else.** The time before the first token appears is mostly the model reading your input.
-- **Generation is a separate cost.** Each output token is another pass over everything so far, produced one at a time. Long answers are slow answers.
-- **Memory grows with the conversation.** The cached keys and values for a long context take real memory on the server, which is part of why long-context requests are priced and rate-limited differently.
+Do not expect a clean curve when you measure. The per-token network grows linearly and dominates at short lengths, and serving stacks fight the quadratic with caching and fast attention kernels. So for a short prompt this rule hardly matters. For a long one the direction never reverses: a long prompt is slow to read before anything else.
 
 ## 3. Where behaviour comes from: two training stages
 
-Almost everything you like or dislike about a model was decided in one of two stages, and it is usually the second one.
+Almost everything you like or dislike about a model was decided in one of two stages, and usually the second.
 
-**Pre-training.** Read an enormous pile of text, predict the next token, adjust the weights when wrong, repeat for trillions of tokens. This takes months on thousands of accelerators and burns most of the money. What comes out is a **base model**: it has absorbed grammar, facts, code, reasoning patterns and style, and it can do exactly one thing — continue text.
+**Pre-training.** Read a very large pile of text, predict the next token, adjust the weights when wrong, and repeat on a large cluster of accelerators. This takes most of the money. What comes out is a **base model**. It has absorbed grammar, facts, code and style, and it can do exactly one thing: continue text.
 
-**Post-training.** Much smaller, much cheaper, and it decides nearly everything you interact with. Two stages inside it: supervised fine-tuning on written demonstrations of good answers, then preference tuning, where people (or another model working from written rules) rank candidate answers and the weights move toward the preferred one. This is where instruction following, tone, refusals, formatting habits, and tool use come from.
+**Post-training.** Much smaller and cheaper, and it decides nearly everything you interact with. First comes supervised fine-tuning on written demonstrations of good answers. Then comes preference tuning, where people (or another model working from written rules) rank candidate answers and the weights move toward the preferred one. Instruction following, tone, refusals, formatting habits and tool use come from here.
 
 <Flow
-  caption="The two stages in order. Pre-training spends months producing a base model that can only continue text; post-training's two steps inside it are what actually teach it to follow an instruction, refuse, or call a tool."
+  caption="The two stages in order. Pre-training produces a base model that can only continue text; the two post-training steps teach it to follow an instruction, refuse, or call a tool."
   steps={[
-    { label: 'Pre-training', note: 'Predict the next token, over trillions of tokens' },
+    { label: 'Pre-training', note: 'Predict the next token, over a very large pile of text' },
     { label: 'Base model', note: 'Continues text. Follows no instructions yet' },
     { label: 'Supervised fine-tuning', note: 'Trained on written demonstrations of good answers' },
     { label: 'Preference tuning', note: 'Candidate answers ranked; weights move toward the preferred one', subject: true },
-    { label: 'The model you call', note: 'Instruction following, tone, refusals, tool use — decided here' },
+    { label: 'The model you call', note: 'Instruction following, tone, refusals, tool use' },
   ]}
 />
 
-| | Pre-training | Post-training |
-|---|---|---|
-| Data | Trillions of tokens of general text | Thousands to millions of curated examples |
-| Cost | Most of the total | A small fraction |
-| Produces | A base model that continues text | The model you actually call |
-| Decides | What it knows | How it behaves |
-| Changes between versions | Rarely, it is a new model | Often, and you feel it |
+So why do two models of the same size behave so differently? Not architecture, which is public and similar across the frontier labs. The differences are:
 
-So why do two models of the same size behave so differently? Not architecture — the transformer is public, and the frontier labs are building recognisably similar things. The differences are:
+- **Data.** What was collected, how it was filtered, how much code and maths is in the mix. Labs guard this closely.
+- **The training budget.** How much data each parameter saw. The Chinchilla paper argued that model size and training tokens should grow together, so size alone was never the whole story. It is one input into why small models got good, not the full account.
+- **Post-training.** The demonstrations, the preference data and the rules. Two labs can start from near-identical base models and ship products that feel nothing alike.
 
-- **Data.** What was collected, how it was filtered and deduplicated, how much code and maths is in the mix, how much of it is synthetic. This is the most closely guarded part of the whole business.
-- **The compute and token budget.** How many tokens each parameter was trained on. Training a smaller model on far more data can beat training a larger one on less, which is the practical lesson of the Chinchilla work and a large part of why small models got good.
-- **Post-training.** The demonstrations, the preference data, the rules. Two labs can start from near-identical base models and ship products that feel nothing alike.
+Which leaves one instruction: **you cannot read quality off a spec sheet.** Not from parameter count, and not from a leaderboard built on someone else's tasks. Write twenty examples from your own workload, with the answers you want, and run the candidates against them. That is a morning of work and it outranks every number a provider publishes.
 
-Which leaves you with one instruction: **you cannot read quality off a spec sheet.** Not from parameter count, not from a leaderboard built on someone else's tasks. Write twenty examples from your own workload, with the answers you want, and run the candidates against them. That is a morning of work and it outranks every number a provider publishes.
+Here is the worked example. It counts tokens for a repeated sentence at three sizes, using the provider's counter and not a rule of thumb.
 
 ```python
-# pip install anthropic
-import time
+# pip install anthropic   (checked against SDK 1.15.0)
 from anthropic import Anthropic
 
-client = Anthropic()
+MODEL = "claude-sonnet-5-5"  # check the models page; as of Oct 2026
 
-filler = "The quick brown fox jumps over the lazy dog. " * 200
+client = Anthropic()
+sentence = "The quick brown fox jumps over the lazy dog. "
 
 for repeats in (1, 4, 16):
-    prompt = filler * repeats + "\n\nReply with the single word: done."
-    start = time.monotonic()
-    resp = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=10,              # output pinned, so we are timing the reading
-        messages=[{"role": "user", "content": prompt}],
+    text = sentence * (100 * repeats)
+    count = client.messages.count_tokens(
+        model=MODEL,
+        messages=[{"role": "user", "content": text}],
     )
-    print(resp.usage.input_tokens, "tokens in", round(time.monotonic() - start, 2), "s")
+    print(repeats, "x:", count.input_tokens, "tokens for", len(text), "characters")
 ```
 
-The answer is ten tokens every time, so what moves is the cost of reading the input. You will not see a clean squaring — the provider's caching and batching flatten it — but you will not see a flat line either, and that gap is the thing to hold in your head next time someone suggests pasting the whole manual into every request.
+I wrote this against the documented call and the SDK's own signature, but I did not run it against the live API, so the numbers are yours to read. Expect the count to grow roughly in line with the repeats. Then change `MODEL` to an older id that is still listed as active and compare the two counts for the same text. That gap is the tokenizer, and it is why you recount before a move. The script counts input only; if you time a real request, thinking tokens add to the wait, as *Thinking and effort, model by model* explains.

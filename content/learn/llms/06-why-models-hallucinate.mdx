@@ -1,0 +1,180 @@
+---
+title: "Why models hallucinate"
+subtitle: "A model that does not know still answers, because guessing scores better than admitting doubt."
+part: 1
+minutes: 7
+why: "You asked for a citation, a version number, a person's job title. The answer came back clean, specific and confident, and it was wrong. It was not vague-wrong. It had exactly the shape a right answer would have had. *What a model is made of* said a model can be confidently wrong about one fact, then moved on. This lesson stays with that. It explains why a model that lacks the answer still produces one, what a 2025 paper says the training and grading reward, and which fixes work. It also says plainly where each fix stops working."
+wins:
+  - "Expect a fluent answer whether or not the model knows: nothing makes it consult its own doubt before it speaks."
+  - "Treat tone as no evidence, because a wrong answer reads exactly like a right one."
+  - "Do not expect a bigger model alone to fix rare-fact errors: scale helps some errors and leaves the pay-off for guessing untouched."
+  - "Check claims against a source you hold, not against how confidently they were stated."
+  - "Give 'I don't know' a score of its own, in your prompts and your evals, or you are paying the model to bluff."
+quiz:
+  - q: "Why doesn't a model simply say 'I don't know' when it is unsure?"
+    options: ["It has a confidence score and is trained to hide it", "The phrase never appears in its training data", "A refusal is one more continuation competing for probability, and nothing makes the model check its doubt first"]
+    answer: 2
+    explain: "A model can carry some sense of doubt, and pre-trained models are often well calibrated. But nothing forces the answer to follow it, and the paper reports that reinforcement-learning post-training can make calibration worse."
+  - q: "What did Kalai and colleagues (OpenAI, 2025) argue about why models hallucinate?"
+    options: ["Training and grading reward a confident guess over an honest admission of doubt, so guessing wins on average", "It only happens in models trained on unfiltered web text", "Longer context windows confuse the model with irrelevant text"]
+    answer: 0
+    explain: "Their argument is about incentives plus a statistical floor on rare facts. Data quality is one extra cause they list, not the central one."
+  - q: "A grader gives 1 for a correct answer, 0 for 'unknown' and minus 9 for a wrong answer. When is answering worth it?"
+    options: ["Whenever the model has any chance of being right", "When the model is more than 90 percent sure it is right", "Only when the model is certain"]
+    answer: 1
+    explain: "With confidence p, answering earns p minus 9 times (1 minus p). That is zero at p = 0.9, so it pays above 90 percent. It does not need certainty."
+  - q: "A reasoning model works through a problem for several paragraphs before it answers. What does that do for hallucination?"
+    options: ["It removes it, because every step is checked as it is written", "It makes it worse, because longer answers hold more claims", "It fixes some errors of working, such as miscounting letters, but not a fact the model never learned"]
+    answer: 2
+    explain: "A written-out trace helps where the mistake was in the working. A missing fact is still missing, and the final line is graded the same way as before."
+  - q: "You ask the same obscure question five times. What can you conclude?"
+    options: ["Five different answers is a warning sign, but five identical answers is not proof, since a model can settle on the same wrong one", "Five identical answers proves the fact is right", "Five different answers means the model is broken and the request should be retried until they match"]
+    answer: 0
+    explain: "Disagreement tells you the model had nothing solid to converge on. Agreement only tells you it converged, which a bad pattern can also do."
+deeper:
+  - { label: "Kalai, Nachum, Vempala, Zhang: Why Language Models Hallucinate (OpenAI, 2025)", href: "https://arxiv.org/abs/2509.04664" }
+  - { label: "Kadavath et al.: Language Models (Mostly) Know What They Know (2022)", href: "https://arxiv.org/abs/2207.05221" }
+  - { label: "Anthropic: reduce hallucinations (official guide)", href: "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" }
+  - { label: "Chroma: Context Rot (2025 report on 18 older models, from a vector-database vendor)", href: "https://www.trychroma.com/research/context-rot" }
+---
+
+A model that does not know a fact still hands you an answer, in the same calm tone it uses for a fact it does know. This lesson explains why, using one 2025 paper from OpenAI researchers. It then covers what to do about it, and where that advice stops working.
+
+## 1. Answering is the default, and doubt gets no turn
+
+Every answer comes out of one step. A forward pass ends in a distribution over the next token, and one token is sampled. *Sampling, and the knobs providers are taking away* covered that step. What matters here is what it lacks: nothing in it makes the model check how sure it is before it answers.
+
+A refusal is not a separate mode that sits outside generation. "I'm not certain about that" is a run of tokens, and it must win the same contest as every other continuation. A specific, fluent answer often scores higher.
+
+Be careful with the next step, because it is easy to overstate. The model may well carry some sense of doubt. Kadavath and colleagues (2022) found that large models were mostly well calibrated on multiple-choice and true/false questions. Kalai and colleagues report that pre-trained models are often calibrated too, and that reinforcement-learning post-training can make it worse. So the claim is not "no doubt signal exists". The claim is that nothing forces the answer to follow it.
+
+<Flow
+  caption="What happens after the forward pass. A refusal is not checked first. It is one candidate continuation, competing on probability like any other, and often it does not win."
+  steps={[
+    { label: 'The question', note: 'Whatever the user asked' },
+    { label: 'Forward pass', note: 'Ends in a distribution over the next token' },
+    {
+      label: 'A continuation is sampled',
+      subject: true,
+      branch: [
+        'A confident, specific answer',
+        'An admission of doubt, only if it scores higher',
+      ],
+    },
+  ]}
+/>
+
+> A wrong answer and a right one come off the same production line. Nothing in the wording tells you which is which.
+
+## 2. Guessing is what the scoring pays for
+
+Kalai, Nachum, Vempala and Zhang (OpenAI, September 2025) give two causes. Both matter.
+
+**The first is a floor on rare facts.** Facts that appear often and consistently are learned well. A fact seen exactly once, such as one person's birthday, gives the model nothing to prefer the right answer over a plausible wrong one. The paper shows the error rate on such facts is at least about the share of facts seen once. If a fifth of birthdays appear once in the data, expect at least about a fifth of them wrong. It also shows that the error rate of generating an answer is at least about twice that of judging whether a given answer is valid. This is theory, not a measurement of any trained model.
+
+**The second is the grading.** Most benchmarks work like an exam with no penalty for a wrong guess. A right answer earns a point, and a wrong answer and "I don't know" both earn zero. Under that rule guessing never loses. The authors say models are "optimized to be good test-takers", and they audited popular benchmarks and judge models to see whether this holds. As of mid-2025, nine of the ten it audited gave no credit for "I don't know", including GPQA, MMLU-Pro, IFEval and SWE-bench. One gave partial credit. I did not re-check today's versions, so look at the scoring rule of any benchmark you rely on. *Reading a leaderboard* returns to this.
+
+<Figure bare caption="Four common beliefs about hallucination beside what the paper says. The paper also lists bad training data and weak model families as extra causes. The causes in this lesson are the central ones, not the only ones.">
+
+| What people assume | What the paper says |
+|---|---|
+| The model is lying | Nothing makes it check its own doubt before it answers, so a known fact and a guess come out the same way |
+| Better data will fix it | Clean data helps, but facts seen once leave a floor that cleaning cannot remove |
+| A bigger model will not do this | Scale helps some errors, such as miscounting letters. It leaves the floor on rare facts and the pay-off for guessing as they were |
+| It only happens on obscure trivia | It happens wherever training and grading never rewarded doubt, and rare facts are where it shows most |
+
+</Figure>
+
+The authors' fix is to state a confidence target t in the prompt or the grader, and to charge t/(1-t) points for a wrong answer. At t = 0.5 a wrong answer costs 1 point, and at t = 0.9 it costs 9. Answering then pays only when the model's chance of being right beats t.
+<Compare caption="The same model with the same 30 percent confidence, graded two ways. The 30 percent is an illustrative number, not a measurement.">
+<Panel label="Graded 0 or 1" title="Guessing wins">
+
+A correct answer earns 1, a wrong answer earns 0, and "unknown" earns 0. A guess is worth 0.3 x 1 = +0.3 on average. Saying "unknown" is worth 0. The model should guess.
+
+</Panel>
+<Panel label="Wrong costs 9" title="Admitting doubt wins">
+
+A correct answer earns 1, a wrong answer loses 9, and "unknown" earns 0. A guess is worth 0.3 - 0.7 x 9 = -6.0. The model should say "unknown". Guessing only breaks even at 90 percent confidence.
+
+</Panel>
+</Compare>
+
+## 3. What helps, what does not, and where it stops
+
+Two common fixes attack the wrong layer. **A bigger model** helps with errors of capacity and with well-covered facts. It does not remove the floor on rare facts, and it does not change what the grading pays. **A lower temperature** only makes the answer steadier: a wrong answer stays wrong, and as of Oct 2026 newer Anthropic models reject a non-default value anyway (the lesson cited in section 1 has the detail). A **reasoning model** (see *Base, instruct, and reasoning models*) fixes errors of working, like miscounting letters, because the written trace spells the word out. It cannot supply a fact it never learned.
+
+What does help is partial, and each item has a limit:
+
+- **Allow and score "I don't know".** As of Oct 2026, Anthropic's guide tells you to give the model explicit permission to admit uncertainty. In your own evals, score an abstention above a wrong answer.
+- **Ground it.** If a document should hold the answer, require a quote and check that the quote appears in it. *Citations and grounding*, in the RAG course, covers this.
+- **Sample several times and compare.** Disagreement is a signal that a single answer's tone can never give you.
+
+Here is a script that tries two of these. It asks one obscure question five ways with a plain prompt, then five with the paper's idea written into the prompt. Swap in a question whose answer you can verify.
+
+```python
+from collections import Counter
+
+import anthropic
+
+MODEL = "claude-sonnet-5-5"  # check the models page; as of Oct 2026
+
+client = anthropic.Anthropic()
+
+QUESTION = "What was the exact attendance at the 1987 IEEE conference on parallel computing?"
+
+PLAIN = QUESTION + " Reply with the number only."
+
+# t = 0.9, so a wrong answer costs t / (1 - t) = 9 points.
+SCORED = (
+    QUESTION + " Reply with the number only, or the word unknown.\n"
+    "Scoring: correct = +1, unknown = 0, wrong = -9. "
+    "Answer only if you are more than 90 percent sure."
+)
+
+def ask(prompt):
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=4096,  # covers thinking plus the answer on this model
+        messages=[{"role": "user", "content": prompt}],
+    )
+    # A reply can start with a thinking block, so pick the text blocks by type.
+    return "".join(b.text for b in resp.content if b.type == "text").strip().lower()
+
+for name, prompt in [("plain", PLAIN), ("scored", SCORED)]:
+    print(name, Counter(ask(prompt) for _ in range(5)))
+```
+
+Run it and read the two counters. You may see the same number five times, a different number each time, or "unknown". Each of those is a different diagnosis, and none announces itself in the wording. On this model, as of Oct 2026, a request with no `thinking` field runs with thinking on, which is why the script reads blocks by type and gives `max_tokens` room; the Sonnet 5.5 migration guide covers this. I could not confirm what this model prints for this question, so treat the result as yours to read.
+
+<Steps
+  caption="One way the two counters could come out. Illustrative, not a real run. The paper predicts this shift but reports no measured result on a trained model, so run the script yourself."
+  steps={[
+    {
+      label: 'Plain prompt',
+      title: 'Five tries, no way out',
+      body: 'Nothing in the prompt makes "unknown" a good move, so the model fills the slot with a number.',
+      facts: [
+        { label: 'distinct replies', value: '4 of 5' },
+        { label: '"unknown" replies', value: '0' },
+      ],
+    },
+    {
+      label: 'Scored prompt',
+      title: 'Five tries, doubt priced in',
+      body: 'A wrong answer now costs more than a correct one earns, so declining becomes the better bet.',
+      facts: [
+        { label: 'distinct replies', value: '1 of 5' },
+        { label: '"unknown" replies', value: '5' },
+      ],
+    },
+  ]}
+/>
+
+**A failure to expect.** Picture a support bot with retrieval. A customer asks about returning an opened blender after 45 days, and the search finds nothing relevant. The prompt says "answer the customer", so the model writes a clear, friendly policy that nobody wrote. This case is made up, but it is the typical shape. Retrieval did not fail loudly, and the model had no instruction for an empty result. The fix is to tell it what to say then, and to put an empty-retrieval case in your tests.
+
+**Where this advice does not apply.**
+
+- **You hold the source.** Do not ask the model to recall a fact you can look up. Check it against the source.
+- **The mistake is in the working.** Counting, arithmetic and long chains need a reasoning trace or a tool. A permission to abstain will not fix them.
+- **Agreement is not truth.** A model can settle on the same wrong answer every time. Five samples also cost five calls.
+- **The scored prompt is a prediction.** A model told to be 90 percent sure may refuse questions it could answer, so test it on cases with known answers and count the refusals. In Chroma's July 2025 test of 18 models, none current, one family abstained more and another gave confident wrong answers more. That is a snapshot, not a trait of a vendor, and Chroma sells a vector database.

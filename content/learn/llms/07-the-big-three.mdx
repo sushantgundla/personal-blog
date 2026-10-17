@@ -1,0 +1,166 @@
+---
+title: "The big three, and what actually differs"
+subtitle: "Anthropic, OpenAI, Google, and the layers you can buy them through. Where the real differences live."
+part: 2
+minutes: 7
+why: "You picked a provider because it was the one you had heard of, wired its SDK into forty files, and then a compliance question or a price change meant you should test another one. You could not, cheaply. Worse, you tried the quick fix: change the model id and carry on. The call came back as a 400, because a setting that was fine on the old model is refused on the new one. Meanwhile the arguments you read about which lab is best are about scores that will be stale next quarter. This lesson separates what really differs between providers from what only looks like it, and shows the small piece of code that keeps the door open."
+wins:
+  - "Check each feature's own docs page for the platforms that list it before you choose a cloud route over the provider's own API."
+  - "Expect to rewrite plumbing first, and to retune prompts too, when you move between providers or between models of one provider."
+  - "Test refusal behaviour on your own inputs; it can differ between providers, and no source used here measures by how much."
+  - "Keep every provider SDK import inside one adapter module, with per-model request settings in a table beside it."
+  - "Do not design around today's ranking; it changes with each release. Read ids, limits and features off the provider's pages and date what you copy."
+quiz:
+  - q: "As of Oct 2026, Anthropic's Messages API takes the system prompt as..."
+    options: ["The first entry in the messages array", "A separate top-level `system` parameter", "An HTTP header on the request"]
+    answer: 1
+    explain: "It is its own field rather than a message, which is one of the small shape differences you translate when you support more than one provider."
+  - q: "The main practical reason to call a model through a cloud route such as Amazon Bedrock instead of the provider directly is..."
+    options: ["The models are cheaper there", "The models are tuned better there", "One bill, your existing cloud identity and permissions, and region and data-residency controls"]
+    answer: 2
+    explain: "It is a procurement and governance route, not a quality or price one. As of Oct 2026 Anthropic lists a 10% premium on regional endpoints for some Claude models, and features can be limited on a cloud route."
+  - q: "Provider lock-in mostly comes from..."
+    options: ["Provider SDK types and conventions spread through your codebase", "The model weights being proprietary", "Prompts that will not transfer at all"]
+    answer: 0
+    explain: "Prompts need some retuning and weights were never yours. What actually pins you down is how many files import one vendor's client."
+  - q: "Something that genuinely differs between the three providers is..."
+    options: ["Whether you are billed per token", "Where the system prompt goes and how a structured-output request is spelled", "Whether the model remembers anything between calls"]
+    answer: 1
+    explain: "Per-token billing and stateless calls are shared. The field names and request shapes are not."
+  - q: "You change only the model id in a working call, to a newer model from the same provider, and it now returns a 400. The likeliest cause is..."
+    options: ["Your API key was revoked when you changed the id", "The new model has a smaller context window", "A setting that was valid on the old id, such as a sampling or thinking option, is rejected on the new one"]
+    answer: 2
+    explain: "Settings are tied to the model id. That is why the adapter keeps them in a per-model table instead of at the call sites."
+deeper:
+  - { label: "Anthropic: Messages API reference (the top-level system field)", href: "https://platform.claude.com/docs/en/api/messages" }
+  - { label: "OpenAI: text generation guide (instructions and developer messages)", href: "https://developers.openai.com/api/docs/guides/text" }
+  - { label: "Google: Gemini API text generation (system_instruction)", href: "https://ai.google.dev/gemini-api/docs/text-generation" }
+  - { label: "Anthropic: OpenAI SDK compatibility (what the layer ignores)", href: "https://platform.claude.com/docs/en/cli-sdks-libraries/libraries/openai-sdk" }
+---
+
+This lesson compares three sellers of closed frontier models: Anthropic, OpenAI, and Google. They are the three it covers because I used their docs, not because anyone measured market share. Others exist; I did not check them. It will not say which of the three is best, because that ordering changes with every release. It says what differs when you write the code, and what only seems to. Every provider fact below is dated, because these pages move.
+
+## 1. Who sells it, and how you can buy it
+
+As of Oct 2026, each of the three offers a consumer product and a direct developer API. Some are also sold through a cloud, and one more layer sits in front of everyone.
+
+<Figure bare caption="Four routes to the same models, as of Oct 2026. The cloud names are the ones Anthropic's models page lists for Claude; cloud routes for OpenAI and Google models were not checked.">
+
+| Route | What it is | Why you would take it, and what it costs |
+|---|---|---|
+| The provider's own API | A direct account and key with the lab | The lab's docs describe every feature for this route, and it is the simplest thing to debug |
+| A cloud route: for Claude, Amazon Bedrock, Google Cloud, Microsoft Foundry, Claude Platform on AWS | The same model served inside your cloud account | One bill you already have, your identity and permissions, region choice. Costs: Amazon Bedrock and Google Cloud set their own retirement dates (Microsoft Foundry and Claude Platform on AWS follow Anthropic's), a feature can be missing or limited there, and regional endpoints carry a 10% premium on some Claude models |
+| An aggregator, such as OpenRouter | One key and one API shape in front of many providers | Compare many models in an afternoon through one interface. Costs: one more party between you and the model, so one more hop and one more place your prompts pass through |
+| Self-hosted open weights | You run the model | Covered in part 3 of this course |
+
+</Figure>
+
+Feature coverage is the part that surprises people. Anthropic's structured-outputs page, for one, says that on Bedrock the feature is limited to a legacy integration and older models (as of Oct 2026). Each Anthropic feature page carries its own platform table, so read the one for the feature you need before you commit to a route.
+
+In a company, the deciding factor is often which vendor is already through legal.
+
+## 2. What genuinely differs when you write the code
+
+Here is the honest split. Each provider fact carries its own date.
+
+<Figure bare caption="The same five jobs in three dialects, as of Oct 2026. Field names come from each provider's own docs. OpenAI's column is its Responses API. Google's fields are from its Interactions API; the older generateContent shape differs.">
+
+| Job | Anthropic | OpenAI | Google |
+|---|---|---|---|
+| Place the system prompt | Top-level `system` field | `instructions`, or a `developer` message in `input` | `system_instruction` field (Interactions API) |
+| Ask for a JSON schema | `output_config.format` | `text.format` with `json_schema` and `strict` | `response_format` with a `schema` (Interactions API) |
+| Prompt caching | Opt in with `cache_control` | Implicit by default; explicit mode with `prompt_cache_options` on newer OpenAI models | Implicit; explicit caches on some models, with a storage fee |
+| Shape of the limits | Requests, input tokens and output tokens per minute, plus a monthly spend cap | Requests and tokens per minute, plus daily caps | Requests, input tokens per minute and requests per day, per project |
+| Shape of a model id | Undated pinned snapshots from the 4.6 generation on | Undated ids on its models page; snapshot status not stated there | Stable ids, plus a `-latest` alias that moves |
+
+</Figure>
+
+**Differences that cost real work:**
+
+- **Request and response shape.** All three take messages and return content, but content blocks, file and image attachment, usage field names and streaming events all differ. None of it is hard. It is where the days go.
+- **Tool calling.** Anthropic describes tools with JSON Schema (as of Oct 2026), and forcing a specific tool returns an error on several current Anthropic models, as of Oct 2026 (its migration guide and compatibility page name them). Neither point was checked here for OpenAI or Google.
+- **Context windows.** As of Oct 2026 Anthropic lists 1M tokens on all four current models, Google's flagship lists 1M, and OpenAI's models page lists about 1M for its flagships. The real difference is price past a length. As of Oct 2026, one Anthropic model charges it, and so do some of Google's Pro models (not its flagship). Read the pricing page for your model.
+- **Tokenizers.** Each lab has its own tokenizer, so the same text is a different count at each; I did not measure the gap for OpenAI or Google. As of Oct 2026 Anthropic says its newer tokenizer makes about 30% more tokens than Claude Sonnet 4.6 and earlier models for the same text, and offers a free counting endpoint. Count with the provider's own tool, never a rule of thumb. Cost is in *What you actually pay for*; limits are in *Rate limits and reliability*.
+- **Safety behaviour.** Refusal lines and tone can differ. If your domain sits near a line, such as security, medical, legal or moderation work, test your real inputs. No source used here measures the gap, so this lesson does not rank anyone.
+- **Data handling.** Retention, training use, regions and certifications are contractual, and in regulated work they decide the question.
+
+**What mostly does not differ:** the core loop (messages in, tokens out, stateless, billed per token, capped output), and the engineering problems on top of it. Hallucination, injection, evaluation, cost and latency get the same fixes under any logo. A design that only works while one model is ahead needs rework when the ranking moves.
+
+## 3. Lock-in, and the thin layer that removes it
+
+The lock-in is never the weights. It is the shape of your own code: the provider's client imported in forty files, its response objects passed around as your type, tool schemas in one dialect, streaming handled the provider's way inside your UI. Nobody decides this. It accumulates, and switching is a project, not an afternoon.
+
+The fix is small. One module, one function, your own type coming out.
+
+- **The adapter owns:** building the request, placing the system prompt, translating tool schemas, normalising streaming, retries, and logging usage.
+- **What comes out:** your own result object, never the provider's.
+- **What it must not become:** a universal wrapper over every feature. Support what you use. When you need something only one provider has, expose it by name.
+
+<Flow
+  caption="The adapter's whole job in one shape: everything that knows which vendor it is talking to lives in the middle box, and what leaves it on the right is a type you defined."
+  steps={[
+    { label: 'Your call site', note: 'A system prompt and messages, in your own shape' },
+    { label: 'The adapter', note: 'Builds the request, applies the per-model settings, places the system prompt, reads the reply by block type, logs', subject: true },
+    { label: 'The provider SDK', note: 'The only place in the codebase that imports it' },
+    { label: 'Your result type', note: "Text, token counts, served model id. Never the provider's response" },
+  ]}
+/>
+
+> The lock-in is never the model. It is the forty files that import one provider's SDK.
+
+**A failure you can predict.** Say your adapter was written for an older model and reads `resp.content[0].text`. You change the id to `claude-sonnet-5-5` and keep the rest. Two things break. Anthropic's migration guide says five old settings now fail with a 400 (as of Oct 2026): assistant prefill, forcing one tool, `thinking: {"type": "disabled"}`, a thinking token budget, and sampling parameters. Also, as of Oct 2026, that model thinks by default, so a reply can begin with a thinking block, and that block has no `text`. Both are plumbing, not prompts.
+
+<Compare caption="The same one-line change, handled two ways. The right-hand side moves the model-specific knowledge into one table, so a new id costs a table row, not a hunt through forty files.">
+  <Panel label="Naive" title="Change the id at the call site">
+
+Settings sit beside each call, so each one is checked by hand. The reply is read as `content[0].text`. A setting that the new id rejects shows up as a 400 in production.
+
+  </Panel>
+  <Panel label="What to do" title="A per-model table, and read by block type">
+
+Settings come from one table keyed by id, and an id missing from it fails loudly. The reply is the joined text of the `text` blocks, so a leading thinking block does no harm.
+
+  </Panel>
+</Compare>
+
+```python
+from dataclasses import dataclass
+from anthropic import Anthropic
+
+MODEL = "claude-sonnet-5-5"  # check the models page; as of Oct 2026
+
+# Settings that suit one id and return a 400 on the next live here, not at the call sites.
+# An id that is missing from this table raises KeyError, which is the point.
+SETTINGS = {
+    "claude-sonnet-5-5": {"output_config": {"effort": "medium"}},
+}
+
+
+@dataclass
+class Answer:
+    text: str
+    input_tokens: int
+    output_tokens: int
+    served_model: str  # log this: it is the id the provider says answered
+
+
+_client = Anthropic()
+
+
+def complete(system: str, messages: list[dict], model: str = MODEL) -> Answer:
+    """The only function in the app that knows which provider is being called."""
+    resp = _client.messages.create(
+        model=model,
+        max_tokens=2000,        # on this model it covers thinking plus the answer
+        system=system,          # a top-level field here, `instructions` or a message elsewhere
+        messages=messages,
+        **SETTINGS[model],
+    )
+    # A reply can start with a thinking block, so never read content[0].text.
+    text = "".join(b.text for b in resp.content if b.type == "text")
+    return Answer(text, resp.usage.input_tokens, resp.usage.output_tokens, resp.model)
+```
+
+Call `complete("Answer in one sentence.", [{"role": "user", "content": "What is a token?"}])` and you get one `Answer`. A second provider means one more branch in this file, with its own settings table, and no change elsewhere. This sample was checked against a mock transport with `anthropic` 1.15.0, not the live API, so run it once with your own key and check that the effort setting is accepted for the model.
+
+**When a thin adapter is the wrong tool.** A compatibility layer looks like a free adapter: point the OpenAI SDK at another provider's URL. Anthropic's own page says its layer is "primarily intended to test and compare model capabilities" (as of Oct 2026). It puts reliability of its native API first, and does not offer the layer as a lasting choice for most production work. The page also lists what the layer ignores: `strict` in function calling, `response_format` and `reasoning_effort`. Prompt caching is not available through it. Most ignored fields raise no error, so you can lose a schema guarantee without noticing. Use such layers to compare models in an afternoon. If your app leans on one provider's deep features, expose them by name. And if you have one model, no compliance question and a prototype to ship, the adapter can wait a week. The one-file rule for SDK imports should not.

@@ -1,0 +1,139 @@
+---
+title: "Running a model yourself"
+subtitle: "The tool ladder, the speed trade quantisation makes, and the idle-GPU arithmetic that decides whether it pays."
+part: 3
+minutes: 7
+why: "You ran a model on your laptop, it answered well, and you told the team you could serve it. Ten colleagues try it that afternoon. The tenth waits through nine answers first. Then someone asks whether renting a GPU would be cheaper than the API bill, and nobody knows. That is not a question about models. It is about which tool belongs on which job, what batching does to speed, and what a GPU costs at 3am when nobody is calling it. This lesson gives you the three rungs, the one speed trade you will meet, and a division you can do before anyone buys anything."
+wins:
+  - "Climb the ladder in order: try a model on one machine, serve it with an engine built for batching, and rent open weights before you buy GPUs."
+  - "Keep a try-it tool away from real traffic, and read its defaults for parallel requests and context length before you doubt the model."
+  - "Pick the quantisation for the job: 4-bit tended to help one-at-a-time latency, 8-bit tended to help batched throughput, and either can cut how many GPUs you need."
+  - "Compare your monthly API bill with a full month of the GPUs you would need, at least two of them, never with the busy hours."
+  - "Treat the cut-off ratio as a rule of thumb, and know the cases where self-hosting is right whatever the ratio says."
+quiz:
+  - q: "You need to serve a self-hosted model to many users at once. Which tool is built for that?"
+    options: ["Ollama, because it is the simplest to install", "vLLM or SGLang, which are serving engines built for many users", "A script that loads the model again for every request"]
+    answer: 1
+    explain: "Ollama is meant for trying models on one machine. A serving engine such as vLLM or SGLang is built to run many requests through the GPU together."
+  - q: "Ten people send Ollama a request at the same moment, with its default settings (as of Oct 2026). What happens?"
+    options: ["They queue, and each loaded model handles one request at a time", "All ten run in parallel, each at a tenth of the speed", "Nine are rejected at once with an error"]
+    answer: 0
+    explain: "Ollama's FAQ gives a default of one parallel request per model and a queue of 512 before it answers 503. Nobody is rejected, but the tenth waits for nine answers."
+  - q: "An older guide lists Text Generation Inference (TGI) as an equal choice for serving. What do TGI's own docs now say?"
+    options: ["It is the fastest engine and the default choice", "It supports only the oldest models", "It is in maintenance mode, and they recommend vLLM and SGLang instead"]
+    answer: 2
+    explain: "The TGI documentation opens with a notice to that effect, and its repository has been archived since March 2026. Check the page before you start new work on it."
+  - q: "A study of Llama-3.1 on vLLM (late 2024) compared quantisation levels. Which result did it report?"
+    options: ["8-bit was best for one request at a time, and 4-bit for large batches", "4-bit weight-only was best for one request at a time, and 8-bit for large batches", "Both were slower than 16-bit in every setup"]
+    answer: 1
+    explain: "The study found 4-bit weight-only cheapest and fastest for single requests, and 8-bit best for throughput under continuous batching. The ratios are indicative only, because the tests are old."
+  - q: "Your monthly API bill divided by the monthly cost of the GPUs you would need comes to 1.5. What does the rule of thumb in this lesson say?"
+    options: ["Stop, because the engineering time will use up the margin", "Buy the GPUs, because any ratio above 1 is a saving", "Buy a single GPU, since redundancy is a luxury"]
+    answer: 0
+    explain: "Below about 3 the saving on paper is eaten by the time spent on drivers, upgrades, capacity and the pager. The cut-off is a rule of thumb, not a measurement."
+deeper:
+  - { label: "Ollama FAQ: parallel requests, queue length and context length", href: "https://docs.ollama.com/faq" }
+  - { label: "vLLM documentation: serving, batching and quantisation formats", href: "https://docs.vllm.ai/en/latest/" }
+  - { label: "SGLang documentation: install, quickstart and supported hardware", href: "https://docs.sglang.io/" }
+  - { label: "arXiv: accuracy and speed trade-offs in LLM quantisation (Llama-3.1, 2024)", href: "https://arxiv.org/abs/2411.02355" }
+---
+
+*Open weights vs closed APIs* gave the reasons to want open weights. *What fits on a GPU* did the memory sum that tells you whether a model fits a card. This lesson starts where that one stops: which tool to run it with, what speed you trade away, and the division that says whether it pays. Tool names and defaults here are as of Oct 2026, and every one of them can change, so each claim points at the page to re-read.
+
+## 1. Three rungs, and the tool that belongs on each
+
+There are three ways to run an open-weight model, and picking the wrong one is the most common self-hosting mistake.
+
+<Figure bare caption="The three rungs, with example tools as of Oct 2026. Each rung is good at what the one below it cannot do, and the cost of climbing is that you own more of the machine.">
+
+| Rung | Example tools | Good at | Bad at |
+|---|---|---|---|
+| Try it | Ollama, llama.cpp | One machine, one user, almost no setup. Perfect for judging whether a model is good enough | Many users at once. Its defaults are set for one person |
+| Serve it | vLLM, SGLang | Serving many concurrent requests through one GPU, with an OpenAI-style API in front | You now own GPUs, drivers, deploys and a pager |
+| Rent it | Hosts such as Together or Fireworks | Open-weight models behind an API, with no GPUs to run | Per-token pricing stops being cheap if your volume is high and steady |
+
+</Figure>
+
+On the first rung, **Ollama** and **llama.cpp** run a model on the machine in front of you. On the second, **vLLM** and **SGLang** are serving engines. As of Oct 2026, vLLM's docs list continuous batching and prefix caching, and SGLang's docs list prefix caching and compatibility with OpenAI-style APIs. On the third, hosts such as Together and Fireworks sell models through an API, billed per token, with dedicated GPU deployments billed by GPU time (per second at Fireworks, as of Oct 2026). Prices and model lists move, so read each host's own page on the day.
+
+You may still find guides that put **TGI**, Hugging Face's Text Generation Inference, on the second rung. As of Oct 2026, its docs open with a notice that it is "now in maintenance mode", and they recommend vLLM and SGLang for serving, and llama.cpp or MLX for local use. Its repository has been archived since 21 March 2026. No source I used ranks vLLM against SGLang, so this lesson does not.
+
+The third rung gets less attention than it deserves. It gives you much of what people want from open weights, which is model choice, no surprise retirements and an exit from one vendor, without a GPU on your account. For many teams that is enough, and they skip it because self-hosting sounds like more serious engineering.
+
+**The failure to expect is the first rung in front of real users.** Ollama's FAQ gives these defaults, as of Oct 2026: one parallel request per loaded model, a 4,096-token context on a card under 24 GiB (the context-length page lists larger defaults for bigger cards), and a queue of 512 requests before it answers 503. Memory also scales with parallel requests times context length. So the model that felt fast to you feels broken to ten people, and the cause is the settings, not the model. You can raise them, but then you are tuning a tool for a job a serving engine was built for.
+
+> The rung you use to try a model is rarely the rung you serve it on.
+
+```bash
+# Try a model on your own machine. No account, no key, no network after the pull.
+# Tag as of Oct 2026 - check ollama.com/library for tags that exist when you run this.
+ollama pull gemma3:4b
+ollama run gemma3:4b "In two sentences, why does VRAM cap which model I can run?"
+
+# The same process serves an OpenAI-shaped API on port 11434.
+curl -s http://localhost:11434/v1/models
+```
+
+The last line matters more than it looks. Ollama's docs give `http://localhost:11434/v1/` as the base URL, as of Oct 2026, so client code you already wrote for a hosted API points at it by changing one URL. The `/v1/models` call should return a JSON list that includes the model you pulled, with `owned_by` set to `library` by default (as of Oct 2026). A serving engine is the same story: vLLM's quickstart starts its server with `vllm serve <model>`, on port 8000 unless you change it (as of Oct 2026). *Switching models safely* builds on exactly this.
+
+## 2. Throughput against latency, and what quantisation changes
+
+A serving engine gets its efficiency from **batching**, which means running many requests through the GPU together. More batching gives more total tokens per second across all users, and can make any single answer slower, because your request shares the card. Continuous batching lets requests join and leave a running batch instead of waiting for the whole batch to finish; the vLLM docs list it. You still choose what to tune for: total throughput, or the latency one person feels. You cannot maximise both.
+
+Quantisation, which *What fits on a GPU* covered for memory, also changes speed, and it does not change it the same way in both regimes. The one study that measured this carefully ran Llama-3.1 models on vLLM 0.6.4 in late 2024. Treat its ratios as indicative, not current: the engine, the kernels and the models have all moved on.
+
+<Compare caption="What the late-2024 study found, on Llama-3.1 with vLLM 0.6.4. The ratios are indicative only. The authors work at Red Hat AI and ISTA and build quantisation tooling, so they want the answer to be 'it works'.">
+  <Panel label="One request at a time" title="4-bit weights tend to win">
+
+The paper reports 4-bit weight-only as the cheapest and fastest in nearly all of its single-query setups, with roughly 1.5 to 2.5 times lower latency than full-precision BF16 on the 8B and 70B models, and about 2 to 3 times lower cost per query. A likely reason is that one stream mostly waits on reading weights from memory, so fewer bits per weight helps, though the paper's numbers are the evidence, not that reason.
+
+  </Panel>
+  <Panel label="Many requests at once" title="8-bit tends to win">
+
+Under continuous batching the 8-bit formats gave the highest throughput in the paper's tests, at higher-latency operating points, and 4-bit sometimes still came out ahead. The crossover between the two depends on the model, the GPU and the task, so measure on yours.
+
+  </Panel>
+</Compare>
+
+The second effect is on the bill. Fewer bytes means fewer GPUs, and the study's biggest example is the 405B model on 4 GPUs at 4-bit where BF16 needed 16, for roughly 5 to 7 times lower cost per query. Its cost ratios used 2024 rental prices, so do not reuse them. Keep the shape: shrinking a model can cut the GPU count by a whole multiple, and the GPU count is the biggest line in section 3.
+
+Two cautions. The study tested a fixed set of Llama-3.1 and distilled reasoning models and did not test the GGUF files that Ollama and llama.cpp use. And quality can still slip on your cases, so re-run them on the exact file you plan to serve, as *Picking a model* describes.
+
+## 3. The idle GPU, and the division that decides
+
+An idle GPU costs exactly what a busy one costs. API pricing falls to zero overnight; a reserved card does not. So the fair comparison is not your peak-hour cost against the API. It is a full month of GPUs, for as many as you need, against a full month of API bill.
+
+Run it as a division: **monthly API bill ÷ monthly cost of the GPU boxes you would need**, using your cloud's own pricing page on the day. Use at least two boxes, because with one box a single failure takes you down, which is a rule of thumb rather than a measurement.
+
+A worked example, with numbers invented for the sum. Your API bill is 4,000 a month. The smallest box that fits your model rents for 1,500, and you need two, so 3,000. The ratio is 4,000 ÷ 3,000, about 1.3. On paper you save a little. In practice the drivers, upgrades, capacity planning and 3am pages take more time than that saving buys. Now make the bill 20,000 and the ratio is about 6.7. That is worth a serious look, and it gets better the higher and steadier your volume is.
+
+<Dial
+  caption="Drag the ratio and watch which region you land in. The cut-off of about 3 is a rule of thumb, not a measurement. It is not confirmed in the sources used, so put your own cost of engineer time into the sum."
+  name="Monthly API bill ÷ monthly GPU cost"
+  min={0}
+  max={5}
+  step={0.5}
+  start={1}
+  bands={[
+    {
+      at: 0,
+      label: 'Under 1',
+      outcome: 'The API bill is smaller than the GPUs cost on their own. Self-hosting cannot win here.',
+    },
+    {
+      at: 1,
+      label: '1 to 3',
+      outcome: 'The GPUs may be cheaper on paper, but engineer-days on drivers, upgrades and the pager are likely to eat the margin.',
+      note: 'Stop here, unless one of the cases below applies.',
+    },
+    {
+      at: 3,
+      label: 'Above 3',
+      outcome: 'The sums start working, and they improve as your volume gets higher and steadier.',
+    },
+  ]}
+/>
+
+**When this division does not apply.** The ratio is the wrong test in some cases, because cost is not the reason you are doing it. Self-hosting is clearly right when data legally cannot leave your network, when volume is steady and high, when a fine-tuned model is your actual product, when the model must never change under you, or when the deployment is air-gapped.
+
+**When to say no.** Self-hosting is probably a hobby when traffic is spiky, volume is modest, nobody on the team can carry the pager, or you need the frontier, because as *Open weights vs closed APIs* said, the best closed models are not downloadable. In those cases the first or third rung is the honest answer, and the API stays.

@@ -1,0 +1,147 @@
+---
+title: "Open weights vs closed APIs"
+subtitle: "What open really means here, what the licence lets you do, and an honest trade that keeps moving."
+part: 3
+minutes: 7
+why: "You tell your team to self-host an open model, and nobody opens the licence. Two months later you want to train a small model on the big one's answers, and the licence says what that makes your small model, and what you must call it. Meanwhile someone else on the team keeps saying open models are not good enough, quoting a score from last spring. This lesson gives you the part that does not date, which is what you are handed when a model is called open. It then gives you the trade against a closed API, with the quality gap as one dated measurement and a way to test it yourself."
+wins:
+  - "Say open weights, not open source: the training data and recipe are almost never included."
+  - "Read the LICENSE file for the exact version you download, and find the four clauses by name before you design around it."
+  - "Check the output-usage clause before you train or distil a model on another model's answers."
+  - "Hold the quality gap as a dated number from one source, and decide on your own twenty cases."
+  - "Choose open for residency, a stable file and fine-tuning you control, and a closed API when traffic is small or you have nobody to carry the pager."
+quiz:
+  - q: "A model is described as open. What are you reliably being given?"
+    options: ["The training data, the training code and the weights", "A file of trained weights you can download and run", "An OSI-approved open source licence"]
+    answer: 1
+    explain: "Open in this world almost always means the weights are downloadable; the data and the training recipe usually are not."
+  - q: "You plan to train a small model on a large open model's answers. Which check comes first?"
+    options: ["The output-usage clause in that model's licence", "Whether the model sits near the top of a leaderboard", "Whether the repo has a quantised build"]
+    answer: 0
+    explain: "Licences differ on this. As read in Oct 2026, Google's Gemma terms treat a model trained on Gemma outputs as a derivative that carries the terms when the aim is to make it perform like Gemma, and Llama 3.1 asks that a distributed model start its name with Llama."
+  - q: "As of May 2026 Epoch measured the best open model trailing the closed frontier by about 4 months. What is the right way to hold that?"
+    options: ["Open models have caught up, so the gap is gone", "A benchmark average for the best open model at that date, to be tested on your own task", "A fixed rule that applies to every open model on every task"]
+    answer: 1
+    explain: "It is an average on a composite of public benchmarks, for the single best open model, on one date. Epoch itself lists reasons it could understate the real gap."
+  - q: "A provider closes its hosted fine-tuning to new jobs. What do open weights give you in the same position?"
+    options: ["Nothing different, because every model can be retired", "An automatic upgrade to the closed frontier model", "A copy on your own disk that no provider can retire"]
+    answer: 2
+    explain: "The file is yours to keep and to retrain, within the licence. A hosted model can be retired or have its tooling closed; a downloaded copy cannot."
+  - q: "Your traffic is a few hundred requests a day, in bursts, and nobody on the team has run GPUs. Which fits best?"
+    options: ["Open weights, because GPUs are cheaper at any volume", "Open weights, because the ops work is small", "A closed API, because you pay per token and idle time costs nothing"]
+    answer: 2
+    explain: "A GPU bills by the hour whether busy or idle. Low and uneven traffic is where per-token pricing wins, and someone else holds the pager."
+deeper:
+  - { label: "Epoch AI: Open models lag state-of-the-art closed models by 4 months (May 2026)", href: "https://epoch.ai/data-insights/open-closed-eci-gap" }
+  - { label: "Hugging Face: licences on the Hub, and the identifiers a repo card can declare", href: "https://huggingface.co/docs/hub/repositories-licenses" }
+  - { label: "Google: Gemma Terms of Use, a worked example of an output-usage clause", href: "https://ai.google.dev/gemma/terms" }
+  - { label: "OpenAI: API deprecations, including the fine-tuning wind-down", href: "https://developers.openai.com/api/docs/deprecations" }
+---
+
+*The big three, and what actually differs* and *What you actually pay for* covered the hosted option. This lesson covers the other one: downloading the model and running it yourself. Before the mechanics, which are in *Running a model yourself*, you need to know what you are downloading, what you may do with it, and how much quality you give up. Anything here that can date is marked with the month it was read.
+
+## 1. Open means the weights, and the licence decides the rest
+
+A model, from *What a model is made of*, is a very large pile of numbers. Those numbers are the **weights**. When a lab says a model is open, it almost always means you can download that file.
+
+That is useful, and it is much less than open source normally means.
+
+| What you usually get | What you usually do not get |
+|---|---|
+| The weights, as a multi-gigabyte download | The training data, or a list of what was in it |
+| The architecture and config, so you can load it | The training code and the exact recipe |
+| A tokenizer and a model card | The compute to reproduce the run |
+
+In software terms it is a binary you may modify, not the source. You can run it, quantise it, fine-tune it and serve it. You cannot rebuild it or audit what went into it. So say **open weights**. A few efforts do publish data and code too, and they say so loudly, because it is rare.
+
+There is no single open-weights licence either. The Hugging Face Hub keeps a separate identifier for each Llama release, from `llama2` to `llama4` (as of Oct 2026), because the terms changed between them. The licence belongs to the version you downloaded.
+
+<Figure bare caption="Four tiers, from a licence that asks nothing of you to one that restricts who you may serve. Epoch's table sorts open models into three tags of its own (unrestricted, restricted use, non-commercial, as of May 2026), which shows the spread is real. Reading a row here does not replace reading the text.">
+
+| Where it sits | Typical terms | What it means for you |
+|---|---|---|
+| Permissive: Apache-2.0, MIT | Use, modify, redistribute, commercially. Keep the notice. | Close to no constraint. The easy case. |
+| Open weights with conditions: vendor community licences | Commercial use allowed, plus rules such as an acceptable-use policy, naming requirements, or a scale threshold above which you must ask | Usable, but someone must read it and you must follow it |
+| Non-commercial or research only | Free to experiment, not to sell | Fine for a prototype, fatal if it reaches production unnoticed |
+| Weights available, restricted | Download allowed, redistribution or hosting restricted | Check whether you may serve it to third parties |
+
+</Figure>
+
+Four clauses are worth finding by name every time:
+
+- **Commercial use.** Allowed at all, and allowed at your size?
+- **Output usage.** May you use the model's answers to train another model, and what does that other model then owe? If you plan to distil, this clause is the plan.
+- **Redistribution and hosting.** May you ship the weights in your product, or serve them to customers?
+- **Acceptable use.** A list of banned applications that you agree to enforce.
+
+Two real examples, as read in Oct 2026. Google's Gemma terms say a model trained on Gemma-generated data counts as a "Model Derivative" when the aim is to make it perform like Gemma, so your small model inherits the terms. The Llama 3.1 licence lets you train on its outputs, but a model you distribute must start its name with "Llama", and above 700 million monthly active users you must ask Meta for a licence. Both would surprise a team that never opened the file.
+
+> Open weights is a distribution model, not a licence. The only thing that tells you what you may do is the file that ships with the download.
+
+The blog post announcing a model is marketing. The `LICENSE` file in the weights repo is the agreement. This is not legal advice; anything with conditions attached goes to someone who gives it.
+
+## 2. The honest trade, and how big the gap really is
+
+Neither side wins. Which trade suits you depends on facts about your product, not about the models.
+
+<Plot
+  caption="Two of the rows below plotted against each other: ops burden and control over data and behaviour rise together, from the provider's side to yours. The table spells out the other rows."
+  xAxis="Who carries the ops burden"
+  xEnds={["None: the provider's problem", "Yours: GPUs, serving, on-call"]}
+  yAxis="Who controls data and behaviour"
+  yEnds={["The provider does", "You do"]}
+  points={[
+    { label: 'Closed API', x: 8, y: 10 },
+    { label: 'Open weights', x: 92, y: 92, subject: true },
+  ]}
+/>
+
+| | Closed API | Open weights |
+|---|---|---|
+| Peak quality | The frontier lives here first | Behind it by months, not years, and the lag moves |
+| Ops burden | None. It is someone else's pager | Yours: GPUs, drivers, serving, upgrades, on-call |
+| Capacity planning | Rate limits instead (*Rate limits and reliability*) | Entirely yours: you size for peak and pay for idle |
+| Cost shape | Per token. Zero at zero traffic, rising with use | Per GPU-hour. Flat, busy or idle |
+| Data residency | Data leaves your network | Runs in your VPC, your datacentre, or air-gapped |
+| Model stability | The provider can retire it (*When a model is retired*) | The file on your disk stays yours |
+| Fine-tuning | Only what the provider offers, and offers can end | Full access: LoRA, full fine-tune, anything the licence allows |
+| Control of behaviour | The provider's refusal and safety layer | Yours, with the responsibility that brings |
+
+The quality row is the one people argue about, so hold it carefully. As of May 2026, Epoch AI measured the best open model trailing the closed frontier by about 4 months on average, or about 8 points on its Epoch Capabilities Index. Under a stricter test, where the open model must score strictly higher, it was about 6 months. In Oct 2025 the same method gave about 3 months. So the lag did not close, and it moves. Epoch is a research nonprofit, but its index is a composite of public benchmarks. It notes that open models tend to do worse on private ones, plausibly because they climb the public ones harder. It also notes that leading closed labs do not always release their best model. Both are reasons the true gap could be larger. In that table the leading open models were mostly from Chinese labs, and their licences differ, so no single rule covers them. I could read only part of the table.
+
+On ordinary work (classify this ticket, extract these fields, summarise this call) the gap is probably smaller than the headline. That is a direction, not a measurement, because Epoch scores aggregate benchmarks and not your task. Epoch's 2025 study of models small enough for home GPUs named **distillation**, shrinking a big model's behaviour into a small one, as one reason the lag stays short.
+
+Rank is a weaker guide than it looks. [A 2025 audit of Chatbot Arena](https://arxiv.org/abs/2504.20879), by researchers at Cohere (itself a model vendor), found open-weight models got far less of the Arena's data and were removed more often. Its data ends in April 2025, and I could not confirm today's practice. *Reading a leaderboard* covers this.
+
+## 3. A worked check, a failure, and when to stay hosted
+
+Suppose your team wants a cheap ticket classifier. The plan: have a large open model label ten thousand tickets, then train a small model on those labels. Start with the licence of each candidate, before downloading 15 GB of anything. The Hub exposes it as metadata.
+
+```bash
+# The declared licence and the gate status, for two candidate repos.
+for repo in mistralai/Mistral-7B-Instruct-v0.3 meta-llama/Llama-3.1-8B-Instruct; do
+  curl -s "https://huggingface.co/api/models/$repo" \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); c=d.get('cardData') or {}; print(d['id'], '| licence:', c.get('license'), '| gated:', d.get('gated'))"
+done
+```
+
+When I ran this in Oct 2026 it printed `apache-2.0` and `False` for the first repo, and `llama3.1` and `manual` for the second. The first asks almost nothing of you. The second means you must request access and the owner approves by hand, and then you read its output-usage and naming clauses, because your small model would be a model trained on its outputs. The field is what the repo declares. A re-upload by someone else may carry a different label, so check the original lab's repo, and open the `LICENSE` file for anything that is not plain Apache-2.0 or MIT.
+
+Now the failure. Picture a team that fine-tuned a hosted model, shipped it, and planned to redo the tuning on each newer base model. On 7 May 2026 OpenAI posted that organisations which had not previously fine-tuned could no longer create fine-tuning jobs. The same notice says that on 6 January 2027 active customers also lose the ability to create new jobs. Existing fine-tuned models keep serving until their base model is retired. Check the deprecations page for the current dates. A capability you rent can change terms, so keep your training data and recipe somewhere you control. With open weights you also keep the file.
+
+The other failure needs no news. A prototype built on a research-only model reaches production unnoticed, and the licence check above would have caught it on day one.
+
+<Compare caption="Two honest answers to the same question, driven by traffic and staffing, not by which model scores higher.">
+  <Panel label="Stay hosted" title="A closed API is the better answer when">
+
+Traffic is small or bursty, because idle time costs nothing per token. Nobody owns GPUs, serving and on-call. You need the hardest reasoning, long tool use or unusual languages, where the frontier lead is most likely to show.
+
+  </Panel>
+  <Panel label="Go open" title="Open weights earn the work when">
+
+Data must stay inside your network. Volume is high and steady, so a flat GPU bill beats per-token. You need fine-tuning the provider does not offer, or a model that cannot be retired out from under you.
+
+  </Panel>
+</Compare>
+
+Two things do not apply everywhere. First, the Epoch number is about the best open model, and the best are usually large. Whether one fits the hardware you have is a separate question, answered in *What fits on a GPU*. Epoch's 2025 study put models that fit one consumer GPU 6 to 12 months behind (as of Aug 2025, on older hardware). Second, the choice is not exclusive. A common, boring design sends the routine majority to open weights in your own infrastructure and escalates the hard remainder to a closed model. Test the split on your own twenty cases, as *Picking a model* describes, and never on a number from someone else's chart.

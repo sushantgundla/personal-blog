@@ -1,0 +1,193 @@
+---
+title: "Caching and batch: the two big discounts"
+subtitle: "Pay less for the part of the prompt you repeat, and for the work that can wait. Both discounts can fail without an error."
+part: 2
+minutes: 7
+why: "You turned on prompt caching for a support bot and expected the bill to fall. It rose instead, on the longest part of the prompt. Nothing errored and every answer was fine. The system prompt began with the current time, so no two requests shared a start, and every call paid for a cache write and never got a read. This lesson gives you the price shape of caching and of batch as ratios you can check against a provider's page. Then it shows what quietly breaks a cache, how two usage fields tell you, a worked sum for a thousand questions over one handbook, and the cases where neither discount applies."
+wins:
+  - "Put stable content first and anything that changes, such as the time or a user name, after the cache breakpoint."
+  - "Do the break-even sum before you cache: as of Oct 2026 an Anthropic five-minute write pays back after one read, and a prefix used once is a small loss."
+  - "Read the two cache fields on the first and second call. Two zeros mean the prefix is under the minimum size."
+  - "Use batch for work nobody is waiting for, and match its results by custom_id because the order is not guaranteed."
+  - "Treat cache hits inside a batch as best effort, so the stacked saving is a ceiling, not a forecast."
+quiz:
+  - q: "As of Oct 2026 an Anthropic five-minute cache write costs about 1.25 times the normal input price and a read about 0.1 times. After how many reads has the write paid for itself?"
+    options: ["Ten reads", "Two reads", "One read"]
+    answer: 2
+    explain: "One write plus one read costs about 1.35 times the input price, against 2.0 times for sending the prefix twice with no cache. A prefix used only once is a small loss."
+  - q: "You mark a 300-token system prompt for caching. Every call returns zero in both cache fields and no error. What is the most likely cause?"
+    options: ["The prefix is under the model's minimum cacheable size, so it was processed without caching", "The five-minute clock ran out between two calls", "Caching only works when the batch discount is also switched on"]
+    answer: 0
+    explain: "Prompts under the minimum are processed normally and the API says nothing. As of Oct 2026 Anthropic's minimum runs from 512 to 4,096 tokens depending on the model, so check the field."
+  - q: "Your system prompt starts with the current time, then the handbook, and the breakpoint sits after the handbook. Over a hundred calls, what do the usage fields show?"
+    options: ["Reads grow on every call after the first", "A full write on every call and zero reads, so you pay the write premium each time", "Nothing is cached and nothing extra is charged"]
+    answer: 1
+    explain: "The prefix differs on every request, so there is never a match to read. Each call writes a new entry at the higher write price, which is worse than not caching."
+  - q: "Anthropic says that on most models cache reads do not count toward the input-tokens-per-minute limit. With a warm cache on a 200,000-token document and a 50-token question, what counts?"
+    options: ["All 200,050 tokens, since the model reads them all", "Nothing, because cached calls bypass the rate limits", "The 50 new tokens, because the cached reads are left out"]
+    answer: 2
+    explain: "Only input_tokens (the part after the last breakpoint) and cache writes count. You still count against the requests-per-minute limit, and the claim is Anthropic's own."
+  - q: "As of Oct 2026 the big providers list roughly 50% off for batch. What do you give up to get it?"
+    options: ["An immediate answer: results arrive later, in any order, and you match them by custom_id", "Some answer quality, because batch uses a smaller model", "The ability to send a system prompt"]
+    answer: 0
+    explain: "As of Oct 2026, a batch does not stream, and a request that is not finished inside the window expires unanswered. Quality, models and system prompts are the same as for a live call."
+deeper:
+  - { label: "Anthropic - Prompt caching: breakpoints, lifetimes and what invalidates a cache", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-caching" }
+  - { label: "Anthropic - Batch processing: limits, result types and the 24-hour window", href: "https://platform.claude.com/docs/en/build-with-claude/batch-processing" }
+  - { label: "OpenAI - Prompt caching: automatic caching, retention and the cached_tokens field", href: "https://developers.openai.com/api/docs/guides/prompt-caching" }
+  - { label: "Google - Context caching: implicit and explicit caches", href: "https://ai.google.dev/gemini-api/docs/caching" }
+---
+
+*What you actually pay for* listed the line items on a bill, including cache writes, cache reads and batch. This lesson covers the two that can cut a bill by half or more, and the ways each one stops working while the app carries on as normal. Every figure below is a ratio of the normal input price with a date on it, because ratios have held steadier than prices. Dollar prices are not quoted at all. Read them off the provider's page on the day you decide.
+
+## 1. A cache remembers the start of your prompt
+
+A **prompt cache** stores the work a provider has already done on the first part of a request. If your next request starts with exactly the same text, that work is not repeated, so the request is cheaper and starts answering sooner. It is a **prefix** cache: everything up to the breakpoint has to match, character for character. That is why stable content goes first and anything that changes goes last, a related ordering rule to the one *Context windows and their limits* gives for where to place an instruction.
+
+How you switch it on differs by provider. As of Oct 2026:
+
+<Figure bare caption="Prompt caching at three providers, as of Oct 2026, as ratios of the normal input price. Defaults and ratios differ between model generations at the same provider, so open the page for the model you call.">
+
+| | Switch | Write | Read |
+|---|---|---|---|
+| Anthropic | You mark it, on the request or on a block | 1.25x for five minutes, 2x for one hour | 0.1x, lower on some models |
+| OpenAI | Automatic by default; explicit mode on newer models | None on older models, 1.25x on newer ones | Cheaper; the ratio depends on the model generation |
+| Google | Implicit by default; explicit caches on some models | No write premium; some explicit caches pay an hourly storage fee | Priced well below normal input |
+
+</Figure>
+
+Whatever the provider, the sum is the same. A write costs more than plain input and a read costs far less, so a prefix pays back only if it is read again. On Anthropic, as of Oct 2026, a five-minute write is repaid by one read, and a one-hour write by two. A prefix used once is a small loss.
+
+An entry does not last. As of Oct 2026, Anthropic's default is five minutes, refreshed free every time it is read. A one-hour lifetime is opt-in with `"ttl": "1h"` and costs more to write. The clock runs from the start of the request that wrote or read the entry, not from the end of its answer, so a slow response eats into the gap you have left.
+
+There is also a floor. A prefix shorter than the model's minimum is processed without caching and **no error comes back**. As of Oct 2026 Anthropic's minimum runs from 512 tokens on its newest models to 4,096 on some older ones.
+
+## 2. How a cache stops working without telling you
+
+The failure that costs real money is a prefix that looks stable and is not.
+
+<Compare caption="One handbook, one question a minute, as of Oct 2026. The left side pays the write premium on every call and never reads. Both sides send identical words; only their order differs.">
+  <Panel label="Breaks" title="The time goes first">
+
+The system prompt opens with `Current time: 09:14:03`, then the handbook, with the breakpoint after the handbook. The first line differs on every request, so no request matches an earlier one. Each call writes the whole handbook again at the write price and reads nothing. On Anthropic that is about a quarter more than not caching at all, on the biggest part of your prompt, with no error.
+
+  </Panel>
+  <Panel label="What to do" title="The time goes last">
+
+The handbook comes first with the breakpoint after it. The time goes into the user message, after the breakpoint, where a change costs nothing. The second call reads what the first one wrote.
+
+  </Panel>
+</Compare>
+
+A timestamp is the common case, not the only one. On Anthropic, as of Oct 2026, a change to tool definitions, `tool_choice`, images, thinking settings or `output_config.effort` also invalidates part of the cache, so a tidy-up of those can switch your savings off. *Thinking and effort, model by model* covers the last two. Two more traps, as of Oct 2026: Anthropic checks only about 20 positions back from a breakpoint, so a single turn that adds more than that can miss the earlier entry, and parallel requests cannot read an entry until the first response has begun, so send one first.
+
+<Steps
+  caption="One script, four moments. Click through and watch the two fields. The saving depends on whether the prefix is still identical and still warm, and the figures use Anthropic's five-minute default and ratios as of Oct 2026."
+  steps={[
+    {
+      label: 'First call',
+      title: 'The cache is written',
+      body: 'The provider processes the handbook and stores the result against the prefix. This call costs a little more than an uncached one.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'the whole prefix' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'that slice costs', value: 'about 1.25x' },
+      ],
+    },
+    {
+      label: 'Second call',
+      title: 'The cache is read',
+      body: 'Same prefix, inside the lifetime. The stored work is reused and the lifetime restarts at no charge.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: '0' },
+        { label: 'cache_read_input_tokens', value: 'the whole prefix' },
+        { label: 'that slice costs', value: 'about 0.1x or less' },
+      ],
+    },
+    {
+      label: 'Text above the breakpoint changes',
+      title: 'Back to a write',
+      body: 'A time, a name, a reordered tool schema. One different character means no matching prefix, so the cache is written again.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'the whole prefix' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'that slice costs', value: 'about 1.25x' },
+      ],
+    },
+    {
+      label: 'Idle past the lifetime',
+      title: 'The entry expires',
+      body: 'Five minutes with no read, counted from the start of the last request. The next call writes again, so this pays on steady traffic and not on an occasional call.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'the whole prefix' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'that slice costs', value: 'about 1.25x' },
+      ],
+    },
+  ]}
+/>
+
+You find all of this by reading the response, not the invoice. The script below marks the handbook as the end of the cached part and prints both fields.
+
+```python
+from anthropic import Anthropic
+
+MODEL = "claude-sonnet-5-5"   # check the models page; as of Oct 2026
+client = Anthropic()
+
+# Long enough to pass the minimum cacheable size, and identical on every request.
+HANDBOOK = open("handbook.md").read()
+
+def ask(question: str) -> None:
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=2000,   # room for the answer and any thinking
+        system=[
+            {"type": "text", "text": "Answer only from the handbook below."},
+            {"type": "text", "text": HANDBOOK, "cache_control": {"type": "ephemeral"}},
+        ],
+        messages=[{"role": "user", "content": question}],
+    )
+    u = resp.usage
+    print(f"written={u.cache_creation_input_tokens} read={u.cache_read_input_tokens} new={u.input_tokens}")
+
+ask("How much notice do I have to give?")
+ask("How many days of annual leave do I get?")
+```
+
+On the first call, `written` should equal the size of the handbook and `read` should be 0. On the second, the two swap, and `new` is only the tokens after the breakpoint. If both stay 0, the handbook is under the minimum. If `written` fills on both calls, something above the breakpoint changed. This request shape builds and parses with Anthropic's Python SDK, version 1.15.0, but it has not been run against the live API, so treat the numbers above as what the documentation says you will see.
+
+Caching also changes your rate limits. Anthropic says that for most models, as of Oct 2026, cache reads do not count toward the input-tokens-per-minute limit. The field `input_tokens` holds only what follows the last breakpoint, so a cached 200,000-token document plus a 50-token question shows `input_tokens: 50`. Total input is reads plus writes plus `input_tokens`. That is Anthropic's own framing. How OpenAI and Google count cached tokens against their limits is not covered here. *Rate limits and reliability* covers the rest of the limits.
+
+## 3. Batch, the arithmetic, and when neither applies
+
+A **batch** is a job. You submit many requests together and collect the results later. As of Oct 2026, Anthropic, OpenAI and Google each list about 50% off, on both input and output. In return, nothing streams, and you give up the answer arriving now. As of Oct 2026, Anthropic says most batches finish within an hour but expire at 24 hours, and an expired request is unanswered and not billed. OpenAI accepts only a `24h` window as of the same date. Results can come back in any order, so every request carries a `custom_id` and you match on that. Batches also have their own limits. As of Oct 2026 Anthropic caps one batch at 100,000 requests or 256 MB, and keeps a separate queue limit.
+
+Caching and batch stack, but with a catch. As of Oct 2026, batch requests run concurrently and in any order, Anthropic describes cache hits inside a batch as best effort, and its page cites hit rates anywhere from 30% to 98%. It suggests the one-hour lifetime for batches.
+
+Here is the sum for 1,000 questions over one handbook. The unit is the cost of reading the handbook once with no discount. Only the handbook is counted, not the questions or the answers.
+
+<Bars
+  caption="Illustrative arithmetic on the Anthropic ratios above, as of Oct 2026, not a measurement. It assumes each question arrives within five minutes of the last, reads at 0.1x, and every read inside the batch hits. Some models read at 0.05x, which would roughly halve the two cached bars."
+  unit="x one uncached read"
+  max={1000}
+  axis="Cost of the handbook tokens across 1,000 questions"
+  bars={[
+    { label: 'No discount', value: 1000 },
+    { label: 'Batch only', value: 500, note: '0.5 x 1,000' },
+    { label: 'Cache only', value: 101, note: '1.25 + 999 x 0.1' },
+    { label: 'Cache and batch', value: 51, note: 'Half of the cache-only figure, if every read hits', subject: true },
+  ]}
+/>
+
+> A cache that never hits costs more than no cache. The saving is real only when the usage fields say so.
+
+Neither discount is always right.
+
+- **A prefix used once or rarely.** You pay the write premium and the entry expires before a second call. The one-hour lifetime helps only if it is read again inside the hour.
+- **A prefix that is too short, or that changes per user.** Put the per-user text after the breakpoint, or accept that the part before it is small.
+- **Bursty traffic.** Gaps longer than the lifetime make every burst start with a write.
+- **A user is waiting, you need streaming, or step two needs step one's answer now.** Batch is wrong for all three.
+- **A hard deadline under 24 hours.** An expired request comes back with nothing, and you must resubmit it live.
+
+Batch does suit nightly enrichment, backfills and evaluation runs. The Evals course covers the habit around them in *Regression testing a prompt or model change*.

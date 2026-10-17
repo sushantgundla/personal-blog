@@ -1,0 +1,214 @@
+---
+title: "Context windows and their limits"
+subtitle: "The window is a hard ceiling, and filling it is neither free nor harmless."
+part: 1
+minutes: 7
+why: "You moved to a model with a far bigger window because a long conversation failed with an error about tokens, and you called the matter closed. It was not. The bill grew, answers slowed, and on long documents the model began quoting a clause that was close to the right one but not it. Nothing errored. A bigger window raises the ceiling and nothing else. This lesson shows what has to fit inside it, what the API does when you cross the line, why look-alike text hurts more than unrelated text, and a small test that tells you whether your own long prompt can be trusted. The numbers change with every release, so it also shows where to read them."
+wins:
+  - "Count the answer in the window: output, thinking included, shares it with everything you sent."
+  - "Read the limits from the Models API and count tokens before you send, instead of hard-coding a number."
+  - "Put the long text first and the question last, and never bury the one thing that matters in the middle."
+  - "Retrieve the passages that matter instead of pasting the corpus, and keep near-miss text out."
+  - "Plant a fact and a near-miss at several positions, at your real length, and count the hits before you trust a long prompt."
+quiz:
+  - q: "The context window is a ceiling on..."
+    options: ["The input tokens alone", "The count of turns in a chat", "Input and output, thinking too"]
+    answer: 2
+    explain: "Anthropic's documentation counts the answer, and any thinking, against the same window as everything you sent."
+  - q: "Your input alone is longer than the window. As of Oct 2026, what does Anthropic's API do?"
+    options: ["Quietly drops the oldest messages", "Returns a 400 error: prompt is too long", "Truncates the middle and answers anyway"]
+    answer: 1
+    explain: "Deciding what is safe to lose is your decision, so the request is rejected and nothing is dropped for you."
+  - q: "You plant one fact in a long prompt and the model finds it at every position. What does that show?"
+    options: ["Only the easy case, with no look-alike text", "Your long prompt is safe to ship as it is", "Position has stopped mattering on any model"]
+    answer: 0
+    explain: "A lone planted fact is the easiest test there is. Add a near-miss and your real length before you trust the result."
+  - q: "What is the safest reading of the 'lost in the middle' result today?"
+    options: ["Newer models have fixed it, so ignore position", "Middle tokens cost more than other tokens", "One factor among several, so test your own model"]
+    answer: 2
+    explain: "The 2023 paper found a position effect. Later work found length and distractors hurt too, and a plain needle test can hide all of it."
+  - q: "Where should your code get a model's current window size and maximum output?"
+    options: ["From a constant copied from this lesson", "From the Models API or the models page", "From the length of the last error message"]
+    answer: 1
+    explain: "Limits change with each release, so read them at runtime or from the official page rather than from anything written down, including this lesson."
+deeper:
+  - { label: "Anthropic — context windows (what counts, overflow behaviour, compaction)", href: "https://platform.claude.com/docs/en/build-with-claude/context-windows" }
+  - { label: "Anthropic — effective context engineering for AI agents", href: "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" }
+  - { label: "Lost in the Middle (Liu et al., 2023)", href: "https://arxiv.org/abs/2307.03172" }
+  - { label: "Chroma — Context Rot (2025, a vendor report)", href: "https://www.trychroma.com/research/context-rot" }
+---
+
+The window is the limit that returns an error before you get an answer. It is also the number people most often mistake for a quality setting, and it is not one. This lesson is about living inside it well. It assumes you have read *What a model is made of*, which explains tokens.
+
+## 1. What has to fit, and what happens when it does not
+
+The **context window** is a token budget for a single request. Not for a conversation, but for one call. As of Oct 2026, Anthropic's documentation counts everything in the request against it: the system prompt, every message, tool results, images, documents and tool definitions. The answer counts too, and so does any thinking.
+
+| What is in the window | Billed as |
+|---|---|
+| System prompt | Input |
+| Tool definitions | Input |
+| Conversation history | Input |
+| Retrieved documents | Input |
+| The new user message | Input |
+| The answer, and any thinking | Output |
+
+<Budget
+  caption="One illustrative request against a 1,000,000-token window. The retrieved documents are the biggest slice, as usual, and the answer sits inside the same budget. Most of the window is empty, which is the point: capacity was never the problem. The figures are an illustration, not a measurement — count your own."
+  totalLabel="A 1,000,000-token window"
+  unit="tokens"
+  total={1000000}
+  segments={[
+    { label: 'System prompt', value: 1200, note: 'Resent on every single turn' },
+    { label: 'Tool definitions', value: 2400, note: 'Schemas get large faster than you expect' },
+    { label: 'Conversation history', value: 9000, note: 'Grows every turn, never shrinks on its own' },
+    { label: 'Retrieved documents', value: 62000, note: 'Usually the biggest slice by far', subject: true },
+    { label: 'The new user message', value: 180, note: 'Rarely the problem' },
+    { label: 'Reserved for the answer', value: 4000, note: 'max_tokens, out of the same budget' },
+    { label: 'Unspent headroom', value: 921220, spare: true },
+  ]}
+/>
+
+As of Oct 2026, Anthropic lists a 1,000,000-token window and a 128,000-token maximum output for each of its four current models. Other providers publish their own figures, so read their model pages. Do not hard-code it. As of Oct 2026, the Models API (`GET /v1/models`) returns `max_input_tokens` and `max_tokens` for every model, so your code can ask. The token-counting endpoint gives an estimate of a request's size in tokens before you send it. As of Oct 2026 it is free, with its own rate limit. Count against the model you will actually use. As of Oct 2026, Anthropic says its newer tokenizer gives about 30 percent more tokens for the same text than older models, so counts from an older model mislead.
+
+What happens at the edge has changed. As of Oct 2026, if the input alone is over the window, the API returns a 400 error, "prompt is too long". If the input fits but input plus `max_tokens` does not, current models (Claude 4.5 and newer) accept the request and stop mid-answer with `stop_reason: "model_context_window_exceeded"`. Older models rejected that request instead (Anthropic's context windows page, as of Oct 2026). Either way, the API does not drop old messages for you.
+
+So you need a policy before a user finds the edge: drop old turns, summarise them, or retrieve only the parts that matter. Anthropic now offers server-side compaction, which writes the summary for you. It was in beta as of Oct 2026.
+
+<Flow
+  caption="Where the limit is enforced. Nothing is dropped for you, so the branch on the right is a decision you make in your own code, before a user finds the edge."
+  steps={[
+    {
+      label: 'One request',
+      note: 'Prompt, tools, history, documents',
+    },
+    {
+      label: 'Add the answer',
+      note: 'Output and thinking count against the same window',
+    },
+    {
+      label: 'Measured against the window',
+      subject: true,
+      branch: ['Input fits — the call runs', 'Input alone is over — the API returns a 400'],
+    },
+    {
+      label: 'Your policy, chosen in advance',
+      branch: [
+        'Drop old turns',
+        'Summarise them, or use compaction',
+        'Retrieve only the parts that matter',
+      ],
+    },
+  ]}
+/>
+
+## 2. A bigger window is not a free upgrade
+
+A larger window costs you several things.
+
+**You pay for every token, every turn.** A 100,000-token prompt costs the same whether the answer needed all of it or 400 tokens of it, and again on the next turn. Anthropic bills the full 1M window at standard rates on most current models, with one exception where prompts over 100,000 tokens cost more (its context windows page, as of Oct 2026).
+
+**Latency goes up before generation starts.** Time to first token is mostly the model reading your input, and attention work grows with the square of the length (see *What a model is made of*). A very long prompt means a blank screen.
+
+**Accuracy can fall as the prompt grows.** Anthropic's own documentation calls this *context rot*: recall and accuracy degrade as token count rises (as of Oct 2026). Three pieces of evidence show how it looks.
+
+- *Position.* Liu and colleagues (2023) found models retrieve facts near the start or end of a long prompt more reliably than the same fact halfway through. They called it *lost in the middle*.
+- *Length.* Chroma tested 18 models in July 2025, none of them current. Accuracy fell as input grew, even on simple tasks. In their plain planted-fact test, position made no notable difference.
+- *Look-alike text.* In the same report, one on-topic passage that did not answer the question lowered accuracy, and four lowered it more.
+
+Chroma sells a vector database, which suits the conclusion "retrieve less", and its models are old, so treat this as a reason to test, not a measurement of your model. One more result: models given about 300 tokens of focused context beat the same models given a roughly 113,000-token history, on the same questions.
+
+Picture this, as an illustration and not a logged incident. An HR assistant gets three handbook versions pasted into one prompt "to be safe": 2023, 2024 and current. Someone asks how much notice they must give. The right clause is in the current version, halfway down. Two older clauses read almost the same and give different numbers. The model answers confidently with the 2023 number. Nothing errored. The answer is wrong, and it looks right.
+
+> A bigger window raises the ceiling. It does not raise the accuracy. What you put in the window still decides the answer.
+
+## 3. Working well inside it
+
+Five moves, in the order they pay.
+
+**Put the long text first and the question last.** Anthropic's guidance for long prompts, as of Oct 2026: put long documents near the top, above your query, and put the query at the end. It reports gains of up to 30 percent in its own tests, especially with several documents. That is a vendor figure, so test it on your task. Wrap each document in tags with its source, so the answer can cite it.
+
+<Anatomy
+  caption="A shape adapted from Anthropic's long-prompt guidance (its own example uses <document> with <source> subtags): the bulk first, then the instruction and the question together at the end, where they are easiest to see."
+  label="One long request"
+  parts={[
+    { text: '<documents>\n' },
+    {
+      text: '  <document source="handbook-2025.pdf">...40,000 tokens...</document>',
+      name: 'The long text, first',
+      note: 'The bulk goes where it will not crowd out the question',
+      subject: true,
+    },
+    { text: '\n</documents>\n\n' },
+    {
+      text: 'Answer only from the documents above. Cite the source you used.',
+      name: 'The instruction',
+      note: 'After the documents, not before them',
+    },
+    { text: '\n\n' },
+    {
+      text: 'How much notice do I have to give?',
+      name: 'The question, last',
+      note: 'A few dozen tokens, and the last thing the model reads',
+    },
+  ]}
+/>
+
+**Retrieve rather than paste.** Ten relevant paragraphs beat the whole handbook on cost and latency, and by the evidence above often on accuracy as well. The RAG course covers building it. Keep the chunk count small, because every extra chunk is another chance for a near-miss.
+
+<Compare caption="The same question answered two ways. Retrieval wins on cost and latency for certain, and on accuracy whenever the extra text is look-alike text.">
+  <Panel label="Naive" title="Paste the whole handbook">
+
+Every token is read and paid for on every turn, and the paragraph that answers the question competes with hundreds that nearly do.
+
+  </Panel>
+  <Panel label="What to do" title="Retrieve ten paragraphs">
+
+Cheaper and faster, because you send a fraction of the tokens, and the evidence is not buried.
+
+  </Panel>
+</Compare>
+
+**Count the answer.** Output shares the window, and as of Oct 2026 Anthropic's context windows page says thinking tokens are a subset of `max_tokens`. A small `max_tokens` on a model that thinks can be used up before any visible text appears. Size it for the thinking and the answer together.
+
+**Cache what never changes.** A long, fixed prefix can be reused at a fraction of the price. The rules for that are in *Caching and batch: the two big discounts*.
+
+**Then measure.** Take your real prompt length and plant the true answer at several positions. Beside it, plant a near-miss: a sentence that looks like the answer and is wrong. A fact alone is the easy case. Run it on the model you actually use.
+
+```python
+import random
+import re
+from anthropic import Anthropic
+
+MODEL = "claude-sonnet-5-5"   # check the models page; valid as of Oct 2026
+client = Anthropic()
+
+PARAS = open("handbook.md").read().split("\n\n")   # your own text, at your real length
+NEEDLE = "Notice to resign is 30 days."
+NEAR_MISS = "Notice to end a lease early is 90 days."
+ASK = "How many days' notice do I give to resign? Reply with the number only."
+
+def hits(at, runs=5):
+    ok = n = 0
+    for _ in range(runs):
+        p = PARAS[:]
+        p.insert(random.randrange(len(p) + 1), NEAR_MISS)
+        p.insert(int(at * len(p)), NEEDLE)   # needle placed last, so it sits at `at`
+        r = client.messages.create(
+            model=MODEL, max_tokens=4000,   # thinking shares this budget
+            messages=[{"role": "user", "content": "\n\n".join(p) + "\n\n" + ASK}],
+        )
+        if r.stop_reason == "max_tokens":
+            continue   # starved of room, not a miss
+        n += 1
+        text = "".join(b.text for b in r.content if b.type == "text")
+        ok += bool(re.search(r"\b30\b", text))
+    return f"{ok}/{n}"
+
+for at in (0.0, 0.25, 0.5, 0.75, 1.0):
+    print(f"{at:.0%}: {hits(at)}")
+```
+
+You get five lines, one per position, each showing hits out of the runs that finished. A dip in the middle is the finding, and so is a dip everywhere; a run cut off by `max_tokens` is skipped, not counted as a miss. Run it again without the `NEAR_MISS` line to see what one look-alike sentence costs. Mind the bill: it sends 25 requests at your full prompt length, so count the tokens, multiply by 25 and check the provider's pricing page.
+
+**When not to use any of this.** If the whole document is the task, such as summarising one 300-page report or finding contradictions across a codebase, retrieval would cut the links you need. Use the big window and test it. If your prompts run to a few thousand tokens, none of this matters yet, so do not optimise. And if your own test finds the planted fact everywhere, trust that result over every rule here, with its date and its model name attached.

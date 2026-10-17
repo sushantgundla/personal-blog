@@ -1,0 +1,189 @@
+---
+title: "When a model is retired"
+subtitle: "Every model id has an end date. Find yours before the provider's email does it for you."
+part: 4
+minutes: 7
+why: "You open your phone to a page of alerts. Every call from your summariser is failing, and nothing was deployed. The model id in your config worked on Friday, and now the provider says it does not exist. An email about this arrived two months ago, at an address nobody reads. Providers retire old models and publish the dates, and the notice is shorter than you would like. This lesson gives you the words providers use, how much warning each of the three gives, what an id does and does not promise, and a short script that lists the model names in your code with the days left on each."
+wins:
+  - "Find every model id you depend on, including the ones built at runtime, before a provider's email does it for you."
+  - "Read a published retirement date as the earliest day, and plan for the exact date once a notice names one."
+  - "Start the migration when the notice arrives, not when the date is close, because the notice window is all you get."
+  - "Check whether an id names one fixed snapshot or a pointer that moves, on the provider's own id page."
+  - "Remember that a pinned id fixes the weights, not the serving around them."
+quiz:
+  - q: "A provider's table lists a model you use as active, with a retirement date marked 'not sooner than' next September. How do you read that date?"
+    options: ["It is the day the model will stop working, with no notice before it", "It is a guarantee that the model keeps running until that day", "It is the earliest possible retirement day; a notice sets the real date"]
+    answer: 2
+    explain: "Dates on models that are still active are floors. The date you plan around is the one in the notice."
+  - q: "OpenAI announces on 14 October that a model leaves on 14 January. Its policy page promises generally available models at least six months. What do you plan around?"
+    options: ["14 January, the date the provider named", "April, because the policy says six months", "Neither; wait for a second email"]
+    answer: 0
+    explain: "The policy is a minimum with an exception for safety and compliance, and the page does not say which applied here. Once a date is named, plan for it."
+  - q: "You call a long-retired OpenAI model and get a 404 'model_not_found' saying the model 'does not exist or you do not have access to it'. What does that tell you?"
+    options: ["Your API key was revoked and you need to create a new one", "The provider is having an outage and you should retry later", "It could be a retired id, a typo or missing access, so check the deprecations page first"]
+    answer: 2
+    explain: "The message is the same for all three causes, so a retired model looks like a configuration bug until you check the dates."
+  - q: "As of Oct 2026, what does an Anthropic id such as claude-sonnet-5-5 name?"
+    options: ["A pointer that moves to newer snapshots as they ship", "One fixed snapshot, with its own retirement schedule", "Every snapshot in that family, retired together"]
+    answer: 1
+    explain: "From the 4.6 generation on, the dateless id is the snapshot. Updates ship under a new id, and each id has its own deprecation and retirement schedule."
+  - q: "You search your repository for model names and find none of the ids you know you use. What is the likeliest reason?"
+    options: ["The ids come from an environment variable or a config service, so they never appear in the source", "Repository search cannot read Python files", "Retirement only affects models you have never called"]
+    answer: 0
+    explain: "A search sees strings in files. Ids assembled at runtime are visible only in your deployment config or in the provider's usage export."
+deeper:
+  - { label: "Anthropic - model deprecations", href: "https://platform.claude.com/docs/en/about-claude/model-deprecations" }
+  - { label: "Anthropic - model ids and versioning", href: "https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions" }
+  - { label: "OpenAI - deprecations", href: "https://developers.openai.com/api/docs/deprecations" }
+  - { label: "Google - Gemini API deprecations", href: "https://ai.google.dev/gemini-api/docs/deprecations" }
+---
+
+*Switching models safely*, the next lesson, covers a move you choose. This lesson covers the one you do not. Every id you call has a date after which it stops working, and the provider sets that date, not you.
+
+## 1. A retirement is announced, then it happens
+
+Providers describe a model's life in a few stage words. As of Oct 2026, Anthropic uses four: **Active**, **Legacy**, **Deprecated** and **Retired**. A deprecated model still works, but it comes with a named replacement and a retirement date. Once it is retired, requests to it fail. OpenAI also marks models *deprecated* and *legacy*, but its definitions differ from Anthropic's, so read the definitions on each page.
+
+<Steps
+  caption="One real retirement, walked through. The two end dates are from Anthropic's deprecations page as of Oct 2026. The middle step is a day chosen to show the quiet stretch in between."
+  steps={[
+    {
+      label: 'Notice',
+      title: '14 April 2026: the email and the docs entry',
+      body: 'The model moves to Deprecated. A replacement is named and a retirement date is set. Your code still works, so nothing alerts you unless you read the notice.',
+      facts: [
+        { label: 'status', value: 'Deprecated' },
+        { label: 'days left', value: '62' },
+        { label: 'a request', value: 'still works' },
+      ],
+    },
+    {
+      label: 'Waiting',
+      title: 'Mid-May: the quiet stretch',
+      body: 'Nothing happens, which is the danger. This is your window to test the replacement and switch. Anthropic warns that deprecated models are likely to be less reliable.',
+      facts: [
+        { label: 'status', value: 'Deprecated' },
+        { label: 'days left', value: 'about 30' },
+        { label: 'a request', value: 'still works' },
+      ],
+    },
+    {
+      label: 'Retirement',
+      title: '15 June 2026: the id stops working',
+      body: 'The model is Retired. Anthropic says requests to a retired model fail.',
+      facts: [
+        { label: 'status', value: 'Retired' },
+        { label: 'days left', value: '0' },
+        { label: 'a request', value: 'fails' },
+      ],
+    },
+  ]}
+/>
+
+How long is the window? Each provider publishes a minimum, and these are the numbers as of Oct 2026.
+
+<Figure bare caption="The three providers side by side, as of Oct 2026. Each cell comes from that provider's own page and can change, so treat the table as a map to the pages.">
+
+| | Anthropic | OpenAI | Google (Gemini API) |
+|---|---|---|---|
+| Notice before retirement | At least 60 days for publicly released models | At least 6 months for generally available models, 3 for specialised ones, about 2 weeks for preview models; shorter if safety or compliance require it | Preview models: at least 2 weeks (stated on the models page). No period stated for stable models on the deprecations page |
+| What a listed date means | Active models show "not sooner than" | A shutdown date, set when announced | "Earliest possible" |
+| Where to check | The deprecations page; Console usage export | The deprecations page; `shutdown_date` in the models list | The deprecations page and release notes |
+
+</Figure>
+
+Real runs show how little room that can be. Anthropic gave 62 days for Claude Sonnet 4, and 61 days for a later model announced on 30 September 2026 for retirement on 30 November. OpenAI announced on 14 October 2026 that several GPT-4o and GPT-4.1 snapshots leave on 14 January 2027, about 92 days. That is shorter than the six months its page promises for generally available models, and the page gives no reason. Google set a shutdown of 9 March 2026 for a preview model released 18 November 2025, under four months later.
+
+Features retire too: OpenAI's Assistants API shut down on 26 August 2026.
+
+> A date on an active model is a floor. A date in a notice is the date.
+
+A floor can pass in silence. On 17 October 2026 one active model's earliest date, 15 October, was two days gone and it was still listed as active. That does not make it safe. A notice could arrive any day.
+
+## 2. What the id tells you, and what it cannot
+
+An id can be a snapshot, which is fixed, or a pointer, which moves. You need to know which one you hold.
+
+On Anthropic, as of Oct 2026, ids from the 4.6 generation onward have no date in them, for example `claude-sonnet-5-5`. Such an id is a **snapshot**, not a pointer: the weights and configuration under it do not change, and an update ships under a new id. Before 4.6, ids carry a date, and the Claude API also accepts a shorter **alias** that moves to the newest snapshot of that version. Every id, dated or not, has its own retirement schedule.
+
+Google works differently. As of Oct 2026, its models page says stable models usually do not change, and a `-latest` alias is swapped on every new release, with two weeks' email notice before breaking changes. So an id that answers does not prove which model answered. This is why the next lesson, *Switching models safely*, returns the served id with every response, and why you log it.
+
+For OpenAI the pages used here list dated snapshots such as `gpt-4o-2024-08-06`. The undated `gpt-4o` and `gpt-4.1` showed the same shutdown date in the models list on 17 October 2026. That tells you they retire together. Whether an undated id is a fixed snapshot is not stated on the pages used here, so it is not confirmed.
+
+Two more things matter. As of Oct 2026, Amazon Bedrock and Google Cloud, which also host Claude, set their own retirement schedules, so the same model can have a different date there. And a pinned id fixes the weights, not everything around them: as of Oct 2026, Anthropic's id page says the router, safety classifiers and sampling code can change under an unchanged id. *Timeouts, fallbacks, and failures that look like success* covers what that looks like in practice.
+
+## 3. Find your exposure before the email does
+
+You survive a retirement if you know what you call. Look in four places.
+
+1. **Your code.** Search every repository for model strings. The script below does this.
+2. **Your running config.** Environment variables, feature flags, a config service, notebooks, and the other team's service that shares your key.
+3. **The provider's own records.** As of Oct 2026, Anthropic's Console has a Usage page with an Export button that gives a CSV of usage by API key and model, and OpenAI's models list carries a `shutdown_date` field on its model objects.
+4. **A calendar.** Put each date in the calendar you use for certificate expiry, with a margin well before it, because the work after a notice is real work.
+
+<Flow
+  caption="The routine, in order. The test step is where the time goes, and it is the same recipe as a model switch you choose."
+  steps={[
+    { label: 'Find every id', note: 'Code, config, usage export' },
+    { label: 'Look up its date', note: 'On the provider page, not from memory' },
+    { label: 'Put it in a calendar', note: 'With a margin before the date' },
+    { label: 'Test the replacement', subject: true, note: 'Your eval cases, run as the next lesson shows' },
+    { label: 'Cut over', note: 'Then remove the old id from every config' },
+  ]}
+/>
+
+Here is a failure case from this course itself. Its first edition pinned one Anthropic id in eleven places across eight lessons. That id was retired on 15 June 2026, 62 days after its notice, and every sample stopped working. A search would have found all eleven in a minute. The same trap exists on the OpenAI side. On 17 October 2026 a call to a model id that OpenAI retired in July 2025 returned a 404 `model_not_found`: "does not exist or you do not have access to it". A retired model looks like a typo or a permissions problem, so people debug the wrong thing.
+
+```python
+# python3 find_models.py path/to/repo   -- set OPENAI_API_KEY to look up OpenAI dates
+import json, os, re, sys, urllib.request
+from datetime import date
+from pathlib import Path
+
+ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
+SKIP = {".git", "node_modules", ".venv", ".next"}
+SUFFIXES = {".py", ".ts", ".js", ".json", ".yaml", ".yml", ".toml", ".env"}
+PATTERN = re.compile(r"\b(?:claude|gpt|gemini|o\d)-[a-z0-9][a-z0-9.\-]*")
+
+# Add Anthropic and Google ids by hand from their deprecations pages: "id": "YYYY-MM-DD".
+MANUAL = {}
+
+found = {}  # model string -> first place it appears
+for path in ROOT.rglob("*"):
+    if path.is_dir() or SKIP & set(path.parts) or not (path.suffix in SUFFIXES or path.name.startswith(".env")):
+        continue
+    for n, line in enumerate(path.read_text(errors="ignore").splitlines(), 1):
+        for m in PATTERN.findall(line):
+            found.setdefault(m.rstrip(".-"), f"{path}:{n}")
+
+# OpenAI: every model object has an optional shutdown_date, "YYYY-MM-DD" or null.
+dates = {}
+key = os.environ.get("OPENAI_API_KEY")
+if key:  # without a key, OpenAI ids print "no date known"
+    req = urllib.request.Request("https://api.openai.com/v1/models",
+        headers={"Authorization": "Bearer " + key})
+    dates = {m["id"]: m.get("shutdown_date") for m in json.load(urllib.request.urlopen(req))["data"]}
+dates.update(MANUAL)
+
+for model, where in sorted(found.items()):
+    d = dates.get(model)
+    days = (date.fromisoformat(d) - date.today()).days if d else None
+    left = "no date known" if days is None else "already past" if days < 0 else f"{days} days"
+    print(f"{model:30} {left:14} {where}")
+
+# Run on 2026-10-17 against a small test repo, it printed:
+# claude-sonnet-4-20250514       no date known  repo/src/config.py:4
+# claude-sonnet-5-5              no date known  repo/src/config.py:3
+# gpt-4o                         89 days        repo/src/config.py:2
+# gpt-4o-2024-08-06              89 days        repo/src/config.py:1
+# gpt-5.1-codex-max              already past   repo/src/config.py:6
+```
+
+Run it from the root of a repository. It prints each model string, the days left and where it was found. Anthropic and Google ids say "no date known" until you add them to `MANUAL`, because the pages used for this lesson describe no API field for their dates. "No date known" means the script does not know, not that no date exists. The first line of that output is the retired id from the failure case, still sitting in a file. The "already past" row shows that the models list still returns ids whose date has gone by, so it is a source of dates, not proof that a model answers.
+
+**When this does not apply.** The routine matters most for production calls. Several cases need less.
+
+- **Open weights you host.** A file on your own disk does not get retired. Your risk moves to the licence and to your hardware, as *Open weights vs closed APIs* and *Running a model yourself* explain. As of Oct 2026, Anthropic says it has committed to keeping the weights of its publicly released models, but that preserves them, it does not keep them callable.
+- **Throwaway scripts and notebooks.** If it is run twice and deleted, let it break.
+- **A date a year away.** A far-off floor needs a calendar entry, not a migration. A new model shipping is not a notice either. Migrate when a notice names a date, or when you want the new model.
+- **Ids your search cannot see.** The script reads files. If your ids live in a config service, use the provider's usage export.

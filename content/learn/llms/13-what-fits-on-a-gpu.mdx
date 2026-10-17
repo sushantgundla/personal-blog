@@ -1,0 +1,147 @@
+---
+title: "What fits on a GPU"
+subtitle: "Weights, KV cache and overhead: the sum that tells you whether a model fits before you download it."
+part: 3
+minutes: 7
+why: "You pick a 32-billion-parameter model, quantised to 4-bit, and the file is 18 GB. Your card has 24 GB, so it fits. It loads, answers three short questions, and looks fine. Then a colleague pastes in a long report and the process dies with an out-of-memory error. Nothing was wrong with the model or the card. The file size was only the first line of the bill. This lesson gives you the whole sum, in three parts, so you can check a model against a card on paper, see which input will break it, and know what quantising it costs you in quality."
+wins:
+  - "Estimate weight memory as parameters times bytes per parameter, and use about 0.54 bytes at 4-bit, not 0.5."
+  - "Count a mixture-of-experts model by its total parameters for memory, and by its active parameters for speed."
+  - "Size the KV cache from the model's own config.json, the context you will use and the users you will serve."
+  - "Run the sum before you download, and treat a result close to the card limit as a no."
+  - "Re-run your own test cases on the exact quantised file you plan to serve."
+quiz:
+  - q: "A 30-billion-parameter model is stored at 4-bit, about 0.54 bytes per parameter. Roughly how much memory do the weights alone need?"
+    options: ["About 60 GB", "About 30 GB", "About 16 GB"]
+    answer: 2
+    explain: "30 billion times 0.54 bytes is about 16 GB. Sixty is what the same model needs at 16-bit, and thirty is 8-bit."
+  - q: "A mixture-of-experts model has 47 billion parameters in total and uses about 13 billion per token. Which number do you plan memory around?"
+    options: ["The 13 billion that are active", "The 47 billion, because every expert has to be loaded", "The average of the two"]
+    answer: 1
+    explain: "The router can pick any expert for the next token, so all of them must be in memory. Only the speed follows the active count."
+  - q: "A model fits on your card at 8K context with one user, but fails at 32K. What grew?"
+    options: ["The KV cache, which holds state for every token in context", "The weights, which scale with context length", "The driver overhead, which is charged per token"]
+    answer: 0
+    explain: "Weights are fixed once the model is loaded. The KV cache grows with every token held, so a longer context needs proportionally more memory."
+  - q: "What did the late-2024 Llama-3.1 quantisation study find?"
+    options: ["4-bit beat 16-bit on every task it tried", "Both 8-bit and 4-bit lost about half their accuracy on hard tasks", "FP8 was near-lossless, and calibrated 4-bit weight-only kept about 96 to 99 percent of the 16-bit score"]
+    answer: 2
+    explain: "That is what the paper reports for its tests. It did not test GGUF files, formats below 4-bit, or KV cache quantisation, so it does not settle your case."
+  - q: "You have downloaded a 4-bit copy of a model. What should you do before you rely on it?"
+    options: ["Nothing, because the study showed 4-bit is lossless", "Re-run your own cases on that exact file", "Trust the leaderboard score of the 16-bit original"]
+    answer: 1
+    explain: "The evidence covers specific models and quantisers. A copy made another way can behave differently, and only your own cases show what you lost."
+deeper:
+  - { label: "Epoch AI: frontier performance on consumer hardware (the VRAM recipe and worked example)", href: "https://epoch.ai/data-insights/consumer-gpu-model-gap" }
+  - { label: "arXiv: accuracy and speed trade-offs in LLM quantisation (Llama-3.1, 2024)", href: "https://arxiv.org/abs/2411.02355" }
+  - { label: "vLLM documentation: quantisation formats and the hardware each one needs", href: "https://docs.vllm.ai/en/stable/features/quantization/" }
+  - { label: "Hugging Face: mixture of experts explained", href: "https://huggingface.co/blog/moe" }
+---
+
+*Open weights vs closed APIs* said that open weights buy you control. Control starts with a smaller question: will the model fit on the card you have? The answer is a sum you can do before you download anything. *Running a model yourself* picks up after that, with the tools and the cost.
+
+## 1. Weights: count the parameters, then the bytes
+
+A GPU has a fixed amount of fast memory, its **VRAM**. The model has to sit in it. If it does not, you do not get a slower answer. You get an out-of-memory error.
+
+The weights claim the first share, and the sum is plain:
+
+**memory for weights ≈ parameters × bytes per parameter**
+
+At 16-bit that is 2 bytes, at 8-bit it is 1. At 4-bit, Epoch AI's recipe uses 0.54 bytes on average (as of Aug 2025), a little above the 0.5 the bit count suggests.
+
+| Precision | Bytes per parameter | 7B model | 30B model | 70B model |
+|---|---|---|---|---|
+| 16-bit | 2 | ~14 GB | ~60 GB | ~140 GB |
+| 8-bit | 1 | ~7 GB | ~30 GB | ~70 GB |
+| 4-bit | ~0.54 | ~3.8 GB | ~16 GB | ~38 GB |
+
+These are decimal gigabytes, which is how cards are sold. Many tools print GiB (powers of 1024), which are about 7 percent smaller, so a "24 GB" card shows as roughly 22.4 GiB. Mix the two units and you lose more than a gigabyte.
+
+<Scale
+  caption="Weights only, on a log rule, from the table above. A 70B model at 4-bit still misses a 24 GB card by a wide margin, and this is before any room for the KV cache. The sizes are arithmetic, not measurements."
+  unit="GB"
+  fromLabel="A 7B model, 4-bit"
+  toLabel="A 70B model, 16-bit"
+  marks={[
+    { at: 3.8, label: '7B, 4-bit' },
+    { at: 16, label: '30B, 4-bit' },
+    { at: 24, label: 'A 24 GB card', subject: true },
+    { at: 38, label: '70B, 4-bit' },
+    { at: 140, label: '70B, 16-bit' },
+  ]}
+/>
+
+One catch changes the count. A **mixture-of-experts** model splits its layers into many experts and sends each token to only a few of them. Mixtral 8x7B, a 2023 example, holds about 47B parameters but runs at roughly the speed of a 12B dense model, according to the Hugging Face explainer (Dec 2023). Its memory need is still the big number: the post says "all parameters need to be loaded in RAM". So memory follows the total, and speed follows the active part. Epoch counted only models whose full weights fit on the card, and says this skews its study away from mixture-of-experts models.
+
+## 2. The KV cache and overhead take the rest
+
+While a model writes, it keeps a **KV cache**: the attention keys and values for every token it has seen, so it need not recompute them. The tokens are the same ones counted in *Context windows and their limits*. The cache cannot be skipped, and it grows with context length and with the number of requests in flight at once:
+
+**KV cache ≈ bytes per token × tokens in context × users**
+
+**bytes per token = 2 × layers × KV heads × head size × bytes per value**
+
+The 2 is one set of keys and one of values. You read the other three off the model's `config.json`, under `num_hidden_layers`, `num_key_value_heads` and `head_dim`. For Qwen3-32B, whose card lists 32.8B parameters and an Apache-2.0 licence (as of Oct 2026), the config gives 64 layers, 8 KV heads and a head size of 128. At 16-bit values that is 256 KiB per token, or 2 GiB for one 8K-token conversation.
+
+Last comes overhead: the GPU's runtime context and memory fragmentation. Epoch allows about 2 GiB.
+
+> Weights are paid once. The KV cache is paid per token, per user, for as long as the conversation stays open.
+
+Epoch's own worked sum is a good one to repeat for your model. It takes a 27B model at 4-bit on a 24 GB card with 8K context and gets 13.6 GiB of weights, 6.6 GiB of KV cache and 2.0 GiB of overhead.
+
+<Budget
+  caption="Epoch AI's worked example for a 27B model at 4-bit on a 24 GB card, with 8K context (figures from Epoch, Aug 2025). The KV cache and overhead add about 64 percent on top of the weights, and more at longer context. These are Epoch's figures, not a measurement of yours."
+  totalLabel="A 24 GB card (22.37 GiB)"
+  unit="GiB"
+  total={22.37}
+  segments={[
+    { label: 'Weights', value: 13.6, note: '27B parameters at about 0.54 bytes each', subject: true },
+    { label: 'KV cache', value: 6.6, note: '8K context, INT8, Llama-class model' },
+    { label: 'Overhead', value: 2.0, note: 'Runtime context and fragmentation' },
+    { label: 'Left over', value: 0.17, spare: true },
+  ]}
+/>
+
+Epoch's 6.6 GiB is a cautious allowance. It does not reproduce from a modern grouped-query config like the one above, which needs far less, so use your model's own numbers. Long outputs push the other way: Epoch estimates that 20K-token reasoning outputs lift its KV figure to about 15 GiB. Its sum also uses 99 percent of the card, which is a limit for a study, not a place to run. No standard safety margin was confirmed in the sources used, so leave one.
+
+```python
+GIB = 1024**3
+
+def fits(params_b, bytes_per_param, layers, kv_heads, head_dim,
+         context, users, kv_bytes, card_gb, overhead_gib=2.0):
+    weights = params_b * 1e9 * bytes_per_param / GIB
+    kv = 2 * layers * kv_heads * head_dim * kv_bytes * context * users / GIB
+    total, card = weights + kv + overhead_gib, card_gb * 1e9 / GIB
+    print(f"weights {weights:.1f} + KV {kv:.1f} + overhead {overhead_gib:.1f}"
+          f" = {total:.1f} GiB of {card:.1f} -> {'fits' if total <= card else 'NO FIT'}")
+
+# Qwen3-32B from its config.json. kv_bytes: 2 = 16-bit cache, 1 = 8-bit cache.
+fits(32.8, 0.54, 64, 8, 128, context=8192,  users=1, kv_bytes=2, card_gb=24)
+fits(32.8, 0.54, 64, 8, 128, context=32768, users=1, kv_bytes=2, card_gb=24)
+fits(32.8, 0.54, 64, 8, 128, context=32768, users=1, kv_bytes=1, card_gb=24)
+```
+
+Run it and you see three lines. The first, at 8K context, says "fits" at 20.5 GiB of 22.4. The second is the failure from the opening: the same model and card at 32K context come to 26.5 GiB, so "NO FIT". Nothing about the weights changed. The third halves the cache to 8-bit and still lands at 22.5, just over the limit. vLLM can store the cache in FP8 (as of Oct 2026), but its [quantized KV cache page](https://docs.vllm.ai/en/stable/features/quantization/quantized_kvcache/) recommends calibrating the scales, gives no accuracy figure, and the quantisation study below did not test it.
+
+## 3. Quantisation buys room, and you check the fee
+
+**Quantisation** stores each weight in fewer bits. The model keeps its shape and parameter count, and each number gets less precise. It is the biggest lever on the weights line of the sum.
+
+The best evidence in the sources used is a study of Llama-3.1 models from 8B to 405B, run in late 2024 (the paper's current version is dated May 2026). Its authors report that FP8 was near-lossless and that well-tuned INT8 lost about 1 to 3 percent. They also report that 4-bit weight-only quantisation, calibrated on real instruction data, kept about 96 to 99 percent of the 16-bit score across their tests. The smallest reasoning model they tried, at 1.5B, kept about 93.5 percent. The title asks the question: "Give Me BF16 or Give Me Death". The authors work on quantisation tooling, so they want it to look good. Those results hold for the Llama-3.1 and DeepSeek-R1-distilled models and the quantiser they used.
+
+Three things they did not test matter to you. The common GGUF files that Ollama and llama.cpp use come from a different quantiser. Formats below 4-bit were not tried, and the common claim that they degrade quickly is not confirmed in the sources used. The KV cache was left at full precision. So the study tells you where to start, and nothing more.
+
+<Flow
+  caption="The loop quantisation actually runs in. The step that gets skipped under time pressure is the third, and it is the only one that can catch damage on your own task."
+  steps={[
+    { label: 'Do the sum', note: 'Weights, KV cache at your real context, overhead' },
+    { label: 'Pick a level and a copy', note: 'Prefer one made with real calibration data' },
+    { label: 'Re-run your cases', note: 'The twenty cases from Picking a model, on the exact file you will serve', subject: true },
+    { label: 'Decide', branch: ['Quality holds: ship it', 'Quality drops: use more bits or a smaller model'] },
+  ]}
+/>
+
+For a feel of the ceiling, Epoch's study assumed 4-bit weights and found that a 24 GB card ran models up to about 27 to 28B parameters, and a 32 GB card up to about 40B (as of Aug 2025). That is more than a year old and the hardware has moved on, so check the Epoch page before you quote it. Epoch also found that models runnable on one consumer card matched the frontier of 6 to 12 months earlier on its benchmarks, and warns that small models are often tuned for those tests.
+
+**When this does not apply.** The sum assumes the whole model sits on one card. It stops being the limit if you spread the weights over several GPUs. The study found its 405B model needed 4 GPUs at 4-bit where 16 were used at full precision, so quantising changes the GPU count too. Offloading layers to system memory also runs bigger models, at a cost in speed or quality, as Epoch notes. And if you call an API, none of this is your problem. For when the sums favour owning the GPU, read *Running a model yourself*.

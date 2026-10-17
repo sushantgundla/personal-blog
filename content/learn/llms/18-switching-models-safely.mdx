@@ -1,0 +1,219 @@
+---
+title: "Switching models safely"
+subtitle: "Why a prompt does not transport, and the recipe for changing model without a bad week."
+part: 4
+minutes: 7
+why: "You change one string in the config, because a cheaper model appeared or a retirement email arrived. The average on your test set looks fine, so you ship. A week later support finds JSON that stopped parsing, a tool that is called twice, and a request that used to pass and now refuses. Nothing in your code changed, so nothing in your code explains it. Your prompt was never model-independent. It was quietly shaped around one model's habits, and an average can rise while a handful of cases get worse. This lesson shows what differs, how to find the cases that broke by name, and how to ship the change so that you can undo it in one line."
+wins:
+  - "Treat a model swap as a re-test, never as a config change."
+  - "Run your cases on both models, several times each, and read the list of cases that got worse, not only the average."
+  - "Fix the prompt for the new model rather than post-processing its output into the old shape."
+  - "Pin the exact id the provider gives you, and know whether it is a snapshot or a moving pointer."
+  - "Shadow a slice of real traffic to the candidate, and keep a one-line way back, before any user depends on it."
+quiz:
+  - q: "You swap to a new model at the same price per token, and the monthly bill rises by a third. What do you check first?"
+    options: ["The pricing page, for a surcharge you missed", "Whether temperature defaults higher on the new API", "How long the new model writes, and what effort it thinks at by default"]
+    answer: 2
+    explain: "Cost is price times tokens, and models differ in how much they write and how hard they think by default, so cost can move with no change in price."
+  - q: "The new model returns correct answers wrapped in a chatty preamble your parser chokes on. Best fix?"
+    options: ["Strip the preamble with a regex after the call", "Change the prompt so the new model stops producing a preamble, then re-run the cases", "Lower the output cap so there is no room for it"]
+    answer: 1
+    explain: "Post-processing means you now maintain both models' quirks for ever; fixing the prompt keeps one source of truth."
+  - q: "As of Oct 2026, which of these can the provider point at a different model without any deploy on your side?"
+    options: ["A short alias for an older Anthropic model, which points at the latest snapshot of that version", "A dateless id from Anthropic's 4.6 generation onwards, which names one fixed snapshot", "A dated snapshot id"]
+    answer: 0
+    explain: "An alias or a latest-style pointer is moved by the provider. A pinned id names one model, though the serving stack around it can still change."
+  - q: "After a swap, your eval average is up 3 points. What could still be wrong?"
+    options: ["Nothing: a higher average means no case got worse", "The eval set must be too small to mean anything", "Some cases may have got reliably worse while others improved, and the average hides it"]
+    answer: 2
+    explain: "Gains and losses cancel inside an average. The only way to see a loss is to list the cases that flipped, by name."
+  - q: "Shadow traffic means..."
+    options: ["Sending a copy of real requests to the candidate without returning its answers to users", "Running the candidate only for internal staff", "Splitting live users 50-50 between the two models"]
+    answer: 0
+    explain: "You compare on genuine production inputs with zero user risk. You only pay for the sampled copies."
+deeper:
+  - { label: "Xu and Wu - What Aggregate Scores Miss (arXiv preprint, Aug 2026)", href: "https://arxiv.org/abs/2608.17719" }
+  - { label: "Anthropic - model IDs and versioning", href: "https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions" }
+  - { label: "Anthropic - define success criteria and build evaluations", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
+  - { label: "Ollama - OpenAI compatibility", href: "https://docs.ollama.com/api/openai-compatibility" }
+---
+
+*Picking a model* was about choosing one. You will choose again: prices move, better models ship, and providers retire the one you built on. The teams that cope well are the ones for whom changing model is boring.
+
+## 1. Your prompt is partly tuned to one model's quirks
+
+You did not intend this. Something did not work, you added a line to the prompt, it worked, and you moved on. Half of those lines are general instruction. The other half correct one model's habits, and mean nothing, or something worse, to another.
+
+| What differs | What you see when it changes |
+|---|---|
+| How literally it follows instructions | A rule that was obeyed becomes a suggestion, or the reverse |
+| Formatting and structured output | Markdown where you wanted plain text, a preamble before the JSON |
+| Verbosity | Answers get longer or terser, so cost and latency move at the same price per token |
+| Refusal threshold | Content that always passed is declined |
+| Tool calling | Different eagerness to call, parallel calls where you expected one |
+| Reasoning and effort | Default effort differs per model, so the bill moves (*Thinking and effort, model by model*); a trick that helps an ordinary model can hurt a reasoning one (*Base, instruct, and reasoning models*) |
+| Settings it accepts | A setting valid on one id can be rejected by the next |
+
+The last row bites in code. As of Oct 2026, Anthropic's docs say a non-default `temperature`, `top_p` or `top_k` returns a 400 on Claude 4.7 and later. One preprint (Aug 2026) says three recent OpenAI models accept no temperature. I could not confirm that on OpenAI's own pages, so read each model's page.
+
+None of this is a bug in either model. You fitted your prompt to one personality. So: **a model swap is a re-test, not a config change.** The config change is how you deploy it, not how you decide it.
+
+## 2. The migration recipe
+
+This takes an afternoon if you have the cases from *Picking a model*, and a week if you do not. The Evals course covers the method in *Regression testing a prompt or model change*.
+
+1. **Freeze the eval set.** One fixed ruler.
+2. **Run both models, several times each.** Same inputs, same settings, same effort level. Only the model id differs. Log the id each response says it came from.
+3. **Diff the failures into piles.** Both fail: not your problem today. Only the old one fails: free wins. Only the new one fails: the entire migration. Read that pile by name, even when the average went up.
+4. **Score twice, strict and loose.** Strict wants the exact format your parser needs. Loose only asks whether the answer was right. A gap between them is a format break, not a lack of understanding.
+5. **Fix the prompt against the new model,** then re-run everything, because one fix often breaks another case.
+6. **Check cost, p95 latency and output length.** A cheaper model that writes twice as much can cost more.
+7. **Ship it gradually.** Section 3.
+
+<Flow
+  caption="The recipe is a loop, not a checklist. The diff forks into three piles, and only one of them is the actual migration."
+  steps={[
+    { label: 'Freeze the eval set', note: 'One fixed ruler' },
+    { label: 'Run both models', note: 'Several runs each, same settings, log the served id' },
+    {
+      label: 'Diff the failures',
+      subject: true,
+      branch: [
+        'Both models fail: pre-existing',
+        'Only the old one fails: free wins',
+        'Only the new one fails: the migration',
+      ],
+    },
+    { label: 'Fix the prompt', note: 'Against the new model, never by patching its output' },
+    { label: 'Ship it, gradually', note: 'Shadow traffic, then a ramp with a kill switch' },
+  ]}
+  back={{ from: 4, to: 2, label: 'Re-run everything, since a fix for one case often breaks another' }}
+/>
+
+Here is the usual failure, in numbers.
+
+<Compare caption="One swap, read two ways. The figures are an illustration, not a measurement. Both sides use the same runs.">
+  <Panel label="Failure" title="Read the average">
+
+Forty cases. The old model passes 36, the new one 37. The score went up, so you ship.
+
+  </Panel>
+  <Panel label="What to do" title="Read the cases that got worse">
+
+Four cases were fixed and three got worse, which nets to plus one. All three losses are the same: the new model wraps its JSON in a code fence and your parser rejects it. Only a strict score shows it.
+
+  </Panel>
+</Compare>
+
+Real data points the same way. A preprint (Aug 2026) ran 900 public benchmark items 50 times each, across three successive versions from one provider. In six of its nine comparisons the average rose, and in each of those 4.4 to 8.3 percent of items still got reliably worse. One run per item found none of its 457 reliable changes. On one benchmark a version pair lost 3.9 points strict and 0.04 loose: the loss was format, not understanding. The authors say these shares are not rates for your app (one provider, three benchmarks, items chosen to leave room to move).
+
+> Fix the prompt for the new model. Post-processing its output back into the old shape means maintaining the quirks of a model you no longer use.
+
+## 3. Keep the switch one config value away
+
+**One adapter module.** Every call goes through one function. Model id, base URL and settings come from config. As of Oct 2026, Ollama serves the OpenAI Chat Completions shape at `http://localhost:11434/v1/`, so, as *Running a model yourself* showed, a local model can sit behind the same code. Check other providers one by one: OpenAI's reference points new projects at Responses (as of Oct 2026), and the adapter is where that gap stays hidden.
+
+```python
+# pip install openai   (checked with openai 3.33.0)
+import json
+import os
+from openai import OpenAI
+
+# One place. The rest of the app calls ask() and never names a provider.
+client = OpenAI(
+    base_url=os.environ["LLM_BASE_URL"],  # https://api.openai.com/v1, or http://localhost:11434/v1/ for Ollama
+    api_key=os.environ["LLM_API_KEY"],    # a local server accepts any placeholder here
+)
+OLD, NEW = os.environ["LLM_MODEL_OLD"], os.environ["LLM_MODEL_NEW"]  # exact ids, from each models page
+
+SYSTEM = 'Classify the ticket. Reply with JSON only: {"label": "refund" | "bug" | "other"}'
+CASES = [("I was charged twice, please send the money back", "refund"),
+         ("The export button does nothing when I click it", "bug")]
+
+def ask(model, user):
+    r = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}],
+    )
+    return r.choices[0].message.content, r.model  # the id actually served
+
+def strict(text, label):  # the format your parser needs
+    try:
+        return json.loads(text)["label"] == label
+    except (ValueError, KeyError, TypeError):
+        return False
+
+def loose(text, label):   # did it get the answer, whatever the format
+    return label in (text or "")
+
+def rate(model, ticket, label, runs=5):
+    got = [ask(model, ticket) for _ in range(runs)]
+    return (sum(strict(t, label) for t, _ in got) / runs,
+            sum(loose(t, label) for t, _ in got) / runs,
+            {m for _, m in got})
+
+for ticket, label in CASES:
+    (s0, l0, _), (s1, l1, served) = rate(OLD, ticket, label), rate(NEW, ticket, label)
+    flag = "REGRESSED" if s1 < s0 - 0.4 else "ok"  # 0.4: a rule of thumb
+    print(f"{flag:9} strict {s0:.1f}->{s1:.1f}  loose {l0:.1f}->{l1:.1f}  served {served}  {ticket[:30]}")
+```
+
+Set the four variables and run it. Each line is one case, and `REGRESSED` means the strict pass rate fell by more than 0.4. If loose stayed flat while strict fell, the model understood and your format broke, so fix the prompt. Store the `served` id beside every output. The sample sets no output cap and no temperature on purpose: OpenAI's reference deprecates `max_tokens` for `max_completion_tokens` (as of Oct 2026), and a name valid at one base URL may fail at another. Keep such settings in a per-model table.
+
+**Pin the exact id the provider gives you,** and know what it is. As of Oct 2026, Anthropic says every id is a pinned snapshot; from the 4.6 generation on, ids carry no date, while older ones have dated ids plus short aliases that do move. Google says its `-latest` alias is hot-swapped with each release (also as of Oct 2026). Pinning stops a pointer moving, not the serving stack changing, which Anthropic's page says can cause small differences under an unchanged id. So keep your cases running (*Drift: when the model changes under you*, in the Evals course). Retirement notice is in *When a model is retired*.
+
+<Compare caption="The same defence against drift, two different mechanisms. A moving pointer looks safer because you never touch it, and that is exactly why it is not.">
+  <Panel label="Fragile" title="A moving pointer, like an alias or -latest">
+
+The provider can move it to a new model at any time. Your behaviour changes and your git history shows nothing.
+
+  </Panel>
+  <Panel label="What to do" title="An exact model id">
+
+Nothing moves until you change the config value. A surprise becomes a scheduled task.
+
+  </Panel>
+</Compare>
+
+**Keep a second provider warm,** with a smoke test in CI that really calls it. An untested fallback is a plan to debug authentication during an outage (*Timeouts, fallbacks, and failures that look like success*).
+
+**Cut over with shadow traffic.** Send a copy of real requests to the candidate and return its answers to no one. Compare offline, on inputs your eval set never thought of. Sample 1 to 5 percent, a rule of thumb, since you pay for the copies. Then ramp, and keep a kill switch that restores the old model in one config change.
+
+<Steps
+  caption="The same rollout, one stage at a time. Traffic share and user risk rise together, and the kill switch keeps the last stage reversible."
+  steps={[
+    {
+      label: 'Shadow',
+      title: 'A copy of real traffic',
+      body: 'The candidate answers a sampled copy. Nobody sees its output.',
+      facts: [
+        { label: 'share of live traffic', value: '0%' },
+        { label: 'users who see it', value: 'none' },
+        { label: 'sample rate', value: '1 to 5%, a rule of thumb' },
+      ],
+    },
+    {
+      label: 'Slice and ramp',
+      title: 'A little live traffic, then more',
+      body: 'A small share of real users see the candidate, and the share grows only while quality and errors stay acceptable.',
+      facts: [
+        { label: 'share of live traffic', value: 'small, then increasing' },
+        { label: 'rollback', value: 'one config change' },
+      ],
+    },
+    {
+      label: 'Full cutover',
+      title: 'The new model is the default',
+      body: 'The old model stays one config change away for as long as that matters.',
+      facts: [
+        { label: 'share of live traffic', value: '100%' },
+        { label: 'users who see it', value: 'everyone' },
+        { label: 'rollback', value: 'one config change' },
+      ],
+    },
+  ]}
+/>
+
+**When this does not apply, or is too much.** A throwaway script or a prototype with no users needs ten cases and a glance, not shadow traffic. With no eval set, build one first (*Building an eval set from your own traffic*, in the Evals course). If the old model is already retired, you cannot run both, so compare against outputs you saved earlier. And shadow traffic sends real user text to a second provider, a data-handling decision, so check your terms first.
+
+If reverting takes a deploy and an argument, you will hesitate at exactly the wrong moment.
