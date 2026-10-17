@@ -3,7 +3,7 @@ title: "Structured outputs in practice"
 subtitle: "The decoder holds the shape. Know what it cannot say, and how a reply can still arrive broken."
 part: 2
 minutes: 7
-why: "You switched on a schema, deleted the retry loop that used to fix bad JSON, and felt good about it. A week later a nightly job wrote 38 rows of a 50-row list, with no error anywhere, because the reply was cut off and a forgiving parser closed the brackets for you. This lesson is the working knowledge that *Output contracts* leaves out: what the enforced schema can and cannot express, how to call it, and the three ways a reply can still fail you."
+why: "You switched on a schema, deleted the retry loop that used to fix bad JSON, and felt good about it. A week later a nightly job wrote 38 rows of a 50-row list, with no error anywhere, because the reply was cut off and a forgiving parser closed the brackets for you. This lesson is the working knowledge that Output contracts leaves out: what the enforced schema can and cannot express, how to call it, and the three ways a reply can still fail you."
 wins:
   - "Know the enforced subset: no numeric ranges, no length bounds, no recursion, and a hard cap on optional fields."
   - "Let the SDK send the schema and check the ranges after the fact, then add the checks only your code can make."
