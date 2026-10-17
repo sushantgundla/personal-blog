@@ -50,7 +50,7 @@ Retrieval metrics tell you whether the right chunk reached the prompt, not wheth
 
 The none run also sorts your questions. One study, ViDoRe V3 (April 2026 version, a benchmark of questions over document pages), called a question easy when any of six models answered it correctly with no documents at all. That made 48.6 percent of the questions easy, close to half. An easy question cannot show retrieval helping or failing; it only pads the average. Judge retrieval on the hard ones.
 
-If an answer needs several documents, label two levels: evidence documents that support each step, and gold documents that hold the answer. BrowseComp-Plus (August 2025) did this, at about 6.1 and 2.9 per question. Your oracle run hands over all of them.
+Use the two label levels from *Measuring retrieval*; the oracle run hands over all of them (about 6.1 evidence and 2.9 gold documents per question in BrowseComp-Plus).
 
 The oracle sets the ceiling. In BrowseComp-Plus one model (GPT-4.1, as of August 2025) scored about 93 percent given every labelled positive document, and about 15 percent when it searched with BM25, five results per call. In ViDoRe V3 the best real pipeline sat about 10 points under the oracle on hard questions. Both are single studies; measure your own.
 
