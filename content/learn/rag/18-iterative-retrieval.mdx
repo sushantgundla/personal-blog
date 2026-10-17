@@ -1,111 +1,112 @@
 ---
 title: "Iterative retrieval"
-subtitle: "Search, read, decide whether you have enough, search again — for the questions where you can't name your second query until you've seen the first answer."
+subtitle: "Search, read, decide whether you have enough, search again - for the questions where you cannot name your second query until you have seen the first answer."
 part: 3
 minutes: 8
-why: "*Query rewriting*'s decomposition trick splits 'how does refund differ from exchange' into two searches you can name before you run either one. Some questions won't split that way: 'find the incident that caused this regression, then tell me who reviewed the fix' needs the first search to finish before the second query even exists. One retrieval pass, however well rewritten, gets one shot. This lesson is what to do when one shot isn't the shape of the problem."
+why: "A support engineer asks the assistant which incident caused last week's checkout regression and who reviewed the fix. Your pipeline rewrites the question, searches, reranks and answers from an incident report that names the incident and says nothing about review. The review log is in the index. Nobody searched for it, because the words that find it, the incident number, appear only in the first answer. Rewriting cannot help here: the second query does not exist until the first search has finished. This lesson covers the loop that closes the gap, search, read, decide, and the three limits that keep it honest: a round cap, a token budget and a check for repeats. You will work out the token bill of a two-round and a four-round run by hand."
 wins:
-  - "Reach for iterative retrieval only when you can't name the second query before seeing the first result."
-  - "Reuse hybrid search, reranking, and rewriting as the tools called inside the loop — the loop isn't a new retrieval method."
-  - "Stop on evidence, not on a step count — the decision each round is 'do I have enough to cite,' not 'have I run out of turns.'"
-  - "Detect thrash — the same chunk returning with nothing new — and treat it as a stop signal, not a reason to try again."
-  - "Give every loop a hard iteration cap and a cost budget before it ever runs against real traffic."
+  - "Use a loop only when you cannot name the second query before seeing the first result."
+  - "Reuse hybrid search, reranking and rewriting as the tools called inside the loop."
+  - "Stop on evidence: each round asks whether you can cite yet, not whether turns remain."
+  - "Treat a chunk that returns with nothing new as a stop signal."
+  - "Set a round cap and a token budget before the loop sees real traffic."
 quiz:
-  - q: "A question needs two searches, and you can name both of them before running either. What do you reach for?"
-    options: ["Decomposition, from *Query rewriting*", "Iterative retrieval", "Reranking"]
+  - q: "A question needs two searches, and you can write both queries before running either. What do you reach for?"
+    options: ["Iterative retrieval", "Decomposition, from the lesson on query rewriting", "A larger reranking candidate list"]
+    answer: 1
+    explain: "If both sub-queries can be written up front, a loop is not needed. Decomposition handles it in one pass, for the price of one extra call."
+  - q: "What does the decide step ask in each round?"
+    options: ["Which of the available tools should run next in the loop", "Whether the user's session has timed out or been closed", "Whether the evidence is enough to cite, or what to search next"]
+    answer: 2
+    explain: "The question is narrow and about retrieval: is there enough evidence to cite? Choosing among tools in general belongs to the loop where the model drives the search."
+  - q: "Three rounds in, the best result is the chunk you already read in round two, and nothing new came back. What should the loop do?"
+    options: ["Stop, because this is thrash, not a sign that one more search will help", "Run a fourth round with a slightly reworded query", "Double the candidate count and rerank again"]
     answer: 0
-    explain: "If you can write both sub-queries up front, you don't need a loop — decomposition already handles it in one pass, cheaper."
-  - q: "What decision does the loop make each round?"
-    options: ["Which tool to call next, generically", "Whether the evidence gathered so far is enough to cite, or whether to search again", "Whether the user's session has timed out"]
+    explain: "A repeating chunk with nothing new means the corpus has nothing more to give this query. Another round spends budget without changing the outcome."
+  - q: "Each round adds 5 chunks of 200 tokens, and the decide call re-reads everything gathered. Over four rounds, if nothing is ever dropped, roughly how many tokens does decide read in total?"
+    options: ["About 4,000, one thousand per round", "About 20,000, because each round reads the corpus again", "About 10,000, because each round re-reads all earlier text"]
+    answer: 2
+    explain: "The rounds read 1,000, 2,000, 3,000 and 4,000 tokens, which is 10 times one pass. Dropping chunks already judged irrelevant brings it to about 5,200."
+  - q: "Why does a loop need a hard round cap, even a good one?"
+    options: ["Because vector databases charge a fee for every query you send", "Because a loop that keeps saying not yet never stops, and rounds cost money", "Because embeddings expire after a fixed number of lookups per index"]
     answer: 1
-    explain: "That's a retrieval-specific question about evidence and citation coverage — not the general 'what should I do next' decision an agent loop makes."
-  - q: "How is this different from the Agents course's *A loop, not a brain*?"
-    options: ["It's the identical loop, just applied to search", "That lesson teaches that a loop exists at all; this lesson is what 'enough' means specifically for retrieved evidence", "This lesson replaces the need for an agent loop entirely"]
-    answer: 1
-    explain: "*A loop, not a brain* is about recognizing when a task needs a loop instead of a fixed script. This lesson assumes you already have one and is about the retrieval-specific stopping question inside it."
-  - q: "Three rounds in, the top result is the same chunk you already read in round one, and nothing new came back. What should the loop do?"
-    options: ["Try a fourth round with a slightly reworded query", "Stop — this is thrash, not a sign that one more search will help", "Increase the candidate count and rerank again"]
-    answer: 1
-    explain: "A repeating chunk with no new information means the corpus has nothing more to give this query; continuing burns budget without changing the outcome."
-  - q: "Why does every iterative retrieval loop need a hard iteration cap, even a good one?"
-    options: ["Because vector databases charge per query", "Because a genuinely stuck loop has no other reason to stop, and each round is a real search plus a real model call", "Because embeddings expire after a fixed number of lookups"]
-    answer: 1
-    explain: "Nothing about 'search again if unsure' guarantees termination on its own — the cap is the backstop for the case where the stopping decision itself keeps saying 'not yet.'"
+    explain: "Nothing about search again if unsure guarantees an end. The cap is the backstop for the case where the decision keeps saying not yet."
 deeper:
-  - { label: "Redis — Agentic retrieval techniques", href: "https://redis.io/blog/agentic-retrieval-techniques/" }
-  - { label: "Towards Data Science — Agentic RAG vs classic RAG: from a pipeline to a control loop", href: "https://towardsdatascience.com/agentic-rag-vs-classic-rag-from-a-pipeline-to-a-control-loop/" }
-  - { label: "Microsoft — AI Agents for Beginners: agentic RAG", href: "https://github.com/microsoft/ai-agents-for-beginners/blob/main/05-agentic-rag/README.md" }
-  - { label: "Trivedi et al. — Interleaving Retrieval with Chain-of-Thought Reasoning", href: "https://arxiv.org/abs/2212.10509" }
+  - { label: "Trivedi et al. - Interleaving Retrieval with Chain-of-Thought Reasoning", href: "https://arxiv.org/abs/2212.10509" }
+  - { label: "Press et al. - Measuring and Narrowing the Compositionality Gap (self-ask)", href: "https://aclanthology.org/2023.findings-emnlp.378/" }
+  - { label: "LangChain - Build a custom RAG agent with LangGraph", href: "https://docs.langchain.com/oss/python/langgraph/agentic-rag" }
+  - { label: "Anthropic - Building effective agents", href: "https://www.anthropic.com/engineering/building-effective-agents" }
 ---
 
-## 1. When one pass, even a decomposed one, isn't enough
+## 1. When one pass, even a decomposed one, is not enough
 
-*Query rewriting* already covers the case where a question has more than one part: split "how does our refund policy differ from our exchange policy" into two searches — refund policy, exchange policy — run both, merge the results. That works because you can write both queries before you run either one. The question fully specifies its own sub-questions up front.
+*Query rewriting* already covers a question with several parts. Split "how does our refund policy differ from our exchange policy" into two searches, run both, merge the results. That works because both queries can be written before either one runs.
 
-Some questions don't. "Find the incident that caused this regression, then tell me who reviewed the fix" has a second search buried inside it, but you cannot write that second query yet — you don't know which incident it was until the first search tells you. The same shape shows up constantly: "which supplier missed the deadline, and what did we agree with them as a penalty," "what changed in the API between the version this ticket references and the current one." Each one is a dependent lookup — the second search's query is a function of the first search's answer, not something you could have named in advance.
+Some questions do not allow that. "Find the incident that caused this regression, then tell me who reviewed the fix" hides a second search, but its query depends on an answer you do not have yet. You cannot write "review of incident 4471" until the first search says the incident was 4471. "Which supplier missed the deadline, and what penalty did we agree" has the same shape. Each is a dependent lookup: the second query is a function of the first result.
 
-That's the line worth being precise about, because it's the whole reason this needs its own lesson instead of being a paragraph inside decomposition:
-
-<Figure bare caption="Only the right-hand column needs a decision mid-loop, because only it depends on a search result that doesn't exist yet when the first query is written.">
+<Figure bare caption="Only the right-hand column needs a decision mid-loop, because only it depends on a search result that does not exist when the first query is written.">
 
 | | Single-pass retrieval | Decomposition | Iterative retrieval |
 |---|---|---|---|
-| Sub-queries known up front | One query, no splitting needed | Yes — all sub-queries nameable before searching | No — each query depends on the previous result |
-| Model calls | None beyond the answer | One (to split the question) | One per round, plus a stop/continue decision each round |
-| Best for | A question that maps to one search | A question with named, independent parts | A question where the next search depends on what the last one found |
-| Main risk | Missing a second aspect entirely | Merging badly, or missing a part the split didn't catch | Looping without a stopping rule, or thrashing on the same result |
+| Sub-queries known up front | One query, no splitting needed | Yes - all nameable before searching | No - each depends on the previous result |
+| Model calls | None beyond the answer | One, to split the question | One per round, plus a stop-or-continue decision |
+| Main risk | Missing a second aspect entirely | Merging badly, or a part the split missed | No stopping rule, or thrashing on the same result |
 
 </Figure>
 
-`13-when-rag-is-wrong.mdx` names this pattern in passing as "agentic search... a loop." This lesson is that loop, worked through properly: what each round actually decides, what tells it to stop, and where it breaks if you don't put a ceiling on it.
+The idea predates today's agent tooling. A December 2022 paper, IRCoT (Trivedi et al., ACL 2023), alternates one reasoning sentence with one search, using the newest sentence as the next query. It used BM25 over Wikipedia-based multi-hop question sets, and it still capped itself: the loop ended on an answer or after 8 steps. Even a research loop needed a ceiling. *When RAG is the wrong tool* names this shape of question in passing; this lesson works it through.
 
-> Decomposition answers a question you could fully specify in advance. Iterative retrieval answers one you can't — you only learn what to search for next by reading what came back.
+> Decomposition answers a question you can fully specify in advance. Iterative retrieval answers one you cannot: you learn what to search for next only by reading what came back.
 
-## 2. The loop: retrieve, reason, decide
+## 2. The loop: search, read, decide
 
-The loop doesn't introduce a new way to search. Every tool inside it is one you already have: hybrid search from *Hybrid search*, a reranker from *Reranking* to narrow candidates before they hit the model, rewriting from *Query rewriting* to turn the next thing you need into a real query. What's new is the round-trip around them — search, read what came back, decide, repeat.
+The loop adds no new way to search. Every tool inside it is one you already have: hybrid search from *Hybrid search*, a reranker from *Reranking* to narrow the candidates, and rewriting from *Query rewriting* to turn the next need into a real query. What is new is the round trip around them.
 
 Each round does three things:
 
-1. **Search.** Run the current query through your normal retrieval stack — nothing about this step changes because it's inside a loop.
-2. **Read.** Feed the retrieved chunks to the model along with what it already knows from earlier rounds.
-3. **Decide.** This is the part worth being careful about, because it's easy to describe as "decide what to do next" and quietly turn it into the general-purpose agent decision — which tool, which action — that the Agents and Tool Use course already teaches in *A loop, not a brain* and *How a model picks a tool*. It isn't that. The decision here is narrower and specific to retrieval: **is the evidence gathered so far enough to answer and cite, or do I need to search again?** That's a question about recall and citation coverage, not about task completion in general. Keep it that narrow and the loop stays simple; let it drift into "what should I do next, generally" and you've quietly rebuilt a full agent for a job that didn't need one.
+1. **Search.** Run the current query through your normal retrieval stack. Nothing about this step changes because it sits inside a loop.
+2. **Read.** Give the new chunks to the model, together with what earlier rounds gathered.
+3. **Decide.** It is not the general agent choice of what to do next. It is narrower: whether the evidence so far is enough to answer and cite, or whether another search is needed. That is coverage, not task management. Keep it narrow and the loop stays small; let it drift into a general choice of actions and you have built the model-driven loop of *Retrieval as a tool the agent calls* for a job that did not need it.
 
 <Flow
-  caption="Decide is the one new step, and it asks a narrower question than a general agent loop would: not what should I do next, but is this enough to cite. Whichever way it answers, that answer is also what ends the loop or sends it around again."
+  caption="Decide is the one new step, and it asks a narrow question: not what to do next, but whether the evidence is enough to cite. Its answer either ends the loop or sends it round again."
   steps={[
     { label: 'Search', note: 'Run the current query through your normal retrieval stack' },
-    { label: 'Read', note: 'Feed the new chunks to the model along with everything gathered so far' },
+    { label: 'Read', note: 'Give the new chunks to the model with everything gathered so far' },
     {
       label: 'Decide',
       subject: true,
       branch: [
-        'STOP — enough evidence to answer and cite',
-        'SEARCH — name the next query',
+        'STOP - enough evidence to answer and cite',
+        'SEARCH - name the next query',
       ],
     },
   ]}
-  back={{ from: 3, to: 1, label: 'SEARCH sends it around again, until MAX_ROUNDS or the cost budget stops it' }}
+  back={{ from: 3, to: 1, label: 'SEARCH sends it round again, until MAX_ROUNDS or the token budget stops it' }}
 />
 
 ```python
+# pip install anthropic
+import os
 import anthropic
 
 client = anthropic.Anthropic()
+MODEL = os.environ["LLM_MODEL"]  # set to a current model
 MAX_ROUNDS = 4
+TOKEN_BUDGET = 20_000  # input + output tokens, summed over every decide call
 
-def retrieve(query):
-    # Your existing hybrid search + rerank pipeline from earlier lessons.
+def retrieve(query, user):
+    # Your hybrid search + rerank; returns objects with .id and .text.
+    # The user's group filter runs on every call, so every round is checked.
     ...
 
 def decide(question, gathered_chunks):
-    """Ask: is this enough to answer and cite, or what should the next search be?"""
     resp = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model=MODEL,
         max_tokens=200,
         system=(
-            "You are deciding whether retrieved evidence is sufficient to answer "
-            "the question with a citation. If yes, reply STOP followed by the answer. "
+            "Decide whether the retrieved evidence is enough to answer the "
+            "question with a citation. If yes, reply STOP followed by the answer. "
             "If not, reply SEARCH followed by the next query to run."
         ),
         messages=[{
@@ -113,86 +114,89 @@ def decide(question, gathered_chunks):
             "content": f"Question: {question}\n\nEvidence so far:\n{gathered_chunks}",
         }],
     )
-    return resp.content[0].text
+    return resp
 
-def iterative_retrieve(question):
+def iterative_retrieve(question, user):
     query = question
     gathered = []
     seen_chunk_ids = set()
+    spent = 0
 
     for round_n in range(MAX_ROUNDS):
-        chunks = retrieve(query)
+        chunks = retrieve(query, user)
         new_ids = {c.id for c in chunks} - seen_chunk_ids
 
         if not new_ids and round_n > 0:
-            break  # thrash: nothing new came back, stop rather than loop again
+            break  # thrash: nothing new came back, so stop
 
         seen_chunk_ids |= new_ids
         gathered.extend(c.text for c in chunks if c.id in new_ids)
 
-        verdict = decide(question, "\n---\n".join(gathered))
+        resp = decide(question, "\n---\n".join(gathered))
+        verdict = resp.content[0].text
         if verdict.startswith("STOP"):
             return verdict.removeprefix("STOP").strip()
+        spent += resp.usage.input_tokens + resp.usage.output_tokens
+        if spent >= TOKEN_BUDGET:
+            break  # fail loudly below, do not truncate silently
         query = verdict.removeprefix("SEARCH").strip()
 
-    return "Could not find enough evidence in the allowed number of searches."
+    return "Could not find enough evidence within the round or token limit."
 ```
 
-Note what's deliberately absent from `decide`: there's no tool menu, no branching into unrelated actions. It reads evidence and it either stops with an answer or names the next search. That's the whole scope.
+`decide` has no tool menu: it reads evidence and either stops with an answer or names the next search. The code keeps every chunk; dropping the irrelevant ones is the hygiene step below. Two more details matter.
 
-## 3. Stopping it
+**Permissions run every round.** Each round is a new query, so it needs the same group filter as the first one; *Permissions that travel with the data* covers how. If you check the source live, cache a verdict per user and document for one request (a design suggestion, not a measured result).
 
-A loop with no stopping rule doesn't fail loudly — it just keeps searching, keeps costing money, and eventually returns something anyway when it runs out of patience or budget. Three separate things need to bound it, because each catches a different way it can go wrong:
+**Context hygiene.** Every round adds text, and text the loop has already judged irrelevant still costs tokens on every later read. Chroma, a vector database vendor, reported in July 2025 that even a single distractor passage lowered accuracy across 18 models, old and new, on long-context needle tests (vendor-reported, mechanism unknown; the authors do not explain it). So have `decide` also name chunks it found irrelevant, and delete them from `gathered`. Keep their ids in `seen_chunk_ids` so they cannot return.
 
-- **A hard iteration cap.** `MAX_ROUNDS` above. No matter how the stop/continue decision reasons, it doesn't get infinite turns. This is the same instinct as the budget caps in *Planning a run, and knowing when to stop* in the Agents course — a run needs a ceiling your code enforces, not one the model decides to respect.
-- **A cost budget.** Each round is a full search plus a model call judging sufficiency. Four rounds is four searches and four judgment calls, on top of whatever the reranker adds. Track it per request the same way *Retries and fallbacks* tracks retry budgets, and fail loudly rather than silently truncating when you hit it.
-- **Thrash detection.** The genuinely distinctive failure mode of this loop: the same chunk (or the same handful of chunks) keeps coming back round after round with nothing new. That's not a sign you're one search away from the answer — it's a sign the corpus has given up everything it has on this query, and further searching just spends budget re-reading it. The `new_ids` check in the code above is exactly this: if a round adds nothing to what you've already seen, stop, don't retry with a slightly different phrasing and hope.
+## 3. What bounds the loop, and what it costs
+
+A loop with no stopping rule does not fail loudly; it keeps spending. Three limits bound it, each catching a different failure.
+
+- **A hard round cap.** `MAX_ROUNDS` above. However the decision reasons, it does not get unlimited turns. Your code enforces it; the model does not choose to respect it. The Agents course's *Planning a run, and knowing when to stop* covers the wider budget.
+- **A token budget.** Each round is a search plus a model call, and the call re-reads everything gathered. Track tokens per request and fail loudly at the limit.
+- **Thrash detection.** The same chunk comes back with nothing new. That is not a sign you are one search from the answer; the corpus has given up what it has on this query. The `new_ids` check in the code is exactly this.
 
 <Steps
-  caption="The incident-and-reviewer question from earlier, three rounds through the code above. Round 2's query didn't exist until round 1 finished — decide() named it, not you — and round 3 shows what thrash looks like: new_ids comes back empty, and the loop breaks itself before decide() is even called. The trace is illustrative, not a real run — build your own to see the shape hold."
+  caption="The incident question again, through the code above. Every number is invented: 5 chunks of 200 tokens per round, and decide reads everything gathered. The third step is hypothetical, because round 2 ended the run."
   steps={[
     {
       label: 'Round 1',
       title: 'Search the question as written',
-      body: 'The loop runs the question exactly as asked. The chunk that comes back names the incident but not who reviewed the fix — enough to know another search is needed, not enough to answer.',
+      body: 'One chunk names incident 4471 but not the reviewer: enough to know another search is needed.',
       facts: [
-        { label: 'query', value: 'the question, unchanged' },
-        { label: 'new_ids', value: 'the incident report' },
-        { label: 'decide() verdict', value: 'SEARCH — needs the reviewer' },
+        { label: 'new_ids', value: '5 chunks, 1,000 tokens' },
+        { label: 'decide reads', value: '1,000 tokens' },
+        { label: 'verdict', value: 'SEARCH - review of incident 4471' },
       ],
     },
     {
       label: 'Round 2',
-      title: 'Search the query decide() just named',
-      body: 'This query only exists because round 1 finished first. The new chunk it turns up is enough to answer and cite.',
+      title: 'Search the query decide just named',
+      body: 'This query exists only because round 1 finished. One new chunk is the review log entry. Keeping all ten chunks, decide reads 2,000 tokens; dropping the four irrelevant ones from round 1, it reads 1,200.',
       facts: [
-        { label: 'query', value: 'named by decide(), not by you' },
-        { label: 'new_ids', value: 'the review log entry' },
-        { label: 'decide() verdict', value: 'STOP — enough to cite' },
+        { label: 'new_ids', value: '5 chunks, 1,000 tokens' },
+        { label: 'decide reads', value: '2,000 tokens, or 1,200 with drops' },
+        { label: 'verdict', value: 'STOP - enough to cite' },
       ],
     },
     {
-      label: 'Round 3',
-      title: 'Thrash: nothing new comes back',
-      body: 'If a further round returned that same review log entry again, new_ids would be empty. The loop breaks on that check, before decide() ever runs — this is the stop signal, not a reason to reword the query and try once more.',
+      label: 'Hypothetical',
+      title: 'If round 2 had said SEARCH: thrash',
+      body: 'Round 2 said STOP, so no round 3 runs. Had it said SEARCH and a third search returned the same entry, new_ids would be empty and the thrash check, which fires before decide, would end the loop. Do not reword and retry.',
       facts: [
-        { label: 'new_ids', value: 'empty — same chunk as round 2' },
-        { label: 'outcome', value: 'loop breaks, no decide() call' },
+        { label: 'new_ids', value: 'empty - same chunk as round 2' },
+        { label: 'outcome', value: 'loop breaks, no decide call' },
       ],
     },
   ]}
 />
 
-Where this genuinely earns its cost: dependent multi-hop lookups, incident and audit-trail questions, anything where the next useful query only exists after you've read the last answer. Where it doesn't: anything decomposition already handles for one round's price, and anything where a single well-rewritten query already covers the ground — running a loop around a question that didn't need one is pure latency and pure spend, with no accuracy gained to show for it.
+**What it costs.** One pass sends 1,000 tokens. The two-round run above has decide read 1,000 + 2,000 = 3,000 tokens, three times as much. Dropping irrelevant chunks makes that 1,000 + 1,200 = 2,200. The gap widens quickly, because round n re-reads rounds 1 to n. Four rounds with nothing dropped read 1,000 + 2,000 + 3,000 + 4,000 = 10,000 tokens, ten times one pass. If only one 200-token chunk survives each round, the same four rounds read 1,000 + 1,200 + 1,400 + 1,600 = 5,200.
 
-## 4. When a loop isn't enough: GraphRAG
+**Two named failures.** The first is thrash, covered above. The second is the early stop on a near miss. Round 1 returns a chunk about incident 4412, a similar regression from last month. It reads like an answer, `decide` says STOP, and the reply cites the wrong incident. Nothing errored. The fix is to make `decide` quote the sentence that supports each part of the question before it may stop, so a missing reviewer is visible. Loops with no cap are easy to write by accident: the official LangGraph tutorial for a grade-and-rewrite retrieval agent (as of October 2026) adds no round counter of its own in its code. LangGraph's default limit (1,000 steps, as of October 2026) is far too high to be a budget and ends in an error, so set your own.
 
-Iterative retrieval works for walking a specific path (Incident 42 → PR 109 → User Sarah). It fails entirely on "global" questions like "What are the common themes across all incidents this year?" A loop cannot pull and read a thousand separate incident reports just to find the theme.
+**When not to use it.** Skip the loop when decomposition can name every query up front: it costs one extra call, not one per round. Skip it when one well-rewritten query already covers the ground. Skip it on a latency-bound path, where each round is a search plus a model call the user waits for. Anthropic's December 2024 essay on building agents advises adding complexity "only when it demonstrably improves outcomes". Test the loop against your single-pass baseline on questions that need hops, using the method in *Measuring retrieval*.
 
-For corpus-wide questions, the state-of-the-art answer is **GraphRAG**. Instead of relying on query-time loops to connect dots, GraphRAG builds the connections at index time:
-1. Pass the entire corpus through an LLM to extract entities (people, systems, concepts) and the relationships between them.
-2. Build a Knowledge Graph from those extractions.
-3. Cluster the graph into dense "communities" (e.g., a cluster of nodes all relating to database timeouts).
-4. Have an LLM write a static summary for every community.
-
-At query time, when asked a global question, you bypass vector search and the loop entirely. You just retrieve the pre-written community summaries and do a map-reduce over them to write the final answer. It costs heavily at ingestion (you are running an LLM over your whole corpus to build the graph), but it solves the sweeping, whole-dataset reasoning problems that iterative vector search structurally cannot.
+A loop follows one path. A question about the whole corpus, such as the common themes across a year of incidents, has no path to follow, and *When RAG is the wrong tool* covers what to do instead. When you want the model, not your code, to choose the tool and the number of searches, that is *Retrieval as a tool the agent calls*.
