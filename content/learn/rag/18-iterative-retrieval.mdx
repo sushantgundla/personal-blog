@@ -148,7 +148,7 @@ def iterative_retrieve(question, user):
 
 **Permissions run every round.** Each round is a new query, so it needs the same group filter as the first one; *Permissions that travel with the data* covers how. If you check the source live, cache a verdict per user and document for one request (a design suggestion, not a measured result).
 
-**Context hygiene.** Every round adds text, and text the loop has already judged irrelevant still costs tokens on every later read. Chroma, a vector database vendor, reported in July 2025 that even a single distractor passage lowered accuracy across 18 models, old and new, on long-context needle tests (vendor-reported, mechanism unknown; the authors do not explain it). So have `decide` also name chunks it found irrelevant, and delete them from `gathered`. Keep their ids in `seen_chunk_ids` so they cannot return.
+**Context hygiene.** Every round adds text, and text the loop has already judged irrelevant still costs tokens on every later read. Chroma, a vector database vendor, reported in July 2025 that even a single distractor passage lowered accuracy across 18 models of that date (2025) on long-context needle tests (vendor-reported, mechanism unknown; the authors do not explain it). So have `decide` also name chunks it found irrelevant, and delete them from `gathered`. Keep their ids in `seen_chunk_ids` so they cannot return.
 
 ## 3. What bounds the loop, and what it costs
 
