@@ -95,7 +95,7 @@ The money for the month is gone. There is no `retry-after`, and nothing refills 
   </Panel>
 </Compare>
 
-**How it fails.** A nightly job reaches the cap on the 24th. Your retry set contains 429, so each document gets five attempts with backoff, and the SDK's own retries (two by default on Anthropic's, as of Oct 2026) sit under each of those. The live feature, which shares the organisation's cap, is down too. The cure is a check before you retry. You can also put a noisy batch job in its own Anthropic workspace with a lower limit, so it hits its own wall first.
+**How it fails.** A nightly job reaches the cap on the 24th. Your retry set contains 429, so each document gets five attempts with backoff, and the SDK's own retries (two by default on Anthropic's, as of Oct 2026) sit under each of those. The live feature, which shares the organisation's cap, is down too. The cure is a check before you retry. As of Oct 2026, you can also put a noisy batch job in its own Anthropic workspace with a lower limit, so it hits its own wall first.
 
 For genuine rate limits, the backoff is **exponential with full jitter**: wait up to `base * 2**attempt`, picking a random time between zero and that. The jitter is the part people skip, because clients that failed together would otherwise retry together and rebuild the spike.
 

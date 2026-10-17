@@ -79,7 +79,7 @@ Effort is soft guidance, not a token count. Anthropic says that at low effort th
 
 The old dial was a fixed number, `thinking: {"type": "enabled", "budget_tokens": N}`. As of Oct 2026, on the newest models it returns a 400 that tells you to use adaptive thinking and effort. Anthropic says there is no fixed mapping from a budget to an effort level, so you cannot convert; run your tests at two or three levels instead.
 
-Turn thinking down with effort before you try anything else. As of Oct 2026, Anthropic reports that asking Sonnet 5.5 in the system prompt to think less does not reliably work. Also as of Oct 2026, changing top-level effort between requests breaks prompt caching, so pick one level per conversation. Per-message effort (beta) on Sonnet 5.5, Opus 5.5 and Haiku 5.5 keeps the cache. *Caching and batch: the two big discounts* explains why.
+Turn thinking down with effort before you try anything else. As of Oct 2026, Anthropic reports that asking Sonnet 5.5 in the system prompt to think less does not reliably work. Also as of Oct 2026, changing top-level effort between requests breaks prompt caching, so pick one level per conversation. As of Oct 2026, per-message effort (beta) on Sonnet 5.5, Opus 5.5 and Haiku 5.5 keeps the cache. *Caching and batch: the two big discounts* explains why.
 
 Now the bill. As of Oct 2026, on Sonnet 5.5 the thinking text comes back empty by default, but you are billed for the full thinking, as output tokens, and it counts toward `max_tokens`. The response reports how many in `usage.output_tokens_details.thinking_tokens`. As of Oct 2026, OpenAI does the same under the name `reasoning_tokens`, and Google bills its thought tokens too.
 
@@ -117,7 +117,7 @@ Some work should never leave the bottom of that loop. A classifier, an extractor
 
 This advice does not apply everywhere. As of Oct 2026, on older models such as Sonnet 4.5, a fixed `budget_tokens` is still the only control. On models you host yourself, how thinking is exposed depends on the model and the server, and those were not checked here. And more thinking is not a cure for a missing fact: *Why models hallucinate* explains why a model that does not know something will still produce an answer.
 
-The script below puts three tasks through the lowest setting and through `high`, and prints where the tokens went. It asks the Models API which off switch the model accepts: `disabled` where that is allowed, `between_tools` where it is not. If you swap in a model that is always on, neither works, so use adaptive thinking at `low` there.
+The script below puts three tasks through the lowest setting and through `high`, and prints where the tokens went. It asks the Models API (as of Oct 2026, through `capabilities.thinking.types`) which off switch the model accepts: `disabled` where that is allowed, `between_tools` where it is not. If you swap in a model that is always on, neither works, so use adaptive thinking at `low` there.
 
 ```python
 from anthropic import Anthropic

@@ -89,7 +89,7 @@ A token is usually a few characters. Sometimes it is a whole common word, more o
 | `1234567` | Digit groups that ignore place value |
 | Japanese, Arabic, Hindi | Often more tokens than the character count suggests, depending on the tokenizer |
 
-**How many tokens is my text?** There is no safe rule of thumb. Every model family ships its own tokenizer, and providers change them. As of Oct 2026, Anthropic says its newer tokenizer gives about 30% more tokens for the same text than its older one, so a million tokens now holds roughly 555,000 words where it once held about 750,000. The fix is to ask the provider. Anthropic offers a token-counting endpoint, and as of Oct 2026 it is free to call (it has its own rate limit). The count is an estimate, and the real figure can differ by a small amount. The code at the end of this lesson uses it.
+**How many tokens is my text?** There is no safe rule of thumb. Every model family ships its own tokenizer, and providers change them. As of Oct 2026, Anthropic says its newer tokenizer gives about 30% more tokens for the same text than its older one, so a million tokens now holds roughly 555,000 words where it once held about 750,000 (those two figures imply nearer 35%, so count with the provider's tool). The fix is to ask the provider. Anthropic offers a token-counting endpoint, and as of Oct 2026 it is free to call (it has its own rate limit). The count is an estimate, and the real figure can differ by a small amount. The code at the end of this lesson uses it.
 
 To watch the cuts happen, try [Tiktokenizer](https://tiktokenizer.vercel.app/). It is a third-party page, and I could confirm only that it lists an OpenAI tokenizer, so its counts will not match Claude's. Use it to see the idea, not to budget.
 

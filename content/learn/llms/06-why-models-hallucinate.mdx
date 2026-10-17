@@ -105,7 +105,7 @@ Two common fixes attack the wrong layer. **A bigger model** helps with errors of
 
 What does help is partial, and each item has a limit:
 
-- **Allow and score "I don't know".** Anthropic's guide tells you to give the model explicit permission to admit uncertainty. In your own evals, score an abstention above a wrong answer.
+- **Allow and score "I don't know".** As of Oct 2026, Anthropic's guide tells you to give the model explicit permission to admit uncertainty. In your own evals, score an abstention above a wrong answer.
 - **Ground it.** If a document should hold the answer, require a quote and check that the quote appears in it. *Citations and grounding*, in the RAG course, covers this.
 - **Sample several times and compare.** Disagreement is a signal that a single answer's tone can never give you.
 

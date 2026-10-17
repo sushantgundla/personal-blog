@@ -54,7 +54,7 @@ There are three ways to run an open-weight model, and picking the wrong one is t
 
 </Figure>
 
-On the first rung, **Ollama** and **llama.cpp** run a model on the machine in front of you. On the second, **vLLM** and **SGLang** are serving engines. As of Oct 2026, vLLM's docs list continuous batching and prefix caching, and SGLang's docs list prefix caching and compatibility with OpenAI-style APIs. On the third, hosts such as Together and Fireworks sell models through an API, billed per token, with dedicated GPU deployments billed by GPU time (per second at Fireworks). Prices and model lists move, so read each host's own page on the day.
+On the first rung, **Ollama** and **llama.cpp** run a model on the machine in front of you. On the second, **vLLM** and **SGLang** are serving engines. As of Oct 2026, vLLM's docs list continuous batching and prefix caching, and SGLang's docs list prefix caching and compatibility with OpenAI-style APIs. On the third, hosts such as Together and Fireworks sell models through an API, billed per token, with dedicated GPU deployments billed by GPU time (per second at Fireworks, as of Oct 2026). Prices and model lists move, so read each host's own page on the day.
 
 You may still find guides that put **TGI**, Hugging Face's Text Generation Inference, on the second rung. As of Oct 2026, its docs open with a notice that it is "now in maintenance mode", and they recommend vLLM and SGLang for serving, and llama.cpp or MLX for local use. Its repository has been archived since 21 March 2026. No source I used ranks vLLM against SGLang, so this lesson does not.
 
@@ -74,7 +74,7 @@ ollama run gemma3:4b "In two sentences, why does VRAM cap which model I can run?
 curl -s http://localhost:11434/v1/models
 ```
 
-The last line matters more than it looks. Ollama's docs give `http://localhost:11434/v1/` as the base URL, as of Oct 2026,, so client code you already wrote for a hosted API points at it by changing one URL. The `/v1/models` call should return a JSON list that includes the model you pulled, with `owned_by` set to `library` by default. A serving engine is the same story: vLLM's quickstart starts its server with `vllm serve <model>`, on port 8000 unless you change it (as of Oct 2026). *Switching models safely* builds on exactly this.
+The last line matters more than it looks. Ollama's docs give `http://localhost:11434/v1/` as the base URL, as of Oct 2026, so client code you already wrote for a hosted API points at it by changing one URL. The `/v1/models` call should return a JSON list that includes the model you pulled, with `owned_by` set to `library` by default (as of Oct 2026). A serving engine is the same story: vLLM's quickstart starts its server with `vllm serve <model>`, on port 8000 unless you change it (as of Oct 2026). *Switching models safely* builds on exactly this.
 
 ## 2. Throughput against latency, and what quantisation changes
 

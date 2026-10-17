@@ -86,7 +86,7 @@ A route is not free. Each has its own ids (Bedrock's differ from the first-party
 
 ## 3. Failures that look like success
 
-Between early August and mid-September 2025, Anthropic says three infrastructure bugs degraded some Claude replies, with the model ids unchanged. Some Sonnet 4 requests went to servers set up for a longer context window, 0.8% of requests from 5 August and 16% in the worst hour. A TPU misconfiguration made rare tokens likely, so English answers carried Thai or Chinese characters. An approximate top-k step in a compiler could drop the best token. None of it raised an error.
+Between early August and mid-September 2025, Anthropic says three infrastructure bugs degraded some Claude replies, with the model ids unchanged. Some Sonnet 4 requests went to servers set up for a longer context window, 0.8% of requests from 5 August and 16% in the worst hour. A TPU misconfiguration made rare tokens likely, so English answers carried Thai or Chinese characters. A compiler bug around an approximate top-k step, with a 16-bit versus 32-bit precision mismatch beside it, could drop the best token or return wrong results. None of it raised an error.
 
 Anthropic also says its benchmarks, safety evals, spot checks and canaries missed it. It makes one claim you cannot check: "We never reduce model quality due to demand, time of day, or server load." That is the vendor's statement about itself, as of Sep 2025.
 
