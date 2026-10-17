@@ -1,0 +1,143 @@
+---
+title: "Reading a leaderboard"
+subtitle: "A ranking is a measurement with a method behind it. Read the method before you read the number."
+part: 4
+minutes: 7
+why: "You open three leaderboards to choose a model for your support bot. One puts model A first, another puts B first, and a vendor chart says its own model wins by two points. You take the top name, ship it, and the bot starts breaking your JSON format. Nothing was faked. Each number measured something real, but it was a test that is not your task, scored by a rule that may reward guessing, and published after someone picked the best of several tries. This lesson shows how a ranking gets that way, what a strict score and a loose score disagree about, and a short routine for reading any leaderboard without being led by it."
+wins:
+  - "Read a benchmark by what it measures, not by its name, and find the one closest to your task."
+  - "Date every score you quote, and ask whether the test still separates strong models."
+  - "Expect a published number to be the best of several tries, and treat a small gap as noise."
+  - "Check how a test scores a wrong answer, a blank, and a broken format before you trust its verdict."
+  - "Use leaderboards to cut a long list, then close the tab and run your own cases."
+quiz:
+  - q: "A lab scores twenty private variants and publishes only the best result. Why is that number too high?"
+    options: ["The private variants were trained on the test questions", "Arena adds bonus points for private testing", "The best of several noisy scores is partly luck, so it overstates the model"]
+    answer: 2
+    explain: "Every score has noise in it. Pick the highest of many and you have picked the luckiest draw as well as the best model."
+  - q: "Most audited benchmarks gave no credit for \"I don't know\" (as of mid-2025). What does that reward?"
+    options: ["Guessing, because a wrong answer costs the same as a blank", "Refusing to answer anything", "Longer answers"]
+    answer: 0
+    explain: "If a wrong answer and a blank both score zero, a guess can only help. A model that bluffs can outrank one that admits doubt."
+  - q: "A new model loses 3.9 points under strict scoring and 0.04 under loose scoring. The likeliest reading?"
+    options: ["It understands the task worse", "It breaks the required output format more often", "The loose scorer must be broken"]
+    answer: 1
+    explain: "Loose scoring forgives format. When the loss nearly vanishes under it, the model is mostly failing the exact format, not the task."
+  - q: "Two identical checkpoints of one model scored 1069 and 1052 on an arena. What does that tell you?"
+    options: ["One of them was secretly retrained", "Arena ratings are exact", "A gap of that size can come from noise alone, so small rank gaps are not decisions"]
+    answer: 2
+    explain: "Same weights, different scores. Whatever produced the 17 points, it was not model quality."
+  - q: "Which use of a public leaderboard holds up?"
+    options: ["Cutting a long list to a few candidates, then testing those on your own cases", "Shipping whichever model is ranked first", "Choosing the model with the highest composite index score"]
+    answer: 0
+    explain: "Leaderboards are good at the coarse cut. They cannot see your inputs, your format or your constraints, so your own cases make the final call."
+deeper:
+  - { label: "Singh et al. — The Leaderboard Illusion", href: "https://arxiv.org/abs/2504.20879" }
+  - { label: "Kalai et al. — Why Language Models Hallucinate", href: "https://arxiv.org/abs/2509.04664" }
+  - { label: "Arena — leaderboard policy, last updated 1 September 2026", href: "https://arena.ai/blog/policy/" }
+  - { label: "Anthropic — define success criteria and build evaluations", href: "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" }
+---
+
+*Picking a model* argues that your own cases decide the choice. You still have to read leaderboards, because that is where a shortlist starts. This lesson is about reading them well: what each family of test measures, how a ranking gets inflated, and what to check before a number moves you. Every score, name and policy below is dated, because the date is part of the fact.
+
+## 1. What the tests measure, and how they wear out
+
+A **benchmark** is a fixed set of questions plus a scoring rule. Each family tests one skill, and the names change faster than the families do.
+
+<Figure bare caption="The main families of public test, with example names. The names are as reported by two sources and will date; the columns on what each family cannot tell you will not.">
+
+| Family | What it measures | What it does not tell you | Example names |
+|---|---|---|---|
+| Hard knowledge questions | Graduate-level science and general knowledge | Whether it follows your output format | GPQA Diamond (Sep 2026), SuperGPQA (Aug 2026) |
+| Competition maths | Olympiad-style problems | Everyday reasoning over your data | Omni-MATH hard (Aug 2026) |
+| Instruction following | Whether output obeys explicit constraints | Whether your constraints are the tested ones | IFBench (Aug 2026) |
+| Coding and agents | Fixing real repositories, working in a terminal | Your codebase and your conventions | SWE-bench, Terminal-Bench, Aider Polyglot (Sep 2026) |
+| Human preference arenas | Which of two answers people vote for | Extraction, classification, strict formats | Arena |
+| Composite indices | Many tests folded into one number | What went into the fold | Epoch Capabilities Index |
+
+</Figure>
+
+The Sep 2026 names come from the evals FAQ by Husain and Shankar (its authors sell an evals course). The Aug 2026 names come from a preprint that compared model versions, [Xu and Wu](https://arxiv.org/abs/2608.17719).
+
+Tests wear out in two ways. **Saturation** means strong models all score near the top, so the remaining gaps are noise and test makers move on. It depends on which models you compare. The preprint screened out GPQA Diamond, MMLU-Pro and IFEval for having too little headroom among the models it tested, yet the FAQ still names GPQA Diamond as current. Both can hold: a test can be finished at the top and still sort the middle.
+
+**Contamination** is the other. Test questions are public text, training data is scraped from public text, and a model that has seen the answers scores well without being better. Nobody can fully rule it out for a public test.
+
+## 2. How a ranking gets inflated
+
+**Selection.** *The Leaderboard Illusion* audited Chatbot Arena (now called Arena), with data up to April 2025. Its authors are at Cohere, which competes with the labs they audit, so read the tone as advocacy. They found that providers could test many unreleased variants privately and publish only the best. One lab had 27 private variants before a single release. The best of several noisy scores is biased upward, like rolling a die ten times and reporting the highest roll. The paper's own two estimates of how much disagree, so quote neither.
+
+As of Sep 2026, Arena's [policy page](https://arena.ai/blog/policy/) still lets providers test several anonymous variants before release. It sets no fixed cap, says they may do so "subject to our system's constraints", and marks scores preliminary until fresh votes arrive after launch. Policies move, so read the page, not this paragraph.
+
+> A leaderboard score answers a narrow question about a test. Whether it answers your question is a separate check, and you have to run it.
+
+**A failure case.** In that audit, two identical checkpoints of one model were submitted. They scored 1069 and 1052, a 17-point gap from noise alone. In a second experiment, a 7B model trained on 0, 30 and 70 percent Arena-style data went from 23.5 to 42.7 to 49.9 percent on ArenaHard, while MMLU stayed flat (66.5, 64.4, 65.9). Arena data taught Arena style, not general skill. That is one study on one lab's setup, which the authors call a lower bound, and the models are all 2025 vintage. The shape is what lasts.
+
+**Scoring.** Kalai and colleagues audited popular benchmarks in 2025. As of mid-2025, GPQA, MMLU-Pro, Omni-MATH, SWE-bench and others gave no credit for "I don't know"; today's versions were not rechecked for this lesson. Under that rule a guess can never score worse than a blank. The authors say models end up "optimized to be good test-takers". The mechanism is in *Why models hallucinate*; the reading habit is here: ask what the test does with a wrong answer.
+
+## 3. Reading one, with a worked example
+
+**Strict versus loose.** The Xu and Wu preprint (Aug 2026) ran each of 900 public items 50 times on one vendor's models, and it tested only that vendor. On the instruction-following test, one model pair lost 3.9 points under strict scoring, and the loss "shrinks to 0.04 points under loose scoring". Strict demands the exact format. Loose forgives it. So the model was not clearly worse at the task; it broke the exact format more often.
+
+<Compare caption="The same model pair on the same instruction-following test, scored two ways (one preprint, one vendor, Aug 2026). Which verdict you believe depends on whether your code parses the output.">
+  <Panel label="Strict" title="Down 3.9 points">
+
+Exact constraint compliance is required. A correct answer in the wrong shape counts as a fail. If a parser reads your output, this is the score that matches your pain.
+
+  </Panel>
+  <Panel label="Loose" title="Down 0.04 points">
+
+Format is forgiven, so the score measures understanding. If a person reads the output, or you can repair it, this is the closer score.
+
+  </Panel>
+</Compare>
+
+You can repeat this on your own outputs. Score each answer twice, once strictly and once loosely, and count format failures apart from wrong answers.
+
+```python
+import json
+
+LABELS = {"billing", "bug", "other"}
+
+# Replace with (model output, correct label) pairs from your own runs.
+cases = [
+    ('{"label": "billing"}', "billing"),
+    ('Sure! {"label": "bug"}', "bug"),
+    ('```json\n{"label": "billing"}\n```', "billing"),
+    ('{"label": "other"}', "bug"),
+    ('{"label": "bug"}', "bug"),
+    ("label: billing", "billing"),
+]
+
+def strict(output, expected):          # exact format AND the right label
+    try:
+        return json.loads(output)["label"] == expected
+    except (ValueError, KeyError, TypeError):
+        return False
+
+def loose(output, expected):           # the right label, whatever the wrapping
+    return {w for w in LABELS if w in output.lower()} == {expected}
+
+s = sum(strict(o, e) for o, e in cases)
+l = sum(loose(o, e) for o, e in cases)
+format_only = [o for o, e in cases if loose(o, e) and not strict(o, e)]
+print(f"strict {s}/{len(cases)}  loose {l}/{len(cases)}")
+print(f"format failures: {len(format_only)}  wrong answers: {len(cases) - l}")
+```
+
+It calls no model, so it needs no API key and no model id. On these six invented cases it prints `strict 2/6  loose 5/6` and then `format failures: 3  wrong answers: 1`. Three of the four strict failures were packaging, which a prompt fix or a repair step can address. The one wrong answer is the real problem. Run it on your own twenty cases and the two lines tell you which job you have.
+
+**Composite indices.** Epoch's [Capabilities Index](https://epoch.ai/benchmarks/eci) folds many tests into one number, and in May 2026 Epoch used it to estimate that the best open model trailed the closed frontier by about four months (see *Open weights vs closed APIs*). That makes it good for a shortlist. Epoch's own caveats apply: developer-reported scores may be cherry-picked, developers may tune for public tests, and scores shift as data arrives. A one-point gap is not a decision.
+
+<Flow
+  caption="A routine for reading any leaderboard. It ends by closing the tab, because the decision belongs to the method in Picking a model."
+  steps={[
+    { label: 'Name the task', note: 'Write down what your product needs' },
+    { label: 'Find the closest test', note: 'Not the most famous one' },
+    { label: 'Read the method', note: 'Date, scoring rule, headroom, who ran it' },
+    { label: 'Compare two or three sources', note: 'Independent ones, not copies' },
+    { label: 'Close the tab', note: 'Then run your own cases', subject: true },
+  ]}
+/>
+
+**When this does not apply.** Skip the reading when no public test sits near your task, for example your own internal format. A leaderboard has nothing to say there, so go straight to your cases. Skip it when your shortlist sits inside one noise band, and decide on cost, latency and limits instead. And skip it when you already run a model and are moving off it: a frozen set from your own traffic beats any ranking, as *Switching models safely* shows. The Evals course teaches the method in *Building an eval set from your own traffic*, *How to trust a judge* and *Regression testing a prompt or model change*.
