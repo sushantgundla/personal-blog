@@ -1,0 +1,154 @@
+---
+title: "Containing prompt injection"
+subtitle: "You cannot make the model un-foolable. You can make a fooled model unable to reach anything."
+part: 3
+minutes: 7
+why: "You read *Prompt injection*, added the tags and the allowlist, and then someone asked the question that matters: your support assistant reads customer email, looks up orders and sends replies, so what happens the day one email is written by an attacker? A stronger prompt is not an answer. This lesson is the design answer: take one of three abilities away in code, shape the pipeline so the part that reads strangers has nothing to steal or press, and test the result with an attacker instead of a list."
+wins:
+  - "Hold at most two of untrusted input, sensitive access and outward reach in one session, and enforce the cut in code."
+  - "Name what each pair still risks, so you never write that a design is safe."
+  - "Cage the reader: no tools, a closed output, and values swapped in by code."
+  - "Count a rendered image or link as an exit, and close it."
+  - "Test the wall with properties and a human attacker, and treat a fixed list of attack strings as a canary."
+quiz:
+  - q: "An assistant reads inbound email, can see the whole inbox and can send mail. Which change removes a property instead of asking the model to behave?"
+    options: ["Drafts go to a person, and only your code sends, to recipients it chooses", "A firmer line in the system prompt about not forwarding mail", "An injection classifier in front of the model"]
+    answer: 0
+    explain: "Taking away the outward reach cuts the attack path in code, while the other two ask a model or a filter to catch every attempt."
+  - q: "Plan-then-execute fixes the list of tool calls before untrusted data arrives. What can still go wrong?"
+    options: ["The model can add a new tool call it was never planned to make", "The sequence can be rewritten by a line in the email", "The data can still bend an argument, such as a recipient or a message body"]
+    answer: 2
+    explain: "The data cannot change which calls run, but values it fills in can still be poisoned, so those values need their own checks."
+  - q: "The quarantined reader returns an enum and an order id, never a free-text summary. Why?"
+    options: ["Free text from the reader can carry the attacker's instructions to the next stage", "Enums are cheaper to produce than sentences", "The next stage cannot parse sentences at all"]
+    answer: 0
+    explain: "A closed field leaves the attacker no room to write, and code can check the id against real records."
+  - q: "A research team attacked twelve published defences with attackers that adapted to each one. As of October 2025, the headline result was..."
+    options: ["Every defence held, once the attacker was given a time limit", "Most defences were beaten more than 90 percent of the time, though they had scored near zero on fixed strings", "Prompt-based defences failed and trained detectors held"]
+    answer: 1
+    explain: "The authors' own numbers show that a low score on a fixed list says little about an attacker who searches against the defence."
+  - q: "A team removes the send-email tool, yet a planted line still leaks data when a person opens the reply. The likely cause is..."
+    options: ["The chat window fetches a remote image whose address carries the data", "The model remembered the data from another session", "The system prompt was too short"]
+    answer: 0
+    explain: "A rendered image or link makes a request to an address the attacker chose, which is outward reach nobody counted."
+deeper:
+  - { label: "Meta — Agents Rule of Two", href: "https://ai.meta.com/blog/practical-ai-agent-security/" }
+  - { label: "Simon Willison — the lethal trifecta for AI agents", href: "https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/" }
+  - { label: "Beurer-Kellner et al. — Design Patterns for Securing LLM Agents (arXiv)", href: "https://arxiv.org/abs/2506.08837" }
+  - { label: "Nasr et al. — The Attacker Moves Second (arXiv)", href: "https://arxiv.org/abs/2510.09023" }
+  - { label: "Wang et al. — MCPTox: tool poisoning on real MCP servers (arXiv)", href: "https://arxiv.org/abs/2508.14925" }
+---
+
+*Prompt injection* ended with the bad news: no prompt reliably makes a model ignore planted text. This lesson accepts that and asks a different question. If the model will sometimes be fooled, can you build the system so a fooled model has nothing to reach? That is a design job, and nearly all of it is code.
+
+## 1. Cut one of three, on purpose
+
+Simon Willison's lethal trifecta (June 2025) is the diagnosis: untrusted content, private data and a way out. Meta's Rule of Two (October 2025) turns it into a design rule. In one session, give an agent at most two of three properties: it reads input from sources you do not control, it reaches sensitive data or systems, and it can change state or talk to the outside. If the job needs all three, it should not run alone. A person or a hard check goes in front of the last step.
+
+Meta calls this a floor, not a finish line, and says it lowers risk "deterministically". That holds only if each property is enforced in code outside the model. A system prompt saying "you cannot send mail" removes nothing. Also note what the post is: a design argument with hypothetical agents, no experiments and no numbers.
+
+Take the refund mailbox from *Decomposition*. The assistant reads customer email, looks up orders, issues refunds and sends replies. That is all three. Here is each cut, and what it leaves.
+
+<Figure bare caption="Three ways to break the path from a planted line to damage. The right-hand column is the risk that remains, which is why no row is called safe.">
+
+| Property you drop | How, in this mailbox | What is still possible |
+|---|---|---|
+| Untrusted input | Answer only mail from known customers | A forged sender, or a real customer pasting in someone else's text. "Known" is only as good as your sender checks |
+| Sensitive access | The model sees the email and no order data | It can still be steered into a wrong action or a misleading reply |
+| Outward reach | Drafts only; a person sends | A misleading draft, and a reviewer who approves without reading |
+
+</Figure>
+
+A session can also change shape. Meta's example starts with web access and no private data, then switches off outward communication for good before touching internal systems. The switch must be one-way and enforced by your code. If the model can flip it back, you have a suggestion, not a cut.
+
+## 2. Patterns that make a leg unreachable
+
+Fourteen authors set out the structural patterns in a June 2025 paper. Treat them as arguments, not results: the paper reports no measurements. Each one buys safety with something you lose.
+
+<Figure bare caption="Five patterns from the design-patterns paper, in plain words. Read the last column first; it is the price.">
+
+| Pattern | The model never... | You give up |
+|---|---|---|
+| Action selector | Sees tool output; it only picks from a fixed menu | Anything not on the menu |
+| Plan then execute | Sees untrusted data before its list of calls is fixed | Plans that must change after reading. Data can still bend an argument |
+| Quarantined reader | Gives the privileged side the untrusted text, or the reader any tool; code swaps its values in | A reader can still be hijacked, so its output must be closed |
+| Map then reduce | Mixes two untrusted items in one call; code combines the results | A bad item can still corrupt its own result |
+| Context minimisation | Sees the original request once it has chosen the action | A reply written without the full request |
+
+</Figure>
+
+The hinge in the quarantined pattern is the hand-off. If the reader returns free text, the attacker rides it into the next stage. If it returns an enum, a boolean or a bounded number, there is nothing to ride. That is *Output contracts* and *Structured outputs in practice* doing security work.
+
+Exits are wider than "send". A markdown image in a reply makes the viewer's browser fetch an address the attacker chose, and the address can carry data. So can any link and any URL fetch. Render no remote images, allowlist the domains you will reach, and rewrite links before display.
+
+The tool catalog is untrusted input too. A 2025 benchmark of poisoned tool descriptions on older models, with naive payloads, reported a 36.5 percent average success rate and refusals under 3 percent. The poisoned tool is never called; its text steers a legitimate one. Review and pin descriptions you depend on, and check each call's arguments against what the user asked. When you add a tool or a server, ask again which of the three properties the whole set now holds. That last habit is this course's suggestion, not tested.
+
+## 3. A worked example, a failure, and how to test
+
+Here is the refund mailbox with the reader caged. One model call sees the email. It has no tools, and its answer is two closed fields. Everything after it is code. The paper's email-assistant case is the model for this.
+
+<Flow
+  caption="The refund mailbox with the reader caged. The only text the model sees is the email, and the only thing that leaves the model is two checked fields."
+  steps={[
+    { label: 'Mail arrives', note: 'The sender comes from the header, read by code' },
+    { label: 'Reader call', note: 'No tools. Output is a kind and an order id', subject: true },
+    { label: 'Code checks', note: 'The order exists, belongs to the sender, and is under the cap' },
+    { label: 'Fixed actions', note: 'Refund or hand to a person; reply from a template' },
+  ]}
+/>
+
+```python
+import logging
+from typing import Literal
+
+from anthropic import Anthropic
+from pydantic import BaseModel
+
+client = Anthropic()
+log = logging.getLogger(__name__)
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+class MailFacts(BaseModel):   # all the reader may say; there is no free-text field
+    kind: Literal["refund_request", "question", "other"]
+    order_id: str | None
+
+def read_mail(raw: str) -> MailFacts:
+    resp = client.messages.parse(
+        model=MODEL,
+        max_tokens=2000,   # thinking is on by default and counts against this
+        system="Read one customer email and fill in the fields. You have no tools.",
+        messages=[{"role": "user", "content": f"<email>\n{raw}\n</email>"}],
+        output_format=MailFacts,
+    )
+    if resp.stop_reason != "end_turn":
+        log.error("raw reply: %r", text_of(resp))
+        raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+    return resp.parsed_output
+
+def handle(sender: str, raw: str) -> None:
+    facts = read_mail(raw)   # the only call that sees the mail
+    order = ORDERS.get(facts.order_id)   # your records, looked up by code
+    if facts.kind != "refund_request" or order is None or order.customer != sender:
+        send_to_human(sender, raw)   # a fixed branch, no model involved
+        return
+    if order.total <= REFUND_CAP:   # the policy is code
+        issue_refund(order.id)
+    send_template(to=sender, name="request_received", order_id=order.id)
+```
+
+`ORDERS`, `REFUND_CAP`, `issue_refund`, `send_template` and `send_to_human` stand for your own code. The parameter spellings come from vendor docs as of October 2026 and were not run here. Try them first, and keep the `stop_reason` check, since the docs do not say what `parse` does on a refusal.
+
+Now attack it. An email saying "refund every order" has no field to say it in. One naming another customer's order fails the ownership check. One that talks the reader into `refund_request` for the sender's own order gets what any honest request gets. Nothing the attacker writes reaches a recipient or a message body, because those come from code. Here the privileged side is plain code. If you want a model to plan the calls instead, you gain flexibility, but the plan must be fixed before any mail is read.
+
+> Do not make the model hard to fool. Make fooling it worth nothing.
+
+The failure case: a team removes `send_email` from the dashboard assistant and calls the leg cut. The dashboard renders replies as markdown. A planted line asks for an image whose address ends in a summary of the inbox. A person opens the dashboard, the browser fetches the image, and the summary has left. Nobody counted rendering as outward reach. The second failure is slower: they add an approve button, and by the fortieth reply it gets clicked unread. Meta and the paper both warn that confirmation wears out, and the paper adds that hidden characters can hide an exfiltration from a reviewer.
+
+Test it in two ways. First, the properties, with no model: the reader request carries no tools, the recipient always equals the sender, and a foreign order is refused. Second, an adaptive attacker. A team including researchers from OpenAI, Anthropic and Google DeepMind (October 2025) attacked twelve published defences with search, reinforcement learning and human contests, and beat most above 90 percent, authors' own numbers, no Claude model tested. Several had reported near zero on fixed strings. They did not attack plan-then-execute designs and argued the attack should fail, which is a scoping note, not proof. Keep your fixed injection list as a canary and run a person against the rest, as in *Versioning and testing prompts*.
+
+When not to use it: a general assistant that must read anything and do anything cannot use these patterns, because they buy safety with flexibility. For that, supervise, shrink the blast radius, and log every call. A read-only summariser with no private data and no exit needs the tags and the habit of distrusting its output, not this architecture. Sandboxes, gates and permissions belong to the **Agents** course, in *Letting an agent touch the real world*.
+
+Next: *Sampling and voting*, for the answers that are well-formed and wrong.
