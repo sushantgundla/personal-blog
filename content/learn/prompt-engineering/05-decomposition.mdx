@@ -16,7 +16,7 @@ quiz:
     answer: 2
     explain: "One call is the default as of October 2026; a chain earns its cost only when you need to look at, or enforce, what happens between steps."
   - q: "The hidden cost of chaining that people miss most often is..."
-    options: ["Later steps only see what earlier steps passed on, so nuance in the original wording is lost", "The provider charges a premium for multiple calls in sequence", "Chained calls cannot use temperature 0"]
+    options: ["Later steps only see what earlier steps passed on, so nuance in the original wording is lost", "The provider charges a premium for multiple calls in sequence", "Chained calls cannot share a system prompt"]
     answer: 0
     explain: "Every seam is a lossy handoff — the tone, the hedging and the odd detail do not survive a JSON summary."
   - q: "A good place to put a seam is..."
@@ -28,9 +28,9 @@ quiz:
     answer: 1
     explain: "One cheap classification picks which focused prompt runs, instead of one giant prompt branching internally."
   - q: "Five chained steps that are each right 95 percent of the time..."
-    options: ["Land near 77 percent end to end if the errors are independent — and they usually are not, so measure it", "Stay at 95 percent, because each step corrects the last", "Land at 19 percent"]
+    options: ["Near 77 percent end to end if the errors are independent", "Stay at 95 percent, because each step corrects the last", "Land at 19 percent"]
     answer: 0
-    explain: "0.95 to the fifth power is about 0.77, which is a direction to worry about rather than a number to quote."
+    explain: "0.95 to the fifth power is about 0.77, which is a direction to worry about rather than a number to quote. The errors usually are not independent, so measure your own chain."
 deeper:
   - { label: "Anthropic — chain complex prompts", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts" }
   - { label: "Anthropic — prompting Claude Sonnet 5.5", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5" }
@@ -38,7 +38,7 @@ deeper:
   - { label: "Beurer-Kellner et al. — design patterns for securing LLM agents against prompt injections", href: "https://arxiv.org/abs/2506.08837" }
 ---
 
-*Why prompts fail* ended with a category you can only reach after ruling out the other two: the task really is too hard as posed. Splitting is the oldest answer to that, and it is no longer the first one to try. As of October 2026, Anthropic's guidance is that a current model with thinking on does most multi-step work inside one call. So this lesson is half how to cut, and half when to leave the prompt whole.
+*Why prompts fail* named a category you can only reach after ruling out the other two: the task really is too hard as posed. Splitting is the oldest answer to that, and it is no longer the first one to try. As of October 2026, Anthropic's guidance is that a current model with thinking on does most multi-step work inside one call. So this lesson is half how to cut, and half when to leave the prompt whole.
 
 ## 1. One prompt, five jobs, one number
 
@@ -147,7 +147,9 @@ print(facts)   # the whole point of splitting: a typed middle you can look at
 reply = write(decide(facts, date.today()), facts, email)
 ```
 
-That `print(facts)` is not debugging clutter. It is the thing you bought. You can log it, assert on it, alert when `order_id` is null more than usual, and hand it to someone who does not read Python. Here it shows `purchase_date` as `None`, because "in March" is not a date, and `decide` sends the case to a person instead of guessing.
+`parse` with `output_format` sends `Facts` as an enforced schema; *Output contracts*, later in this part, explains how.
+
+That `print(facts)` is not debugging clutter. It is the thing you bought. You can log it, assert on it, alert when `order_id` is null more than usual, and hand it to someone who does not read Python. Here `purchase_date` would come back as `None`, because "in March" is not a date, and `decide` sends the case to a person instead of guessing.
 
 > Put the seams where you would want to look at the intermediate result.
 
@@ -155,7 +157,7 @@ That `print(facts)` is not debugging clutter. It is the thing you bought. You ca
 
 A second shape is the one Anthropic's guide calls the commonest chain: draft, review against written criteria, refine. Each is its own call, so you can log the draft, skip the refine when the review finds nothing, and see whether the reviewer ever changes an outcome. If it never does, delete it.
 
-One more rule of thumb. Steps that depend on each other run in sequence. Steps that do not, such as summarising ten documents, can run at once, which costs tokens but not time. Only a real dependency forces a queue.
+One more rule of thumb. Steps that depend on each other run in sequence. Steps that do not, such as summarising ten documents, can run at once, which finish in about the time of the slowest one. Only a real dependency forces a queue.
 
 ## 3. What it costs, and when one prompt wins
 
@@ -166,7 +168,7 @@ One more rule of thumb. Steps that depend on each other run in sequence. Steps t
 | Code | Orchestration, retries, and a distinct failure mode per step |
 | Lost context | Step 3 knows only what step 2 passed on |
 
-The vendor's current advice is blunter than the table. With adaptive thinking and subagents, most multi-step work happens inside one call; chain explicitly to inspect intermediate outputs or to enforce a fixed pipeline (as of October 2026). Anthropic's Sonnet 5.5 guide also reports that splitting one structured task into two calls kept accuracy high but at very high cost and latency (vendor-run, no numbers given). Treat both as reasons to start with one prompt and earn each split.
+The vendor's current advice is blunter than the table. With adaptive thinking and subagents, most multi-step work happens inside one call; chain explicitly to inspect intermediate outputs or to enforce a fixed pipeline (as of October 2026). Anthropic's Sonnet 5.5 guide also reports that splitting a structured task into an answer call and then a JSON call kept accuracy high but at very high cost and latency (vendor-run, no numbers given). Treat both as reasons to start with one prompt and earn each split.
 
 | Split it | Keep it as one prompt |
 |---|---|
@@ -197,4 +199,4 @@ Two things to get right: give the classifier an explicit fallback such as `other
 
 A split can also be a security seam. If one call reads untrusted text and a different one acts, the boundary between them is a place to enforce rules in code. A router that picks only from a fixed menu, and never sees tool output again, is what a 2025 design-patterns paper calls an action-selector. *Prompt injection* explains the threat and *Containing prompt injection* builds on it.
 
-Next: the technique that makes a single hard step work better, and the many tasks where it is pure waste.
+Next: the technique that makes a single hard step work better, and the many tasks where it is pure waste — *Thinking out loud*.
