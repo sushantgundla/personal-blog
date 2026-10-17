@@ -106,7 +106,7 @@ An id can be a snapshot, which is fixed, or a pointer, which moves. You need to 
 
 On Anthropic, as of Oct 2026, ids from the 4.6 generation onward have no date in them, for example `claude-sonnet-5-5`. Such an id is a **snapshot**, not a pointer: the weights and configuration under it do not change, and an update ships under a new id. Before 4.6, ids carry a date, and the Claude API also accepts a shorter **alias** that moves to the newest snapshot of that version. Every id, dated or not, has its own retirement schedule.
 
-Google works differently. As of Oct 2026, its models page says stable models usually do not change, and a `-latest` alias is swapped on every new release, with two weeks' email notice before breaking changes. So an id that answers does not prove which model answered. This is why *Switching models safely* returns the served id with every response, and why you log it.
+Google works differently. As of Oct 2026, its models page says stable models usually do not change, and a `-latest` alias is swapped on every new release, with two weeks' email notice before breaking changes. So an id that answers does not prove which model answered. This is why the next lesson, *Switching models safely*, returns the served id with every response, and why you log it.
 
 For OpenAI the pages used here list dated snapshots such as `gpt-4o-2024-08-06`. The undated `gpt-4o` and `gpt-4.1` showed the same shutdown date in the models list on 17 October 2026. That tells you they retire together. Whether an undated id is a fixed snapshot is not stated on the pages used here, so it is not confirmed.
 
@@ -127,7 +127,7 @@ You survive a retirement if you know what you call. Look in four places.
     { label: 'Find every id', note: 'Code, config, usage export' },
     { label: 'Look up its date', note: 'On the provider page, not from memory' },
     { label: 'Put it in a calendar', note: 'With a margin before the date' },
-    { label: 'Test the replacement', subject: true, note: 'Your eval cases, as in Switching models safely' },
+    { label: 'Test the replacement', subject: true, note: 'Your eval cases, run as the next lesson shows' },
     { label: 'Cut over', note: 'Then remove the old id from every config' },
   ]}
 />
