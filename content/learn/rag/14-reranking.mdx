@@ -123,7 +123,7 @@ for score, text in sorted(zip(scores, candidates), reverse=True):
 
 All three candidates are about laptops and returns, so their embeddings sit close together and vector search could order them any way. The cross-encoder reads "how long" against each one, and only the middle passage answers it.
 
-How much can a reranker add? In ViDoRe V3, a benchmark paper from January 2026 (revised April 2026), a text cross-encoder reranker lifted one strong text retriever from about 50 to about 64 nDCG@10 (+13.2). A reranker built for page images, put over an image retriever, added almost nothing and hurt four datasets. So test the one you plan to use; a good reranker for one kind of input is not a good reranker for all. In "When to Use Graphs in RAG" (GraphRAG-Bench, June 2025), one setup with a 2023-era open embedder and reranker gained about 22 points of fact-lookup recall from the reranker, more than any graph system added.
+How much can a reranker add? In ViDoRe V3, a benchmark paper from January 2026 (revised April 2026), a text cross-encoder reranker lifted one strong text retriever from about 50 to about 64 on nDCG@10, a score for the whole ordering (defined in *Measuring retrieval*), a gain of 13.2. A reranker built for page images, put over an image retriever, added almost nothing and hurt four datasets. So test the one you plan to use; a good reranker for one kind of input is not a good reranker for all. In "When to Use Graphs in RAG" (GraphRAG-Bench, June 2025), one setup with a 2023-era open embedder and reranker gained about 22 points of fact-lookup recall from the reranker, more than any graph system added.
 
 ## 3. What it costs, and how much to send
 
@@ -152,7 +152,7 @@ Call it `n` for candidates in, `k` for chunks out. `n` is the dial.
 | 100 to 200 | Diminishing returns for most corpora, noticeably slower |
 | 1000+ | Almost never worth it outside offline batch work |
 
-Compute recall@n for your first stage across the eval set from *Measuring retrieval*. Where recall@n stops climbing, extra candidates only add cost: if recall@50 were 0.94 and recall@200 were 0.95 (invented), you would pay four times as much for one extra question in a hundred. One chunking study from August 2026 found that the best method changed with the metric, so judge stage one on recall at your `n` and leave ordering to stage two.
+Compute recall@n for your first stage across the eval set from *Measuring retrieval*. Where recall@n stops climbing, extra candidates only add cost: if recall@50 were 0.94 and recall@200 were 0.95 (invented), you would pay four times as much for one extra question in a hundred. Judge stage one on recall at your `n` and leave ordering to stage two; *Measuring retrieval* explains why the metric must match the stage.
 
 `k` is set by your prompt, usually 3 to 10, and not by recall. Chroma's July 2025 report on long inputs found that even one near-miss passage lowered answer accuracy when the right one was present. It tested older models and no RAG pipeline, so take the direction and not a number: every weak chunk you add is a distractor. Pick `k` by answer quality, as *Measuring the whole answer* shows.
 
