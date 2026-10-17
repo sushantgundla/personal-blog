@@ -1,0 +1,146 @@
+---
+title: "Structured outputs in practice"
+subtitle: "The decoder holds the shape. Know what it cannot say, and how a reply can still arrive broken."
+part: 2
+minutes: 7
+why: "You switched on a schema, deleted the retry loop that used to fix bad JSON, and felt good about it. A week later a nightly job wrote 38 rows of a 50-row list, with no error anywhere, because the reply was cut off and a forgiving parser closed the brackets for you. This lesson is the working knowledge that *Output contracts* leaves out: what the enforced schema can and cannot express, how to call it, and the three ways a reply can still fail you."
+wins:
+  - "Know the enforced subset: no numeric ranges, no length bounds, no recursion, and a hard cap on optional fields."
+  - "Let the SDK send the schema and check the ranges after the fact, then add the checks only your code can make."
+  - "Read stop_reason before you touch the body; a refusal or a cut-off reply may not match the schema."
+  - "Compare enum values case-insensitively, because casing can drift even when the set is closed."
+  - "Skip the feature for free-form text, citations, and real function calls."
+quiz:
+  - q: "Which of these can the enforced schema NOT hold, as of October 2026?"
+    options: ["A required string field", "An enum of four strings", "A numeric range such as 1 to 5"]
+    answer: 2
+    explain: "Numeric bounds and string lengths are outside the enforced subset, so the range has to be checked in code."
+  - q: "A reply arrives with stop_reason set to refusal. What can you say about the body?"
+    options: ["It may not match the schema, so check stop_reason before you parse", "It matches the schema, just with empty fields", "The API returned an HTTP error, so there is no body"]
+    answer: 0
+    explain: "A refusal is a normal HTTP 200 response, and the schema guarantee does not extend to it."
+  - q: "A list of 50 items comes back cut at item 38 with stop_reason set to max_tokens. The right move is..."
+    options: ["Keep the 38 and request the rest in a second call", "Close the brackets and carry on", "Treat it as failed, then raise the cap or ask for less"]
+    answer: 2
+    explain: "A cut-off reply is incomplete even when a tolerant parser makes it look fine, and thinking tokens count against the cap too."
+  - q: "Your code compares a raw status string to the lowercase value needs review, and some tickets never match. The documented cause is..."
+    options: ["Enum casing is not guaranteed, so compare case-insensitively", "The decoder dropped the enum from the schema", "Enums only work on tool calls, not on output formats"]
+    answer: 0
+    explain: "Even a closed set can come back with a changed letter after a space, with no error and no special stop reason."
+  - q: "On claude-sonnet-5-5 you want JSON back and used to force a tool call. As of September 2026 the way to do it is..."
+    options: ["Set tool_choice to any and add strict", "Keep the forced tool_choice and raise max_tokens", "Use the output format, or strict tools with tool_choice left on auto"]
+    answer: 2
+    explain: "Forced tool choice returns a 400 on that model, so the guarantee now comes from the format or from strict."
+deeper:
+  - { label: "Anthropic — structured outputs", href: "https://platform.claude.com/docs/en/build-with-claude/structured-outputs" }
+  - { label: "Anthropic — strict tool use", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" }
+  - { label: "Anthropic — refusals and fallback", href: "https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback" }
+  - { label: "OpenAI — structured outputs", href: "https://platform.openai.com/docs/guides/structured-outputs" }
+  - { label: "Pydantic documentation", href: "https://docs.pydantic.dev/latest/" }
+---
+
+This is not a lesson about asking for JSON, and it is not a guarantee that the answer is right. *Output contracts* was the design half: which fields, which enums, what unknown looks like. This one is the machinery under it, the limits you will hit the first week, and the ways a reply still arrives broken.
+
+## 1. What the decoder does, and what it cannot say
+
+A schema you pass through the structured-output setting is compiled into a grammar, and the model's sampling is restricted to tokens that keep the output valid against it. That is a guarantee about generation, not a polite request. As of October 2026 it comes in two forms on the Claude API: a JSON output format (`output_config.format`, type `json_schema`) and `strict: true` on a tool definition, which applies the same machinery to the tool's arguments. You can use both in one request. The grammar covers the model's visible output only, not its thinking, so it can still reason freely before it writes the object.
+
+The catch is that the schema language it enforces is a subset. These are the gaps that bite first, as of October 2026.
+
+<Figure bare caption="The schema keywords the decoder will not enforce, and what to do about each. Anything in the left column is a check you write, not a check you get.">
+
+| Cannot say | You wanted | Do instead |
+|---|---|---|
+| `minimum`, `maximum`, `multipleOf` | urgency from 1 to 5 | Say it in the description; check in code |
+| String length bounds | a summary under 200 characters | Say it in the prompt; check `len` |
+| `minItems` above 1, any `maxItems` | exactly three tags | Ask in the prompt; check the count |
+| Recursive schemas | a comment thread, a tree | Flatten to a list with parent ids |
+| `additionalProperties` other than false | a free-form bag of keys | A list of key and value objects |
+
+</Figure>
+
+There are also limits across a whole request: 20 strict tools, 24 optional parameters, and 16 parameters with union types. Go past any of them and you get a 400 reading "Schema is too complex for compilation". The vendor's own advice maps to a design rule. Make every field required and give the absent case an explicit `null`, rather than leaving fields optional. Flatten nesting. Mark only the tools that matter as strict.
+
+Three costs come with it. The first request with a new schema pays extra latency while the grammar compiles; the grammar is then cached for 24 hours, keyed by the schema's structure, and the vendor gives no figure for the delay. The API also injects a system prompt describing the format, which you are billed for. And changing the format invalidates the prompt cache for that conversation, so pick a schema and keep it. The vendor publishes no accuracy numbers for any of this, so measure on your own cases.
+
+## 2. A worked example: the ticket, end to end
+
+Take the support-ticket triage from *Validating what comes back*. The schema is a Pydantic model, with the 1-to-5 range written as `Field(ge=1, le=5)`, which the decoder cannot hold. The SDK helper `parse` handles that gap. It sends a version of the schema with those constraints stripped out and written into the field description, then validates the reply against your original model afterwards, on the client. The model is nudged by the description; the SDK enforces the real rule after the fact.
+
+```python
+import logging
+from typing import Literal
+
+from anthropic import Anthropic
+from pydantic import BaseModel, Field
+
+client = Anthropic()
+log = logging.getLogger(__name__)
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+OWNERS = {"alice", "bob", "priya"}   # facts the schema cannot know
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+class Ticket(BaseModel):
+    category: Literal["billing", "bug", "feature_request", "other"]
+    urgency: int = Field(ge=1, le=5)   # the SDK checks this, the decoder cannot
+    owner: str | None                  # required, with an explicit null
+    quote: str                         # must appear in the source text
+
+def triage(text: str) -> Ticket:
+    resp = client.messages.parse(
+        model=MODEL,
+        max_tokens=2000,   # thinking is on by default and counts against this
+        system="Triage the ticket. Use null for an owner the text does not name.",
+        messages=[{"role": "user", "content": text}],
+        output_format=Ticket,
+    )
+    # The schema holds only for a finished answer: a refusal or a cut-off may not match it.
+    if resp.stop_reason != "end_turn":
+        log.error("raw reply: %r", text_of(resp))   # keep what came back, as in the next lesson
+        raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+    ticket = resp.parsed_output
+    if ticket.owner is not None and ticket.owner not in OWNERS:
+        raise ValueError(f"unknown owner {ticket.owner!r}")   # only your data knows
+    if ticket.quote not in text:
+        raise ValueError("quote does not appear in the source text")
+    return ticket
+```
+
+The parameter spellings are copied from the vendor docs as of October 2026, not run here, so try them on your SDK version first. One more unknown: the vendor pages this lesson was written from do not say whether `parse` raises or hands back an empty `parsed_output` on a refused or cut-off reply. Keep the `stop_reason` check where it is, and do not assume the call throws for you.
+
+The sample shows three jobs with three owners. The decoder owns the shape and the closed set of categories. The SDK owns the range, afterwards. Your code owns the owner lookup and the quote search, and nothing else can, which is the argument of *Validating what comes back*.
+
+<Flow
+  caption="What to do with a reply from a structured call, in order. The first check is stop_reason, because the schema's guarantee only covers a reply that finished."
+  steps={[
+    { label: 'The call returns', note: 'HTTP 200, even for a refusal' },
+    {
+      label: 'Read stop_reason',
+      subject: true,
+      branch: [
+        'end_turn — go on and parse',
+        'max_tokens — failed; raise the cap or ask for less',
+        'refusal — do not parse; see Stop reasons and refusals',
+      ],
+    },
+    { label: 'Check the rest', note: 'The SDK checks ranges; you check ids and quotes' },
+  ]}
+/>
+
+## 3. Three ways the contract still breaks
+
+**A refusal.** Current Claude models run classifiers, and a declined request comes back as a normal HTTP 200 with `stop_reason` set to `refusal` (as of October 2026). The body may not match your schema. A property that asks for the model's reasoning can cause one yourself, which *Output contracts* warns about. What to do with each refusal category is the subject of *Stop reasons and refusals*.
+
+**A cut-off.** Thinking tokens count against `max_tokens`, and the vendor reports that at low or medium effort the model occasionally thinks until it hits the cap (as of October 2026). Output that stops mid-object is incomplete and does not match the schema. The parse error is the lucky outcome. The dangerous one is a forgiving parser, or a streaming consumer that hands you each finished item as it goes, so a 50-item list stops at item 38 and nothing raises. Those numbers are an illustration. Treat `max_tokens` as failed whatever the body looks like, and in this course that means raise the cap or ask for less, then call again.
+
+**Case drift.** An enum closes the set, but case is not guaranteed, as of October 2026. Claude can change a letter after a space, so a value with a space in it, such as `needs review`, can arrive as `needs Review`, with no error and no special stop reason. A raw string comparison then misses without a sound. Compare case-insensitively, and never define two values that differ only by case. The SDK path above rejects the drifted value loudly, because the client-side check runs against your original model, though that behaviour is inferred from the vendor's description, not confirmed.
+
+> The schema guarantees the shape of a finished answer, not that you received one.
+
+**When not to use it.** It does not work with citations or with a prefilled assistant message, and both return a 400. It does not suit a recursive or very large schema, where the limits above push you toward splitting the work. The schema is cached on the vendor's side for up to 24 hours, so keep protected health information out of property names, enum values and patterns. It exists only on listed models and platforms, so check yours; on Amazon Bedrock it is available only through the legacy integration, as of October 2026. And skip it for free-form text, or when you need a real function call, which is tool use with `strict`.
+
+When you cannot constrain the output, you are back on the ladder from *Output contracts*. One trick from the vendor's Sonnet 5.5 guide is worth having: if the model writes drafts before the final JSON, parse the last JSON value in the text blocks, not the first brace to the last brace. Forced tool choice has its own dated note: as of September 2026 it returns a 400 on `claude-sonnet-5-5`, so keep `tool_choice` on `auto` with `strict: true` and tell the model in the prompt when to call the tool.
+
+Next: the decoder has done its half, and *Validating what comes back* is the half it cannot.
