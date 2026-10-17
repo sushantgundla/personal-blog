@@ -1,0 +1,172 @@
+---
+title: "Timeouts, fallbacks, and failures that look like success"
+subtitle: "How to stop a slow call hanging, what to fall back to, and how to catch an answer that came back 200 and wrong."
+part: 2
+minutes: 7
+why: "You have retries, backoff and a timeout, and the dashboard is green. Meanwhile a handful of users keep getting answers that stop mid-sentence, or that carry a few Thai characters in the middle of English. Every one of those requests returned 200. Your error rate never moved, your fallback never fired, and you heard about it from a support thread. Loud failures are the easy kind, because the status code tells you. This lesson covers the timeout, streaming and fallback habits for those, then the harder kind: a model that answers quickly, successfully and wrongly. You get cheap checks, a small canary, and the logging that lets you find it before your users do."
+wins:
+  - "Set an explicit timeout sized to the work, and stream long answers so a slow call is neither a hang nor a mystery."
+  - "Make any action with a side effect safe to repeat on your side, because a dropped connection looks the same as a lost request."
+  - "Order a fallback chain by route first, then a smaller model, then another provider, and fail over instead of retrying on a spend-cap 429."
+  - "Check every reply cheaply, and log the model id that answered, the request id and the user."
+  - "Watch failure rates per user as well as on average, and run a small canary on a schedule."
+quiz:
+  - q: "During an incident every request returns HTTP 200 and your error rate stays flat. What does that tell you?"
+    options: ["The model is working as it should", "Your retries and fallback are absorbing the problem", "Only that each call completed; the answers could still be wrong"]
+    answer: 2
+    explain: "A status code reports whether the call finished, not whether the answer was good, and Anthropic's 2025 postmortem describes weeks of degraded answers behind normal-looking responses."
+  - q: "You pinned an exact model id. Why can the answers still change?"
+    options: ["The serving code around the weights can change while the id stays the same", "Providers replace the weights under a pinned id every night", "A pinned id stops receiving bug fixes and slowly decays"]
+    answer: 0
+    explain: "The id names the weights, but routers, hardware and sampling code sit around them, and the 2025 postmortem describes bugs in exactly that layer under unchanged ids."
+  - q: "A job's key hits the monthly spend cap, and a second provider is configured as a fallback. What should the code do?"
+    options: ["Retry the same route with a longer backoff", "Fail over to the next route and alert someone", "Raise the timeout and try again"]
+    answer: 1
+    explain: "A tier spend-cap 429 keeps failing until access resumes (as of Oct 2026), so waiting cannot help. Failing over keeps the feature up, and the alert tells a person the cap needs attention."
+  - q: "Streaming a long answer mainly helps because..."
+    options: ["The model generates the tokens faster", "The price per token falls", "Tokens arrive as they are produced, so the connection is not silent for minutes and the user sees progress"]
+    answer: 2
+    explain: "Total generation time is unchanged. What changes is that nothing sits idle long enough for a network to drop it, and the user sees words soon after the call starts."
+  - q: "In a bad hour, 16% of requests are misrouted, and routing is sticky. Why can the 16% average mislead you?"
+    options: ["A few users may have received nearly all the bad answers", "Sticky routing makes the bad requests cheaper, so the figure is inflated", "The average only counts requests that returned an error"]
+    answer: 0
+    explain: "If a user's follow-ups tend to land on the same wrong server, the same 16% can fall on a small group, who see a product that is almost always broken."
+deeper:
+  - { label: "Anthropic Engineering - A postmortem of three recent issues (the 2025 incident, in the vendor's own words)", href: "https://www.anthropic.com/engineering/a-postmortem-of-three-recent-issues" }
+  - { label: "Anthropic - API errors (status codes, long requests, errors inside a stream, request ids)", href: "https://platform.claude.com/docs/en/api/errors" }
+  - { label: "Google - Gemini API deprecations (ids that stay callable and route to a newer model)", href: "https://ai.google.dev/gemini-api/docs/deprecations" }
+  - { label: "AWS Builders' Library - timeouts, retries, and backoff with jitter (2019)", href: "https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter" }
+---
+
+The last lesson, *Rate limits and reliability*, handled failures that announce themselves with a status code. This one covers a call that hangs or repeats, a fallback for when a route is down, and the failure with no status code at all, where the request succeeds and the answer is worse. Provider facts are dated "as of Oct 2026" unless marked, and each provider's own page is the authority.
+
+## 1. A call that hangs, and a call that repeats
+
+**Set a timeout on every call.** A long prompt with a long answer can legitimately take minutes, so one global ten-second limit breaks real work, and no limit holds a connection and a user indefinitely. Size the timeout to the work, per feature. A timeout also tells you less than it seems to: you cannot tell a request that never arrived from an answer lost on the way back.
+
+**Stream long answers.** Streaming does not speed up generation. It changes what the user sees: words soon after the call starts, not a blank page for tens of seconds. As of Oct 2026, Anthropic's errors page recommends streaming or its batch API for long requests, especially ones past ten minutes, because some networks drop idle connections. It adds that the SDKs check that a non-streaming request is not expected to run past ten minutes. The other providers' pages were not checked in the sources used, so look them up. Two cautions apply:
+
+- **A stream can fail after the 200.** As of Oct 2026, Anthropic sends a mid-stream failure, such as `overloaded_error`, as an `error` event inside the stream, so a loop that only checks the status code misses it.
+- **An early end is a failure.** Treat a stream that stops early like a timeout.
+
+**Make repeats safe.** A connection that drops after the model answered is ordinary, and you cannot tell it from a request that was lost. The model call is safe to repeat: it costs money but changes no state. The action you take on its output is not, whether that is an email, a charge or a row. The AWS Builders' Library makes the same point: a call with side effects is only safe to retry if it is idempotent, meaning a repeat changes nothing. Give each operation a key you generate, store the key with the result, and check it before acting. That the model APIs accept an idempotency key is not confirmed in the sources used, so do not lean on one.
+
+## 2. A fallback chain, ordered by evidence
+
+Some failures are not worth retrying: a route is down, a model is overloaded for an hour, a spend cap is hit. Behind the adapter from *The big three, and what actually differs*, a chain costs little. The question is order.
+
+<Flow
+  caption="The order to try when a call fails for a reason a retry cannot fix. Each step changes more than the one before it, so each needs its own test before the day you rely on it."
+  steps={[
+    { label: 'Primary route', note: 'Fails: timeout, overload, spend-cap 429' },
+    { label: 'Same model, other route', note: 'Another cloud or region; prompts keep working', subject: true },
+    { label: 'Smaller model', note: 'Same family; worse, but answering' },
+    { label: 'Another provider', note: 'Biggest change: adapter, prompt, eval' },
+    { label: 'Degraded answer', note: 'Cached, queued, or the non-AI path' },
+  ]}
+/>
+
+Route comes first because of what happened in 2025. Anthropic's postmortem says the same model id was served through its own API, Amazon Bedrock and Google Cloud Vertex AI. The three bugs did not hit the three routes equally. These are Anthropic's figures about itself (as of Sep 2025), measured over different windows, so read them as a pattern, not a league table.
+
+<Figure bare caption="One model id, three routes, three outcomes, from Anthropic's own account of Aug to Sep 2025. The first row is the share of one model's requests that went to the wrong servers.">
+
+| Bug (Aug to Sep 2025) | Anthropic's own API | Amazon Bedrock | Google Cloud Vertex AI |
+|---|---|---|---|
+| Wrong context-window servers | 16% of requests in the worst hour | 0.18% at the peak | Under 0.0004% |
+| TPU output corruption | Affected | Not affected | Not affected |
+| Approximate top-k miscompile | Affected | Not affected | Not affected |
+
+</Figure>
+
+Two bugs touched only the first-party API, so a second route would have changed what some users saw. A smaller model comes next because it keeps your prompts and tools. Another provider comes last, since it is the biggest change: a new adapter, new prompt habits, and the work in *Switching models safely*.
+
+A route is not free. Each has its own ids (Bedrock's differ from the first-party one, as of Oct 2026), quotas, retirement dates (as of Oct 2026, Anthropic says Bedrock and Google Cloud set theirs) and data terms, so check price and contract for every link. A tier spend-cap 429 keeps failing until access resumes (as of Oct 2026), so it is a reason to fail over, never to retry, but only if the next link is not under the same cap.
+
+**How it fails:** a chain you never exercise. The second provider's key has expired, its quota is the free tier, and it wraps JSON in prose. Send a small share of real traffic down each link all the time.
+
+## 3. Failures that look like success
+
+Between early August and mid-September 2025, Anthropic says three infrastructure bugs degraded some Claude replies, with the model ids unchanged. Some Sonnet 4 requests went to servers set up for a longer context window, 0.8% of requests from 5 August and 16% in the worst hour. A TPU misconfiguration made rare tokens likely, so English answers carried Thai or Chinese characters. An approximate top-k step in a compiler could drop the best token. None of it raised an error.
+
+Anthropic also says its benchmarks, safety evals, spot checks and canaries missed it. It makes one claim you cannot check: "We never reduce model quality due to demand, time of day, or server load." That is the vendor's statement about itself, as of Sep 2025.
+
+> A 200 tells you the call finished. It says nothing about whether the answer is any good.
+
+Routing was also **sticky**. A request that landed on a wrong server was likely to be followed by more there. So an average hides who was hurt.
+
+<Compare caption="The same 16% in the worst hour, two ways. The figures are an illustration, not a measurement: 100 users, 10 requests each, 160 bad answers. Anthropic reported that about 30% of Claude Code users had at least one message misrouted over the whole period.">
+  <Panel label="If it were random" title="Spread across everyone">
+
+Each request has a 16% chance of being bad. A user sees at least one bad answer with probability 1 minus 0.84 to the power of 10, about 83%. The complaints are scattered and easy to dismiss.
+
+  </Panel>
+  <Panel label="With sticky routing" title="Concentrated on a few">
+
+The same 160 bad answers fall on 16 users, who get all ten wrong. The other 84 see nothing. The average is identical, but sixteen people have a broken product, and only a per-user view shows it.
+
+  </Panel>
+</Compare>
+
+What you can do is small and cheap.
+
+- **Check every reply against what the feature expects.** Valid JSON, a sane length, and the expected script catch the Thai-in-English symptom. They only catch what you can state; valid JSON can still be wrong.
+- **Run a canary on a schedule.** A fixed set of prompts with known answers, compared with a stored baseline. The golden set and its baseline are in the Evals course, in *Drift: when the model changes under you*. At a 0.8% bad rate, a 20-prompt canary sees one bad reply about one run in seven. With the default `margin=0.10` it alerts only at 3 misses or more, which is rare at 0.8%. At 16% it sees one nearly every run and alerts about two runs in three. A canary is a tripwire for large problems.
+- **Log the answering model, the request id and the user.** The returned id would not have caught the 2025 bugs, since the id never changed. It catches a different case. Google's deprecations page lists `gemini-3.7-flash`, whose endpoint stays up and routes to a newer model (as of Oct 2026). An id that answers is not proof of which model answered. The request id gives support something to look up. Count bad replies per user from these lines, not only on average.
+
+```python
+import json, re, sys, time
+from anthropic import Anthropic
+
+MODEL = "claude-sonnet-5-5"   # check the models page; as of Oct 2026
+
+client = Anthropic(timeout=60.0)   # an explicit timeout; as of Oct 2026 the SDK's own retries stay on
+
+ODD_SCRIPT = re.compile(r"[\u0e00-\u0e7f\u3040-\u30ff\u4e00-\u9fff]")   # Thai, Japanese, Chinese
+
+def problems_in(text: str) -> list[str]:
+    """Cheap checks. This feature expects short English JSON."""
+    found = []
+    if not 2 <= len(text) <= 2000:
+        found.append("length")
+    if ODD_SCRIPT.search(text):
+        found.append("odd_script")
+    try:
+        json.loads(text)
+    except ValueError:
+        found.append("bad_json")
+    return found
+
+def ask(prompt: str, user_id: str) -> str:
+    resp = client.messages.create(
+        model=MODEL, max_tokens=2000,   # as of Oct 2026, thinking tokens share this budget
+        messages=[{"role": "user", "content": prompt}],
+    )
+    # as of Oct 2026 thinking is on by default here, so content[0] can be a thinking block with no .text
+    text = next((b.text for b in resp.content if b.type == "text"), "")
+    problems = problems_in(text)
+    if resp.stop_reason == "max_tokens":
+        problems.append("cut_off")
+    print(json.dumps({                       # one log line per call
+        "t": time.time(), "user": user_id, "asked": MODEL, "answered": resp.model,
+        "request_id": resp._request_id, "stop": resp.stop_reason, "problems": problems,
+    }))
+    return text
+
+# Fixed prompts with a known answer. Run on a schedule, never on user traffic.
+CANARY = [("Reply with only the number: what is 17 * 3?", "51")]   # about 20 in real life
+
+def run_canary(baseline: float, margin: float = 0.10) -> float:
+    rate = sum(want in ask(q, "canary") for q, want in CANARY) / len(CANARY)
+    if rate < baseline - margin:
+        print(f"CANARY DROP: {rate:.0%} against a baseline of {baseline:.0%}", file=sys.stderr)
+    return rate
+```
+
+I ran it with `anthropic` 1.15.0 against a mocked reply (a thinking block, then a text block). The loop skipped the thinking block, `51` passed as valid JSON, and the log line showed `"stop": "end_turn"` and `"problems": []`. That was not a live call, so run it once on your own key.
+
+**When this does not apply.**
+
+- **Low volume or low stakes.** For an internal tool, the SDK's retries plus one fallback are plenty.
+- **A fallback that crosses a data line.** Another provider or cloud route may break a residency or contract commitment. Do not fail over across one; degrade instead.
+- **Answers a shape check cannot judge.** Free-form text can pass every check and still be wrong; that needs sampled review, as the Evals course covers.
+- **A 400.** Neither fallback nor retry will fix a bad request. A spend limit you set yourself also returns a 400, and Claude Code workspace limits can return a 429 (both as of Oct 2026); there, failing over to a route outside that limit can help.
