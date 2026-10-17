@@ -7,7 +7,7 @@ why: "You have one long user message doing everything — the rules, the example
 wins:
   - "Put rules that are true on every call in the system prompt, and treat that as a default you test, not a law."
   - "Set the format in the system prompt before turn one, because the model copies its own earlier replies."
-  - "Keep the messages list append-only wherever thinking or tools are in play."
+  - "Keep the messages list append-only wherever thinking is on."
   - "Send user words in a user turn, never inside a tool result."
   - "Never treat the system prompt as a security boundary."
 quiz:
@@ -47,9 +47,9 @@ Mechanically, the system prompt, the history and the new message are joined into
 
 **Position.** The system prompt is at the front of every call. As a chat grows, a rule typed into turn 2 slides further back behind newer text. A system rule never moves.
 
-**Training.** Models are post-trained on data where the system prompt is the operator's standing instruction and the user turn is the request being served. That is a learned prior, and a strong one. When the two conflict, the system prompt usually wins.
+**Training.** As of October 2026, models are post-trained on data where the system prompt is the operator's standing instruction and the user turn is the request being served. That is a learned prior, and a strong one. When the two conflict, the system prompt usually wins.
 
-*Usually*, on the models people have measured, is not *always*. Nothing in the API enforces it, and a user message with convincing instructions can still steer the model. Hamel Husain and Shreya Shankar, in an evals FAQ from September 2026, advise a different default when you are unsure: put the text in the user turn, because it moves between models more easily and is easier to debug. They give no data. Treat both views as opinion, and treat the split below as a default you confirm by running your own cases with the rule in each place.
+*Usually*, in the vendor's own guidance, is not *always*. Nothing in the API enforces it, and a user message with convincing instructions can still steer the model. Hamel Husain and Shreya Shankar, in an evals FAQ from September 2026, advise a different default when you are unsure: put the text in the user turn, because it moves between models more easily and is easier to debug. They give no data. Treat both views as opinion, and treat the split below as a default you confirm by running your own cases with the rule in each place.
 
 | Goes in the system prompt | Goes in the user turn |
 |---|---|
@@ -82,7 +82,7 @@ More rules is not better. The Claude Code team said in a July 2026 conversation 
 
 The API is stateless. Your code resends the whole conversation every turn, so your newest instruction competes with everything said earlier, including the model's own replies. Those replies are few-shot examples whether you meant them to be or not. Five bulleted answers teach it that this conversation produces bullets, and one sentence at turn 6 asking it to stop is outnumbered.
 
-An older version of this lesson called the list an array you construct, free to edit. As of October 2026 that is wrong wherever thinking is in play. The vendor says that on Sonnet 5.5 and the other newest models it lists, a thinking block stays valid only while `system`, `tools` and the earlier messages are unchanged. Edit a turn, rebuild `system` or summarise old turns in place, and the next request either errors or, if you opt in, drops the block. For accounts created on or after 31 August 2026 the vendor says Sonnet 5.5 enforces this with an error. The rule is **append-only**.
+As of October 2026, on Sonnet 5.5 and the other newest models the vendor lists, a thinking block stays valid only while `system`, `tools` and the earlier messages are unchanged. Edit a turn, rebuild `system` or summarise old turns in place, and the next request either errors or, if you opt in, drops the block. For accounts created on or after 31 August 2026 the vendor says Sonnet 5.5 enforces this with an error. The rule is **append-only**.
 
 ```python
 from anthropic import Anthropic
@@ -145,11 +145,11 @@ The parameter spellings are copied from the vendor docs as of October 2026, not 
   ]}
 />
 
-Two smaller notes from the vendor, both as of October 2026. A mid-conversation system message, in beta, is the vendor's way to change instructions without rewriting history. And the old trick of ending the list with a half-written assistant turn, so the model continues it, is a 400 on Claude 4.6 models and the later ones the vendor lists. Ask in the user turn, or use structured outputs, covered in *Output contracts*.
+Two smaller notes from the vendor, both as of October 2026. A mid-conversation system message, in beta, is the vendor's way to change instructions without rewriting history. And the old trick of ending the list with a half-written assistant turn, so the model continues it, is a 400 on Claude 4.6 models and Mythos Preview. Ask in the user turn, or use structured outputs, covered in *Output contracts*.
 
 ## 3. Channels carry weight, and when to leave the split alone
 
-Where a piece of text arrives is a signal the model reads. Current models are trained to resist indirect injection, and the Sonnet 5.5 guide says that has a side effect. A real user message placed inside a `tool_result`, or wedged right after one, can be read as an attack. The model may tell the user the tool output impersonated them, or stop to ask for confirmation. The vendor gives no rates. Its advice is plain: user words go in a user turn as a text block after the last tool result, tool output stays in `tool_result`, and harness notices go in a separate system message.
+Where a piece of text arrives is a signal the model reads. As of October 2026, current models are trained to resist indirect injection, and the Sonnet 5.5 guide says that has a side effect. A real user message placed inside a `tool_result`, or wedged right after one, can be read as an attack. The model may tell the user the tool output impersonated them, or stop to ask for confirmation. The vendor gives no rates. Its advice is plain: user words go in a user turn as a text block after the last tool result, tool output stays in `tool_result`, and harness notices go in a separate system message.
 
 That signal is a training prior, like the system prompt's weight, and not a lock. The system prompt is not a security boundary, and *Prompt injection* explains why.
 
