@@ -8,43 +8,42 @@ wins:
   - "Sort every failure into ambiguous, buried, or beyond the model before you edit anything."
   - "Ask the model to restate the task before doing it — one cheap call names the ambiguity."
   - "Re-run on a tiny clean input to tell buried apart from genuinely too hard."
-  - "Delete intensifiers — replace be accurate with a checkable artefact like a quote or a null."
+  - "Replace be accurate with a checkable artefact like a quote or a null, and give the reason behind each rule."
   - "Use role prompts for tone and vocabulary, not for accuracy."
 quiz:
-  - q: "The same prompt gives a differently shaped answer on every run. The most likely cause is..."
-    options: ["The task is beyond the model", "Your instruction is buried under pasted context", "The instruction is ambiguous — it never described the output"]
+  - q: "A rule in your prompt says never discuss pricing, and the model now refuses to answer a plain question about the free plan. The better fix is..."
+    options: ["Add extremely important to the rule so it is taken seriously", "Move the rule to the end of the prompt", "State the reason for the rule and where it stops applying"]
     answer: 2
-    explain: "When nothing pins the shape, each run is free to pick a different one, and it will."
+    explain: "A bare prohibition has no edge, so the model guesses one; the reason lets it work out the cases you did not list."
   - q: "The cheapest way to tell an ambiguous prompt from a genuinely hard task is..."
     options: ["Ask the model to restate the task and name anything unclear, before it answers", "Raise max_tokens and run it again", "Switch to a bigger model and compare"]
     answer: 0
     explain: "One short call shows you the reading it took, and every ambiguity it lists is a decision you left open."
   - q: "A prompt works on a short input and fails on a 30-page one. That points at..."
-    options: ["The task being beyond the model", "The instruction being buried and out-competed by the pasted text", "Temperature being set too high"]
-    answer: 1
+    options: ["The task being beyond the model", "The model being out of date", "The instruction being buried and out-competed by the pasted text"]
+    answer: 2
     explain: "Nothing about the task changed — only how much text your instruction is competing with."
   - q: "Adding this is extremely important to a prompt mostly fails because..."
     options: ["It uses up too much of the context window", "Emphasis is stripped out before the model sees it", "It does not describe anything different for the model to produce"]
     answer: 2
-    explain: "An instruction only helps if it changes the target; emphasis leaves the target exactly where it was."
+    explain: "An instruction only helps if it changes the target; emphasis leaves the target where it was, and on some current models loud wording makes a rule fire where it should not."
   - q: "You give the model the role you are a senior tax accountant. The honest expectation is..."
     options: ["It shifts vocabulary and register; do not assume it raises accuracy", "It unlocks tax knowledge the model otherwise withholds", "It reliably improves factual correctness on tax questions"]
     answer: 0
     explain: "Role prompting changes how the answer sounds; evidence that it changes how often the answer is right is thin and task-dependent."
 deeper:
   - { label: "Anthropic — be clear and direct", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct" }
-  - { label: "Anthropic — prompt engineering overview", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview" }
+  - { label: "Anthropic — prompting Claude Sonnet 5.5", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5" }
   - { label: "Lost in the Middle — how models use long contexts", href: "https://arxiv.org/abs/2307.03172" }
-  - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
+  - { label: "Meincke et al. 2025 — the decreasing value of chain of thought", href: "https://arxiv.org/abs/2506.07142" }
+  - { label: "Simon Willison — a conversation with the Claude Code team (self-reported results)", href: "https://simonwillison.net/2026/Jul/21/cat-and-thariq/" }
 ---
 
-An instruction can lose to everything else in the box — the pasted document, the examples, the conversation so far. This lesson is what to do when yours has. Debugging a prompt feels like guesswork because most people change three things at once and keep whichever version looked better on one example. It does not have to be guesswork. There are three failure causes, they look different, and you can tell them apart in about two minutes.
+An instruction can lose to everything else in the box — the pasted document, the examples, the conversation so far. This lesson is what to do when yours has. Debugging a prompt feels like guesswork because most people change three things at once and keep whichever version looked better on one example. It does not have to be. There are three failure causes, they look different, and you can tell them apart in about two minutes.
 
 ## 1. Three causes, and they need different fixes
 
-Every prompt failure is one of these.
-
-<Figure bare caption="The three causes produce the same symptom, a wrong answer, and diverge only in the middle column — which is why the fix always starts with naming which one you have, not with rewriting the prompt.">
+<Figure bare caption="The three causes produce the same symptom, a wrong answer, and diverge only in the middle column — which is why the fix starts with naming which one you have, not with rewriting the prompt.">
 
 | Cause | What it looks like | The fix |
 |---|---|---|
@@ -54,21 +53,19 @@ Every prompt failure is one of these.
 
 </Figure>
 
-Most people reach straight for the third. "The model can't do this" is a comfortable conclusion — it ends the debugging. It is also wrong most of the time, because the first cause is enormously more common and looks exactly like incompetence from the outside.
+Most people reach straight for the third. "The model can't do this" is comfortable — it ends the debugging. It is also usually wrong, because the first cause is far more common and looks exactly like incompetence.
 
-Ambiguity hides in ordinary words. Every one of these is a decision you did not make, so the model made it for you:
+Ambiguity hides in ordinary words. Each is a decision you did not make, so the model made it for you:
 
 - **Summarise this.** One sentence or one page? For whom? Keeping the numbers or not?
-- **Extract the date.** Which date — invoiced, due, paid? In what format? What if there are three?
-- **Recent tickets.** Recent as in seven days, thirty, or since the last release?
-- **Fix the tone.** Fix it towards what? Warmer, shorter, more formal, less apologetic?
-- **List the key points.** How many is key? Ranked or in document order?
+- **Extract the date.** Invoiced, due, or paid? In what format? What if there are three?
+- **Recent tickets.** Seven days, thirty, or since the last release?
 
-You know what you meant. The prompt does not contain what you meant. That gap is where almost all of this lives.
+You know what you meant. The prompt does not contain it. Anthropic's prompting guide offers a free first check: hand the prompt to a colleague with none of your context. Wherever they would stop and ask, the model is guessing.
 
 ## 2. Debug in that order
 
-Check ambiguity first because it is the cheapest to test and the most likely to be the answer.
+Check ambiguity first: it is the cheapest to test and the most likely.
 
 **Step one: make it restate the task.** Before asking for the work, ask what it thinks the work is.
 
@@ -76,12 +73,16 @@ Check ambiguity first because it is the cheapest to test and the most likely to 
 from anthropic import Anthropic
 
 client = Anthropic()
+MODEL = "claude-sonnet-5-5"   # as of October 2026
 
-TASK = "Summarise the support ticket below for the on-call engineer."
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+TASK = "Summarise the support ticket for the on-call engineer."
 
 resp = client.messages.create(
-    model="claude-sonnet-4-20250514",
-    max_tokens=300,
+    model=MODEL,
+    max_tokens=2000,   # thinking is on by default and counts against this
     messages=[{
         "role": "user",
         "content": (
@@ -93,22 +94,28 @@ resp = client.messages.create(
         ),
     }],
 )
-print(resp.content[0].text)
+if resp.stop_reason != "end_turn":
+    raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+print(text_of(resp))
 ```
 
-Answer 3 is the one you want. Every item it lists is a decision you left to a coin flip, and answer 2 tells you which side the coin landed on this time. If the restatement is wrong, stop debugging — you have found it. Write the missing decisions into the prompt and try again.
+The parameter spellings are copied from vendor docs as of October 2026, not run here; try them on your SDK version first.
 
-**Step two: shrink the input.** If the restatement is right but the answer is still wrong, cut the context down to one small, clean example and re-run. If it now works, the problem was never capability. Your instruction was buried, and the fix is placement: document first and task last, clear delimiters around the data, and less pasted context rather than more.
+Expect an answer shaped like this invented one: a few sentences of prose, and under question three, what it would be guessing — whether to name the customer, whether the engineer wants symptoms or cause, how long "short" is. Those are coins you left in the air. Write the decisions down: *Two lines. Line one: what the customer sees. Line two: what to check first. No names.* The summary was never the problem.
 
-**Step three: only now, believe it is hard.** A task that fails on a tiny clean input, with an accurate restatement, and fails the same way on every attempt, is a task the model cannot do as posed. That is a real category — exact arithmetic on long numbers, anything needing information the model does not have, anything with five interacting sub-tasks. The fix is not a better sentence. It is decomposition (*Decomposition*), a tool, or code.
+If the restatement is wrong, you have found it. It is evidence, not proof, since it is the model's own account of its reading; confirm by changing the prompt and re-running.
+
+**Step two: shrink the input.** If the restatement is right but the answer is wrong, cut the context to one small, clean example and re-run. If it now works, the problem was never capability. Your instruction was buried, and the fix is placement: document first, task last, clear delimiters, less pasted context. Research on older models (Liu et al., 2023) found the middle of a long input gets used worst.
+
+**Step three: only now, believe it is hard.** A task that fails the same way on a tiny clean input, with an accurate restatement, is one the model cannot do as posed — exact arithmetic on long numbers, information it does not have, five interacting sub-tasks. The fix is decomposition (*Decomposition*), a tool, or code.
 
 <Steps
-  caption="The same order, one step at a time. Click through and watch what you're testing and what a failure there means change at every step — the expensive conclusion is reached only once the first two tests have passed."
+  caption="The same order, one step at a time: what you test and what a failure means change at each step, and the expensive conclusion comes last."
   steps={[
     {
       label: 'Restate',
       title: 'Ask it to restate the task',
-      body: 'Before it does the work, ask what it thinks the work is, and what could be read more than one way.',
+      body: 'Ask what it thinks the work is.',
       facts: [
         { label: 'you test', value: 'the restatement' },
         { label: 'a failure here means', value: 'ambiguous — describe the output' },
@@ -117,7 +124,7 @@ Answer 3 is the one you want. Every item it lists is a decision you left to a co
     {
       label: 'Shrink',
       title: 'Re-run on a small, clean input',
-      body: 'The restatement was right, but the answer is still wrong. Cut the context down to one small, clean example and re-run.',
+      body: 'Cut the context to one clean example.',
       facts: [
         { label: 'you test', value: 'a tiny clean input' },
         { label: 'a failure here means', value: 'buried — fix placement and delimiters' },
@@ -126,7 +133,7 @@ Answer 3 is the one you want. Every item it lists is a decision you left to a co
     {
       label: 'Believe it',
       title: 'Only now, believe it is hard',
-      body: 'Fails the same way every time, on a tiny clean input, with an accurate restatement, however you word it.',
+      body: 'It still fails the same way, with an accurate restatement.',
       facts: [
         { label: 'you test', value: 'nothing left to test' },
         { label: 'the conclusion', value: 'genuinely hard — split it or use a tool' },
@@ -135,47 +142,45 @@ Answer 3 is the one you want. Every item it lists is a decision you left to a co
   ]}
 />
 
-| You observed | Test | If the test passes |
-|---|---|---|
-| Inconsistent shape across runs | Ask it to restate the task | Ambiguity — specify the output |
-| Fine on short input, bad on long | Re-run on a small clean input | Buried — fix placement and delimiters |
-| Same wrong answer every time, small input | Nothing left to test | Genuinely hard — split it or use a tool |
-
 > Prove the first two before you believe the third. "The model can't do this" is usually "I did not say what I wanted".
+
+Two causes can hide inside "hard", both from Anthropic's Sonnet 5.5 guide and vendor-reported (as of October 2026). A JSON-only answer at low effort can skip the thinking and miss on multi-step tasks. And the model sometimes answers from memory when the facts may have changed, instead of looking. Both are settings, not capability; *Steering how much it thinks* covers them.
+
+**When not to use the ladder.** If you have twenty real cases with expected answers, skip the detective work and run them. A rate beats a hunch, and one restatement cannot see a failure that shows up one run in ten. That is *Versioning and testing prompts*.
 
 ## 3. Why "be careful" does nothing
 
-Now the sentences everyone adds and nobody measures. *This is very important. Be thorough. Take your time. Please be accurate. Double-check your work.*
-
-They read as pressure. The model does not experience pressure. It predicts the next token given everything in the box, and "this is very important" does not change what output is being described — so there is nothing for it to do differently. Compare that with "quote the sentence you took each value from", which changes the output concretely, on every run.
+Now the sentences everyone adds and nobody measures. *This is very important. Be thorough. Take your time. Double-check your work.* They read as pressure. The model does not feel pressure; it predicts the next token from everything in the box, and "this is very important" does not change what output is being described.
 
 The rule: **if an instruction does not change what the output contains, it does not change the output.**
 
 | Weak prompt | Rewrite that does something | What changed |
 |---|---|---|
-| Please be very careful and accurate. | Quote the exact sentence each value came from. If you cannot quote it, return null for that field. | Care became a visible artefact you can check. |
-| This is really important, get the format right. | Return one JSON object with keys `id`, `date`, `total`, in that order. No text before or after. | Named the shape instead of asking for effort. |
-| Take your time and think it through. | Before answering, list the constraints one per line, then give the answer. | Turned "thinking" into tokens that actually get produced. |
-| Be thorough — do not miss anything. | Cover all five sections, in document order, one paragraph each. | A countable target replaced a feeling. |
-| You are an expert contract lawyer. | Cite the clause number for every claim. If no clause supports it, write `not in the document`. | Replaced a costume with a rule you can verify. |
+| Please be very careful and accurate. | Quote the exact sentence each value came from. If you cannot quote it, return null for that field. | Care became an artefact you can check. |
+| Take your time and think it through. | Compare each date to the invoice period and flag any that fall outside it. | A concrete check replaced a feeling. |
+| You are an expert contract lawyer. | Cite the clause number for every claim. If no clause supports it, write `not in the document`. | A costume became a rule you can verify. |
 
-<Compare caption="The same instruction, rewritten so the output is checkable instead of implied. The rewrite does not ask for more effort — it names an artefact the model can actually produce.">
-  <Panel label="Weak" title="Please be very careful and accurate.">
+Emphasis can also do harm. Anthropic's guide reports that on Opus 4.5 and 4.6, prompts that shouted to fix an ignored rule began to over-trigger once the models followed system prompts more closely; the fix was plain wording (as of October 2026). A bare "never" has the same flaw: with no reason attached, the model has to guess where the rule stops. The guide's example is a ban on ellipses, rewritten to say a speech engine will read the text aloud and cannot pronounce them. With the reason, the model can handle cases you never listed.
 
-Reads as pressure. It does not describe anything different for the model to produce, so there is nothing for the instruction to change.
+<Compare caption="A constructed failure case, not a measured one. The shouted rule has no edge, so it fires where it was never meant to; the rewrite carries its reason and its boundary.">
+  <Panel label="Shouted" title="NEVER mention refunds. This is CRITICAL.">
+
+A customer asks what the refund policy is. The rule has no edge, so the model dodges a question you wanted answered.
 
   </Panel>
-  <Panel label="Rewrite" title="Quote the exact sentence each value came from. If you cannot quote it, return null for that field.">
+  <Panel label="Reason and edge" title="Do not promise a refund — only a manager can approve one. Explaining the policy is fine.">
 
-Care becomes a visible artefact you can check. The model either produces the quote or admits it cannot, and both are checkable.
+The motive says what the rule protects, so the model can sort the unlisted cases.
 
   </Panel>
 </Compare>
 
-Two honest notes, because this area is thick with folklore.
+"Don't" rules pull hard and can collide with other instructions. A Claude Code team member said in a July 2026 conversation that a rule true nine times in ten misfired on the tenth (an anecdote, no published numbers). For each rule, ask where it is wrong, then write that case down.
 
-**Role prompting is a habit, not a proven accuracy lever.** "You are an expert X" reliably changes vocabulary, register and how technical the answer gets, and that is genuinely useful when you care how it sounds. Claims that it makes the model *right* more often are weak and depend heavily on the task. Use it for tone. Do not use it instead of specifying the output.
+Two honest notes.
 
-**"Take your time" is not the same as chain-of-thought.** Asking for step-by-step reasoning does work, for a mechanical reason covered in *Thinking out loud* — the model gets more tokens to compute in. "Take your time" produces no extra tokens, so it produces no extra computation. The phrasing is similar; the effect is not.
+**Role prompting is a habit, not a proven accuracy lever.** "You are an expert X" reliably shifts vocabulary and register, which is useful when you care how it sounds. Claims that it makes the model *right* more often are thin and task-dependent. Use it for tone, never instead of specifying the output.
+
+**"Take your time" is not step-by-step reasoning.** Step-by-step prompting does work, for the mechanical reason in *Thinking out loud*, but the evidence is narrower than the folklore. A June 2025 Wharton study of older models on one hard science benchmark found a clear gain only against a baseline that forbade thinking, little against the model's default, and a small, mixed gain on reasoning models. Whether it holds today is untested.
 
 The next lesson goes at placement — which half of the request your instruction should live in, and why that changes how much weight it carries.
