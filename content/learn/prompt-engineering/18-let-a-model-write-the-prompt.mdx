@@ -1,9 +1,9 @@
 ---
 title: "Let a model write the prompt"
-subtitle: "Turn the harness from *Versioning and testing prompts* into a search, and stop hand-editing by feel."
+subtitle: "Turn the harness from Versioning and testing prompts into a search, and stop hand-editing by feel."
 part: 4
 minutes: 7
-why: "You built the harness in *Versioning and testing prompts*, and it works: it tells you whether an edit helped. So you change a sentence, the score goes from 22 to 23, you change another, it drops to 21, and you are back to guessing with a number attached. The harness was only ever a scoreboard. It never said what to try next. This lesson makes that step less manual: show a model the cases your prompt fails and why, ask for a few rewrites, and let your own harness, never the model's opinion of its own work, decide which one wins."
+why: "You built the harness in Versioning and testing prompts, and it works: it tells you whether an edit helped. So you change a sentence, the score goes from 22 to 23, you change another, it drops to 21, and you are back to guessing with a number attached. The harness was only ever a scoreboard. It never said what to try next. This lesson makes that step less manual: show a model the cases your prompt fails and why, ask for a few rewrites, and let your own harness, never the model's opinion of its own work, decide which one wins."
 wins:
   - "Show the drafting model the failing cases with the expected output, the actual output and a one-line reason, not just the prompt."
   - "Ask for several candidates per round, and let the harness pick, never the drafter."
@@ -42,7 +42,7 @@ deeper:
 
 ## 1. Show it the failures, and why they failed
 
-Ask a model to "improve this prompt" with the prompt alone and you get polish — smoother wording, the same score. It cannot tell which sentence is broken. So give it the misses. For each one, hand over the input, the expected output, what the prompt actually produced, and one line saying why that is wrong. The last item matters most. Agrawal and colleagues (a February 2026 revision, the authors' own results on small and mid-size models, none of them Claude) argue that a written account of each failure carries more signal per run than a score. *Searching over prompts* returns to that paper.
+Ask a model to "improve this prompt" with the prompt alone and you tend to get polish — smoother wording, the same score. It cannot tell which sentence is broken. So give it the misses. For each one, hand over the input, the expected output, what the prompt actually produced, and one line saying why that is wrong. The last item matters most. Agrawal and colleagues (a February 2026 revision, the authors' own results on small and mid-size models, none of them Claude) argue that a written account of each failure carries more signal per run than a score. *Searching over prompts* returns to that paper.
 
 Where does the reason come from? From you. Hamel Husain and Shreya Shankar (September 2026) argue, as opinion rather than a measured result, that an optimiser only improves failures you already know about, and that your idea of "good" shifts as you read outputs. Read the failing outputs by hand, write a short note on each, and keep the note in the case file. In their view the safer pattern is this one: the model revises the prompt from your notes and you review the result. It works the way *Retries and fallbacks* did, with the error attached — one level up.
 
@@ -69,7 +69,8 @@ from prompts.classify_ticket import EFFORT, MODEL as CLASSIFIER, SYSTEM, THINKIN
 
 client = Anthropic()
 LABELS = ["billing", "bug", "feature_request", "other"]
-MODEL = "claude-sonnet-5-5"   # as of October 2026; the drafter, a separate choice
+# MODEL here is the drafter; CLASSIFIER is the model being tuned
+MODEL = "claude-sonnet-5-5"   # as of October 2026
 
 def text_of(resp) -> str:
     return "".join(b.text for b in resp.content if b.type == "text")
@@ -110,6 +111,8 @@ holdout = [c for c in cases if c["split"] == "holdout"]   # 10
 got = {c["id"]: run_with(SYSTEM, c) for c in working}
 misses = [{"input": c["input"], "expected": c["expected"], "got": got[c["id"]], "why": c.get("note", "")}
           for c in working if got[c["id"]] != c["expected"]]
+if not misses:
+    raise SystemExit("no misses")
 candidates = draft(SYSTEM, misses[:5])   # a sample of the misses, not all of them
 if not candidates:
     raise SystemExit("no candidate kept the labels")
@@ -147,7 +150,7 @@ print(f"holdout: current {score(SYSTEM, holdout)}, winner {score(candidates[best
 
 **A failure.** In another round, a candidate pastes four of the misses it was shown into the prompt as examples. It scores 30 of 30 on the working set and 5 of 10 on the holdout, against the current 7. It learned the shown tickets: near-twins of them pass and anything new does not. Because you picked on the working set alone, you see 5 against 7 and refuse the swap. Add the holdout into the pick score and 35 beats the current 29, and the overfit prompt ships.
 
-Even a clean win needs care. B is not safe just because it won. Ten holdout cases cannot tell a one-case gain from noise, so treat 8 as support, not proof. A drafted prompt also tends to pick up narrow rules, so read the winner as if a colleague wrote it, and prune it later with *Trimming a prompt that grew*. And if you draft with a bigger model than you ship, the harness is your only evidence: Anthropic's Claude Code team said in July 2026 that it has no hard data on whether a bigger model's detailed prompt lifts a smaller one (a talk read through a summary, not checked here).
+Even a clean win needs care. B is not safe just because it won. Ten holdout cases cannot tell a one-case gain from noise, so treat 8 as support, not proof. A drafted prompt also tends to pick up narrow rules, so read the winner as if a colleague wrote it, and prune it later with *Trimming a prompt that grew*. And if you draft with a bigger model than you ship, the harness is your only evidence: Anthropic's Claude Code team said in July 2026 that it has no hard data on whether a bigger model's detailed prompt lifts a smaller one (an informal conversation, read through Simon Willison's write-up, not checked here).
 
 <Scale
   caption="The calls in one round of the script above: 30 to find the misses, 1 to draft, 90 to score three candidates, and 20 for the holdout. Typing the edit yourself costs none of this."
