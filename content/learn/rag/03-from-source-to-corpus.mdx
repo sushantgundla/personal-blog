@@ -3,190 +3,167 @@ title: "From source system to corpus"
 subtitle: "Extraction is the bottleneck, not the embedding call - because the content still lives inside someone else's system."
 part: 1
 minutes: 7
-why: "Say you fix every parsing problem you can think of - the two-column PDF that read left to right across both columns and scrambled every sentence into nonsense, layout-aware parsing, tables turned to markdown, the works (*Parsing documents before you chunk them*, next, is where that happens). Retrieval is still missing whole documents, and none of them are PDFs. They are pages in a wiki, tickets in a helpdesk, records in a CRM, files in a shared drive nobody remembers the name of. Nothing ever tried to get them out, or the script that tried breaks every time someone renames a folder. Getting bytes out of the system they actually live in is a different problem from turning those bytes into text, and for most real corpora it is the bigger one. This lesson is that problem: connectors versus hand-rolled extraction, and why extraction eats most of an ingestion budget before parsing or embedding get a turn."
+why: "You fixed the parser. Tables come out as tables and two-column PDFs read in the right order. Retrieval still cannot answer anything about last quarter's outages, because the postmortems live in a wiki and no PDF ever existed. The same goes for helpdesk tickets, CRM notes and a shared drive nobody can name. Either nothing pulled them out, or a script did once and quietly stopped. Getting content out of the system it lives in is a different job from reading a file, and often it is the bigger one. This lesson covers connectors versus scripts, the crawl that ends early and looks finished, what to record at extraction, and when to skip the pipeline."
 wins:
   - "Treat getting content out of the source system as its own problem, separate from parsing the file."
   - "Reach for a maintained connector before you write a scraper against someone else's API."
-  - "Handle pagination, auth expiry and rate limits as real code paths, not edge cases."
-  - "Store a content hash per document at extraction time, before anything else touches it."
-  - "Plan an ingestion budget assuming extraction costs more than embedding, not the other way round."
+  - "Make a crawl that ends short fail loudly, never return what it has and exit cleanly."
+  - "Store the source text, a text hash and a metadata hash for each document at extraction."
+  - "Plan an ingestion budget assuming extraction may cost more than embedding, not the other way round."
 quiz:
   - q: "You already fixed layout-aware parsing for your PDFs. Retrieval is still missing entire documents. What is the most likely cause?"
-    options: ["The embedding model has too small a context window", "Nobody built a way to pull those documents out of the system they live in, so they never reached the parser at all", "The chunk size is too large for those documents"]
+    options: ["The embedding model has a context window too small for the longer documents in the set", "Nothing pulls those documents out of their system, so they never reach the parser", "The chunk size is set too large for how those particular documents are laid out"]
     answer: 1
     explain: "Parsing only runs on bytes you already have. If nothing extracts a document from its source system, parsing and chunking never get a chance to fail on it - it is simply absent."
-  - q: "A hand-rolled extraction script silently stops pulling new pages from a wiki after a folder gets renamed. What does that tell you?"
-    options: ["The wiki's API changed its response format", "The script hard-coded something about the source's structure that the source was free to change", "The embedding model was updated"]
-    answer: 1
-    explain: "A hand-rolled script usually encodes assumptions - a folder path, a fixed page ID list - that the source system never promised to keep. A maintained connector is built to expect that churn."
+  - q: "A nightly crawl finishes with exit code 0, yet the corpus holds a fifth of the pages the wiki reports. What is the missing safeguard?"
+    options: ["A check that compares the pages fetched with the total the source reports, and fails the run when it is short", "A larger embedding batch size", "A longer timeout on every request"]
+    answer: 0
+    explain: "A crawl that stops early still returns something, so nothing errors. Only a comparison against what the source says it holds, or against the last run, turns a silent gap into a failed run."
   - q: "When is hand-rolling extraction the right call instead of a connector?"
-    options: ["Whenever the source system has a REST API at all", "When no connector covers the system, or your access pattern is narrow enough that a connector's general case is not worth its overhead", "Always, because a script gives full control"]
+    options: ["Whenever the source system has a REST API at all", "Always, because a script gives you full control", "When no connector covers the system, or the need is too narrow to justify one"]
+    answer: 2
+    explain: "Connectors earn their keep on pagination, retries and auth for systems other people already use. For a narrow, stable endpoint nobody else needs, a small script can be less work than adopting a general connector."
+  - q: "Tonight's crawl returns 3,000 pages where last night's returned 12,000, with no error. What should the pipeline do with the 9,000 pages missing from the result?"
+    options: ["Write a tombstone for each one, since they are gone from the source", "Delete their vectors now and re-add them if they show up tomorrow", "Fail the run and keep the corpus as it was until the gap is explained"]
+    answer: 2
+    explain: "A short crawl is far more likely to be a broken crawl than 9,000 real deletions. Tombstones and deletes belong after the count check passes, never before it."
+  - q: "Why keep the extracted source text, and not only the chunks made from it?"
+    options: ["Chunks cannot be stored in a vector database", "The source may have changed or gone by the time you need it again", "Embedding models refuse input shorter than a full document"]
     answer: 1
-    explain: "Connectors earn their keep on pagination, retries and auth for systems other people already use. For a one-off internal tool with a narrow, stable endpoint, a small script can be less work than adopting a general connector."
-  - q: "Why does extraction usually cost more engineering time than the embedding step?"
-    options: ["Embedding models are free to run", "Extraction has to deal with every source system's own quirks - auth, pagination, rate limits, format - while embedding is one uniform API call regardless of source", "Extraction requires a GPU and embedding does not"]
-    answer: 1
-    explain: "Embedding a chunk of text looks the same no matter where the chunk came from. Getting the chunk in the first place is different for every source system, which is where the variable, ongoing cost sits."
-  - q: "You store a content hash for each document the moment you extract it. What does that buy you later?"
-    options: ["Faster embedding calls", "A cheap way to tell whether a re-fetched document actually changed, before spending anything on reprocessing it", "Automatic deduplication across different source systems"]
-    answer: 1
-    explain: "A hash computed at extraction time is the cheapest possible check against a later fetch of the same document - compare hashes before you parse, chunk or embed anything."
+    explain: "A new chunker or a new embedding model needs the original text. Fetching it again means another full crawl, against quotas, and a deleted page cannot be fetched at all."
 deeper:
   - { label: "Airbyte - connector documentation", href: "https://docs.airbyte.com/" }
   - { label: "Atlassian - Confluence REST API v2", href: "https://developer.atlassian.com/cloud/confluence/rest/v2/intro/" }
-  - { label: "Slack API - rate limits", href: "https://api.slack.com/apis/rate-limits" }
-  - { label: "Requests - documentation", href: "https://requests.readthedocs.io/en/latest/" }
+  - { label: "Slack - rate limit changes for non-Marketplace apps (changelog)", href: "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps" }
+  - { label: "MDN - the Retry-After header", href: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Retry-After" }
 ---
 
-This lesson is about the step before a file exists on your disk at all - getting it out of a wiki, a helpdesk, a CRM, or a shared drive that was never built to be read by a pipeline. *Parsing documents before you chunk them*, next, is about what happens once that file is in hand. Skip this step, and no amount of layout-aware parsing helps, because the document never arrives.
+A support lead asks why the assistant knows nothing about last quarter's outages. The postmortems are in the wiki. The parser is fine and the chunker is fine, but the wiki was never indexed: someone ran an export in March and nobody ran it again. This lesson is about the step before a file exists - getting content out of a system that was never built to be read by a pipeline. *Parsing documents before you chunk them*, next, takes the bytes from there.
 
 ## 1. Getting bytes out is a different job than parsing them
 
-A PDF sitting in a folder is the easy case. Something already put it there, and your job is only to read it correctly. Most of a real corpus does not arrive that way. It lives inside a running system - a wiki with a permissions model, a ticketing tool with a rate-limited API, a CRM that only shows you records through its UI or a paid export - and getting content out means talking to that system on its terms, not yours.
-
-Each kind of source system fails in its own way, and the failure has nothing to do with file format.
+A PDF in a folder is the easy case. Something already put it there, and your job is only to read it correctly. Most of a real corpus does not arrive that way. It lives inside a running system with its own permissions, its own limits and its own idea of what a page is, and you get content out on that system's terms. Each kind fails in its own way, and none of it has to do with file format. The systems named here are examples, current as of October 2026.
 
 | Source system | How you get content out | What actually breaks |
 |---|---|---|
-| Wiki (Confluence, Notion-style) | Paginated REST API, page tree walk | Nested spaces, permission-scoped pages, renamed paths breaking cached IDs |
-| Helpdesk / ticketing | REST API, often rate-limited per minute | Rate limits, attachments fetched separately from ticket text |
+| Wiki (Confluence, for example) | Paginated REST API, page tree walk | Permission-scoped pages, cursor pagination across large spaces |
+| Helpdesk or chat (Slack, for example) | REST API, rate-limited per minute | Tight rate limits, attachments fetched separately from the text |
 | CRM | REST API or a scheduled export | Fields hidden behind record-level permissions, export schemas that change without notice |
-| Shared drive | Sync client or storage API | Auth tokens that expire mid-crawl, folders that are actually shortcuts to other folders |
-| Internal database | Direct query or a read replica | No API at all - someone has to grant access and agree on a query |
+| Shared drive | Sync client or storage API | Auth tokens that expire mid-crawl, native documents that must be exported before they can be read |
 
-None of these problems show up in a parsing library, because parsing runs after extraction. If your retrieval quality looks bad and the corpus is missing whole documents rather than mangling the ones it has, look here first, not at chunk size.
+None of this shows up in a parsing library, because parsing runs after extraction. If the corpus is missing whole documents instead of mangling the ones it has, look here first, not at chunk size.
 
-<Flow
-  caption="The pipeline this course covers, in order. Extraction is the step this lesson is about, and nothing downstream of it ever runs on a document that never got this far."
+Rate limits are the part that surprises people, so do the arithmetic before you design anything. Slack's changelog says that since May 2025, new commercially distributed apps outside its Marketplace, and new installations of them, may read channel history at one request per minute, with at most 15 messages per request (as of October 2026). Whether older installs are covered is unclear: Slack's changelog says they are not, but other sources report a move to the same limits in March 2026, so check Slack's current page for your install. Internal apps you build for your own workspace keep much higher limits. Say you ship a distributed app, and one customer's workspace holds 100,000 messages. That count is invented, but the division is not.
+
+<Steps
+  caption="One channel history pulled by a distributed app at 15 messages per call and one call per minute, for an invented 100,000 messages. The counts come from the division, and per-channel overhead is ignored."
   steps={[
-    { label: 'Source system', note: 'Wiki, helpdesk, CRM, shared drive - on its own terms' },
-    { label: 'Extraction', note: 'Getting bytes out - this lesson', subject: true },
-    { label: 'Parsing', note: 'Turning bytes into clean text - next lesson' },
-    { label: 'Chunking and embedding', note: 'One uniform step, regardless of source' },
+    {
+      label: 'First full pull',
+      title: 'Everything, once',
+      body: '100,000 messages at 15 per call is 6,667 calls, at one per minute. That is most of five days of waiting before the corpus exists.',
+      facts: [
+        { label: 'Calls', value: '6,667' },
+        { label: 'Time', value: 'about 4.6 days' },
+        { label: 'Corpus holds', value: '100,000 messages' },
+      ],
+    },
+    {
+      label: 'Nightly delta',
+      title: 'Only what changed',
+      body: 'If 600 messages are new or edited each day, asking only for those is 40 calls. The same limit that made day one painful makes every later night cheap.',
+      facts: [
+        { label: 'Calls', value: '40' },
+        { label: 'Time', value: '40 minutes' },
+        { label: 'Corpus holds', value: 'unchanged, plus 600' },
+      ],
+    },
+    {
+      label: 'Stopped early',
+      title: 'A first pull dies after one day',
+      body: 'The job is killed after 1,440 calls and the script returns what it has. The exit code is 0 and the logs are clean.',
+      facts: [
+        { label: 'Calls', value: '1,440' },
+        { label: 'Messages fetched', value: '21,600' },
+        { label: 'Corpus holds', value: 'about 22% of the source' },
+      ],
+    },
   ]}
 />
 
+The third row is the failure to name. Call it the quiet partial crawl: nothing errors, the corpus is simply short, and retrieval blames the model for pages that were never there. It gets worse downstream, because a pipeline that treats a missing page as a deleted page will turn a short crawl into a mass deletion. The guard is a count: compare what you fetched with the total the source reports, or with the last run, and fail when it falls short.
+
 ## 2. Buy the connector, hand-roll only the gap
 
-Once you accept extraction as its own problem, the next question is who solves it: a connector someone else maintains, or a script you write and own.
+A **connector** is software built to pull data out of one kind of system, maintained by someone who watches that system's API change. Airbyte is a general example, an open-source platform whose docs list over 600 sources and destinations (as of October 2026), mostly databases and SaaS tools. Unstructured, built for preparing documents for LLM pipelines, lists Confluence, SharePoint and Slack among its source connectors (as of October 2026). Either way, pagination, retry-on-429 and incremental fetch are already solved for those systems.
 
-A **connector** is a piece of software built specifically to pull data out of one kind of system, maintained by someone who watches that system's API for changes. Airbyte and Fivetran are the general-purpose examples; Unstructured and similar libraries ship source connectors for wikis, drives and ticketing tools aimed specifically at feeding an LLM pipeline. Using one means someone else has already solved pagination, retry-on-429, and incremental fetch for that exact system, and keeps solving it as the system's API drifts.
-
-A **hand-rolled script** is code you write against the source's API directly. It is faster to start - no new dependency, no configuration format to learn - and it can do exactly the narrow thing you need and nothing else. It is also entirely your job to keep working when the source system changes anything.
+A **hand-rolled script** is code you write against the source's API. It starts faster, does exactly the narrow thing you need, and is entirely yours to keep working.
 
 | | Maintained connector | Hand-rolled script |
 |---|---|---|
 | Time to first working pull | Slower - setup and configuration | Faster - straight to the API |
-| Handles pagination and rate limits | Usually, out of the box | Only what you write |
-| Survives the source's API changing | Someone else's job to fix | Your job, discovered when it silently stops working |
-| Best fit | Common systems, ongoing sync | One narrow, stable endpoint nobody else needs |
-| Ongoing cost | A dependency to manage | Code to maintain forever |
+| Pagination and rate limits | Usually handled | Only what you write |
+| Source's API changes | Someone else's job to fix | Your job, found when it goes quiet |
+| Best fit | Common systems, ongoing sync | One narrow, stable endpoint |
 
-The right default is to reach for a connector first and hand-roll only the gap it does not cover - a niche internal tool, a one-off migration, an endpoint too narrow for a general connector to be worth adopting. Where a script is genuinely the right call, write it as if someone else has to run it without you: log every failure, never let a partial fetch look like a successful one, and never hard-code something about the source's structure - a folder path, a fixed set of IDs - that the source is free to change without telling you.
+Default to a connector and hand-roll only the gap: a niche internal tool, a one-off migration, an endpoint too narrow to justify adopting one. Where a script is the right call, write it for someone who has to run it without you. Log every failure, never hard-code something the source may change (a folder path, a fixed set of IDs), and fail on a short crawl.
 
 ```python
-import hashlib
-import time
-
+import hashlib, json, logging, time
 import requests
 
-def extract_pages(base_url: str, api_token: str, since_cursor: str | None = None):
-    """Pull every page from a wiki-style API, one batch at a time.
+log = logging.getLogger("extract")
 
-    Real extraction code, whether hand-rolled or inside a connector,
-    has to handle three things a parser never sees: pagination, rate
-    limits, and detecting which pages actually changed.
-    """
+def sha(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
+
+def extract_pages(base_url: str, api_token: str, cursor: str | None = None):
+    """Pull every page from an invented wiki-style API (invented response shape)."""
     headers = {"Authorization": f"Bearer {api_token}"}
-    cursor = since_cursor
-    documents = []
+    documents, retries = [], 0
 
     while True:
-        resp = requests.get(
-            f"{base_url}/pages",
-            headers=headers,
-            params={"cursor": cursor, "limit": 100},
-            timeout=30,
-        )
+        resp = requests.get(f"{base_url}/pages", headers=headers, timeout=30,
+                            params={"cursor": cursor, "limit": 100})
         if resp.status_code == 429:
-            wait = int(resp.headers.get("Retry-After", 5))
-            time.sleep(wait)
+            retries += 1
+            if retries > 5:
+                raise RuntimeError("still rate limited after 5 retries")
+            # Retry-After is seconds or an HTTP date; this reads only seconds
+            wait = resp.headers.get("Retry-After", "")
+            log.warning("429 at cursor %s, retry %d", cursor, retries)
+            time.sleep(int(wait) if wait.isdigit() else 30)
             continue
         resp.raise_for_status()
+        retries = 0
 
         batch = resp.json()
         for page in batch["results"]:
-            content_hash = hashlib.sha256(page["body"].encode()).hexdigest()
+            meta = {"title": page["title"], "acl": page["groups"]}
             documents.append({
                 "source_id": page["id"],
-                "title": page["title"],
-                "body": page["body"],
-                "content_hash": content_hash,
                 "source_url": page["url"],
+                "body": page["body"],  # the source text, kept whole
+                "text_hash": sha(page["body"]),
+                "meta_hash": sha(json.dumps(meta, sort_keys=True)),
+                "meta": meta,
             })
-
         cursor = batch.get("next_cursor")
         if not cursor:
             break
 
+    if len(documents) < batch["total"]:  # the quiet partial crawl
+        raise RuntimeError(f"fetched {len(documents)} of {batch['total']}")
     return documents
 ```
 
-Notice what the function returns: not just text, but a `content_hash` and a `source_url` alongside it. That is not incidental - it is the beginning of a schema every document needs before it is ever chunked: a stable id, a content hash, and a source url decided at the point of extraction, and it is cheapest to capture right here rather than reconstructed later from a corpus that has already forgotten where anything came from.
+Notice what comes back besides text. A stable id and a source url are decided here, because a corpus that has forgotten where things came from cannot be repaired later. The url also lets you ask the source who may read a page, a check *Permissions that travel with the data* builds on. The body is kept whole, not only the chunks cut from it: a new chunker, a model that reads whole documents (*Giving each chunk its context*) or a new embedding model (*Changing the embedding model underneath a live index*) all need the original text, and by then the page may have changed or gone.
 
-<Steps
-  caption="The same three fields, across four calls that this function makes. Step through them and watch what a cursor and a rate limit actually do to a pagination loop."
-  steps={[
-    {
-      label: 'First call',
-      title: 'No cursor yet',
-      body: 'The first request has no cursor, so the API starts from the beginning of the page tree.',
-      facts: [
-        { label: 'cursor', value: 'None' },
-        { label: 'result', value: 'first batch of pages returned' },
-      ],
-    },
-    {
-      label: 'Second call',
-      title: 'Normal page',
-      body: 'The next_cursor from the previous batch is sent back, so this call picks up exactly where the last one left off.',
-      facts: [
-        { label: 'cursor', value: 'the next_cursor from the previous call' },
-        { label: 'result', value: 'next batch of pages returned' },
-      ],
-    },
-    {
-      label: 'Third call',
-      title: 'Rate limited',
-      body: 'The API returns 429. The loop sleeps for Retry-After and retries the same request - no page is skipped, but none is gained this round either.',
-      facts: [
-        { label: 'cursor', value: 'unchanged - same request retried' },
-        { label: 'result', value: '429, wait, then retry' },
-      ],
-    },
-    {
-      label: 'Last call',
-      title: 'No cursor returned',
-      body: 'The batch carries no next_cursor, so the loop breaks. Extraction for this run is done.',
-      facts: [
-        { label: 'cursor', value: 'no next_cursor in the response' },
-        { label: 'result', value: 'loop breaks, extraction is done' },
-      ],
-    },
-  ]}
-/>
+The two hashes are the other half. Hash the text and the metadata separately: the text hash decides whether a vector must be recomputed, the metadata hash whether stored fields must be patched. After chunking, keep the same pair per chunk. When a page disappears from a later crawl, record a tombstone, a marker that it is gone, instead of silently forgetting it - but only after the count check has passed, so a short crawl never turns into deletions. *Keeping the index fresh without paying twice* shows how the pair and the tombstone drive updates and deletes.
 
 ## 3. Where the ingestion budget actually goes
 
-Teams that budget an ingestion project usually put the biggest number next to embedding, because that is the line item with a per-token price attached to it. In practice the money and the time go somewhere else.
-
-| Task | Effort, in most real pipelines |
-|---|---|
-| Building and maintaining connectors, one per source system | Large, ongoing |
-| Handling auth, pagination, rate limits and retries | Large, ongoing |
-| Normalising formats before parsing | Moderate, one-time per source type |
-| Embedding the resulting chunks | Small, predictable, scales with corpus size |
-| Writing vectors to the store | Small, predictable |
+Many teams budget an ingestion project by putting the biggest number next to embedding, because that line has a per-token price. The first section showed where the time goes instead.
 
 <Budget
   caption="One illustrative split of an ingestion project's engineering time. Connectors and the auth, pagination and rate-limit handling behind them dwarf embedding and writing to the store. The figures are an illustration, not a measurement - count your own."
@@ -202,8 +179,8 @@ Teams that budget an ingestion project usually put the biggest number next to em
   ]}
 />
 
-Embedding a chunk costs the same whether that chunk came from a PDF, a wiki page, or a support ticket - it is one uniform API call regardless of source. Extraction has none of that uniformity. Every source system has its own auth model, its own pagination scheme, its own way of telling you a record changed, and its own way of silently going quiet when something upstream shifts. That variability, not the per-token price of an embedding call, is what actually consumes an ingestion team's time.
+Embedding a chunk costs the same whether it came from a PDF, a wiki page or a ticket: one uniform call. Extraction has none of that uniformity. Every source has its own auth model, its own pagination, its own way of saying a record changed, and its own way of going quiet when something upstream shifts. That variability, not the per-token price, is what consumes an ingestion team.
 
 > The embedding call looks the same for every document. Getting the document is different every single time - that is where the budget goes.
 
-This is worth saying plainly before you scope a project, because it changes what you plan for. A four-source corpus is not one extraction problem times four - it is four different extraction problems, each with its own way of breaking, and each needing someone to notice when it does.
+**When not to build this.** If the content changes rarely and the system offers a one-time export, export once and treat the dump as your source. A sync pipeline costs more to run than it saves, and a stale snapshot you control beats a live crawl you cannot trust. The same goes for a folder of files you already hold: read them with a parser and skip the connector. Build the pipeline when the source keeps changing and the answers must keep up.
