@@ -148,7 +148,7 @@ def triage(text: str) -> Ticket:
     ticket = resp.parsed_output
     found = problems(ticket, text)
     if found:   # keep the raw reply and the input together, then fail loudly
-        log.error("rejected %s | input=%r | raw=%r", found, text, text_of(resp))
+        log.error("rejected %s | model=%s stop=%s | input=%r | raw=%r", found, MODEL, resp.stop_reason, text, text_of(resp))
         raise BadReply("; ".join(found))
     return ticket
 ```
@@ -156,7 +156,7 @@ def triage(text: str) -> Ticket:
 Each failure carries a sentence that says what is wrong and what a good value looks like. That is deliberate: it is the text you would hand back to the model in a repair call.
 
 <Steps
-  caption="Three replies that pass the schema, one at a time. The fields are the same each time: what arrived, and which check stopped it. The first two live in the code above; the third is a gate in front of a tool."
+  caption="Three replies that pass the schema, one at a time. Each shows what arrived and what stopped it. The first two live in the code above; the third is a gate in front of a tool."
   steps={[
     {
       label: 'owner: "dave"',
