@@ -3,205 +3,193 @@ title: "Validating what comes back"
 subtitle: "Treat every response as an untrusted body, and catch the wrong answer before it reaches your database."
 part: 3
 minutes: 7
-why: "You added an output contract in *Output contracts* and the parsing errors stopped, so you moved on. Then a row appeared in your database with an urgency of 11 on a one-to-five scale, assigned to an engineer who left last year, quoting a sentence that is nowhere in the source document. Nothing threw. The JSON was perfect. This lesson closes that gap: the checks that a schema cannot do for you, sorted by the kind of wrongness they catch, and the one logging habit that stops you debugging blind."
+why: "You moved the support-ticket triage onto a schema, and the SDK now checks the one-to-five range, so the parse errors are gone. Then a row lands in your database assigned to an engineer who left last year, quoting a sentence that is nowhere in the ticket. Nothing threw. The object was perfect. This lesson is the part that comes after the schema: sorting a bad reply by the kind of wrong it is, checking ids and quotes against your own data, checking a tool call before it runs, and keeping the raw reply so you are not debugging blind."
 wins:
   - "Validate every response at the boundary, the same way you validate an HTTP body."
-  - "Check what the schema cannot: enum membership, ranges, and ids that exist in your data."
-  - "Separate malformed, wrong, and fabricated output — each needs a different response."
-  - "When the answer must come from a document, verify the quoted span is really in it."
-  - "Log the raw output on every validation failure, or you will be guessing."
+  - "Check what neither the decoder nor the SDK can: ids that exist in your data, and rules that span fields."
+  - "Separate unfinished, wrong, and fabricated output; each needs a different response."
+  - "When the answer must come from a document, verify the quoted span is really in it, on a normalised copy."
+  - "Treat tool-call arguments as model output, and log the raw reply on every validation failure."
 quiz:
-  - q: "Your Pydantic model parses the response with no error. What has that proved?"
-    options: ["That the answer is correct", "That the output has the right fields and types — nothing about whether it is true", "That the model did not fabricate anything"]
-    answer: 1
-    explain: "A schema is a check on shape. It has no view on whether the content is right."
-  - q: "The model returns valid JSON with an owner of dave, and nobody called Dave works here. That failure is..."
-    options: ["Malformed output", "A bug in your schema", "Well-formed but fabricated — the schema has no way to check a name against your data"]
-    answer: 2
-    explain: "The value is the right type and the right shape; only a lookup against your own records can catch it."
-  - q: "A summary quotes a sentence that is not in the document you supplied. The cheapest check is..."
-    options: ["Asking a second model whether the quote is genuine", "Searching for the quoted span in the source text and rejecting the response if it is absent", "Asking the model to double-check its own quote"]
-    answer: 1
-    explain: "A substring search costs nothing and catches an invented quote outright."
-  - q: "Validation fails in production and the one thing you did not log was..."
-    options: ["The token count", "The request id", "The raw model output — so you cannot see what it actually returned"]
-    answer: 2
-    explain: "Without the raw text you are debugging a failure you cannot see, and the input rarely reproduces it."
-  - q: "A value of 11 arrives in a field documented as one to five. The right place to catch it is..."
-    options: ["A range constraint in the validator at your boundary", "A sentence in the prompt asking for a number between one and five", "A try/except around the code that later uses the value"]
+  - q: "Your SDK parse of a ticket succeeds, range check included. What is still unproven?"
+    options: ["Whether the owner exists and the quote is real, because the schema holds shape and range, not facts", "Whether urgency is between one and five", "Whether the category is one of the four allowed values"]
     answer: 0
-    explain: "The prompt is a request and the try/except is too late; the boundary check is the only place that reliably rejects it."
+    explain: "The decoder and the SDK cover the shape and the range; whether a name or a quote matches your world is a question only your code can answer."
+  - q: "The model returns valid JSON with an owner of dave, and nobody called Dave works here. That failure is..."
+    options: ["Malformed output", "A bug in your schema", "Well-formed but fabricated, which only a lookup against your own records can catch"]
+    answer: 2
+    explain: "The value has the right type and shape, so the check has to be a set lookup or a database query."
+  - q: "A ticket summary quotes a sentence that may not be in the ticket. The cheapest check is..."
+    options: ["Asking a second model whether the quote is genuine", "Searching for the quote in a normalised copy of the source and rejecting the reply if it is absent", "Asking the model to double-check its own quote"]
+    answer: 1
+    explain: "A substring search costs nothing and catches an invented quote outright, once whitespace and quote marks are normalised."
+  - q: "A validation failure happens in production, and the log holds only the exception message. What is missing?"
+    options: ["The request id", "The token count", "The raw reply, next to the input that produced it"]
+    answer: 2
+    explain: "Model failures rarely reproduce, so without the raw text you are debugging a failure you can no longer see."
+  - q: "The model asks to call send_email with a recipient you did not expect. Where is the right place to check it?"
+    options: ["In your code, against an allowlist, before the tool runs", "In the tool description, by asking the model to be careful", "In the log, after the email has gone"]
+    answer: 0
+    explain: "Tool-call arguments are model output shaped by input you do not control, so they get the same boundary check as any other reply."
 deeper:
   - { label: "Pydantic — documentation", href: "https://docs.pydantic.dev/latest/" }
   - { label: "Zod — documentation", href: "https://zod.dev/" }
-  - { label: "Anthropic — tool use", href: "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" }
+  - { label: "Anthropic — structured outputs", href: "https://platform.claude.com/docs/en/build-with-claude/structured-outputs" }
   - { label: "Anthropic — reduce hallucinations", href: "https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" }
+  - { label: "MCPTox — tool poisoning benchmark (arXiv)", href: "https://arxiv.org/abs/2508.14925" }
 ---
 
-*Output contracts* made the shape a contract. That was worth doing, and it fixed the class of bug where you were pulling JSON out of a fenced code block with a regex. It did not make the content true. This lesson is about everything that is still wrong after the parse succeeds.
+*Structured outputs in practice* ended with the decoder holding the shape and the SDK holding the range. Neither can hold the truth. This lesson is about everything still wrong after the parse succeeds, and none of the checks in it needs a second model call.
 
 ## 1. Three kinds of wrong, and why you must tell them apart
 
-Engineers tend to have one bucket labelled "the model failed". That is too coarse to act on, because the three things in the bucket want three different responses.
+Engineers tend to keep one bucket labelled "the model failed". It is too coarse to act on: the three things in it want three different responses.
 
 | Failure | What you see | Where it comes from | What to do |
 |---|---|---|---|
-| **Malformed** | The response will not parse, or a required field is missing | Truncation, a stray sentence, the model wandering off the contract | Retry — this one is usually fixable, and *Retries and fallbacks* is about how |
-| **Well-formed but wrong** | Valid object, wrong value. Sentiment `positive` on an angry email | The model misread the input, or your prompt is ambiguous | Do not retry. Fix the prompt or the examples; a retry gives you the same misreading |
-| **Well-formed but fabricated** | Valid object, plausible value, no basis in reality. An invented invoice number, a quote that does not exist | The model filled a gap with the most likely-looking text | Reject the response and check the source. Never trust it because it looked confident |
+| **Unfinished or malformed** | No usable body: a refusal, a cut-off at `max_tokens`, or, where no decoder enforces a schema, text that will not parse | Thinking tokens using up the cap, a classifier, a stray sentence | Read `stop_reason` first (*Stop reasons and refusals*), fix the cause, then call again |
+| **Well-formed but wrong** | Valid object, wrong value: urgency 2 on an outage | The model misread the input, or your prompt is ambiguous | Do not retry. Fix the prompt or the examples. The borderline cases are the business of *Sampling and voting* |
+| **Well-formed but fabricated** | Valid object, plausible value, no basis: an owner nobody employs, a quote that is not in the ticket | The model filled a gap with likely-looking text | Reject it and check it against the source or your records |
 
-The practical point: **only the first kind is worth retrying.** If you treat all three the same you will burn tokens re-asking a question the model already answered wrongly with total consistency.
+With a decoder-enforced schema the first row mostly shrinks, as of October 2026: parse errors become rare, and what is left is a reply that never finished. The other two rows do not shrink. The decoder guarantees a valid object, not a true one.
+
+**A retry is worth paying for only if something changed.** For an unfinished reply it is the cap or the effort. For a fabricated one it is the error text you attach, which *Retries and fallbacks* covers. A well-formed wrong answer has nothing to attach, because no check knows it is wrong, so asking again returns the same misreading.
 
 <Flow
-  caption="The only branch worth spending another call on is the first one — the other two will come back exactly as wrong, with the same prompt, however many times you ask."
+  caption="Sorting a bad reply before spending another call: the other two branches come back identical unless the request changes."
   steps={[
-    { label: 'A response comes back', note: 'Parsed, or an attempt was made to' },
+    { label: 'A reply comes back', note: 'HTTP 200, with a body of some kind' },
     {
       label: 'Which kind of wrong is it',
       subject: true,
       branch: [
-        'Malformed — retry, this is usually fixable',
-        'Well-formed but wrong — do not retry; fix the prompt or the examples instead',
-        'Well-formed but fabricated — reject the response and check the source',
+        'Unfinished or malformed — fix the cause, then call again',
+        'Well-formed but wrong — do not retry; fix the prompt or the examples',
+        'Well-formed but fabricated — reject it; retry only with the error attached',
       ],
     },
   ]}
 />
-
-Truncation deserves a note, because it is the malformed case people misdiagnose most often. If `max_tokens` cuts the response mid-object, you get a parse error that looks like the model ignoring the contract. Check the stop reason before you blame the prompt.
 
 ## 2. Validate at the boundary, exactly like an HTTP body
 
-You would never take a JSON body from the internet and write it to your database without validating it. A model response has the same standing. It arrived over the network, its content is influenced by input you do not control, and it is right most of the time — which is the dangerous kind of wrong.
+You would never write a JSON body from the internet to your database unchecked. A model reply has the same standing: it came over the network, its content is shaped by input you do not control, and it is right most of the time, which is the dangerous kind of wrong.
 
-So put a real validator at the edge: Pydantic if you are in Python, Zod if you are in TypeScript. Both give you types, required fields and enums in one place, and both fail with an error message you can read — which turns out to matter a lot in the next lesson.
+Three layers stand between the model and your row. The decoder holds the shape. A validator at the edge, Pydantic or Zod, holds types and ranges. Your code holds everything that depends on your data, and that is this lesson. The middle layer has one trap: the Python helper validates the reply against your model after the call, but the TypeScript plain-JSON-schema helper does not validate at all, and the Zod helper does (vendor docs, as of October 2026). Know which one you hold.
 
-Types are the floor. These are the checks that actually catch production bugs:
+The checks that catch production bugs:
 
-- **Enum membership.** The field is a string; the allowed values are `billing`, `bug`, `feature_request`, `other`. `Billing` with a capital B is a different string and should be rejected or normalised, deliberately, by you.
-- **Required fields present, not just present-and-empty.** An empty string passes a `str` type check and means nothing. Decide whether empty is legal, and say so.
-- **Numbers in range.** Confidence between 0 and 1. Urgency between 1 and 5. A page number that is not larger than the document.
-- **Referenced ids that exist.** This is the big one. The model returns `owner: "dave"` or `product_id: "SKU-4471"`. Your schema cannot know whether either exists. A set lookup or a database query can, and it costs almost nothing.
-- **Cross-field consistency.** `end_date` after `start_date`. A `status` of `resolved` with a `resolution` that is null.
+- **Enum membership, after normalising.** The set is closed, but the vendor documents that the case of a value can drift even under enforcement, as of October 2026. Compare case-insensitively, or normalise on purpose before you compare, never by accident.
+- **Present is not meaningful.** An empty string passes a `str` check and says nothing. Decide whether empty is legal.
+- **Referenced ids that exist.** This is the big one. The model returns `owner: "dave"` or `product_id: "SKU-4471"`. No schema can know whether either exists. A set lookup or a query can, for almost nothing.
+- **Cross-field consistency.** `end_date` after `start_date`. A `status` of `resolved` with a null `resolution`.
 
-The id check is where the abstraction leaks in a useful way. A schema describes a document in isolation. Your data has facts the document knows nothing about. Only your code sits in both worlds.
+**Tool-call arguments are model output too.** If the model asks to run `send_email`, the arguments get the boundary check before the tool does anything. A 2025 benchmark of poisoned MCP tool descriptions, on older models with naive payloads, found the most effective attack was the quiet one: the user's real call still happened, with one value swapped, such as a recipient (the ranking is solid; the exact figures do not reproduce). A recipient allowlist in code stops that. Links and image addresses in a reply get the same treatment against a domain allowlist, since an address can carry data out; *Containing prompt injection* has the argument.
 
 > A schema proves the output has the right shape. Nothing in it can tell you the answer is true.
 
-## 3. Grounding, and what to keep when it fails
+## 3. Grounding, a worked example, and what to keep
 
-When the answer is supposed to come from a document you supplied — a contract, a support thread, a retrieved chunk — you have a check available that is unusually strong: make the model quote, then verify the quote.
+When the answer is supposed to come from a document you supplied, a ticket, a contract, a retrieved chunk, you have an unusually strong check: ask for the exact supporting span as a field, then search for it in the source. If it is not there, the reply is fabricated however well it reads.
 
-Ask for the exact supporting span as a field. Then, in code, search for that span in the source text. If it is not there, the response is fabricated, no matter how good it reads. This is a substring search. It is free, and it catches the failure that is hardest to spot by eye.
+Two things make it work. **Compare on a normalised copy.** Collapse whitespace and straighten smart quotes, or you will reject honest quotes. **Give the model a legal way out.** If the source does not hold the answer, it needs a permitted reply, `null` for the owner, say, or it will invent something to fill the field. That is the escape hatch from *Output contracts*, doing real work.
 
-<Flow
-  caption="The check itself, reduced to what actually runs: ask for the span, then search for it. Nothing about how good the writing sounds enters into it."
-  steps={[
-    { label: 'Ask for the exact quote', note: 'A field on the response, not a paraphrase' },
-    {
-      label: 'Search the source text for it',
-      subject: true,
-      branch: [
-        'Found — the answer is grounded, keep it',
-        'Not found — reject it, no matter how good it reads',
-      ],
-    },
-  ]}
-/>
-
-Two things make it work in practice:
-
-- **Normalise before comparing.** Collapse whitespace, and expect smart quotes and dashes to have been rewritten. Compare on a normalised copy, not the raw one, or you will reject honest quotes.
-- **Give it a legal way out.** If the source does not contain the answer, the model needs a permitted response — `not_found`, `null` — or it will invent a quote to satisfy the field. That is the escape hatch from *Output contracts*, doing real work here.
-
-The last habit is the cheapest and the one people skip. **On every validation failure, log the raw output.** Not the exception, not a summary — the actual text or object the model returned, next to the input that produced it. Model failures do not reproduce reliably. If you throw away the only copy of what it said, you are left staring at an input that works fine when you try it again.
+Here is the ticket from *Structured outputs in practice*, with the checks only your code can make. The parameter spellings are copied from the vendor docs as of October 2026 and were not run here, so try them on your SDK version first.
 
 ```python
 import logging
+import re
 from typing import Literal
 
 from anthropic import Anthropic
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 client = Anthropic()
 log = logging.getLogger(__name__)
-OWNERS = {"alice", "bob", "priya"}          # facts the schema cannot know
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+OWNERS = {"alice", "bob", "priya"}   # facts the schema cannot know
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
 
 class Ticket(BaseModel):
     category: Literal["billing", "bug", "feature_request", "other"]
-    urgency: int = Field(ge=1, le=5)        # range, not just int
-    owner: str
-    quote: str                              # must appear in the source text
+    urgency: int = Field(ge=1, le=5)   # the SDK checks this after the call
+    owner: str | None                  # required, with an explicit null
+    quote: str                         # must appear in the source text
 
-def extract(text: str) -> Ticket:
-    resp = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=400,
-        tools=[{
-            "name": "save_ticket",
-            "description": "Record the parsed ticket.",
-            "input_schema": Ticket.model_json_schema(),   # one definition, both ends
-        }],
-        tool_choice={"type": "tool", "name": "save_ticket"},
+class BadReply(Exception):
+    """The message is written to be read, by a person or by a retry."""
+
+def squash(s: str) -> str:
+    s = s.replace("‘", "'").replace("’", "'")
+    s = s.replace("“", '"').replace("”", '"')
+    return re.sub(r"\s+", " ", s).strip()
+
+def problems(t: Ticket, source: str) -> list[str]:
+    found = []
+    if t.owner is not None and t.owner.casefold() not in OWNERS:
+        found.append(f"unknown owner {t.owner!r}; use one of {sorted(OWNERS)} or null")
+    if not t.quote.strip() or squash(t.quote) not in squash(source):
+        found.append("quote does not appear in the ticket text")
+    return found
+
+def triage(text: str) -> Ticket:
+    resp = client.messages.parse(
+        model=MODEL,
+        max_tokens=2000,   # thinking is on by default and counts against this
+        system="Triage the ticket. Quote it exactly. Use null for an owner it does not name.",
         messages=[{"role": "user", "content": text}],
+        output_format=Ticket,
     )
-    raw = resp.content[0].input
-    try:
-        ticket = Ticket(**raw)                            # types, enum, range
-        if ticket.owner not in OWNERS:                    # id that must exist
-            raise ValueError(f"unknown owner {ticket.owner!r}")
-        if ticket.quote not in text:                      # grounding check
-            raise ValueError("quote does not appear in the source text")
-        return ticket
-    except (ValidationError, ValueError):
-        log.exception("ticket validation failed", extra={"raw_output": raw})
-        raise
-
-print(extract("Charged twice in March. Give this to priya, it is blocking payroll."))
+    # The schema holds only for a finished answer: a refusal or a cut-off may not match it.
+    if resp.stop_reason != "end_turn":
+        raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+    ticket = resp.parsed_output
+    found = problems(ticket, text)
+    if found:   # keep the raw reply and the input together, then fail loudly
+        log.error("rejected %s | input=%r | raw=%r", found, text, text_of(resp))
+        raise BadReply("; ".join(found))
+    return ticket
 ```
 
+Each failure carries a sentence that says what is wrong and what a good value looks like. That is deliberate: it is the text you would hand back to the model in a repair call.
+
 <Steps
-  caption="Four responses that would sail through a bare type check, one at a time. Same two fields each time — what arrived, and which check actually caught it."
+  caption="Three replies that pass the schema, one at a time. The fields are the same each time: what arrived, and which check stopped it. The first two live in the code above; the third is a gate in front of a tool."
   steps={[
-    {
-      label: 'urgency: 11',
-      title: 'Out of range',
-      body: 'The field is documented as one to five. The range constraint inside Ticket is the only thing standing between a typo and a row your on-call engineer trusts.',
-      facts: [
-        { label: 'value', value: 'urgency = 11' },
-        { label: 'caught by', value: 'the range check inside Ticket' },
-      ],
-    },
     {
       label: 'owner: "dave"',
       title: 'Fabricated id',
-      body: 'Valid string, right type, and nobody called Dave works here. Only a lookup against OWNERS can know that.',
+      body: 'A valid string, and nobody called Dave works here. Only a lookup against OWNERS can know that.',
       facts: [
         { label: 'value', value: 'owner = "dave"' },
-        { label: 'caught by', value: 'ticket.owner not in OWNERS' },
+        { label: 'caught by', value: 'problems(), the OWNERS lookup' },
       ],
     },
     {
       label: 'quote: invented',
       title: 'Not in the source',
-      body: 'Plausible, well-formed, and absent from the text it is supposed to summarise. A substring search is free and catches it outright.',
+      body: 'Plausible, well-formed, and absent from the text it claims to quote. A substring search catches it outright.',
       facts: [
         { label: 'value', value: 'quote not in text' },
-        { label: 'caught by', value: 'ticket.quote not in text' },
+        { label: 'caught by', value: 'problems(), the squash() search' },
       ],
     },
     {
-      label: 'Any of the above',
-      title: 'Logged before it raises',
-      body: 'The except block writes the raw output next to the input that produced it, so the failure is something you can actually look at later rather than an input that works fine when you retry it.',
+      label: 'recipient: swapped',
+      title: 'A tool argument',
+      body: 'The model asks to send mail to an address that is not the customer. The tool does not run until an allowlist in code says yes.',
       facts: [
-        { label: 'value', value: 'the raw dict, unparsed' },
-        { label: 'caught by', value: 'log.exception(..., extra={"raw_output": raw})' },
+        { label: 'value', value: 'to = an unlisted address' },
+        { label: 'caught by', value: 'a recipient allowlist, outside this sample' },
       ],
     },
   ]}
 />
 
-Four checks, in order of cost: types, then range, then a set lookup, then a substring search. None of them needs another model call, and together they catch most of what a schema alone lets through.
+**The failure case.** Picture a team that ships the schema and deletes the repair code. Weeks later someone spots tickets assigned to an engineer who left in the spring, and a summary quoting a sentence that is not in the thread. Every row was valid. The two checks above fix it, but the worse part was the log: they had kept the exception and thrown away the reply, and the input worked fine when re-run. Log the raw reply on every validation failure, next to the input, the `stop_reason` and the model id. Model failures do not reproduce reliably, and the reply you did not save is the only evidence there was. It can hold customer data, so decide how long you keep it; that last part is my advice, not the vendor's.
 
-What they do not do is decide what happens next. Right now every failure raises. The next lesson turns that into something better than a five hundred.
+**When not to use it.** Grounding only works when the answer is a span of the source; for a summary or an inference there is no exact sentence to find. It also proves less than it feels like: a real quote can still back the wrong label, which is the well-formed-but-wrong row again, and only the prompt, the examples or a test set can fix that. Do not build a second-model judge before the free checks, and for a throwaway script a `stop_reason` check and a type check are enough.
+
+Next: a reply that failed validation is now an exception with a readable message, and *Stop reasons and refusals* is about the replies that arrive with no body to validate at all.
