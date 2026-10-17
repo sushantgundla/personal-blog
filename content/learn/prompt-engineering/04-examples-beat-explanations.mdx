@@ -30,7 +30,7 @@ quiz:
   - q: "You only need a fixed JSON shape. As of October 2026 on Sonnet 5.5, examples are..."
     options: ["Required, because a schema only suggests the shape", "Needed for the first call only", "Optional: the decoder enforces the shape, so keep examples for what a schema cannot say, such as tone or judgement"]
     answer: 2
-    explain: "A guarantee beats a demonstration for shape, and examples still earn their place for judgement."
+    explain: "A guarantee beats a demonstration for shape (covered in Part 2), and examples still earn their place for judgement."
 deeper:
   - { label: "Anthropic — prompting best practices, using examples", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#use-examples-effectively" }
   - { label: "Simon Willison — a fireside chat with the Claude Code team (a conversation, self-reported results)", href: "https://simonwillison.net/2026/Jul/21/cat-and-thariq/" }
@@ -123,7 +123,7 @@ print(note("feat(export): add CSV option to the export dialog"))
 The parameter spellings are copied from the vendor docs as of October 2026. This sample was not run here, so try it before you rely on it. The other form is hand-written user and assistant turns placed before the real one. This lesson checked only the tag form against the vendor's guide, so test the turn form on your model before you switch.
 
 <Anatomy
-  caption="The three examples from the code above, with the job each one is doing named. Delete the middle pair and SKIP stops being a real option: it becomes a sentence in a system prompt with nothing behind it."
+  caption="The three examples from the code above, with the job each one is doing named. Delete the SKIP example and SKIP stops being a real option: it becomes a sentence in a system prompt with nothing behind it."
   label="Three examples, three jobs"
   parts={[
     {
@@ -151,9 +151,9 @@ The parameter spellings are copied from the vendor docs as of October 2026. This
 
 The failure you will meet first is **copying content instead of form**. Examples are context like everything else, so the model can lift a name, a number or a fact straight out of one. Suppose the real commit says the limit is now 500 a minute and the note comes back saying 200. That is the shape of the failure, shown here as an illustration, not a run result. The tell is a detail from an example turning up in a real output. The fixes, in order: keep examples short and obviously synthetic, vary them so no one detail dominates, and say outright that they show format only, as the sample's prompt does.
 
-The second failure is newer. In July 2026, two members of Anthropic's Claude Code team said they had taken examples out of their agent's system prompt for the newest models, because examples pulled the output toward the sample and narrowed what the agent tried. The claim is theirs, about their own product, with no published evaluation, and it came through an informal conversation, so weigh it that way. The "no longer best practice" headline was the host's gloss, not theirs. They did not test format tasks.
+The second failure is newer. In July 2026, two members of Anthropic's Claude Code team said they had taken examples out of their agent's system prompt for the newest models, because examples pulled the output toward the sample and narrowed what the agent tried. The claim is theirs, about their own product, with no published evaluation, and it came through an informal conversation, so weigh it that way. Simon Willison's "no longer best practice" framing was his gloss, not theirs. They did not test format tasks.
 
-The vendor's own guide, as of October 2026, still recommends three to five examples. Both can be true: examples are strong for fixing a shape and weak when you want the model to explore. Do not settle it by argument. Run your twenty cases with the examples and without, per model, and let the harness decide (*Versioning and testing prompts*). Also, a different paper (GEPA, a prompt optimiser) reported tuned instructions alone matching or beating tuned instructions plus examples on its six tasks. That is a claim about those optimisers, not a rule that examples are bad.
+The vendor's own guide, as of October 2026, still recommends three to five examples. Both can be true: examples are strong for fixing a shape and weak when you want the model to explore. Do not settle it by argument. Run your twenty cases with the examples and without, per model, and let the harness decide (*Versioning and testing prompts*). Also, a different paper (GEPA, a February 2026 revision) reported that its instruction-only optimiser matched or beat an optimiser that also tuned examples, on its six tasks. That is a claim about those optimisers, not a rule that examples are bad.
 
 | Situation | Examples? | Why |
 |---|---|---|
@@ -161,7 +161,7 @@ The vendor's own guide, as of October 2026, still recommends three to five examp
 | A house style, tone or level of formality | Yes | The cheapest way to transfer taste |
 | A classification with a fuzzy boundary | Yes, with near-misses | Boundaries are learned from cases, not definitions |
 | A simple, fully specifiable task ("return the ISO date") | No | A one-line rule is shorter and clearer |
-| A shape a schema can enforce | Usually no | The decoder guarantees it; see *Structured outputs in practice* |
+| A shape a schema can enforce | Usually no | The decoder guarantees it; see *Output contracts* in Part 2 |
 | Agent or open-ended work, newest models | Test first | Examples can narrow behaviour |
 
 **Cost.** Examples are input tokens on every call, which sounds worse than it is. Stable examples in the system prompt sit in the cached prefix, and cache reads cost a small fraction of normal input (as of October 2026, see *Prompt layout and the cache*). Two catches: the prefix must pass the model's minimum length to be cached at all, and examples you retrieve per request land in the volatile part, where you pay in full.
