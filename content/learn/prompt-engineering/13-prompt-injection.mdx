@@ -2,7 +2,7 @@
 title: "Prompt injection"
 subtitle: "Why untrusted text can steer your app, and the defences that actually reduce the damage."
 part: 3
-minutes: 8
+minutes: 7
 why: "You saw a screenshot of a chatbot being talked out of its rules and assumed a firmly worded system prompt would handle it. Then you built something that reads documents, or summarises email, and you realised the instruction does not have to come from a person at all. It can be sitting in the content your app went and fetched. This lesson explains the mechanism plainly, shows what a prompt-only defence is worth when someone attacks it properly, and spends most of its length on the defences that hold up, all of which live in your code."
 wins:
   - "Treat every piece of text your app did not write as a possible instruction."
@@ -45,9 +45,9 @@ This is the one topic in the course where the honest summary is that nobody has 
 
 The model reads one flat sequence of tokens and cannot reliably tell your instructions from text that arrived as data.
 
-*Why prompts fail* made the point in a friendly way. Here is the unfriendly consequence: the `system` parameter is not a protected channel. It carries more weight, but weight is not enforcement. As of October 2026 the vendor says Sonnet 5.5 is trained to resist injected instructions, so much that a real user message pasted inside a `tool_result` can be doubted. That is a trained habit, not a guarantee.
+*Why prompts fail* made the point in a friendly way. Here is the unfriendly consequence: the `system` parameter is not a protected channel. It carries more weight, but weight is not enforcement. As of October 2026 the vendor says Sonnet 5.5 is trained to resist injected instructions, so firmly that a real user message placed inside a `tool_result` can be doubted. That is a trained habit, not a guarantee.
 
-So the rule to carry around: **any text your application did not write is a possible instruction.** An uploaded document, a fetched page, an email body, a database row someone else can write to, a filename, a tool result. Also the name and description of a tool that comes from a server you did not write. A poisoned description is never run; it sits in the context from the moment the server is registered and steers a legitimate tool you already approved. A 2025 benchmark of such descriptions, on older models with naive payloads, reported a 36.5 percent average success rate (o1-mini 72.8 percent) and refusals under 3 percent. Read that as "it works broadly", not as a current rate.
+So the rule to carry around: **any text your application did not write is a possible instruction.** An uploaded document, a fetched page, an email body, a database row someone else can write to, a filename, a tool result. Also the name and description of a tool that comes from a server you did not write. A poisoned description is never run; it sits in the context from the moment the server is registered and steers a legitimate tool you already approved. A 2025 benchmark of such descriptions, on older models with naive payloads, reported a 36.5 percent average success rate (o1-mini 72.8 percent, the paper's own figures; trust the ranking more than the numbers) and refusals under 3 percent. Read that as "it works broadly", not as a current rate.
 
 A malicious instruction usually reads like a change of authority in the middle of data:
 
@@ -88,7 +88,7 @@ Simon Willison named the dangerous combination in June 2025, the "lethal trifect
 2. It can reach something private.
 3. It can send data somewhere the attacker can see.
 
-The third is wider than "send an email". Any URL fetch counts, and so does a markdown image or link that the chat window renders, because the address can carry data in it. Meta's later "Rule of Two" widens it again to any state change. Two ingredients shrink the damage; they do not make a feature safe, since untrusted input plus a write tool can still do harm with no private data in sight. The dependable move is to remove one, which is the next lesson's subject.
+The third is wider than "send an email". Any URL fetch counts, and so does a markdown image or link that the chat window renders, because the address can carry data in it. Meta's later "Rule of Two" (October 2025) widens it again to any state change. Two ingredients shrink the damage; they do not make a feature safe, since untrusted input plus a write tool can still do harm with no private data in sight. The dependable move is to remove one, which is the next lesson's subject.
 
 <Steps
   caption="The same three questions asked about one feature, one at a time. Each added ingredient makes the worst case worse; none of the first two states is simply fine."
@@ -185,6 +185,7 @@ def summarise_and_send(doc: str) -> str:
     )
     if resp.stop_reason not in ("end_turn", "tool_use"):
         raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+    # one-shot: no tool_result is sent back; a tool loop would need one
     for block in resp.content:
         if block.type == "tool_use":
             send_report(**block.input)   # the wall runs on the model's request
@@ -195,7 +196,7 @@ Say the document ends with a hidden line telling the assistant to mail the notes
 
 > The model cannot tell your instructions from the data. Only your code can.
 
-The failure case is the team that trusts the bump. They add tags, a system-prompt warning and a classifier, test against fifty known injection strings, see one percent get through, and ship an agent that can read private files and fetch URLs. A week later someone who can try many phrasings against the live system finds one. A fixed list is a canary, never proof, and a passing test is necessary, not sufficient. The wall above has a limit too: it checks the recipient, so a hijacked call can still put misleading text in the body sent to the right address.
+The failure case is the team that trusts the bump. They add tags, a system-prompt warning and a classifier, test against five hundred known injection strings, see five get through, and ship an agent that can read private files and fetch URLs. A week later someone who can try many phrasings against the live system finds one. A fixed list is a canary, never proof, and a passing test is necessary, not sufficient. The wall above has a limit too: it checks the recipient, so a hijacked call can still put misleading text in the body sent to the right address.
 
 When is this too much? A read-only summariser with no private data and no way out needs the tags and the habit of treating its output as untrusted, and little more; the worst outcome is a bad summary, so skip the gates. The effort pays once the ingredients combine. At the other end, a general assistant that must read anything and do anything cannot be made safe by a wall like this alone. That case is the next lesson.
 
