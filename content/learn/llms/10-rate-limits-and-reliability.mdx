@@ -1,168 +1,200 @@
 ---
 title: "Rate limits and reliability"
-subtitle: "Three separate ceilings, one status code, and a retry loop that does not make things worse."
+subtitle: "Three kinds of limit, two kinds of 429, and a retry loop that knows when to stop."
 part: 2
 minutes: 7
-why: "It worked on your machine, and then you pointed it at a real queue and everything went red. You added a retry, which helped until the day the provider was actually struggling and your retries turned a two-minute wobble into forty minutes of hammering a service that was already down. Meanwhile a long request hangs with no output and users reload the page, doubling the load again. None of this is about the model. It is ordinary distributed-systems work with one unusual property — the calls are slow and expensive — and this lesson gives you the handful of patterns that make it boring."
+why: "You wrote a retry loop and it passed every test. Then your nightly job reached its monthly spend cap. The provider answered every call with a 429, your loop read each one as a passing blip, and it spent hours retrying a request that could not succeed until next month. The live feature on the same key went down with it. Both failures came from one mistake: treating every limit as the same limit and every 429 as a reason to wait. This lesson separates the kinds of limit, shows how to tell one 429 from another, and gives you a backoff loop that stops when waiting cannot help."
 wins:
-  - "Treat requests per minute, tokens per minute, and concurrency as three separate ceilings."
-  - "Back off exponentially with random jitter, and cap both the attempts and the total wait."
-  - "Never retry a 400 — it will fail identically every time."
-  - "Set an explicit timeout, and stream long answers so a slow call does not look like a hang."
-  - "Decide per feature what degrading looks like, before the day you need it."
+  - "Plan around three kinds of limit: requests per minute, tokens per minute, and a longer cap such as a daily quota or a monthly spend."
+  - "Treat concurrency as something you impose on yourself, with a semaphore, not as a ceiling the provider publishes."
+  - "Tell a rate-limit 429 from a spend-cap 429 before you retry, because only one of them recovers on its own."
+  - "Back off exponentially with random jitter, treat retry-after as a minimum, and cap both the attempts and the total wait."
+  - "Read the headers and slow down before you hit the wall, and look up every limit on the provider's page, not in a lesson."
 quiz:
-  - q: "A 429 response means..."
-    options: ["The provider is down", "Your request was malformed", "You asked faster than your rate limit allows"]
-    answer: 2
-    explain: "It is a throttle, not an outage and not a bug in your payload — the same request will succeed a moment later."
-  - q: "Random jitter is added to exponential backoff in order to..."
-    options: ["Stop every failed client retrying at the same instant and rebuilding the spike", "Make the average wait shorter", "Work around clock drift between servers"]
-    answer: 0
-    explain: "Clients that failed together would otherwise retry together, which recreates exactly the burst that caused the failure."
-  - q: "A pipeline sending a handful of very long documents each minute will most likely hit..."
-    options: ["The requests-per-minute ceiling", "The tokens-per-minute ceiling", "The concurrency ceiling"]
+  - q: "As of Oct 2026, Anthropic returns a 429 whose body carries the error code enforced_spend_limit_reached, with no retry-after header. What do you do?"
+    options: ["Back off with jitter and retry", "Stop retrying, alert someone, and fail over if you can", "Retry the default number of times, then give up"]
     answer: 1
-    explain: "Few requests, enormous prompts — the token budget runs out long before the request count does."
-  - q: "Streaming a long answer mainly improves..."
-    options: ["Total generation time", "The cost of the request", "How quickly the user sees something, and it avoids HTTP timeouts on long answers"]
+    explain: "This 429 means the monthly cap is spent, and Anthropic says retries, including the SDK's own, fail until access resumes on the 1st."
+  - q: "A job sends a few hundred very long documents and keeps getting 429s while its request count is low. Which limit is it most likely hitting?"
+    options: ["Requests per minute", "A daily request cap", "Tokens per minute"]
     answer: 2
-    explain: "The same tokens take the same time to generate; what changes is that they arrive as they are produced instead of all at the end."
-  - q: "The right response to a 400 Bad Request is..."
-    options: ["Fix the request — retrying it will fail in exactly the same way", "Retry it with a longer backoff", "Fail over to a second provider"]
+    explain: "Few requests carrying a great many tokens use up the token budget long before the request budget."
+  - q: "Why add random jitter to exponential backoff?"
+    options: ["So clients that failed together do not all retry at the same moment", "So the average wait is shorter", "So retries stay in step with the provider's clock"]
     answer: 0
-    explain: "Nothing about waiting or switching changes a malformed payload, so a retry is pure waste and hides the real error."
+    explain: "Without jitter, every client that failed at the same instant retries at the same instant and rebuilds the burst that caused the failure."
+  - q: "A limit is stated as 60 requests per minute. You send ten in the first second and get a 429. Why?"
+    options: ["The provider was down", "The limit can be enforced as about one per second, with capacity refilling continuously", "Limits reset on the clock minute, and yours had not reset yet"]
+    answer: 1
+    explain: "As of Oct 2026, Anthropic says it uses a token bucket, so capacity returns continuously and a burst can be refused even though the minute total is fine."
+  - q: "As of Oct 2026, a 200,000-token cached document plus a 50-token question reaches an Anthropic model that excludes cache reads from its input-token limit. How many tokens count toward that limit on this call?"
+    options: ["About 50", "200,050", "None, because cached calls are exempt from limits"]
+    answer: 0
+    explain: "Only the uncached input tokens and any cache-write tokens count, so the 50-token question counts and the cached read does not."
 deeper:
-  - { label: "Anthropic — rate limits", href: "https://platform.claude.com/docs/en/api/rate-limits" }
-  - { label: "Anthropic — errors and error handling", href: "https://platform.claude.com/docs/en/api/errors" }
-  - { label: "AWS — exponential backoff and jitter", href: "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/" }
-  - { label: "Google SRE Book — handling overload", href: "https://sre.google/sre-book/handling-overload/" }
+  - { label: "Anthropic - rate limits (tiers, spend cap, headers, cache-aware limits)", href: "https://platform.claude.com/docs/en/api/rate-limits" }
+  - { label: "OpenAI - rate limits guide (limit kinds, tiers, ramp-up, backoff advice)", href: "https://developers.openai.com/api/docs/guides/rate-limits" }
+  - { label: "Google - Gemini API rate limits (per project, tiers, daily quotas)", href: "https://ai.google.dev/gemini-api/docs/rate-limits" }
+  - { label: "AWS Architecture Blog - exponential backoff and jitter (the jitter comparison, 2015)", href: "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/" }
 ---
 
-Everything up to here has been about the model. This lesson is about the network between you and it, which is where working systems actually break. The good news is that none of it is new — it is the same reliability engineering you would apply to any remote call. The difference is that these calls take seconds, cost money, and are metered on two axes at once, so the usual sloppiness gets expensive fast.
+Everything up to here has been about the model. This lesson is about the gate in front of it. Providers cap how fast you may call and how much you may spend, and they report both with the same status code. Every limit, tier name and field below is dated "as of Oct 2026", and each provider's own page is the authority, so the lesson tells you where to read the real number.
 
-## 1. Three ceilings, not one
+## 1. Three kinds of limit, and one that is not a limit
 
-Providers meter you on several axes at the same time, and you can hit any one of them while sitting comfortably under the others.
+The names differ, but all three providers meter you on the same three shapes. As of Oct 2026:
 
-| Ceiling | You hit it when | What fixes it |
-|---|---|---|
-| Requests per minute | Many small, fast calls | Fewer, larger calls; a queue with a paced worker |
-| Tokens per minute | Few calls with enormous prompts | Shorter context, caching, spreading work over time |
-| Concurrent requests | A wide fan-out across a list | A semaphore capping in-flight calls |
+| Provider | Per minute | Longer cap | Tier names |
+|---|---|---|---|
+| Anthropic | Requests, input tokens, and output tokens, each per model class | A monthly spend cap per tier | Start, Build, Scale, Custom (new accounts may begin below Start) |
+| OpenAI | Requests and tokens, plus images for image models | Requests per day, tokens per day, a monthly usage limit | Free, Build, Launch, Grow |
+| Google | Requests and input tokens, per project | Requests per day (reset at midnight Pacific), a spend limit that is checked over a short rolling window | Free, 1, 2, 3 |
 
-Some providers split the token budget further into input tokens per minute and output tokens per minute. Limits are usually per organisation and per model — so a noisy batch job on the same key starves your live traffic, which is a good argument for separate keys per workload — and they rise as your account moves up usage tiers.
+Notice what is missing. None of the three pages documents a concurrency limit as of Oct 2026, apart from Google's cap of 100 concurrent batch requests. Concurrency is a tool you apply to yourself, a **semaphore** that caps in-flight calls, so a fan-out across a list does not spend a minute's budget in one second.
 
-The move that saves you most of this pain is **proactive throttling**. Providers return your remaining budget and reset time in response headers (Anthropic uses `anthropic-ratelimit-*`; others have their own names). Read them, and slow down when you are getting close, instead of sprinting into a wall and reacting. Being refused and retrying is strictly worse than not being refused.
+Three details change how you plan.
 
-## 2. The 429, and backing off without making it worse
+- **A bucket, not a clock.** As of Oct 2026, Anthropic says it uses a token bucket: capacity refills continuously instead of resetting on the minute. A limit of 60 per minute may be enforced as one per second, and limits are maximums, not guarantees.
+- **Ramps count.** A sudden jump can earn a 429 under the stated numbers. As of Oct 2026, OpenAI's page says that past 1 million input tokens per minute you should grow by no more than 50% every 15 minutes, and that the threshold varies by model.
+- **Pools, and what counts.** As of Oct 2026, Anthropic gives each model class its own limit, and a few older models share one bucket. For most models, cache reads do not count toward input tokens per minute, and `max_tokens` does not count toward output tokens per minute, only the tokens actually produced. This is not confirmed for OpenAI or Google in the sources used, so read their pages.
 
-`429 Too Many Requests` means you went faster than your limit allows. It is not an outage and it is not a bug in your request. Distinguishing it from its neighbours matters, because the correct response is different for each.
+**A worked example.** The numbers are illustrative, so read your own from the provider's console. Say your tier allows 50 requests and 100,000 input tokens per minute. You must summarise 600 contracts. Each request carries a 20,000-token instruction block and a 10,000-token contract.
+
+- Requests alone would finish in 12 minutes. Tokens do not: 30,000 per request gives 3.3 requests a minute, so 600 take about 180 minutes. Calling faster changes nothing, because tokens are the binding limit.
+- Cache the instruction block on a provider that excludes cache reads from the limit, and only 10,000 count per request. That is 10 a minute, so about 60 minutes. The same work finishes three times sooner with no tier change. The first request pays to write the cache, and as of Oct 2026 Anthropic counts cache writes, so add a few minutes at the start.
+- On a provider that counts cached tokens, that saving does not appear. The cache rules are in *Caching and batch: the two big discounts*.
+
+Last, throttle early. As of Oct 2026, Anthropic returns `anthropic-ratelimit-*-remaining` and `-reset` headers (remaining counts are rounded to the nearest thousand), and OpenAI returns `x-ratelimit-remaining-requests` and `x-ratelimit-remaining-tokens`. Slow down as they fall, instead of sprinting into the wall.
+
+## 2. One status code, two meanings
+
+A `429` means "no, not now". Whether "now" ever ends depends on which limit you hit. As of Oct 2026:
 
 | Status | Means | Retry? |
 |---|---|---|
-| 400 Bad request | Your payload is wrong | Never — fix it |
-| 401 / 403 | Bad or unauthorised key | Never |
-| 429 Too many requests | You exceeded your rate limit | Yes, after a backoff |
-| 500 Internal error | Something went wrong their side | Once or twice |
-| 503 / 529 Overloaded | The provider is saturated | Yes, with a longer backoff |
-| Timeout / connection reset | Unknown — it may have succeeded | Yes, if the call is safe to repeat |
+| 400 | Your payload is wrong. On Anthropic, also a spend limit you set yourself | No: fix it, or raise your own limit |
+| 401 / 402 / 403 | Bad or unauthorised key, or (Anthropic 402 `billing_error`) a billing problem | No: fix the key or the billing |
+| 429, rate limit | You went faster than a per-minute or per-day limit | Yes, after a wait; honour `retry-after` |
+| 429, spend cap | The monthly money is spent | No: alert, and fail over |
+| 500, 502, 504 | A fault or timeout on their side (Anthropic 504 is `timeout_error`) | Yes, but only up to the attempt cap |
+| 503, 529 | Overloaded: OpenAI sends 503 `server_is_overloaded`, Anthropic sends 529 | Yes, with a longer backoff |
+| Timeout or reset (408 in the code) | Unknown: it may have succeeded | Covered in the next lesson |
 
-The backoff itself is **exponential with full jitter**. Wait roughly `base * 2**attempt`, and then pick a random duration between zero and that. The exponential part is what everyone implements. The jitter is the part people leave out, and it is the part that matters: without it, every client that failed at the same moment retries at the same moment, and you have faithfully rebuilt the spike you were recovering from. That is a thundering herd, and it is how a short blip becomes a long incident.
+As of Oct 2026, on Anthropic the spend-cap 429 has the same `rate_limit_error` type as a rate-limit one. What differs is `error.details.error_code`, which reads `enforced_spend_limit_reached`, and the missing `retry-after` header. Retries, including the SDK's automatic ones, fail until 00:00 UTC on the first of next month. As of Oct 2026, OpenAI also returns 429 at a hard spend limit, and its page says not to retry quota or billing errors. Google returns 429 `RESOURCE_EXHAUSTED` for a breach. As of Oct 2026, its page describes the spend limit as checked over a 10-minute window and says to wait and retry, and it gives no separate field to tell the cases apart, so log the whole body.
+
+<Compare caption="Both arrive as a 429 with the same error type. They differ in what the response carries and in what retrying achieves, so a retry loop must tell them apart.">
+  <Panel label="Wait" title="Rate-limit 429">
+
+You went too fast. The bucket refills, so the same request works shortly. The response may carry `retry-after`, and if it does, earlier retries fail. Back off with jitter, and the call goes through.
+
+  </Panel>
+  <Panel label="Stop" title="Spend-cap 429">
+
+The money for the month is gone. There is no `retry-after`, and nothing refills until the 1st. Every retry fails and still occupies a worker. Alert someone, and fail over or degrade.
+
+  </Panel>
+</Compare>
+
+**How it fails.** A nightly job reaches the cap on the 24th. Your retry set contains 429, so each document gets five attempts with backoff, and the SDK's own retries (two by default on Anthropic's, as of Oct 2026) sit under each of those. The live feature, which shares the organisation's cap, is down too. The cure is a check before you retry. You can also put a noisy batch job in its own Anthropic workspace with a lower limit, so it hits its own wall first.
+
+For genuine rate limits, the backoff is **exponential with full jitter**: wait up to `base * 2**attempt`, picking a random time between zero and that. The jitter is the part people skip, because clients that failed together would otherwise retry together and rebuild the spike.
 
 <Flow
-  caption="The decision behind the status table above. Most outcomes end the loop immediately — only the retryable ones earn a backoff and another attempt, and even those are capped rather than open-ended."
+  caption="The decision behind the status table. Most outcomes end the loop at once. Only a rate-limit 429, a server fault or an overload earns a backoff and another attempt, and even those are capped."
   steps={[
     { label: 'Request sent' },
     {
       label: 'Response status',
       subject: true,
       branch: [
-        '400 / 401 / 403 — never retry, fix the request',
-        '429 / 500 / 503 / 529 — retry after a backoff',
-        'Timeout or reset — retry only if the call is safe to repeat',
+        '400 / 401 / 402 / 403 - never retry, fix the request',
+        'Spend-cap 429 - stop, alert, fail over',
+        'Rate-limit 429 / 500 / 503 / 529 - retry after a backoff',
       ],
     },
-    { label: 'Exponential backoff, full jitter', note: 'Wait a random duration between zero and the ceiling' },
+    { label: 'Wait: retry-after, else jittered backoff', note: 'Never less than the header says' },
   ]}
   back={{ from: 3, to: 1, label: 'Try again, until the attempt cap or the total wait cap is hit' }}
 />
 
 <Dial
-  caption="The wait ceiling from the retry loop's own formula, min(60.0, 2.0 ** attempt), attempt by attempt. The actual wait is still random.uniform(0, ceiling), so two clients on the same attempt still land at different moments."
+  caption="The wait ceiling in the code below, min(60.0, 2.0 ** attempt), attempt by attempt. With the default attempts=5, waits happen only at attempts 0 to 3, so the 60 second cap shows only if you raise attempts. The real wait is random.uniform(0, ceiling)."
   name="attempt"
   min={0}
   max={6}
   step={1}
   start={0}
   bands={[
-    { at: 0, label: 'First retry', outcome: 'Ceiling is min(60, 2**0) — one second.' },
-    { at: 3, label: 'A few attempts in', outcome: 'Ceiling is min(60, 2**3) — eight seconds.' },
-    { at: 6, label: 'Capped', outcome: '2**6 is 64, but the ceiling stopped climbing at 60 — the min(60.0, ...) in the code.', note: 'Past here, more attempts spend the retry budget without buying more patience.' },
+    { at: 0, label: 'First retry', outcome: 'Ceiling is min(60, 2**0): one second.' },
+    { at: 3, label: 'A few attempts in', outcome: 'Ceiling is min(60, 2**3): eight seconds.' },
+    { at: 6, label: 'Capped', outcome: '2**6 is 64, but the ceiling stopped climbing at 60, the min(60.0, ...) in the code.', note: 'Past here, more attempts spend the retry budget without buying more patience.' },
   ]}
 />
 
 Four rules around it:
 
-- **Honour `retry-after` when the response carries it.** The provider knows more than your formula does.
-- **Cap the attempts and cap the total wait.** An unbounded retry loop turns a thirty-second wobble into an hour of burned quota and a pile of hung requests holding connections.
-- **Keep a retry budget.** If retries are more than a small percentage of your traffic, stop retrying and shed load. Retrying hard against a failing service is indistinguishable from attacking it.
-- **Know what your SDK already does.** The official clients retry with backoff by default — `Anthropic(max_retries=N)` — so a hand-rolled loop on top silently multiplies into far more attempts than you intended.
+- **Treat `retry-after` as a minimum.** As of Oct 2026, OpenAI's page advises adding a small random delay on top, and falling back to jittered backoff when the header is missing.
+- **Cap the attempts and the total wait.** An unbounded loop turns a thirty-second wobble into an hour of burned quota and hung connections.
+- **Keep a retry budget.** As of Oct 2026, failed requests still count toward OpenAI's per-minute limits, so hammering does not help. If retries are a large share of your traffic, shed load.
+- **Know what your SDK already does.** As of Oct 2026, Anthropic's SDK retries twice by default, honouring `retry-after`. A hand-rolled loop on top multiplies the attempts, so count them or switch the SDK's off.
 
-> A retry loop with no jitter and no cap is not resilience. It is a load test you run against a service that is already struggling.
+> Before you retry a 429, ask whether waiting can fix it. A rate limit says yes. A spend cap says no.
 
-## 3. Timeouts, streaming, idempotency, and what happens when you give up
+## 3. The loop, and when to leave it out
 
-**Set an explicit timeout.** Default client timeouts can be generous. A long prompt with a long answer and extended thinking can legitimately take minutes, so one global ten-second timeout will break real work — but a request that hangs forever is worse than one that fails fast, because it holds a connection and a user. Set a per-request timeout that matches the work that request is doing.
-
-**Stream long answers.** Streaming does not make generation faster; the same tokens take the same time. What it changes is that the user sees words after a second instead of a blank screen for forty, which is the entire difference between "thinking" and "broken". It also lets you abort early when the user navigates away, and it avoids the HTTP-level timeouts that long non-streaming requests run into — which is why some providers require streaming above a certain expected output length.
-
-<Compare caption="The same answer, delivered two ways. The total generation time is identical — what changes is when the user sees anything at all, and what a dropped connection costs you.">
-  <Panel label="Without streaming" title="Wait for the whole answer">
-
-The connection sits open for the entire generation. The user watches a blank screen until the last token is ready, and a long answer risks the HTTP-level timeout that streaming exists to avoid.
-
-  </Panel>
-  <Panel label="With streaming" title="Words arrive as they're produced">
-
-The first tokens appear after about a second instead of forty. The user can watch it "thinking" instead of wondering if it broke, and you can abort the call cleanly the moment they navigate away.
-
-  </Panel>
-</Compare>
-
-**Make repeats safe.** A connection that drops after the model answered is a real and regular event, and you cannot tell it apart from a request that never arrived. If the call has a side effect — sending an email, charging a card, writing a row — the safety has to live on your side: an idempotency key on the operation, and a write that is safe to repeat. Some APIs accept an idempotency key too, which helps, but your database is where the guarantee actually holds.
-
-**Have somewhere to fall back to.** Behind the adapter from *The big three, and what actually differs*, a fallback chain costs very little:
-
-1. The same model through a different route or region.
-2. The smaller model in the same family — worse, but answering.
-3. A different provider entirely.
-
-**And decide what degrading looks like.** The useful question is not *how do we never fail*, it is *what does the user see when we do*. Pick per feature, in advance: a cached previous answer, a smaller model's answer with a note attached, a queued job and an email when it is ready, or the plain non-AI path that existed before. Failing loudly and clearly beats a spinner, and beats a silently worse answer that nobody flagged.
+This loop tells the two 429s apart, honours `retry-after`, and jitters when the header is missing.
 
 ```python
 import random, time
 from anthropic import Anthropic, APIStatusError, APITimeoutError
 
+MODEL = "claude-sonnet-5-5"   # check the models page; as of Oct 2026
+
 client = Anthropic(max_retries=0, timeout=60.0)   # this example owns its own retries
 
-RETRYABLE = {408, 409, 429, 500, 502, 503, 529}
+RETRYABLE = {408, 429, 500, 502, 503, 504, 529}
 
-def ask(prompt: str, model: str = "claude-sonnet-4-20250514", attempts: int = 5) -> str:
+def is_spend_cap(err: APIStatusError) -> bool:
+    body = err.body if isinstance(err.body, dict) else {}
+    inner = body.get("error", body)               # some SDK versions unwrap "error"
+    details = inner.get("details") or {}
+    return details.get("error_code") == "enforced_spend_limit_reached"
+
+def ask(prompt: str, model: str = MODEL, attempts: int = 5, max_wait: float = 120.0) -> str:
+    deadline = time.monotonic() + max_wait             # total wait budget across all retries
     for attempt in range(attempts):
         try:
             resp = client.messages.create(
                 model=model,
-                max_tokens=500,
+                max_tokens=2000,                       # thinking tokens share this budget
                 messages=[{"role": "user", "content": prompt}],
             )
-            return resp.content[0].text
+            # A thinking block may come first, so pick the first text block.
+            return next(b.text for b in resp.content if b.type == "text")
         except (APIStatusError, APITimeoutError) as err:
             status = getattr(err, "status_code", 408)
+            if status == 429 and is_spend_cap(err):
+                raise                                  # waiting cannot fix a spend cap
             if status not in RETRYABLE or attempt == attempts - 1:
                 raise                                  # a 400 dies here, correctly
-            ceiling = min(60.0, 2.0 ** attempt)        # exponential
-            time.sleep(random.uniform(0, ceiling))     # full jitter: the part people skip
+            response = getattr(err, "response", None)
+            header = response.headers.get("retry-after") if response else None
+            try:                                       # the provider knows more than our formula
+                pause = float(header) + random.uniform(0, 1)
+            except (TypeError, ValueError):            # header missing, or an HTTP-date
+                ceiling = min(60.0, 2.0 ** attempt)    # exponential
+                pause = random.uniform(0, ceiling)     # full jitter: the part people skip
+            if time.monotonic() + pause > deadline:
+                raise                                  # this wait would blow the total budget
+            time.sleep(pause)
     raise RuntimeError("unreachable")
 ```
 
-`max_retries=0` is set only so the loop above is the one doing the work. In most applications the better answer is the opposite: let the SDK do the backoff it already implements correctly, and spend your own code on the fallback and the degraded path instead, because those are the parts nobody has written for you.
+I ran the retry logic with `anthropic` 1.15.0 against a stub server that returned the documented 429 bodies, not against the live API. The stub sent a thinking block before the text block, and the loop read the text. A spend-cap response raised after one call. Two rate-limit responses with `retry-after: 0` were followed by success on the third. A `retry-after: 500` with `max_wait=10` raised at once. Check the shape of `err.body` on your own installed version, because `is_spend_cap` accepts both the wrapped and unwrapped forms. The `max_retries=0` is there only so this loop does the work, and retrying a timeout is safe here only because this call has no side effect. In most applications let the SDK do its own backoff, and spend your effort on the next lesson, *Timeouts, fallbacks, and failures that look like success*.
+
+**When this does not apply.**
+
+- **Low volume.** A few calls a minute never meets a limit, and the SDK's defaults are enough.
+- **Batch jobs.** The Batch APIs queue the work on the provider's side, so the limits become queue sizes. As of Oct 2026, Anthropic caps batch requests in the queue, and OpenAI caps queued input tokens per model. You poll for results and pace nothing.
+- **Self-hosted models.** There is no provider cap. The limit is your GPU, and the 429 is one you write yourself. See *Running a model yourself*.
+- **Constant 429s.** If limits bite every day, a better loop only hides it. Ask for a higher tier, or cache the repeated prefix.
