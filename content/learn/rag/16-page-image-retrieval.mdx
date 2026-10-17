@@ -1,0 +1,143 @@
+---
+title: "Retrieving pages as images"
+subtitle: "Skip the parser and embed a picture of each page, so a chart can be found by what it shows and not only by the words printed near it."
+part: 3
+minutes: 7
+why: "Someone asks how automotive revenue changed over time. The answer is a bar chart on one slide of a quarterly deck, and your parser turned it into 'Q1 Q2 Q3 Q4 0 100 200 300 400 500 Revenue 312 388 451 449 520 Automotive'. Every number survived and the shape did not: nothing says which value belongs to which quarter, or that revenue rose and then sagged. The slide after it, a paragraph about automotive strategy, shares more words with the question, so it wins. This lesson teaches the other route: render each page as a picture and embed the picture. You will see what that fixes, what the evidence says about when it beats parsing, and what a page costs to store."
+wins:
+  - "Describe page-image retrieval as a set of vectors per rendered page, matched to a text query."
+  - "Say when parsing plus a reranker still wins, and why this is a route, not a replacement."
+  - "Work out storage per page and per corpus from vectors, dimensions and bytes."
+  - "Send chart and table pages to the image index, and prose pages to the text index."
+  - "Score finding the right page and reading the right number as two separate checks."
+quiz:
+  - q: "In page-image retrieval, what is the unit that gets retrieved?"
+    options: ["A paragraph cut from the page by a layout parser", "A caption that a model writes for the page", "The whole page, stored as many vectors, one for each patch of its image"]
+    answer: 2
+    explain: "There is no parser and no chunker. The page is rendered, embedded as a set of patch vectors, and returned as one object."
+  - q: "In ViDoRe V3, a text pipeline with a cross-encoder reranker scored above the best page-image retriever used alone. What should you take from that?"
+    options: ["Parsing plus reranking is still a serious competitor, so test page images as a route and do not assume they replace the text pipeline", "Page images never help on charts and tables", "Rerankers cannot be used on pages that contain pictures"]
+    answer: 0
+    explain: "The study also found image retrievers ahead of text embedders, and the winners differed in size and design. The honest reading is to compare both on your own pages."
+  - q: "A team plans 100,000 pages at about 1,000 vectors each, 128 numbers per vector, stored as float16. About how big is the index?"
+    options: ["About 260 MB, a little over two kilobytes a page", "About 26 GB, around 256 KB a page", "About 2.6 TB, because images are stored at full size"]
+    answer: 1
+    explain: "1,000 vectors times 128 numbers times 2 bytes is about 256,000 bytes a page, so 100,000 pages come to about 26 GB. The vectors are stored, not the pixels."
+  - q: "Retrieval returns the right slide, but the answer states a figure that is not on it. What should your evaluation have scored separately?"
+    options: ["Nothing more, because the right page came back and retrieval is done", "The embedding dimension of the page model", "Whether the right page came back, and whether the answer read the right number from it"]
+    answer: 2
+    explain: "A vision model can misread a bar or pick the wrong series on the right page. Page recall cannot see that, so the reading needs its own check."
+  - q: "Which corpus is the poorest fit for page-image retrieval?"
+    options: ["Contracts and transcripts that are almost entirely running text", "Slide decks full of bar charts", "Annual reports whose tables carry meaning in their layout"]
+    answer: 0
+    explain: "Text-heavy documents lose little in parsing, and a text embedder is cheaper to store and run. Page images earn their cost where the picture carries the meaning."
+deeper:
+  - { label: "Faysse et al. - ColPali, document retrieval with vision language models (ICLR 2025)", href: "https://arxiv.org/abs/2407.01449" }
+  - { label: "Loison et al. - ViDoRe V3, a benchmark for visually rich document retrieval", href: "https://huggingface.co/papers/2601.08620" }
+  - { label: "Weaviate - charts and tables in PDFs (vendor post)", href: "https://weaviate.io/blog/charts-tables-pdfs" }
+  - { label: "Qdrant - multivector document retrieval with ColPali and ColQwen", href: "https://qdrant.tech/documentation/tutorials-search-engineering/pdf-retrieval-at-scale/" }
+---
+
+## 1. What a parser throws away
+
+*Parsing documents before you chunk them* turns a page into text. For prose that is fine. For a chart the picture is the content: the height of a bar, the bend in a line, which colour is which series. A parser keeps whatever happened to be text, such as axis ticks and data labels, and drops the rest.
+
+Page-image retrieval removes the step. Render each page to an image. Give it to a vision-language model that outputs one small vector for each patch of the picture. Store the whole set as one object per page. The query stays plain text, and the score is the MaxSim from *Late interaction: one vector per token*, with image patches where passage tokens were. There is no parser, no OCR and no chunker, and the page is the unit. The idea comes from the ColPali paper (June 2024, ICLR 2025), which also introduced the ViDoRe benchmark.
+
+<Compare caption="The same slide down two routes. The image route keeps what the parser drops, and pays for it in vectors.">
+  <Panel label="Text route" title="Parse, chunk, embed">
+
+Keeps the words, and tables if the parser reads them. Loses bar heights, line shapes, legends and layout. Breaks when the meaning is the picture.
+
+  </Panel>
+  <Panel label="Image route" title="Render, embed the patches">
+
+Keeps charts and tables as drawn. Costs about a thousand vectors a page, a model pass per page, and a generator that can see. Breaks on small print and exact strings.
+
+  </Panel>
+</Compare>
+
+Here is a toy version. The deck is invented, for a fictional company, three pages long. Page 1 is a bar chart of automotive revenue over five quarters in $ millions: 312, 388, 451, 449, 520 (all invented). Page 2 is a prose slide about automotive strategy. Page 3 is a line chart of cloud revenue. The query is "how did automotive revenue change over time?" A text embedder reads what PyMuPDF extracts. A page-image model reads a picture of each page.
+
+| Page | Text the parser kept | Text model cosine | Page-image MaxSim |
+|---|---|---|---|
+| 1, automotive chart | "Q1 Q2 Q3 Q4 Q1 next 0 100 200 300 400 500 Revenue, $ millions 312 388 451 449 520 Automotive" | 0.538 (second) | 13.45 (first) |
+| 2, strategy prose | A three-sentence paragraph that says automotive and revenue | 0.556 (first) | 12.89 (second) |
+| 3, cloud chart | Axis ticks and "Cloud revenue" | 0.263 | 11.20 |
+
+The text model was all-MiniLM-L6-v2, the small teaching model from *What an embedding really is* (as of October 2026). The page model was ModernVBERT/colmodernvbert, about 250 million parameters under an MIT licence (as of October 2026). The order flipped: the prose slide wins on words, the chart wins on pixels. Keep the claim small. This is three pages, one query, two small models and one run: a demonstration, not a benchmark. Both gaps are narrow, and the two score columns are on different scales.
+
+> A parser keeps the words on the page. A page image keeps the rest, and bills you for every patch of it.
+
+## 2. What the evidence says, and what it costs
+
+The best evidence so far is ViDoRe V3, an arXiv preprint from January 2026 (revised April 2026): 10 datasets, about 26,000 pages and 3,099 human-checked queries over public English and French PDFs. Page-image retrievers led its table. The best one scored 59.8 nDCG@10 against 51.0 for the best text embedder. That comparison is confounded, because the winner is a 3-billion-parameter late-interaction model and the text leader a larger single-vector one. The fairer test is a text pipeline with a cross-encoder from *Reranking*, which scored 63.6, above the best image retriever alone. Pages that mix text and images were the hardest content type. Combining the two routes gave the best end-to-end answers, by under a point overall, which is a hint and not a result. The corpora are clean public reports; scans and handwriting were not tested.
+
+A vendor post from Weaviate (September 2026) points the same way. It tests three hand-picked queries over 92 slides from one company's decks, runs no text baseline and measures no recall, so read it as a how-to and not as evidence. This is a route to test against parsing, not a replacement for it.
+
+### What it costs
+
+At index time you pay one vision-model pass per page instead of a parser run. The ColPali authors report their page indexing was faster than their parse-and-OCR pipeline, on their own setup. No independent per-page latency or cost figure turned up for this lesson, so time a hundred of your own pages.
+
+Storage is the bigger surprise. The ColPali paper reports 257.5 KB per page: about 1,030 vectors of 128 float16 numbers, which is 1,030 x 128 x 2 bytes. At 100,000 pages that is about 26 GB, and a million pages is about 260 GB. Now take the same pages as four text chunks each (an invented count), one 1,024-number float32 vector per chunk. That is 16 KB a page, or 1.6 GB for 100,000 pages: about sixteen times smaller. In the toy run above, the model returned 1,149 vectors for a page rendered at 1,000 pixels and at 2,000 pixels, so extra pixels bought no extra vectors. The Weaviate post suggests rendering near 2,000 pixels, one author's default and not a measured sweep, so check what your model does first.
+
+At query time, 25 query vectors against 1,030 page vectors is about 26,000 dot products a page. Qdrant's tutorial (undated, read in October 2026) shrinks that by averaging the patch grid by rows, so 1,024 patch vectors become 32. It searches those first and rescores the shortlist with the full vectors. It reports comparable quality and indexing an order of magnitude faster but gives no figures, and the full vectors still have to be stored, so this saves search time, not disk. The ColPali paper warns that text-dense pages may lose more under pooling. At answer time the generator must be able to read images, and every retrieved page reaches it as image tokens.
+
+## 3. Building it without trusting it blindly
+
+Try it on a hundred pages of your hardest PDF before you build anything. The code renders pages, encodes them and scores one query by brute force.
+
+```python
+# pip install -U "sentence-transformers[image]" pymupdf peft
+import os
+import pymupdf
+from PIL import Image
+from sentence_transformers import MultiVectorEncoder
+
+# Set PAGE_MODEL to a current page-image retriever. Read its model card first:
+# some checkpoints need trust_remote_code=True or a pinned revision.
+model = MultiVectorEncoder(os.environ["PAGE_MODEL"])
+
+def render(page, long_edge=2000):
+    zoom = long_edge / max(page.rect.width, page.rect.height)
+    pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom))
+    return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+pages = [render(p) for p in pymupdf.open("deck.pdf")]
+page_vecs = model.encode_document(pages, batch_size=2)  # a matrix per page
+
+query = "how did automotive revenue change over time?"
+scores = model.similarity(model.encode_query([query]), page_vecs)[0]
+
+print("vectors per page:", [v.shape[0] for v in page_vecs])
+for i in scores.argsort(descending=True).tolist():
+    print(f"page {i + 1}  {scores[i].item():6.2f}")
+
+# Output of one run with ModernVBERT/colmodernvbert (as of October 2026),
+# Sentence Transformers 6.1, PyMuPDF 1.28, on the invented deck above.
+# Loading it printed a warning about unexpected custom_text_proj.lora keys;
+# shapes and scores looked sane, but check your own checkpoint.
+# vectors per page: [1149, 1149, 1149]
+# page 1   13.45
+# page 2   12.89
+# page 3   11.20
+```
+
+In production you route. Decide per page at ingestion, with cheap signals such as the share of the page covered by images, table or chart blocks your parser reports, and very few words per page (invented rules, so test them). Query both indexes and fuse the lists with the reciprocal rank fusion from *Hybrid search*. If routing is hard, index the chart-heavy pages both ways. Exact identifiers such as part numbers and error codes should stay on the text and keyword side. That is inference, since no source tested it, but a small serial number is the first thing to check.
+
+<Flow
+  caption="One route per page, decided once at ingestion. Both indexes are searched at query time and the lists are fused."
+  steps={[
+    { label: 'Look at the page', note: 'Once, when it is ingested' },
+    { label: 'Chart or table?', subject: true, branch: ['Yes - image index', 'No - text index'] },
+    { label: 'Search both', note: 'One ranked list each' },
+    { label: 'Fuse with RRF', note: 'One list of pages' },
+    { label: 'A model that can see', note: 'Reads the top pages' },
+  ]}
+/>
+
+**The confident misread.** Retrieval does its job and the generator reads a bar as 451 when it is 449, or answers from the wrong series. The Weaviate post never evaluates the answer step, and none of the sources read for this lesson isolates chart-reading errors. The second failure runs the other way: on a dense page of running text, the image route can rank below the same page parsed to text.
+
+Evaluate with queries whose answer lives only in the picture, such as the trend of a line or one table cell by row and column. Score two things apart: did the right page come back, as in *Measuring retrieval*, and did the answer carry the right number, as in *Measuring the whole answer*. A good first score with a bad second points at the generator, not the retriever. Cite the page and show the image, as *Citations and grounding* describes. In ViDoRe V3 the best models' boxes around the evidence scored under 0.1 F1 where human annotators agreed with each other at 0.60, so do not claim a region. A page image also carries everything printed on it, so the permission metadata from *Permissions that travel with the data* travels with the page, and a model change re-embeds every page, as *Changing the embedding model underneath a live index* describes.
+
+When not to use it. Skip it for text-heavy corpora such as contracts, transcripts and logs, where Weaviate's own authors say a text embedder is cheaper and about as accurate. Skip it for exact-string lookup, for a storage budget that cannot absorb sixteen times the vectors, and for pages that do not render the same way each time, because the vectors then describe your renderer. Parse and rerank is the baseline: adopt this only when your own eval set shows it finds pages the baseline misses. Even then it only finds the page; whether the number on it was read correctly is a separate question.
