@@ -159,7 +159,7 @@ Metadata you did not capture at index time is usually gone. The source has moved
 |---|---|---|
 | `tenant_id`, `allowed_group_ids` | Security boundary | Sometimes, painfully |
 | `source_url`, `doc_id`, `doc_title` | Citations, and users trust answers they can check | No, once the source moves |
-| `doc_version`, `content_hash` | Detecting what changed, incremental re-indexing | No |
+| `doc_version`, `text_hash`, `meta_hash` | Detecting what changed; the two hashes drive incremental re-indexing | No |
 | `ingested_at`, `updated_at` | Recency ranking, staleness alerts | No |
 | `doc_type`, `lang`, `section_path` | Everyday filtering, and debugging | Only by reprocessing |
 | `chunk_index`, `parent_id` | Small-to-big retrieval, neighbour expansion | Only by re-chunking |
