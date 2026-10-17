@@ -1,0 +1,187 @@
+---
+title: "Keeping the index fresh without paying twice"
+subtitle: "Hash every span and let only real text edits reach the embedder: a permission flip is a patch, and a delete is a removal."
+part: 2
+minutes: 7
+why: "Someone fixed a typo in the refund policy. Your pipeline saw an edited page, re-chunked it and sent every chunk back to the embedding API. An hour later someone flipped the same page from private to public, and the pipeline did the whole job again, for a change that moves no vector at all. A week after that, a page deleted from the wiki was still being quoted by your assistant. All three are one mistake: the pipeline asks whether a page changed, not what changed. This lesson shows the small record that answers it, with a worked example you can check by hand, the two ways it fails, and when a nightly rebuild is the better answer."
+wins:
+  - "Sort every source change into text edit, metadata edit, move, delete or nothing."
+  - "Keep a text hash and a metadata hash per span, so only changed text is embedded."
+  - "Send a metadata patch, not an embedding call, when only a permission or tag changed."
+  - "Find deleted pages by comparing source ids with index ids on a schedule."
+  - "Skip all of this when a nightly rebuild is cheaper than keeping state."
+quiz:
+  - q: "A page flips from private to public and no word of its text changes. What should the pipeline do?"
+    options: ["Re-chunk the page and re-embed every span, to be safe", "Patch the stored metadata of each span and make no embedding call", "Skip it, because every text hash still matches"]
+    answer: 1
+    explain: "A vector comes from text, so the vectors are still right. Skipping would leave the old permission in the index, which is the worse mistake."
+  - q: "Why keep a metadata hash separate from the text hash?"
+    options: ["So the text hash can be shorter and faster to compute", "Because metadata is always stored in a different database", "So a metadata-only change can be told apart from a text change and handled without an embedding call"]
+    answer: 2
+    explain: "One combined hash says only that something changed. Two hashes say what kind of change it was, and that decides whether you pay for an embedding."
+  - q: "A chunker returns the same page's spans in a different order on each run. What happens?"
+    options: ["A one-sentence edit looks like many changed spans, so most of the page is re-embedded", "Nothing, because the hashes still match", "The vector store rejects the writes"]
+    answer: 0
+    explain: "Spans are compared by position, so a shuffled order puts different text under each position. Nothing errors, and the savings quietly vanish."
+  - q: "A page is deleted in the source and the pipeline only handles edits. What happens?"
+    options: ["The assistant refuses every question about that topic", "Search results shrink by one page and nothing else changes", "The old vectors still match queries, so the assistant can quote a page that no longer exists"]
+    answer: 2
+    explain: "An index does not know the source moved on. Deleted pages stay searchable until something removes them, so compare source ids with index ids."
+  - q: "You switch embedding models and keep your old page-state records. What should the comparison do?"
+    options: ["Skip every span, since the text hashes still match", "Treat every stored hash as stale, because the old vectors came from another model, and migrate as a whole", "Re-embed only the spans edited after the switch"]
+    answer: 1
+    explain: "Text hashes say the words are unchanged, not that the vector fits the new model. Store a model and chunker version with each record and a mismatch forces the full re-embed."
+deeper:
+  - { label: "Qdrant - Incremental Embedding Updates (docs tutorial)", href: "https://qdrant.tech/documentation/tutorials-operations/incremental-embedding-updates/" }
+  - { label: "Notion - Two years of vector search at Notion", href: "https://www.notion.com/en-gb/blog/two-years-of-vector-search-at-notion" }
+  - { label: "turbopuffer - Write API (upsert, patch, delete, conditions)", href: "https://turbopuffer.com/docs/write" }
+  - { label: "Prajapati - LiveVectorLake (arXiv preprint, 100-document test)", href: "https://arxiv.org/abs/2601.05270" }
+---
+
+## 1. Five kinds of change
+
+Every edit in a source system is one of five events, and only one of them needs a new vector.
+
+| Event | What changed | What to do | Embedding calls |
+|---|---|---|---|
+| Text edit | The words in some spans | Re-embed those spans and replace them | One per changed span |
+| Metadata edit | A permission, a tag, an owner | Patch the stored fields | None |
+| Move or rename | The URL, title or folder | Patch the fields, or copy the stored vector to the new id | None |
+| Delete | The page is gone | Remove its spans from the index | None |
+| Nothing | A save with no change, or a change you do not index | Skip | None |
+
+A naive pipeline treats all five as the first row. It sees "page changed", re-chunks the page and embeds every chunk again. A one-character typo costs the same as a rewrite, and a permission flip, which moves no vector, costs the same as both. Notion (as of its February 2026 write-up) described fixing this in July 2025 and reported about 70% less data volume. That is one company's own number, with no dollar figure, from a corpus far bigger than yours. Take the pattern, not the number.
+
+One caution on "metadata moves no vector". If you stamp a title or header line into the text before embedding, as *Chunking* describes, that field is text for this purpose. Put it in the text hash.
+
+<Compare caption="The same six-span page, hashed two ways. A hash of the whole page can only say that something changed. Two hashes per span say where, and which kind.">
+  <Panel label="Naive" title="One hash per page">
+
+Any difference means "changed", with no clue where. A typo fix re-embeds six spans. A permission flip changes the hash too, so it re-embeds all six again.
+
+  </Panel>
+  <Panel label="What to do" title="Two hashes per span">
+
+One hash covers the text that gets embedded, one covers the metadata that gets indexed. The comparison names the spans and the kind of change, so it can pay for the first and patch the second.
+
+  </Panel>
+</Compare>
+
+> An edit is not a re-embed. Ask what changed, then pay only for that.
+
+## 2. The page-state record
+
+Split each page into spans with the chunker from *Chunking*. For each span keep two hashes: one of the normalised text, one of every metadata field that goes into the index. Store the list, with a model and chunker version, as one record per page in an ordinary key-value table. Notion keeps its records the same way, one per page.
+
+On every event, re-chunk the page, build a new record and compare it with the stored one. Chunking is cheap computing. The embedding call is the part you are avoiding.
+
+Here is an invented six-span page, "Refund policy". The figure walks four events through it.
+
+<Steps
+  caption="Four events on one invented six-span page, counted by hand. The counts are an illustration, not a measurement. The naive pipeline would make six embedding calls for each of the first three."
+  steps={[
+    {
+      label: 'Typo fix',
+      title: 'One sentence edited in span 4',
+      body: 'Only span 4 has a new text hash. The other five match, so they are left alone.',
+      facts: [
+        { label: 'Embedding calls', value: '1' },
+        { label: 'Metadata patches', value: '0' },
+        { label: 'Skipped', value: '5' },
+      ],
+    },
+    {
+      label: 'Made public',
+      title: 'The page flips from private to public',
+      body: 'No text hash changes. Every metadata hash does, because the permission is stored on each span.',
+      facts: [
+        { label: 'Embedding calls', value: '0' },
+        { label: 'Metadata patches', value: '6' },
+        { label: 'Skipped', value: '0' },
+      ],
+    },
+    {
+      label: 'Counter ticks',
+      title: 'A view count changes',
+      body: 'The count is not an indexed field, so it is in neither hash. The page looks changed to the source and not to you.',
+      facts: [
+        { label: 'Embedding calls', value: '0' },
+        { label: 'Metadata patches', value: '0' },
+        { label: 'Skipped', value: '6' },
+      ],
+    },
+    {
+      label: 'Last paragraph cut',
+      title: 'The page shrinks to five spans',
+      body: 'Spans 1 to 5 match. The record has a span 6 that the new page lacks, so its vector must go.',
+      facts: [
+        { label: 'Embedding calls', value: '0' },
+        { label: 'Removals', value: '1' },
+        { label: 'Skipped', value: '5' },
+      ],
+    },
+  ]}
+/>
+
+The comparison is a few lines of Python. It returns a plan instead of acting, so you can test it without an embedding model.
+
+```python
+import hashlib, json, os
+
+# Bump the chunker part when you change the chunker. A new model id
+# changes the string too, and every stored hash then counts as stale.
+VERSION = os.environ["EMBED_MODEL"] + "|chunker-1"
+
+def h(value) -> str:
+    raw = json.dumps(value, sort_keys=True).encode()
+    return hashlib.sha256(raw).hexdigest()[:16]
+
+def page_state(spans):
+    """spans: [{"text": ..., "meta": {...}}], in a fixed order."""
+    return {"version": VERSION,
+            "spans": [(h(" ".join(s["text"].split())), h(s["meta"]))
+                      for s in spans]}
+
+def plan_updates(prev, new):
+    plan = {"embed": [], "patch": [], "skip": [], "delete": []}
+    stale = prev is None or prev["version"] != new["version"]
+    old = [] if stale else prev["spans"]
+    for i, (text_h, meta_h) in enumerate(new["spans"]):
+        if i >= len(old) or old[i][0] != text_h:
+            plan["embed"].append(i)
+        elif old[i][1] != meta_h:
+            plan["patch"].append(i)
+        else:
+            plan["skip"].append(i)
+    old_n = len(prev["spans"]) if prev else 0
+    plan["delete"] = list(range(len(new["spans"]), old_n))
+    return plan
+
+spans = [{"text": f"Paragraph {i}.", "meta": {"acl": "private"}} for i in range(6)]
+before = page_state(spans)
+spans[3]["text"] += " Sale items are excluded."
+print(plan_updates(before, page_state(spans)))
+# {'embed': [3], 'patch': [], 'skip': [0, 1, 2, 4, 5], 'delete': []}
+```
+
+Run the plan, then save the new record last. If the job dies halfway, the old record is still there and the next run plans the same work again.
+
+**What it costs.** Invented numbers: a day brings 2,000 events on six-span pages. Say 1,000 are one-span edits, 600 are permission flips and 400 change nothing you index. The naive pipeline makes 2,000 x 6 = 12,000 embedding calls. This one makes 1,000, and 600 patches. You pay for it in a state table, a re-chunk on every event, and a hash per span. All three are small beside an embedding call.
+
+## 3. Deletes, drift and when to skip it
+
+**Deletes are the case an edit-driven pipeline never sees.** The failure looks like this: the team removes a wrong policy page, the index keeps its vectors, and the assistant keeps quoting it with a citation that now leads nowhere. Nothing errors. Do not assume your source announces deletes. Check, and add a reconcile pass either way: list the ids in the source, list the ids in the index, and remove the difference.
+
+Run deletes last, and guard them. Qdrant's incremental-update tutorial (as of July 2026) refuses to delete at all when the source list is empty, with the message "Refusing to delete from an empty source snapshot." A connector that fails and returns nothing must not look like a company deleting everything. A comment in its code suggests capping how many deletes one run may make. A reconcile also reads every stored hash each run, so cost grows with the corpus: the tutorial says about 100,000 points is fine and that around a million can hit its 32 MB request cap.
+
+For ordering, a delete should leave a marker, usually called a tombstone, so a late edit event cannot bring the page back. That is general practice, not something the docs above state. turbopuffer's write API (as of October 2026) offers conditions on upserts, patches and deletes, checked against the stored document. That lets you refuse a write that is older than what the index holds, our reading and not the docs' example.
+
+**What breaks the hashes.** Three things, and none of them errors:
+
+- A chunker whose output order changes between runs. Spans are compared by position, so one edit re-embeds most of the page.
+- A position shift. Insert a paragraph at the top and every later span moves down one. Qdrant's answer: when an id is new but the text hash already exists, copy the stored vector instead of embedding.
+- A change of model or chunker, which makes every stored vector wrong for the new setup. The version string in the code forces the full re-embed described in *Changing the embedding model underneath a live index*. That is also why you keep the source text, as *From source system to corpus* says: a re-embed needs it.
+
+**Two paths, one planner.** Notion runs single edits through a queue with sub-minute freshness (self-reported) and backfills through batch jobs. Both can call the same `plan_updates`. Permission patches belong on their own faster clock, as *Permissions that travel with the data* argues. Measure the time from an edit to the edit being searchable. Pinecone's docs (as of October 2026) say reads right after a write may not show it, so test with a delay.
+
+**When not to use it.** If the corpus is small and changes rarely, rebuild it every night. A full re-embed that takes ten minutes, run once a day, is cheaper than the state table, the reconcile and the bugs in both. If staleness matters more than query cost, fetch the page when asked instead, as *Retrieval as a tool the agent calls* describes, and pay on every query. The state record also knows nothing about quality: an index that is perfectly fresh can still retrieve badly, and *Measuring retrieval* is where you find out.
