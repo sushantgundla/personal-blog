@@ -1,0 +1,170 @@
+---
+title: "Thinking and effort, model by model"
+subtitle: "The same empty request thinks on one model and stays quiet on the next. Here is how to find out which, and how to turn it down."
+part: 1
+minutes: 7
+why: "You upgraded a support bot to a newer model and changed nothing but the model id. The next invoice came in at several times the old one. Your request never mentioned thinking, so you assumed there was none. On the old model that was true. On the new one a request with no thinking field thinks by default, every thinking token is billed as output, and you never see the text. Then you tried to switch it off with the field you used last year and got a 400. This lesson shows what each setting does on each model, where the hidden bill and the cut-off answers come from, and how to find the lowest setting your task can live with."
+wins:
+  - "Look up a model's thinking default before you assume it: the same empty request thinks on one model and not on another."
+  - "Set effort and max_tokens on purpose, and leave room under max_tokens for the thinking as well as the answer."
+  - "Lower effort first when thinking costs too much. As of Oct 2026 the off switch on Sonnet 5.5 is between_tools, because disabled is a 400."
+  - "Fix effort on both sides before you compare two models on cost or quality."
+  - "Start at the lowest setting the task tolerates, and raise it one step only where a test set gets better."
+quiz:
+  - q: "As of Oct 2026, you send a request with no `thinking` field to Sonnet 5.5. What happens?"
+    options: ["Thinking is off, as it was on older Sonnet models", "The call fails with a 400 until you pick a thinking type", "Adaptive thinking runs, and the thinking is billed as output"]
+    answer: 2
+    explain: "On Sonnet 5.5 an empty thinking field means adaptive thinking, whereas Sonnet 4.6 and earlier ran without it, so an unchanged request can start costing more."
+  - q: "As of Oct 2026, you send `thinking: {\"type\": \"disabled\"}` to Sonnet 5.5 to save money. What do you get?"
+    options: ["A 400 that tells you to send `between_tools` instead", "Thinking switches off and effort is ignored", "The model thinks anyway, and nothing tells you"]
+    answer: 0
+    explain: "Sonnet 5.5 rejects disabled with an invalid_request_error that names between_tools, and between_tools itself returns a 400 at xhigh or max."
+  - q: "Why must a cost comparison between two models fix the effort level on both?"
+    options: ["Effort only changes the price per token", "The default effort differs between models, so two defaults compare different amounts of thinking", "Models refuse to answer when no effort is set"]
+    answer: 1
+    explain: "A model that defaults to high and one that defaults to medium will spend different amounts on the same prompt, and that gap would be mixed into the model comparison."
+  - q: "You set `max_tokens` to 500, enough for the old short answers, and call a model that thinks. A hard request most likely..."
+    options: ["Is unaffected, because thinking does not count toward max_tokens", "Has max_tokens raised for you by the API", "Spends the cap on thinking and stops at `max_tokens` with little text"]
+    answer: 2
+    explain: "Thinking and the visible answer share one cap, and you are billed for the thinking even when the answer is cut off."
+  - q: "Which of these tasks is most likely to waste thinking tokens?"
+    options: ["Labelling support tickets as billing, bug or other", "Scheduling meetings around rules that interact", "Finding the cause of a race condition from a stack trace"]
+    answer: 0
+    explain: "The label is read straight off the input and there are no intermediate steps to get wrong, so extra thinking buys nothing."
+deeper:
+  - { label: "Anthropic - Thinking: what each model does with each setting", href: "https://platform.claude.com/docs/en/build-with-claude/thinking" }
+  - { label: "Anthropic - Effort: levels, defaults and the interaction with thinking", href: "https://platform.claude.com/docs/en/build-with-claude/effort" }
+  - { label: "OpenAI - Reasoning models: effort, reasoning tokens and max_output_tokens", href: "https://developers.openai.com/api/docs/guides/reasoning" }
+  - { label: "Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters (Snell et al.)", href: "https://arxiv.org/abs/2408.03314" }
+---
+
+*Base, instruct, and reasoning models* said that thinking is a mode on an ordinary model, chosen per request. This lesson covers the settings that choose it, which are not the same from one model to the next. Everything about a named model below is as of Oct 2026 and comes from the provider's own documentation, so read the tables as a guide to what to look up, not as a fixed list.
+
+## 1. The default is not shared
+
+A request with no `thinking` field means different things on different models. This is what Anthropic's thinking page says, as of Oct 2026, for five of its models:
+
+| Model | No `thinking` field | Switch thinking off | Fixed `budget_tokens` |
+|---|---|---|---|
+| Sonnet 5.5 | Adaptive thinking runs | `{"type": "between_tools"}`, at low, medium or high effort | 400 error |
+| Haiku 5.5 | Adaptive thinking runs | `{"type": "disabled"}`, at high effort or below | 400 error |
+| Opus 5.5 | Adaptive thinking runs, always | Not possible: `disabled` is a 400 | 400 error |
+| Sonnet 4.6 | No thinking | Already off | Accepted, but deprecated |
+| Sonnet 4.5 | No thinking | Already off | Accepted, and the only way to think |
+
+**Adaptive thinking** means the model reads each request and decides for itself whether to think and for how long. You can read the table as a trap more than a reference. The quiet failure is the migration where you change the model id, send the same request, and thinking now runs.
+
+> Same field, same name, different default. Read the row for the model you are calling, not the one you used last year.
+
+<Compare caption="The same empty request on two Sonnet models, as of Oct 2026. Nothing in your code changed, but the second one can bill thinking you never asked for and return a first block that is not text.">
+  <Panel label="Older model" title="Sonnet 4.6, no thinking field">
+
+It answers straight away. Output tokens are the answer and nothing else, and the response begins with a text block.
+
+  </Panel>
+  <Panel label="Newer model" title="Sonnet 5.5, no thinking field">
+
+It decides whether to think. When it does, the thinking is billed as output, its text arrives empty by default, and the response can begin with a thinking block, so code that reads the first block as text breaks.
+
+  </Panel>
+</Compare>
+
+The other two big providers expose the same idea under other names. OpenAI's reasoning guide, as of Oct 2026, uses `reasoning.effort` with values from `none` to `max`, and says the values a model accepts depend on the model. It lists at least one model where `none` returns a 400, and a default of `medium` for the models it names. Google's thinking page, updated 14 Oct 2026, uses `thinking_level` with `minimal`, `low`, `medium` or `high` depending on the model. It marks thinking as on by default for nearly every model, and documents no way to switch it off on those. I read each page once and did not test either, and the Google page I read mainly covers its Interactions API.
+
+## 2. Two dials, and a bill you cannot see
+
+On Anthropic, `thinking` decides whether the model may think up front, and **effort** decides how hard it works on the whole reply. You set effort at `output_config.effort`, with five levels as of Oct 2026: `low`, `medium`, `high`, `xhigh` and `max`. As of Oct 2026, the default is `high` on Sonnet 5.5 and `medium` on Opus 5.5 and Haiku 5.5, so a request that sets nothing runs at a different level on each.
+
+Effort is soft guidance, not a token count. Anthropic says that at low effort the model still thinks on hard problems, only less. It also reaches past thinking: text and tool calls get terser too.
+
+The old dial was a fixed number, `thinking: {"type": "enabled", "budget_tokens": N}`. As of Oct 2026, on the newest models it returns a 400 that tells you to use adaptive thinking and effort. Anthropic says there is no fixed mapping from a budget to an effort level, so you cannot convert; run your tests at two or three levels instead.
+
+Turn thinking down with effort before you try anything else. As of Oct 2026, Anthropic reports that asking Sonnet 5.5 in the system prompt to think less does not reliably work. Also as of Oct 2026, changing top-level effort between requests breaks prompt caching, so pick one level per conversation. Per-message effort (beta) on Sonnet 5.5, Opus 5.5 and Haiku 5.5 keeps the cache. *Caching and batch: the two big discounts* explains why.
+
+Now the bill. As of Oct 2026, on Sonnet 5.5 the thinking text comes back empty by default, but you are billed for the full thinking, as output tokens, and it counts toward `max_tokens`. The response reports how many in `usage.output_tokens_details.thinking_tokens`. As of Oct 2026, OpenAI does the same under the name `reasoning_tokens`, and Google bills its thought tokens too.
+
+<Budget
+  caption="One reply on a model that thinks by default, with illustrative numbers. The thinking took most of the cap and none of it is readable, so the answer got what was left. The figures are an illustration, not a measurement — count your own."
+  totalLabel="A max_tokens cap of 4,000"
+  unit="tokens"
+  total={4000}
+  segments={[
+    { label: 'Thinking', value: 2600, note: 'Billed as output, text omitted by default', subject: true },
+    { label: 'The visible answer', value: 300, note: 'What you asked for' },
+    { label: 'Unspent headroom', value: 1100, spare: true },
+  ]}
+/>
+
+That sharing is also how the cut-off answer happens. You set `max_tokens` to 500, which was plenty for the old answers. On a hard request the model can spend all 500 on thinking and stop with `stop_reason: "max_tokens"` and little or no text, and you still pay. Anthropic gives two remedies: raise the cap, or lower the effort if the request did not need the thinking. As of Oct 2026, OpenAI describes the same failure as a response with status `incomplete` and the reason `max_output_tokens`, sometimes before any visible output. A second break comes with the first block: code that reads `content[0].text` fails when the first block is a thinking block. Read blocks by their `type`.
+
+Last, comparisons. If one model defaults to `high` and the other to `medium`, running both on defaults compares two amounts of thinking as well as two models. Fix effort on both. One August 2026 preprint on three OpenAI model upgrades did this, holding effort at medium, and also found that answer length changed between versions ([Xu and Wu](https://arxiv.org/abs/2608.17719); not peer reviewed). The Evals course lesson *Regression testing a prompt or model change* covers how to compare properly.
+
+## 3. Finding the lowest setting, and when to skip thinking
+
+The rule from *Base, instruct, and reasoning models* still holds, now with real settings. Begin at the lowest setting your task tolerates, find the requests that fail, and raise it one step at a time. Keep a step only if a test set says it helped. The Evals course lesson *Building an eval set from your own traffic* shows how to build that set.
+
+<Flow
+  caption="The loop for choosing a setting. Each pass costs one run of your test set, and the loop stops the first time the failures stop mattering."
+  steps={[
+    { label: "Start at low", note: "Lowest thinking setting, effort low" },
+    { label: "Run the test set", note: "Same prompts, same effort for every model" },
+    { label: "Do failures remain?", subject: true, branch: ["No: keep this setting", "Yes: raise one step"] },
+  ]}
+  back={{ from: 3, to: 2, label: "Raise effort one step, run again" }}
+/>
+
+Some work should never leave the bottom of that loop. A classifier, an extractor and a rewrite have no intermediate steps to get wrong. As of Oct 2026, OpenAI's guide names classification and latency-critical work as the cases for `none`, and Anthropic says `low` skips thinking for simple tasks. Both are vendor advice, so test it. As of Oct 2026, Anthropic also says no effort level guarantees a thinking block on every request, in either direction, and that in a tool loop the follow-up requests can skip thinking even at `xhigh` and `max`. Research on inference-time compute (Snell and colleagues, 2024) found that sharing extra compute out by prompt difficulty beat a best-of-N baseline, by more than 4x in efficiency. The lesson carries over: spend more only where it helps.
+
+This advice does not apply everywhere. As of Oct 2026, on older models such as Sonnet 4.5, a fixed `budget_tokens` is still the only control. On models you host yourself, how thinking is exposed depends on the model and the server, and those were not checked here. And more thinking is not a cure for a missing fact: *Why models hallucinate* explains why a model that does not know something will still produce an answer.
+
+The script below puts three tasks through the lowest setting and through `high`, and prints where the tokens went. It asks the Models API which off switch the model accepts: `disabled` where that is allowed, `between_tools` where it is not. If you swap in a model that is always on, neither works, so use adaptive thinking at `low` there.
+
+```python
+from anthropic import Anthropic
+
+# Check the models page for current ids; as of Oct 2026 this one is valid.
+MODEL = "claude-sonnet-5-5"
+
+client = Anthropic()
+
+TASKS = {
+    "label": "Answer with one word, billing, bug or other: 'I was charged twice this month.'",
+    "puzzle": (
+        "Alice, Bram and Chen each need one of the three one-hour slots at 9, 10 and 11, "
+        "in one room. Alice cannot take 9. Chen cannot take 11. Bram must come before Chen. "
+        "Give one valid schedule."
+    ),
+    "extract": "Reply with only the invoice number: 'Invoice INV-20418, due 3 Nov, total 412.50 GBP.'",
+}
+
+
+# Ask the Models API how this model switches thinking down, instead of guessing.
+types = client.models.retrieve(MODEL).capabilities.thinking.types
+OFF = {"type": "disabled"} if types.disabled.supported else {"type": "between_tools"}
+SETTINGS = {
+    "lowest": (OFF, "low"),
+    "high": ({"type": "adaptive"}, "high"),
+}
+
+
+def run(prompt, thinking, effort):
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=16000,  # thinking and the answer share this one cap
+        thinking=thinking,
+        output_config={"effort": effort},
+        messages=[{"role": "user", "content": prompt}],
+    )
+    usage = response.usage.model_dump()
+    used = (usage.get("output_tokens_details") or {}).get("thinking_tokens")
+    text = next((b.text for b in response.content if b.type == "text"), "")
+    return usage["output_tokens"], used, response.stop_reason, text.strip()
+
+
+for name, prompt in TASKS.items():
+    for label, (thinking, effort) in SETTINGS.items():
+        total, used, stop, text = run(prompt, thinking, effort)
+        print(f"{name:8}{label:7} output={total:5} thinking={used} stop={stop} {text[:50]!r}")
+```
+
+You will see six lines, one per task and setting, each with the billed output tokens, the thinking share of them, and the stop reason. Expect the label and the extraction to cost about the same on both lines, and the puzzle to be where `high` spends more. No numbers are printed here because they depend on your prompts and the model, and effort is soft guidance. The request was built with the current SDK and checked against the shape Anthropic documents, but no live response was seen, so your first run is the first measurement. If `thinking` prints `None`, your SDK or model does not report the breakdown. If `stop` reads `max_tokens`, raise the cap. Swap in your own three tasks before you decide anything.
