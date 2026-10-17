@@ -3,121 +3,94 @@ title: "Retries and fallbacks"
 subtitle: "Turn a validation failure into a second attempt the model can actually get right."
 part: 3
 minutes: 7
-why: "Your validator now rejects bad responses, which is progress, except that a rejection is still a five hundred to whoever called you. So you wrapped the call in a retry loop, and it mostly did not help — the same prompt came back with the same missing field, three times, and cost you three times as much. The fix is small and slightly surprising: show the model the error. This lesson covers what to retry, what never to retry, how many times, and what to do when the retries run out."
+why: "You sorted every reply into finished, cut off or refused, and your validator rejects the bad ones. A rejection is still a five hundred to whoever called you. So you wrapped the call in a retry loop, and it mostly did not help: the same prompt came back with the same unknown owner three times, and it cost three times as much. The fix is small and slightly surprising: show the model the error. This lesson covers what to retry, what never to retry, how many times, and what to do when the retries run out."
 wins:
-  - "On a validation failure, retry with the error message included — never blindly."
-  - "Cap retries at two; a third failure means the prompt is wrong, not unlucky."
-  - "Retry malformed output, 429s and timeouts; never retry a wrong answer or a 400."
-  - "Break a stuck loop by changing the request, not by hoping for different sampling."
-  - "Put a hard budget cap on the loop, and fail loudly rather than silently."
+  - "Sort the failure first; retry only what a second call can change."
+  - "On a validation failure, retry with the error attached — never blindly."
+  - "Cap the loop at three attempts; a third failure means the prompt is wrong, not unlucky."
+  - "Never resend a refusal or a 400 unchanged; fix the prompt or the request, or change the model where the category allows it."
+  - "Put a hard budget on the loop, and fail loudly rather than silently."
 quiz:
-  - q: "Validation fails. The retry most likely to succeed is the one that..."
-    options: ["Sends the same prompt again, unchanged", "Sends the prompt again with the validation error appended to the conversation", "Switches straight to a larger model"]
-    answer: 1
-    explain: "The model can usually fix a problem it can see; a blind retry hides the only useful information you have."
-  - q: "How many retries before you should suspect the prompt rather than bad luck?"
-    options: ["Two — a third failure is usually a prompt problem", "Ten, because models are noisy", "None, always fail on the first error"]
+  - q: "Your check rejects a reply because the owner does not exist. The retry most likely to succeed is the one that..."
+    options: ["Appends the bad reply and the error text, then asks for a corrected object", "Sends the same prompt again, unchanged", "Switches straight to a larger model"]
     answer: 0
-    explain: "Two repair attempts catch nearly all recoverable failures; beyond that you are paying to repeat a design flaw."
-  - q: "Which of these is not worth retrying?"
-    options: ["A 429 rate limit response", "A request that timed out", "A 400 saying your image is over the size limit"]
+    explain: "The model can usually fix a problem it can see; a blind retry hides the only useful information you have."
+  - q: "A reply arrives as HTTP 200 with stop_reason set to refusal. What is the right move?"
+    options: ["Retry it with backoff, like a 429", "Append the refusal and ask again more politely", "Read the category, discard partial output, then fix the prompt or change the model — not just resend"]
     answer: 2
+    explain: "An identical resend to the same model usually draws the same refusal, and some categories are billed every time."
+  - q: "Which of these is not worth retrying?"
+    options: ["A 400 caused by a setting your own code sends", "A 429 rate limit response", "A request that timed out"]
+    answer: 0
     explain: "A 400 describes something wrong with the request itself, so an identical retry fails identically."
   - q: "An identical retry keeps producing an identical failure. The move that reliably breaks it is..."
-    options: ["Sending it a fourth and a fifth time", "Changing the request — attach the error, reword the instruction, reorder an example", "Lowering `max_tokens` so it commits sooner"]
-    answer: 1
-    explain: "A second attempt only takes a different path if something about the request changed; sampling alone may not differ enough to escape."
+    options: ["Changing the request — attach the error, reword the instruction, reorder an example", "Sending it a fourth and a fifth time", "Lowering the token cap so it commits sooner"]
+    answer: 0
+    explain: "A second attempt takes a different path only if something about the request changed."
   - q: "The last rung of a fallback ladder should be..."
     options: ["Retrying forever with backoff", "Silently returning an empty result", "Failing loudly so a human finds out"]
     answer: 2
     explain: "A silent failure becomes a data quality problem you discover weeks later; a loud one gets fixed."
 deeper:
+  - { label: "Anthropic — refusals and fallback", href: "https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback" }
   - { label: "Anthropic — rate limits", href: "https://platform.claude.com/docs/en/api/rate-limits" }
   - { label: "Anthropic — errors and error codes", href: "https://platform.claude.com/docs/en/api/errors" }
   - { label: "AWS — exponential backoff and jitter", href: "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/" }
   - { label: "Google SRE Book — handling overload", href: "https://sre.google/sre-book/handling-overload/" }
 ---
 
-Everything in *Validating what comes back* ends in an exception. That is the right place to be — the bad value never reached your database. It is not a good place to stop, because your user still got nothing. This lesson is about the space between "we rejected it" and "we failed".
+Everything in *Validating what comes back* ends in an exception. That keeps the bad value out of your database, but your user still got nothing. This lesson is about the space between "we rejected it" and "we failed".
 
-## 1. Retry with the error attached, not blindly
+## 1. Sort the failure, then decide
 
-This is the single biggest win in the lesson, and it is one line of code.
+Retrying the wrong failure is worse than not retrying: you pay, and you still fail.
 
-When your validator rejects a response, you are holding an error message that says precisely what was wrong: `urgency: input should be less than or equal to 5`. Append the failed response and that error to the conversation and ask again. The model can nearly always fix a problem it can see.
-
-The conversation ends up looking like this:
-
-1. Your original prompt.
-2. The assistant's bad response, as an assistant turn.
-3. A user turn: this failed validation, here is the error, return the corrected object only.
-
-That third turn is doing something a blind retry never does. A blind retry asks the identical question and hopes for different sampling. The repair turn asks a narrower, easier question — fix this specific thing — with the answer mostly written already.
-
-Two details make it work:
-
-- **Pass the validator's own error text.** Do not summarise it into "that was wrong". Pydantic and Zod produce messages that name the field and the constraint, which is exactly what the model needs.
-- **Do not re-send the whole instruction set.** The rules are already in the conversation. Repeating them at higher volume just adds tokens.
-
-> A blind retry asks the same question again. A retry with the error attached asks a different, easier one.
-
-<Flow
-  caption="The one loop this lesson relies on: a failure the model can see is a failure it can usually fix, and the retry differs from the first call only in what got appended to the conversation before it went out again."
-  steps={[
-    { label: 'Call the model', note: 'The conversation so far, plus whatever the last turn added' },
-    {
-      label: 'Validate the response',
-      subject: true,
-      branch: ['Passes — return it to the caller', "Fails — hold the validator's own error text"],
-    },
-    { label: 'Append the bad response and the error', note: 'Both go back in as turns, not summarised' },
-  ]}
-  back={{ from: 3, to: 1, label: 'Ask again — a narrower question than the first call' }}
-/>
-
-## 2. What to retry, and how many times
-
-Retrying the wrong failure is worse than not retrying, because you pay for it and you still fail.
-
-<Figure bare caption="Nine kinds of failure, sorted by whether a second try can possibly go differently: everything transient or model-visible is worth retrying, and everything that describes the request itself is not.">
+<Figure bare caption="Eight kinds of failure, sorted by whether a second try can go differently: transient ones and ones the model can see are worth retrying, and ones that describe the request itself are not.">
 
 | Failure | Retry? | Why |
 |---|---|---|
-| Malformed or invalid output | Yes, with the error attached | The model can see and fix it |
-| Truncated response | Yes, after raising `max_tokens` | The retry is pointless without the change |
-| 429 rate limited | Yes, with backoff | It is a timing problem, not a request problem |
-| 500 / 503 / connection reset | Yes, with backoff | Transient on the provider side |
-| Request timeout | Yes, with backoff | Same, but watch your own deadline |
-| Well-formed but wrong answer | No | The model was consistent, not unlucky. Fix the prompt |
-| 400 bad request | No | Something about the request is invalid; an identical retry fails identically |
-| 401 / 403 | No | Credentials or permissions. Retrying is noise |
-| Content refused by the model | No | Retrying a refusal is how you build a tool that begs |
+| Your checks reject it (unknown owner, quote not in the source) | Yes, with the error attached | The model can see it and fix it |
+| Does not parse, or wrong shape | Yes, the same way | Rare under decoder-enforced schemas |
+| Cut off (`stop_reason: "max_tokens"`) | Yes, after a higher cap, or lower effort if it over-thought | Thinking counts against the cap (vendor, as of October 2026) |
+| 429, 500, 503, timeout | Yes, with backoff | Timing, not your request |
+| Refusal (HTTP 200, `stop_reason: "refusal"`) | Not the same request on the same model | Discard partial output. `cyber`, `frontier_llm`: another model (fallback is beta). `reasoning_extraction`: fix your prompt. `bio`, `general_harms`: stop |
+| Well-formed but wrong | No | The model was consistent, not unlucky. Fix the prompt |
+| 400 from your own settings | No | On Sonnet 5.5 as of September 2026: `thinking: disabled`, `budget_tokens`, forced `tool_choice` |
+| Other 400, 401, 403 | No | The request or the key is wrong |
 
 </Figure>
 
-**Cap the attempts at three total — the first try plus two repairs.** Two repairs catch nearly everything recoverable. A third failure on the same input is not bad luck; it means the prompt is asking for something the model is not reliably able to give, and no number of attempts fixes a design problem. Let it fail and go and look at the prompt.
+**Cap the attempts at three: the first try plus two repairs.** That number is this course's rule of thumb, not a measured one; the vendor's Sonnet 5.5 guide, as of October 2026, suggests a single retry for a failed field check. A third failure on the same input is not bad luck: the prompt asks for something the model does not reliably give. Let it fail and go and look.
 
-For the rate-limit and overload cases, the retry needs a delay, and the delay needs jitter — exponential backoff with a random component, so that a thousand clients that failed together do not retry together. The rate-limit lesson in the **LLMs** course covers the headers to read and the token-bucket behaviour behind them; the point here is only that a 429 belongs in a different branch from a validation failure, with a sleep in it.
+Rate limits and overload need a delay, and the delay needs jitter: exponential backoff with a random part, so a thousand clients that failed together do not retry together. The **LLMs** course covers the headers; here, a 429 just gets its own branch, with a sleep in it.
 
-One more knob, and a caveat about it that has become the more important half. The classic move here was **temperature**. If your first call runs at temperature 0 the sampling is close to deterministic, so a blind retry with identical input tends to reproduce the identical failure, and nudging the retry to 0.3 or 0.4 introduces enough variation to take a different path. That still works on OpenAI models, and on any open-weight model you run yourself.
+> A blind retry asks the same question again. A retry with the error attached asks a different, easier one.
 
-It is not a universal dial any more. Anthropic's current models do not accept `temperature` at all — anything but the default value is a 400, and `top_k` and most values of `top_p` go the same way. There is no replacement knob, and you do not need one here, because the trap it got you out of was a temperature-0 trap in the first place: leave the sampling alone and two identical calls already differ a little. So the durable version of this move is not about the sampler at all. **If a loop is stuck, change the request.** Attach the error, reword the instruction, drop or reorder an example, or go up a rung of the ladder below. That works on every model, and it is the better move anyway — it makes the second attempt better informed rather than merely different.
+## 2. Retry with the error attached
 
-## 3. The fallback ladder, and the bill
+This is the biggest win in the lesson, and it is one line of code. A rejected reply comes with an error that says exactly what was wrong: `unknown owner 'dave'`. Append the failed reply and that error to the conversation and ask again. The model can usually fix a problem it can see.
 
-When the retries run out, you need somewhere to go. Decide the order in advance, per feature, because the right answer differs:
+A blind retry repeats the question and hopes for different sampling. The repair turn asks a narrower one: fix this specific thing, with the answer mostly written already. Two details make it work:
+
+- **Pass your own error text.** Do not summarise it to "that was wrong". Pydantic and Zod messages name the field and the constraint.
+- **Do not re-send the instructions.** They are already in the conversation.
+
+Be honest about the size of this. Under a decoder-enforced schema the shape failures that made retry famous mostly vanish. What is left is meaning: an owner who does not exist, a quote not in the source. Those suit a repair turn, because the error is specific.
+
+Append, never edit. A repair call that adds two turns at the end leaves the earlier request identical, so it can plausibly read the prompt cache from the first call. That is an inference from how prefix caching works, not something the vendor says about retries. Rewriting an earlier turn, or changing effort or thinking between calls, breaks the prefix, and as of October 2026 editing history can also invalidate replayed thinking blocks.
+
+If a loop is stuck anyway, **change the request**: attach the error, reword the instruction, reorder an example, or go up a rung of the ladder below. Some providers let you raise temperature on a retry. This course has not checked whether a given Claude model accepts it, so do not build on it.
+
+## 3. The ladder, the bill, and one loop
+
+When the retries run out, you need somewhere to go. Decide the order in advance, per feature:
 
 1. **Repair retry.** Same model, error attached. Cheapest, fixes most things.
-2. **A stronger model.** Worth a rung when the task is genuinely at the edge of what the smaller model can do. Slower and more expensive, which is why it is not rung one.
-3. **A deterministic default.** A regex, a lookup table, a rule, or simply the safe value — `category: other`, `confidence: 0`, an empty list. Not clever, always available.
-4. **Fail loudly.** Raise, alert, put the case somewhere a human will see it.
+2. **A different or stronger model.** Worth a rung at the edge of the first model's skill, or when a refusal category allows it. Slower and dearer, and it starts without the first model's thinking: blocks it cannot read are dropped silently.
+3. **A deterministic default.** A regex, a lookup, or the safe value, such as `owner: null`.
+4. **Fail loudly.** Raise, alert, put the case where a human will see it.
 
-Never make rung four a silent success. Returning an empty result and a 200 turns a visible outage into a quiet data quality problem you discover a month later, in a report.
-
-Two guard rails around the whole thing:
-
-- **A budget cap.** Count attempts and tokens per request, and stop at a ceiling you chose. A retry loop that fires on every item of a large batch is how a small bug becomes a large invoice.
-- **Idempotency.** If the operation has an effect — sending a message, charging a card, writing a row — a retry must not do it twice. Give each logical request a key, and check the key before you act. The model call is safe to repeat. What you do with its answer usually is not.
+Never make rung four a silent success: an empty result with a 200 hides an outage until a report is wrong next month. Two guard rails go around it all. **A budget cap:** count attempts and tokens per request and stop at a ceiling, because a retry loop over a large batch is how a small bug becomes a large invoice. **Idempotency:** if the answer triggers an effect, such as a message sent or a row written, a retry must not do it twice, so give each logical request a key and check it first. The model call is safe to repeat; what you do with its answer often is not.
 
 ```python
 import logging
@@ -125,77 +98,115 @@ import random
 import time
 
 from anthropic import Anthropic, APIStatusError
-from pydantic import ValidationError
+from pydantic import BaseModel, Field
 
 client = Anthropic()
 log = logging.getLogger(__name__)
-MAX_ATTEMPTS = 3          # first try, plus two repairs
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+OWNERS = {"alice", "bob", "priya"}
+MAX_ATTEMPTS = 3   # first try, plus two repairs
 
-def call_with_repair(messages, validate):
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+class Ticket(BaseModel):   # the triage model from Validating what comes back
+    urgency: int = Field(ge=1, le=5)   # checked here, because the decoder cannot hold a range
+    owner: str | None
+    quote: str
+
+# By hand, not parse(), so the raw reply stays in your hands for the repair turn.
+TICKET_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "urgency": {"type": "integer"},
+        "owner": {"type": ["string", "null"]},
+        "quote": {"type": "string"},
+    },
+    "required": ["urgency", "owner", "quote"],
+    "additionalProperties": False,
+}
+
+def check(ticket: Ticket, source: str) -> None:
+    if ticket.owner is not None and ticket.owner not in OWNERS:
+        raise ValueError(f"unknown owner {ticket.owner!r}; use null if no listed owner is named")
+    if ticket.quote not in source:
+        raise ValueError("quote does not appear in the source text")
+
+def triage(source: str) -> Ticket:
+    messages = [{"role": "user", "content": source}]
+    max_tokens = 2000   # thinking counts against this
     for attempt in range(MAX_ATTEMPTS):
         try:
             resp = client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=400,
-                messages=messages,      # the repair turn below is what breaks a stuck loop
+                model=MODEL, max_tokens=max_tokens, system="Triage the ticket. Use null for an owner the text does not name.",
+                messages=messages,
+                output_config={"format": {"type": "json_schema", "schema": TICKET_SCHEMA}},
             )
         except APIStatusError as err:
             if err.status_code in (429, 500, 503) and attempt < MAX_ATTEMPTS - 1:
                 time.sleep(2 ** attempt + random.random())   # backoff with jitter
                 continue
-            raise                                            # 400, 401 - do not retry
+            raise   # a 400 is your request, a 401 is your key
 
-        text = resp.content[0].text
+        if resp.stop_reason == "max_tokens":
+            max_tokens *= 2   # the same request with more room, not a repair turn
+            continue
+        if resp.stop_reason != "end_turn":
+            raise RuntimeError(f"no usable answer: {resp.stop_reason}")   # a refusal is never resent as is
+
+        reply = text_of(resp)
         try:
-            return validate(text)
-        except ValidationError as err:
-            log.warning("validation failed on attempt %s", attempt, extra={"raw": text})
-            messages = messages + [
-                {"role": "assistant", "content": text},
-                {"role": "user", "content":
-                    f"That response failed validation:\n{err}\n"
-                    "Return only the corrected object."},
+            ticket = Ticket.model_validate_json(reply)   # its ValidationError is a ValueError
+            check(ticket, source)
+            return ticket
+        except ValueError as err:
+            log.warning("attempt %s rejected: %s", attempt, err, extra={"raw": reply})
+            messages = messages + [   # append only, so the earlier prefix stays identical
+                {"role": "assistant", "content": reply},
+                {"role": "user", "content": f"That ticket failed a check:\n{err}\nReturn only the corrected ticket."},
             ]
-
-    raise RuntimeError("could not get a valid response in 3 attempts")
+    raise RuntimeError(f"no valid ticket in {MAX_ATTEMPTS} attempts")
 ```
 
+The parameter spellings come from the vendor's docs as of October 2026 and were not run here, so test against your SDK version first. Now the loop on a ticket that says "Charged twice in March, give this to dave."
+
 <Steps
-  caption="The loop above, run through by hand: three attempts at most, and each failure adds exactly two turns to messages before the next call goes out."
+  caption="One run of the loop, invented for illustration: a cut-off, a repair, then a pass. A cut-off adds no turns; a rejection adds exactly two."
   steps={[
     {
       label: 'Attempt 0',
-      title: 'The first call',
-      body: 'resp comes back and validate(text) raises ValidationError. The bad response and the error both get appended as new turns.',
+      title: 'Cut off',
+      body: 'No usable text. Nothing is appended; the same request goes out again with a bigger cap.',
       facts: [
-        { label: 'attempt', value: '0' },
-        { label: 'messages', value: 'as passed in' },
-        { label: 'on failure', value: 'append assistant + user, continue' },
+        { label: 'stop_reason', value: 'max_tokens' },
+        { label: 'next cap', value: '4000' },
+        { label: 'turns added', value: '0' },
       ],
     },
     {
       label: 'Attempt 1',
-      title: 'The first repair',
-      body: "The model sees its own bad answer and the validator's error in the same conversation. If it fails again, one repair is still left.",
+      title: 'Rejected, repaired',
+      body: 'It parses, but dave is not in OWNERS. The bad reply and the error go in as two new turns.',
       facts: [
-        { label: 'attempt', value: '1' },
-        { label: 'messages', value: '+ bad answer + error' },
-        { label: 'on failure', value: 'append again, continue' },
+        { label: 'stop_reason', value: 'end_turn' },
+        { label: 'caught by', value: 'check(): unknown owner' },
+        { label: 'turns added', value: '2' },
       ],
     },
     {
       label: 'Attempt 2',
-      title: 'The last try',
-      body: 'attempt < MAX_ATTEMPTS - 1 is now false. A further ValidationError is not caught here — it falls through to the RuntimeError below the loop.',
+      title: 'Passes',
+      body: 'The model sees its answer and the error, returns owner null, and the checks pass.',
       facts: [
-        { label: 'attempt', value: '2' },
-        { label: 'messages', value: '+ bad answer + error' },
-        { label: 'on failure', value: 'RuntimeError: could not get a valid response' },
+        { label: 'stop_reason', value: 'end_turn' },
+        { label: 'turns added', value: '0' },
       ],
     },
   ]}
 />
 
-Note what the loop does not contain: no retry on a wrong answer, no unbounded attempts, no swallowed exception at the end. It either returns something your validator accepted, or it raises where somebody will notice.
+**The failure this prevents.** Say a team's wrapper retries every non-finished reply up to three times. A prompt change adds "write your reasoning in a `trace` field", and some calls start returning `reasoning_extraction` refusals. Each ticket now draws the same refusal three times, and as of September 2026 the vendor bills that category even when it refuses before any output. The dashboard shows flakiness; the bill shows the truth. Sorting by `stop_reason` first would have named the cause in one log line.
 
-That covers failures your own system caused. The next lesson is about failures that arrive on purpose.
+**When not to use it.** A prototype needs no ladder; three attempts and a raise is the whole feature. Skip the repair loop where the call has side effects and you have no keys to make a second pass harmless. Skip it where latency is tight: every repair is another full call, so a user-facing path can double its wait. And do not use it to hide a prompt that fails often. If more than a few percent of calls need a repair, read the logged replies and fix the prompt, as in *Versioning and testing prompts*.
+
+Next: those were failures your own system caused; *Prompt injection* is about the ones that arrive on purpose.
