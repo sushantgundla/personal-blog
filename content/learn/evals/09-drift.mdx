@@ -78,7 +78,7 @@ This is the golden set from *Building an eval set from your own traffic*, and it
 
 Three things make this work in practice rather than becoming a dashboard nobody reads:
 
-- **Pin the dated model id**, per *Switching models safely*, so a version change on the provider's side cannot happen without you at least knowing which id you are calling — a moving alias makes this whole exercise pointless, because you would be scoring a target that already changed under the alias before your test even ran.
+- **Pin the exact model id**, per *Switching models safely*, so a version change on the provider's side cannot happen without you at least knowing which id you are calling — a moving alias makes this whole exercise pointless, because you would be scoring a target that already changed under the alias before your test even ran.
 - **Store the score with its date and the exact model id it ran against.** A history of numbers with no id attached cannot tell you whether a dip lines up with a version change you can find in a deprecation notice.
 - **Alert on your own baseline, not on a provider announcement.** A published changelog is a nice confirmation after the fact. It is not a detector, because plenty of what changes a model's behaviour is never published as a change at all.
 

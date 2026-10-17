@@ -7,7 +7,7 @@ import s from '../sheet.module.css'
  * FIG. 2 — LLMs. The model layer, and the choosing around it.
  *
  * FIG. 1 draws this stage as one object: a stack of plates with attention
- * across them. That is one lesson out of twelve. Three of this course's
+ * across them. That is one lesson out of eighteen. Three of this course's
  * four parts are about providers, bills, open weights and picking — so
  * this detail draws the choosing at the same scale as the machine, and the
  * machine stops being the whole sheet.
@@ -20,7 +20,7 @@ import s from '../sheet.module.css'
  *   the three bars     rate ceilings, with a return line under them
  *   the enclosure      frozen weights, one attention step, repeated
  *   the picket         the spread of possible next tokens
- *   the three rings    the sampling knobs; two are struck out
+ *   the three rings    the sampling knobs, all three struck out
  *   the low enclosure  the same weights, on a machine you own
  *   the switch         five candidates, five contacts, one wired through
  *
@@ -115,13 +115,13 @@ function LlmsDetail({ k }: { k: BayKey }) {
 
         {/* Sampling. A picket of possible next tokens hanging off the
             line, and the three knobs that used to choose between them —
-            two struck out, because providers are taking them away. */}
+            all three struck out, because providers have taken them away. */}
         <path
           className={s.thin}
           d="M826 292V377M842 292V356M858 292V337M874 292V324M890 292V313M906 292V305"
         />
-        <circle className={s.thin} cx="845" cy="237" r="15" />
-        <path className={s.thin} d="M845 237L856 226" />
+        <circle className={s.dropped} cx="845" cy="237" r="15" />
+        <path className={s.dropped} d="M834 226L856 248M856 226L834 248" />
         <circle className={s.dropped} cx="888" cy="237" r="15" />
         <path className={s.dropped} d="M877 226L899 248M899 226L877 248" />
         <circle className={s.dropped} cx="931" cy="237" r="15" />
@@ -299,7 +299,7 @@ export const detail: Detail = {
     'It crosses the line onto somebody else’s machine through a meter, which counts every token in and every token back out.',
     'Three ceilings sit above the line. A request that hits one is turned back and sent again.',
     'Inside the enclosure the weights are frozen, and one attention step runs across the tokens, repeated at every layer.',
-    'What leaves the stack is a spread of possible next tokens. Three knobs used to choose between them; two are struck out, because the providers are taking them away.',
+    'What leaves the stack is a spread of possible next tokens. Three knobs used to choose between them; on the newest models all three are struck out, because the providers have taken them away.',
     'The same weights can sit in a second enclosure on your own machine, on your side of the line, where nothing is metered and the height of the box is the memory you have to find.',
     'Five candidates arrive at a switch: three struck out on your own cases, the provider, and your own box. One is wired through, and that is the model you get. Throwing the switch is how you change it.',
   ],
