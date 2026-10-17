@@ -1,0 +1,163 @@
+---
+title: "Steering how much it thinks"
+subtitle: "Effort is the dial, the prompt is the weak second lever, and every token of thinking is billed."
+part: 2
+minutes: 7
+why: "You moved an invoice-total job to a newer model and the answers got worse, but only on the long invoices with discounts and tax. Or the opposite: your support classifier got slower and dearer overnight and nothing in the prompt changed. Both are the same setting, how much the model thinks before it writes. You can turn it, but not where most people first reach, which is a sentence in the prompt. This lesson gives you the dials in the order to try them, the one prompt line that does work, and the two ways the bill and the cache surprise you."
+wins:
+  - "Set effort first, and reach for prompt wording only when effort alone does not fit."
+  - "Lower effort to make a model think less, because a line in the prompt asking for it does not reliably work on Sonnet 5.5."
+  - "When the answer is JSON only, add one closing line asking it to think the problem through, since a bare schema leaves no room to work."
+  - "Size max_tokens for the thinking as well as the reply, and read thinking_tokens to see what you paid."
+  - "Pick one effort per conversation, and re-test the setting on your own cases whenever the model changes."
+quiz:
+  - q: "You want a model to think less on easy requests. Which lever do you try first?"
+    options: ["Lower the effort setting", "Tell it in the system prompt to answer directly", "Cut max_tokens until it has no room to deliberate"]
+    answer: 0
+    explain: "Effort is the calibrated control, while the vendor reports that a think-less sentence in the prompt does not reliably work on Sonnet 5.5."
+  - q: "Your effort setting is high and a reply arrives with stop_reason set to max_tokens and no text. The likeliest cause is..."
+    options: ["The schema was too complex to compile", "The model refused the request", "A cap sized for the reply alone, with thinking using it up"]
+    answer: 2
+    explain: "Thinking tokens count against max_tokens, so a limit that suited a no-thinking answer can be spent before the reply starts."
+  - q: "A JSON-only task with several steps loses accuracy at low effort. The vendor's cheap fix is..."
+    options: ["Add a closing line asking the model to think the problem through before it answers", "Add a reasoning field to the schema so it can show its working", "Ask for the answer first and the explanation after"]
+    answer: 0
+    explain: "With only the JSON as visible output, the working has to happen in thinking, which low effort often skips; the one line prompts it."
+  - q: "Midway through a conversation your code switches effort from medium to low. What does that do?"
+    options: ["Nothing, because effort only affects output length", "It returns a 400, because effort cannot change in a conversation", "It invalidates the cached prefix, so the next call pays to write the cache again"]
+    answer: 2
+    explain: "Effort is rendered into the prompt, so changing the top-level value restarts the cache, and the vendor's advice is one setting per conversation."
+  - q: "You compare two effort settings by running one invoice through each and the higher one wins. What have you learned?"
+    options: ["Very little, because one case cannot show how often either setting is right", "That the higher setting is better on this model", "That the lower setting should be dropped"]
+    answer: 0
+    explain: "Levels are recalibrated for each model and thinking varies per request, so only a set of your own cases, run the same way for each setting, tells you anything."
+deeper:
+  - { label: "Anthropic — steering thinking and cost", href: "https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost" }
+  - { label: "Anthropic — the effort parameter", href: "https://platform.claude.com/docs/en/build-with-claude/effort" }
+  - { label: "Anthropic — prompting Claude Sonnet 5.5", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5" }
+  - { label: "Anthropic — prompting Claude Haiku 5.5", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-haiku-5-5" }
+  - { label: "Anthropic — prompting best practices", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" }
+---
+
+This is not a lesson about making the model smarter, and it is not about asking for the working in the answer. *Thinking out loud* gave you the mechanism. This one is the control panel: how much thinking a call gets, what that costs, and which knob actually moves it.
+
+## 1. Two dials, in this order
+
+**Effort comes first.** It is a request setting, `output_config.effort`, with five levels: `low`, `medium`, `high`, `xhigh`, `max`. As of October 2026 the default is `high` on most models, `medium` on Opus 5.5 and Haiku 5.5. Setting it to the default is the same as leaving it out. Three facts about it are easy to miss.
+
+It is soft guidance, not a token budget, so there is no number of thinking tokens to set. It covers all output tokens — the reply text, tool-call arguments and thinking — so it still does something with thinking switched off. And the levels are recalibrated per model. The vendor says outright that Sonnet 5.5's levels are not Sonnet 5's, so a setting you tuned last quarter does not carry over. Re-run your cases.
+
+<Figure bare caption="What the vendor says each level does, as of October 2026. The levels are names for behaviour, not token counts, and the notes come from different models, so check yours.">
+
+| Level | What the vendor reports |
+|---|---|
+| `low` | On Sonnet 5.5, skips thinking on most simple requests. On Haiku 5.5 in long agent prompts, likelier to skip a search or a check |
+| `medium` | On Sonnet 5.5, thinks briefly before nearly every reply, even a greeting |
+| `high` | The default on most models. Where you start |
+| `xhigh` | Best accuracy in the vendor's JSON reasoning test. Cannot be combined with the thinking-off setting |
+| `max` | On Opus 4.7, often adds cost for a small gain. Use only if you measured it |
+
+</Figure>
+
+One more fact, from the vendor's thinking page: thinking is adaptive. A turn can have no thinking block, at any level, so do not write code that expects one. In a tool loop, later requests that only process tool results can skip it.
+
+**Prompt wording comes second.** The vendor offers sentences for both directions: a line saying thinking adds latency so use it only for multistep problems, or "think carefully" on a task that needs it. They are wording-sensitive, and the direction that matters most does not hold up. In its own testing, as of October 2026, the vendor reports that a system-prompt request to think less does not reliably reduce thinking on Sonnet 5.5, and telling Haiku 5.5 to answer directly did not stop it thinking. Its advice is to lower effort instead. Effort is calibrated; a sentence is not.
+
+Whatever you change, compare with and without it on a sample of real traffic: how often it thinks, output tokens, latency, quality. Thinking less can cost accuracy on exactly the tasks that needed the thinking.
+
+## 2. A worked example: an invoice that needs working out
+
+Take an invoice that has to come back as one amount due: line items, a volume discount on some of them, then tax on the discounted total. It returns as JSON through a schema, per *Output contracts*. That is the awkward case. The only visible output is the object, so every bit of working has to happen in thinking, and at low or medium effort the model often skips it. The vendor reports lost accuracy on multi-step tasks of this kind.
+
+The cheap fix is one line at the end of the system prompt. The vendor's Sonnet 5.5 guide gives it as "Think the problem through before you answer". The sample below runs the three settings over your own cases and prints accuracy beside thinking tokens per call.
+
+```python
+import json
+from anthropic import Anthropic
+
+client = Anthropic()
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+SYSTEM = "Read the invoice and give the amount due after discounts and tax. Apply the invoice's own terms."
+NUDGE = "\nThink the problem through before you answer."   # last line of the system prompt
+AMOUNT = {
+    "type": "object",
+    "properties": {"amount_due_minor_units": {"type": "integer"}},   # cents; no room for working
+    "required": ["amount_due_minor_units"],
+    "additionalProperties": False,
+}
+
+def amount_due(invoice: str, effort: str, nudge: bool) -> tuple[int, int]:
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=4000,   # thinking counts against this, so leave room
+        system=SYSTEM + (NUDGE if nudge else ""),
+        output_config={"effort": effort, "format": {"type": "json_schema", "schema": AMOUNT}},
+        messages=[{"role": "user", "content": invoice}],
+    )
+    # A cut-off or refused reply is a failure, however the body looks.
+    if resp.stop_reason != "end_turn":
+        raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+    thinking = resp.usage.output_tokens_details.thinking_tokens   # billed, shown or not
+    return json.loads(text_of(resp))["amount_due_minor_units"], thinking
+
+CASES = [...]   # (invoice text, expected cents) pairs, from real failures
+
+for effort, nudge in [("low", False), ("high", False), ("high", True)]:
+    right, spent = 0, 0
+    for invoice, want in CASES:
+        try:
+            got, used = amount_due(invoice, effort, nudge)
+        except RuntimeError:
+            got, used = None, 0   # a failed call counts as wrong
+        right += got == want
+        spent += used
+    print(effort, nudge, f"right {right}/{len(CASES)}", f"thinking {spent // len(CASES)} per call")
+```
+
+The parameter spellings, including `output_config` carrying both `effort` and `format`, are copied from the vendor docs as of October 2026, not run here, so try them on your SDK version first. The table is what the vendor reports for this task, not what the script prints.
+
+<Figure bare caption="The vendor's report on JSON-only reasoning tasks, as of October 2026. Vendor-run, with no sample sizes published, so treat the direction as a hypothesis to test, not a number to rely on.">
+
+| Setting | What it reports | Cost direction |
+|---|---|---|
+| `low`, no line | Often skips thinking, loses accuracy on multi-step work | Lowest |
+| `high`, no line | The default, and the baseline | Middle |
+| `high`, closing line | Accuracy close to `xhigh` | A modest rise in tokens |
+| `low` or `medium`, closing line | Helps, but does not reach `high` | A larger rise than at `high` |
+
+</Figure>
+
+What the schema cannot hold is the working itself. Do not add a `reasoning` field to buy it back. As of September 2026 that shape can draw a refusal, and *Stop reasons and refusals* covers what that costs.
+
+## 3. What it costs, and how it breaks
+
+Thinking is billed as output, at its full internal size, whatever you choose to display. A summary of the thinking is free, but it is shorter than what you paid for. To see the split, read `usage.output_tokens_details.thinking_tokens`, as the sample does. The vendor's own example response shows 312 of 348 output tokens as thinking, one example and not a typical ratio. When you stream it only appears on the final event.
+
+`max_tokens` is the hard cap, and it covers thinking plus the visible reply. A limit sized for a no-thinking answer is often too small once thinking starts, and the call ends with `stop_reason: "max_tokens"`. The vendor's two fixes: raise the cap if the answers needed the reasoning, lower effort if they were over-thought. Effort itself is soft, so `max_tokens` is the only hard bound you have.
+
+**Failure case: the sentence that did not work.** Say a classifier is slow and dear on Sonnet 5.5, so the team adds "Answer directly. Do not deliberate." to the system prompt. Thinking carries on, because the vendor says that wording does not reliably reduce it on this model, and `thinking_tokens` barely moves. Worse, with thinking at its off setting (`{"type": "between_tools"}` on Sonnet 5.5, accepted at `high` effort or lower) the vendor warns that telling the model not to think makes internal tags more likely to leak into visible text. The fix is the dial, set to `low`, and a before-and-after on a sample.
+
+<Compare caption="Two ways to get less thinking out of Sonnet 5.5. Only the second is the vendor's recommendation, and neither replaces measuring.">
+  <Panel label="Naive" title="Ask in the prompt">
+
+"Don't deliberate" in the system prompt. The vendor reports it does not reliably cut thinking on Sonnet 5.5, and it adds a rule the model may weigh against your other ones.
+
+  </Panel>
+  <Panel label="What to do" title="Lower the effort">
+
+Set `low` or `medium`, then compare quality, tokens and latency on a sample of real requests before you ship it.
+
+  </Panel>
+</Compare>
+
+**The second failure: the cache goes cold.** Effort is rendered into the prompt, so changing the top-level value between requests invalidates the cached prefix. The vendor's three-call script shows a cache read on the second call, then a full cache write and zero read on the third, after only the effort changed. Pick one effort per conversation. The vendor documents a per-message effort setting that leaves earlier cache alone, in beta. Whether it is still in beta as of October 2026 is not confirmed here, so read the effort page first. *Prompt layout and the cache* has the prefix rules.
+
+> Turn the dial before you reword the prompt, and test the change on your own cases, not on one invoice.
+
+**When not to use it.** Skip tuning where nothing needs working out: extraction, formatting, translation. Run those at `low`, or with thinking at its off setting where the model allows it. On Opus 5.5 thinking cannot be turned off (a 400, per the vendor's effort page), so effort is the only dial you have there. Do not fix an ambiguous prompt with more effort. More thinking on an instruction that can be read two ways gets you a longer, more confident wrong answer; *Why prompts fail* is the fix. That last point is the course's inference, not a vendor claim. And do not tune on a single example: levels differ by model, and thinking varies per request.
+
+Next: the thinking is under control, and *Output contracts* is about the shape the answer comes back in.
