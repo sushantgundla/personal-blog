@@ -3,7 +3,7 @@ title: "Retries and fallbacks"
 subtitle: "Turn a validation failure into a second attempt the model can actually get right."
 part: 3
 minutes: 7
-why: "You sorted every reply into finished, cut off or refused, and your validator rejects the bad ones. A rejection is still a five hundred to whoever called you. So you wrapped the call in a retry loop, and it mostly did not help: the same prompt came back with the same unknown owner three times, and it cost three times as much. The fix is small and slightly surprising: show the model the error. This lesson covers what to retry, what never to retry, how many times, and what to do when the retries run out."
+why: "You sorted every reply into one of four outcomes, and your validator rejects the bad ones. A rejection is still a five hundred to whoever called you. So you wrapped the call in a retry loop, and it mostly did not help: the same prompt came back with the same unknown owner three times, and it cost three times as much. The fix is small and slightly surprising: show the model the error. This lesson covers what to retry, what never to retry, how many times, and what to do when the retries run out."
 wins:
   - "Sort the failure first; retry only what a second call can change."
   - "On a validation failure, retry with the error attached — never blindly."
@@ -39,11 +39,9 @@ deeper:
   - { label: "Google SRE Book — handling overload", href: "https://sre.google/sre-book/handling-overload/" }
 ---
 
-Everything in *Validating what comes back* ends in an exception. That keeps the bad value out of your database, but your user still got nothing. This lesson is about the space between "we rejected it" and "we failed".
+Everything in *Validating what comes back* ends in an exception, and *Stop reasons and refusals* sorted the replies that have no body to check. That keeps the bad value out of your database, but your user still got nothing. This lesson is about the space between "we rejected it" and "we failed".
 
 ## 1. Sort the failure, then decide
-
-Retrying the wrong failure is worse than not retrying: you pay, and you still fail.
 
 <Figure bare caption="Eight kinds of failure, sorted by whether a second try can go differently: transient ones and ones the model can see are worth retrying, and ones that describe the request itself are not.">
 
@@ -53,16 +51,16 @@ Retrying the wrong failure is worse than not retrying: you pay, and you still fa
 | Does not parse, or wrong shape | Yes, the same way | Rare under decoder-enforced schemas |
 | Cut off (`stop_reason: "max_tokens"`) | Yes, after a higher cap, or lower effort if it over-thought | Thinking counts against the cap (vendor, as of October 2026) |
 | 429, 500, 503, timeout | Yes, with backoff | Timing, not your request |
-| Refusal (HTTP 200, `stop_reason: "refusal"`) | Not the same request on the same model | Discard partial output. `cyber`, `frontier_llm`: another model (fallback is beta). `reasoning_extraction`: fix your prompt. `bio`, `general_harms`: stop |
+| Refusal (HTTP 200, `stop_reason: "refusal"`; *Stop reasons and refusals*) | Not the same request on the same model | Discard partial output. `cyber`, `frontier_llm`: another model (fallback is beta). `reasoning_extraction`: fix your prompt. `bio`, `general_harms`: stop |
 | Well-formed but wrong | No | The model was consistent, not unlucky. Fix the prompt |
 | 400 from your own settings | No | On Sonnet 5.5 as of September 2026: `thinking: disabled`, `budget_tokens`, forced `tool_choice` |
 | Other 400, 401, 403 | No | The request or the key is wrong |
 
 </Figure>
 
-**Cap the attempts at three: the first try plus two repairs.** That number is this course's rule of thumb, not a measured one; the vendor's Sonnet 5.5 guide, as of October 2026, suggests a single retry for a failed field check. A third failure on the same input is not bad luck: the prompt asks for something the model does not reliably give. Let it fail and go and look.
+**Cap it at three calls in all: the first try plus up to two more, and a cut-off retry uses one of them.** That number is this course's rule of thumb, not a measured one; the vendor's Sonnet 5.5 guide, as of October 2026, suggests a single retry for a failed field check. A third failure on the same input is not bad luck: the prompt asks for something the model does not reliably give. Let it fail and go and look.
 
-Rate limits and overload need a delay, and the delay needs jitter: exponential backoff with a random part, so a thousand clients that failed together do not retry together. The **LLMs** course covers the headers; here, a 429 just gets its own branch, with a sleep in it.
+Rate limits and overload need a delay, and the delay needs jitter: exponential backoff with a random part, so a thousand clients that failed together do not retry together. The **LLMs** course covers the headers in *Rate limits and reliability*; here, a 429 just gets its own branch, with a sleep in it.
 
 > A blind retry asks the same question again. A retry with the error attached asks a different, easier one.
 
@@ -77,34 +75,34 @@ A blind retry repeats the question and hopes for different sampling. The repair 
 
 Be honest about the size of this. Under a decoder-enforced schema the shape failures that made retry famous mostly vanish. What is left is meaning: an owner who does not exist, a quote not in the source. Those suit a repair turn, because the error is specific.
 
-Append, never edit. A repair call that adds two turns at the end leaves the earlier request identical, so it can plausibly read the prompt cache from the first call. That is an inference from how prefix caching works, not something the vendor says about retries. Rewriting an earlier turn, or changing effort or thinking between calls, breaks the prefix, and as of October 2026 editing history can also invalidate replayed thinking blocks.
+Append, never edit. A repair call that adds two turns at the end leaves the earlier request identical, so it can plausibly read the prompt cache from the first call. That is an inference from how prefix caching works, not something the vendor says about retries. Rewriting an earlier turn, or changing effort or thinking between calls, breaks the prefix, and editing history invalidates replayed thinking blocks: on Sonnet 5.5, for accounts created on or after 31 August 2026, the request returns an error.
 
-If a loop is stuck anyway, **change the request**: attach the error, reword the instruction, reorder an example, or go up a rung of the ladder below. Some providers let you raise temperature on a retry. This course has not checked whether a given Claude model accepts it, so do not build on it.
+If a loop is stuck anyway, **change the request**: attach the error, reword the instruction, reorder an example, or go up a rung of the ladder below.
 
 ## 3. The ladder, the bill, and one loop
 
 When the retries run out, you need somewhere to go. Decide the order in advance, per feature:
 
 1. **Repair retry.** Same model, error attached. Cheapest, fixes most things.
-2. **A different or stronger model.** Worth a rung at the edge of the first model's skill, or when a refusal category allows it. Slower and dearer, and it starts without the first model's thinking: blocks it cannot read are dropped silently.
+2. **A different or stronger model.** Worth a rung at the edge of the first model's skill, or when a refusal category allows it. Slower and dearer, and it starts without the first model's thinking: as of October 2026, blocks it cannot read are dropped silently.
 3. **A deterministic default.** A regex, a lookup, or the safe value, such as `owner: null`.
 4. **Fail loudly.** Raise, alert, put the case where a human will see it.
 
-Never make rung four a silent success: an empty result with a 200 hides an outage until a report is wrong next month. Two guard rails go around it all. **A budget cap:** count attempts and tokens per request and stop at a ceiling, because a retry loop over a large batch is how a small bug becomes a large invoice. **Idempotency:** if the answer triggers an effect, such as a message sent or a row written, a retry must not do it twice, so give each logical request a key and check it first. The model call is safe to repeat; what you do with its answer often is not.
+Never make rung four a silent success: an empty result with a 200 hides an outage until a report is wrong next month. Two guard rails go around it all. **A budget cap:** count attempts (and tokens, if you track them) per request and stop at a ceiling, because a retry loop over a large batch is how a small bug becomes a large invoice. **Idempotency:** if the answer triggers an effect, such as a message sent or a row written, a retry must not do it twice, so give each logical request a key and check it first. The model call is safe to repeat; what you do with its answer often is not.
 
 ```python
 import logging
 import random
 import time
 
-from anthropic import Anthropic, APIStatusError
+from anthropic import Anthropic, APIConnectionError, APIStatusError
 from pydantic import BaseModel, Field
 
 client = Anthropic()
 log = logging.getLogger(__name__)
 MODEL = "claude-sonnet-5-5"   # as of October 2026
 OWNERS = {"alice", "bob", "priya"}
-MAX_ATTEMPTS = 3   # first try, plus two repairs
+MAX_ATTEMPTS = 3   # three calls in all; a cut-off retry uses one
 
 def text_of(resp) -> str:
     return "".join(b.text for b in resp.content if b.type == "text")
@@ -127,7 +125,8 @@ TICKET_SCHEMA = {
 }
 
 def check(ticket: Ticket, source: str) -> None:
-    if ticket.owner is not None and ticket.owner not in OWNERS:
+    # simplified; see squash() in Validating what comes back
+    if ticket.owner is not None and ticket.owner.casefold() not in OWNERS:
         raise ValueError(f"unknown owner {ticket.owner!r}; use null if no listed owner is named")
     if ticket.quote not in source:
         raise ValueError("quote does not appear in the source text")
@@ -142,8 +141,9 @@ def triage(source: str) -> Ticket:
                 messages=messages,
                 output_config={"format": {"type": "json_schema", "schema": TICKET_SCHEMA}},
             )
-        except APIStatusError as err:
-            if err.status_code in (429, 500, 503) and attempt < MAX_ATTEMPTS - 1:
+        except (APIConnectionError, APIStatusError) as err:   # connection errors include timeouts
+            transient = isinstance(err, APIConnectionError) or err.status_code in (429, 500, 503)
+            if transient and attempt < MAX_ATTEMPTS - 1:
                 time.sleep(2 ** attempt + random.random())   # backoff with jitter
                 continue
             raise   # a 400 is your request, a 401 is your key
@@ -162,7 +162,7 @@ def triage(source: str) -> Ticket:
         except ValueError as err:
             log.warning("attempt %s rejected: %s", attempt, err, extra={"raw": reply})
             messages = messages + [   # append only, so the earlier prefix stays identical
-                {"role": "assistant", "content": reply},
+                {"role": "assistant", "content": resp.content},   # the whole turn, thinking blocks included
                 {"role": "user", "content": f"That ticket failed a check:\n{err}\nReturn only the corrected ticket."},
             ]
     raise RuntimeError(f"no valid ticket in {MAX_ATTEMPTS} attempts")
@@ -205,7 +205,7 @@ The parameter spellings come from the vendor's docs as of October 2026 and were 
   ]}
 />
 
-**The failure this prevents.** Say a team's wrapper retries every non-finished reply up to three times. A prompt change adds "write your reasoning in a `trace` field", and some calls start returning `reasoning_extraction` refusals. Each ticket now draws the same refusal three times, and as of September 2026 the vendor bills that category even when it refuses before any output. The dashboard shows flakiness; the bill shows the truth. Sorting by `stop_reason` first would have named the cause in one log line.
+**The failure this prevents.** Say the loop body also sends the email a ticket asks for, with no idempotency key, and a later line in the same `try` block, a write to the audit table, fails. Each pass gets a valid ticket, sends the email, and trips on the write. Three attempts send three emails to one customer, and the log shows three ordinary retries. The model call was safe to repeat; the send was not. A key per logical request, checked before sending, would have made attempts two and three do nothing.
 
 **When not to use it.** A prototype needs no ladder; three attempts and a raise is the whole feature. Skip the repair loop where the call has side effects and you have no keys to make a second pass harmless. Skip it where latency is tight: every repair is another full call, so a user-facing path can double its wait. And do not use it to hide a prompt that fails often. If more than a few percent of calls need a repair, read the logged replies and fix the prompt, as in *Versioning and testing prompts*.
 
