@@ -40,7 +40,7 @@ deeper:
 
 ## 1. Five kinds of change
 
-Every edit in a source system is one of five events, and only one of them needs a new vector.
+Every edit in a source system is one of five events, and only one of them needs a new vector. Below, a span is one chunk of a page, as *Chunking* defines it.
 
 | Event | What changed | What to do | Embedding calls |
 |---|---|---|---|
@@ -71,7 +71,7 @@ One hash covers the text that gets embedded, one covers the metadata that gets i
 
 ## 2. The page-state record
 
-Split each page into spans with the chunker from *Chunking*. For each span keep two hashes: one of the normalised text, one of every metadata field that goes into the index. Store the list, with a model and chunker version, as one record per page in an ordinary key-value table. Notion keeps its records the same way, one per page.
+Split each page into spans with the chunker from *Chunking*. For each span keep two hashes: one of the normalised text, one of every metadata field that goes into the index. Store the list, with a model and chunker version, as one record per page (the page-state record) in an ordinary key-value table. Notion keeps its records the same way, one per page.
 
 On every event, re-chunk the page, build a new record and compare it with the stored one. Chunking is cheap computing. The embedding call is the part you are avoiding.
 
@@ -181,6 +181,8 @@ For ordering, a delete should leave a marker, usually called a tombstone, so a l
 - A chunker whose output order changes between runs. Spans are compared by position, so one edit re-embeds most of the page.
 - A position shift. Insert a paragraph at the top and every later span moves down one. Qdrant's answer: when an id is new but the text hash already exists, copy the stored vector instead of embedding.
 - A change of model or chunker, which makes every stored vector wrong for the new setup. The version string in the code forces the full re-embed described in *Changing the embedding model underneath a live index*. That is also why you keep the source text, as *From source system to corpus* says: a re-embed needs it.
+
+**Context lines break the per-chunk rule.** If each chunk carries a generated context line, or you use a contextualized embedder, as *Giving each chunk its context* describes, one text edit can change what every line in that document should say. Hashing per chunk then under-counts. Plan at document level instead: when any text hash changes, regenerate and re-embed all chunks of that document. The keyword index from *Hybrid search* must follow the same plan. Apply each `plan_updates` result (embed, patch, delete) to both indexes, or the two halves drift apart.
 
 **Two paths, one planner.** Notion runs single edits through a queue with sub-minute freshness (self-reported) and backfills through batch jobs. Both can call the same `plan_updates`. Permission patches belong on their own faster clock, as *Permissions that travel with the data* argues. Measure the time from an edit to the edit being searchable. Pinecone's docs (as of October 2026) say reads right after a write may not show it, so test with a delay.
 
