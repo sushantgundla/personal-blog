@@ -30,7 +30,7 @@ quiz:
   - q: "You trimmed a prompt to twelve lines on your current model, and a smaller, cheaper model is next. The safest move is to..."
     options: ["Run the same cases on that model, because the long version may be the one it needs", "Carry the twelve lines over, since shorter is always better", "Go back to the long version everywhere, since longer is always safer"]
     answer: 0
-    explain: "A prompt is measured against one model, and no published data shows that a big model's prompt carries over to a small one."
+    explain: "A prompt is measured against one model, and the team said it has not tested whether a big model's prompt lifts a small one."
 deeper:
   - { label: "Willison — a fireside chat with the Claude Code team", href: "https://simonwillison.net/2026/Jul/21/cat-and-thariq/" }
   - { label: "Anthropic — prompting best practices", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" }
@@ -45,7 +45,7 @@ This is not a lesson about short prompts for their own sake, and it is not a way
 
 Every failure adds a line. Nothing removes one. The evidence is lopsided: a rule you add has a failing ticket behind it, so it feels earned, while a rule you could delete has nothing behind it. No case fails because a line is unnecessary. After a year the prompt is sediment: fixes for failures the current model no longer has, in a style an older model needed.
 
-In July 2026, two members of Anthropic's Claude Code team said in an informal conversation, relayed by Simon Willison, that they had cut their agent's system prompt by about 80 percent for their newest models, dropped the examples, and now keep one prompt per model. Their reasoning: the old prompt over-constrained the model. Weigh it as an anecdote: one product, one team, no published evaluation, and not a target to copy. What transfers is the habit: a prompt belongs to a model, so re-check it when the model changes.
+One team's report of cutting its agent's system prompt hard and keeping one prompt per model is told in *The system prompt and the user turn*; it is an anecdote, so take the habit and not the number: a prompt belongs to a model, so re-check it when the model changes.
 
 Which lines are the suspects? The vendor's own guides name several, as of October 2026.
 
@@ -61,7 +61,7 @@ Which lines are the suspects? The vendor's own guides name several, as of Octobe
 
 </Figure>
 
-One more suspect needs no model name. A rule that is true nine times in ten misfires on the tenth. One of the two speakers gave an example: an "always verify the front end" rule that held about 90 percent of the time, which the team rewrote to say when to run the app (again an anecdote). Ask of every rule, "when is this wrong?" If you can name the case, write the edge into the rule. If you cannot, it is a candidate to cut. *Examples beat explanations* has the same dispute about examples, with the same answer: test it.
+One more suspect needs no model name. A rule that is true nine times in ten misfires on the tenth. The Claude Code team's "always verify the front end" rule, rewritten to say when to run the app, is the case told in *Why prompts fail*. Ask of every rule, "when is this wrong?" If you can name the case, write the edge into the rule. If you cannot, it is a candidate to cut. *Examples beat explanations* has the same dispute about examples, with the same answer: test it.
 
 > A line stays in the prompt because a case needs it, not because someone once added it.
 
@@ -71,7 +71,7 @@ The method is ablation, and it is the harness from *Versioning and testing promp
 
 1. Split the prompt into blocks that each do one job. Leave the core (task, labels, reply format) alone; you are testing what grew around it.
 2. Pin the model, effort and thinking mode, then run the full prompt twice. The gap between the runs is your noise, and it sets how big a move you may believe.
-3. Remove one block, run the same cases with the same repeats, and read the share right every time.
+3. Remove one block, run the same cases with the same repeats, and read the share right every time. Note which block went and the score, so the run can be replayed.
 4. Keep a deletion when the score stays inside the noise. Restore any block whose removal moves it further.
 5. Put the survivors together and run once more. Two blocks can each look free alone and still be needed together, because each covers for the other.
 
@@ -96,7 +96,7 @@ Here is that lesson's classifier a year on: eight lines of core and six blocks a
 
 Cutting everything that did not move leaves twelve lines. Run that prompt once more as a whole. If it lands inside the noise of 16 or 17, you have a prompt a third the size that measures the same on your cases. If not, restore blocks one at a time until it does.
 
-The bill is small for a one-word label: eight runs of twenty cases at five repeats is at most 800 short calls, and each variant pays its own cache write (*Prompt layout and the cache*). It also shows what trimming is for: a stable prefix is cached, so the lines you cut were cheap to carry (as of October 2026). The gain is behaviour and clarity.
+The bill is small for a one-word label: eight runs of twenty cases at five repeats is at most 800 short calls, and a variant would pay its own cache write if you cache the prefix and it clears the model's minimum length (*Prompt layout and the cache*). It also shows what trimming is for: a stable prefix is cached, so the lines you cut were cheap to carry (as of October 2026). The gain is behaviour and clarity.
 
 ## 3. The script, a rule it deleted, and when to leave it alone
 
@@ -154,7 +154,7 @@ for name in BLOCKS:
 
 **A failure the harness missed.** In the table, the forwarded-thread rule scored the same without it, so it went. It scored the same because none of the twenty cases was a forwarded thread. Picture a few weeks later: customers forward long threads with a new bug report on top, and the quoted refund talk underneath pulls tickets into `billing`. The twenty never asked. The fix is one case per rule before you delete anything. For each block, find the real ticket that made someone add it, or write one, and run it without the line. A rule whose case still passes is cleared. A rule with no case is not cleared, only unmeasured: leave it, or write the case first. List what you removed in the commit message, so the next regression can find the old text.
 
-**When not to use it.** Do not trim before the harness exists; deleting by taste is just editing by feel. Do not carry a trimmed prompt to another model. A smaller or older model may still need the long version, and the same conversation admitted there is no hard data on whether a big model's prompt lifts a small one. The **LLMs** course has the migration recipe in *Switching models safely*. Never delete a format or safety rule that only the prompt enforces; move it into code first, as a schema (*Structured outputs in practice*), a validator (*Validating what comes back*) or a gate on untrusted text (*Containing prompt injection*). And skip all this for a prompt that is already ten lines.
+**When not to use it.** Do not trim before the harness exists; deleting by taste is just editing by feel. Do not carry a trimmed prompt to another model. A smaller or older model may still need the long version, and the team said it has not tested whether a big model's prompt lifts a small one. The **LLMs** course has the migration recipe in *Switching models safely*. Never delete a format or safety rule that only the prompt enforces; move it into code first, as a schema (*Structured outputs in practice*), a validator (*Validating what comes back*) or a gate on untrusted text (*Containing prompt injection*). And skip all this for a prompt that is already ten lines.
 
 Be honest about how little this proves. The case for leaner prompts here is one team's report, plus a claim in the same post that another vendor's guide agrees, which was not checked here. You are getting a method, not a target.
 
