@@ -1,0 +1,172 @@
+---
+title: "Searching over prompts"
+subtitle: "Run the drafting round many times, and keep three sets apart so the score you report is still true."
+part: 4
+minutes: 7
+why: "You ran one round from *Let a model write the prompt*, the winner beat the old prompt on your cases, and you shipped it. A month later you want a second round, then a third, and each time you peek at the same held-back cases to decide whether to carry on. By round five the held-back score is the best of five tries, not a measurement, and the prompt that looked like 90 percent is really 80. This lesson is the loop that makes many rounds worth running, and the bookkeeping that stops it from fooling you."
+wins:
+  - "Run the drafting round as a loop: pick a parent, test three cases, reflect, keep the child only if it beats its parent on those three."
+  - "Give the reflector the why behind each miss as text, because a sentence tells it which rule broke and a score does not."
+  - "Keep a pool of prompts, not one winner, so a candidate that wins cases the others lose survives."
+  - "Split the cases three ways: learn, select and test, and read the test set once, after the loop stops."
+  - "Skip the search below about fifty cases, without a clean pass or fail check, or before you have read the failures yourself."
+quiz:
+  - q: "In a prompt search, which set may be read only once, after the loop has stopped?"
+    options: ["The learn set, the cases the reflector is shown", "The selection set, which scores every child", "The test set, held back to report the final result"]
+    answer: 2
+    explain: "Every decision made with a set fits the prompt to it, so only a set that decided nothing can report an honest score."
+  - q: "Why does the reflector get a sentence about each miss, and not only the score?"
+    options: ["A sentence says which rule broke, so the rewrite can target it", "A score is too large a number to put in a prompt", "Sentences make the child prompt shorter than its parent"]
+    answer: 0
+    explain: "A pass count says that something is wrong; the written reason points at the line to change."
+  - q: "What does keeping a pool, and not one winner, protect?"
+    options: ["The cost of the run, since fewer prompts are scored", "The order of the cases in the selection set", "A prompt with a lower average that is the only one passing a few hard cases"]
+    answer: 2
+    explain: "The best average often comes from the easy cases, while the fix for a rare failure lives in a prompt that looks worse overall."
+  - q: "You have twenty cases in total. Why is a search a poor fit?"
+    options: ["One or two cases of gain is noise, and no cases are left to hold back", "The drafting model refuses to write prompts from fewer than fifty examples", "A search needs at least a thousand cases before its first call can run"]
+    answer: 0
+    explain: "The paper behind this lesson used over a hundred cases per set on most tasks, and on twenty cases each case moves the score by five points."
+  - q: "What can a prompt search not find for you?"
+    options: ["A rewrite that fixes a failure you already measure", "A rule that makes the prompt longer than before", "A failure that none of your cases or checks capture"]
+    answer: 2
+    explain: "A search climbs the metric you give it, so the failures you never read and never encoded stay invisible to it."
+deeper:
+  - { label: "Agrawal et al. — GEPA: reflective prompt evolution", href: "https://arxiv.org/abs/2507.19457" }
+  - { label: "gepa-ai — the authors' GEPA code", href: "https://github.com/gepa-ai/gepa" }
+  - { label: "Khattab et al. — DSPy", href: "https://arxiv.org/abs/2310.03714" }
+  - { label: "Husain and Shankar — AI evals FAQ", href: "https://hamel.dev/blog/posts/evals-faq/" }
+---
+
+*Let a model write the prompt* ran one round: draft three, score them, pick one. This lesson is that round repeated, with bookkeeping that stops the repeats from fooling you. The bookkeeping is the lesson.
+
+## 1. One round, run many times
+
+The paper behind this is Agrawal and colleagues on a method called GEPA (a February 2026 revision; the results are the authors' own, on open and mid-size models, none of them Claude). The loop is short. Start a pool with your current prompt. Pick a parent. Run it on a tiny batch, three cases in every run the paper reports. Show a model the outputs and a written reason for each miss, and have it write one child prompt. The child earns a full score only if it beats its parent on those same three cases. Then score it on the whole selection set, add it to the pool with a note of its parent, and go round again.
+
+The reason is text, not a number. In the paper it was things like error messages and failed rubric items. For your ticket classifier it is the expected label, the label it gave, and the note you wrote when you read the output by hand.
+
+Keep a pool, not a single winner. The paper keeps any candidate that is best on at least one case, and draws the next parent in proportion to how many cases each one leads. In its test on one small model across four tasks, always improving the current best added 6.05 points, beam search added 5.11, and this added 12.44 (authors' aggregate). The best average is usually the prompt that took the easy cases, and the fix for a rare failure often sits in a prompt that looks worse overall.
+
+<Flow
+  caption="One round of the search. The three-case gate is cheap and throws most children away, so the full score is paid only by the few that earn it."
+  steps={[
+    { label: 'Pick a parent', note: 'From the pool, favouring prompts that win cases others lose' },
+    { label: 'Run three cases', note: 'Keep each output and the reason for each miss' },
+    { label: 'Reflect', note: 'A model reads the misses and writes one child prompt' },
+    {
+      label: 'Gate',
+      subject: true,
+      branch: [
+        'better than the parent on the same three — go on',
+        'no better — throw the child away',
+      ],
+    },
+    { label: 'Score and keep', note: 'Full selection score, then into the pool with its parent' },
+  ]}
+  back={{ from: 5, to: 1, label: 'Round again, until the budget is spent' }}
+/>
+
+> Each look at the test set spends some of its honesty.
+
+## 2. Three sets, because you will read one of them forty times
+
+The last lesson used two sets. A loop needs three. The **learn** set is the cases the reflector may see. The **select** set scores every child and decides which prompts stay in the pool, so the loop reads it over and over. The **test** set is touched once, after the loop stops. Each decision made with a set bends the prompt toward it, so only a set that decided nothing can report a true number.
+
+Sixty cases, twenty per set, is what the sample below uses, and it is a toy: one miss moves a score five points, so a gain of one or two cases is noise. The paper's runs used over a hundred cases per set, with one maths task at 45. Husain and Shankar (September 2026) advise hand-annotating at least thirty failing outputs before any loop runs, a rule of thumb with no study behind it.
+
+The parameter spellings below are copied from vendor docs as of October 2026, not run here, so try them first. The parent weighting is a simple stand-in for the paper's rule: a case few prompts pass counts for more.
+
+```python
+import json
+import random
+
+from anthropic import Anthropic
+from pydantic import BaseModel
+
+from prompts.classify_ticket import EFFORT, MODEL as CLASSIFIER, SYSTEM, THINKING   # pinned with the prompt
+
+client = Anthropic()
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+ROUNDS = 40   # your budget; every accepted child costs a full selection run
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+def run_with(prompt: str, case: dict) -> str:
+    resp = client.messages.create(
+        model=CLASSIFIER, max_tokens=20, thinking=THINKING, output_config={"effort": EFFORT},
+        system=prompt, messages=[{"role": "user", "content": case["input"]}],
+    )
+    if resp.stop_reason != "end_turn":
+        return f"[{resp.stop_reason}]"   # the case fails and the run goes on
+    return text_of(resp).strip().lower()
+
+def passes(prompt: str, cases: list[dict]) -> list[bool]:
+    return [run_with(prompt, c) == c["expected"] for c in cases]   # one result per case, not a total
+
+class Rewrite(BaseModel):
+    prompt: str
+
+def reflect(parent: str, misses: list[dict]) -> str | None:
+    resp = client.messages.parse(
+        model=MODEL, max_tokens=4000,   # thinking is on and counts against this
+        system="Rewrite a ticket-classifier prompt to fix these misses. Keep the four labels and the one-word reply.",
+        messages=[{"role": "user", "content": f"Prompt:\n{parent}\n\nMisses, each with why:\n{json.dumps(misses, indent=2)}"}],
+        output_format=Rewrite,
+    )
+    return resp.parsed_output.prompt if resp.stop_reason == "end_turn" else None
+
+def pick(pool: dict[str, list[bool]]) -> str:
+    n = len(next(iter(pool.values())))
+    weight = {p: sum(1 / sum(q[i] for q in pool.values()) for i in range(n) if r[i]) or 0.01
+              for p, r in pool.items()}   # a case few prompts pass is worth more
+    return random.choices(list(weight), weights=list(weight.values()))[0]
+
+cases = json.load(open("evals/tickets.json"))   # 60 cases: id, input, expected, note, split
+learn, select, test = ([c for c in cases if c["split"] == s] for s in ("learn", "select", "test"))
+
+pool = {SYSTEM: passes(SYSTEM, select)}   # prompt -> pass or fail on each selection case
+for _ in range(ROUNDS):
+    parent, batch = pick(pool), random.sample(learn, 3)
+    got = [run_with(parent, c) for c in batch]
+    misses = [{"input": c["input"], "expected": c["expected"], "got": g, "why": c.get("note", "")}
+              for c, g in zip(batch, got) if g != c["expected"]]
+    child = reflect(parent, misses) if misses else None   # no label guard: a child that drops a label fails the gate or score
+    if child is None or child in pool:
+        continue
+    if sum(passes(child, batch)) <= len(batch) - len(misses):
+        continue   # the gate: no better than its parent on the same three cases
+    pool[child] = passes(child, select)   # only now pay for the full score
+
+best = max(pool, key=lambda p: sum(pool[p]))   # chosen on the selection set alone
+print(f"select: seed {sum(pool[SYSTEM])}, best {sum(pool[best])} of {len(select)}")
+print(f"test, read once: seed {sum(passes(SYSTEM, test))}, best {sum(passes(best, test))} of {len(test)}")
+```
+
+With every child accepted, that is at most about 1,100 classifier calls and 40 drafting calls. The round in *Let a model write the prompt* was 141. The paper's runs used roughly 1,800 to 7,000 rollouts per task, about $86 for its GPT-4.1 Mini runs (their figure).
+
+## 3. A worked example, a failure, and when to skip it
+
+**A worked example.** Split the sixty tickets 20, 20, 20. Say four prompts are in the pool, scored on six of the twenty selection cases (an illustration, not a measurement).
+
+<Figure bare caption="Four prompts on six selection cases, an illustration. B has the best average, but only C passes the two hardest cases, so a pool that kept only the leader would have dropped the fix.">
+
+| Prompt | s1 | s2 | s3 | s4 | s5 | s6 | Passes |
+|---|---|---|---|---|---|---|---|
+| Seed | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | 3 |
+| B | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | 4 |
+| C | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | 3 |
+| D | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | 2 |
+
+</Figure>
+
+B passes everything the seed does and one more, and D is worse than both, so a pool can let the seed and D go. C stays, because s5 and s6 pass nowhere else. Later rounds favour C as a parent and show the reflector the cases it still misses.
+
+**A failure.** The easy way to ruin this is to peek. After each accepted child you run the test set, and you stop when it looks good. On twenty cases the score moves in steps of five, and a dozen looks give you a dozen chances at a lucky reading. It is the same leak as in *Let a model write the prompt*, one level up, and the only cure is to read the test set once. A second failure is quieter: a winner scores well because it grew narrow rules shaped like your learn set. The authors also pointed the loop the other way and found distractor text that dropped GPT-5 Mini from 76 to 10 percent on a maths benchmark (one model, one benchmark). An optimiser finds strange things, so look at what it found before it ships.
+
+As of February 2026, on small and mid-size models, the method added about 9.6 to 12.2 aggregate points over a baseline, and beat a reinforcement-learning run on five of six tasks with far fewer rollouts; RL still won on the maths task. No Claude model was tested, and whether the gains carry over is unknown. Each score is one configuration, with no confidence interval.
+
+**When not to use it.** Below about fifty cases, where you cannot spare three sets. When there is no clean pass or fail check, or no way to say why a case failed; the paper did not test that. Before you have read the failing outputs by hand. For a prompt that already passes, or a script nobody will touch again. And after a model change you still re-run the harness from *Versioning and testing prompts*, because the search found a prompt for one model and one metric, not for ever.
+
+That is the course. A prompt is an instruction you test: stable parts first, a hard job split into steps, examples shown, thinking set on purpose, output pinned to a schema, every reply checked, votes taken where they pay, retries and refusals handled, untrusted text contained, the whole thing in git behind real cases, lines taken back out, and only then a model, and a loop, to propose the next edit. Every step has one shape: make a change, measure it on cases you did not tune on, and keep it only if it held.
