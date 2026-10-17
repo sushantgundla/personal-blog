@@ -3,213 +3,158 @@ title: "The system prompt and the user turn"
 subtitle: "Which half of the request is the frame, and which half is the job."
 part: 1
 minutes: 7
-why: "You have one long user message doing everything — the rules, the examples, the pasted document and the actual question, all in one block. It works, roughly, until a user's own text argues with your rules and wins, or until you notice you are paying full price for the same 2,000 tokens of instructions on every single call. The split between the system prompt and the user turn is not cosmetic. This lesson shows what actually changes when you move a line across that boundary, and what it costs you to leave it on the wrong side."
+why: "You have one long user message doing everything — the rules, the examples, the pasted document and the actual question, all in one block. It works, roughly, until a user's own text argues with your rules and wins, or until a chat runs to turn nine and the model is back to the habit you told it to drop. The split between the system prompt and the user turn is not cosmetic, and it is not a law either. This lesson shows what changes when a line crosses that boundary, why a conversation is a list you can only add to, and when to leave the split alone."
 wins:
-  - "Put every rule that is true on every call in the system prompt."
-  - "Keep the system prompt byte-identical between calls so prompt caching can reuse it."
-  - "Treat the messages list as an array you own, not an append-only log."
-  - "Remember the model's own earlier replies are examples it will copy."
+  - "Put rules that are true on every call in the system prompt, and treat that as a default you test, not a law."
+  - "Set the format in the system prompt before turn one, because the model copies its own earlier replies."
+  - "Keep the messages list append-only wherever thinking or tools are in play."
+  - "Send user words in a user turn, never inside a tool result."
   - "Never treat the system prompt as a security boundary."
 quiz:
-  - q: "The system prompt tends to be followed more reliably than the same text in a user turn because..."
-    options: ["A separate model processes it first", "Models are post-trained to treat it as standing operator instruction, and it always sits at the front of the context", "It skips the tokenizer and is passed in as structured data"]
-    answer: 1
-    explain: "It is a strong learned prior plus a fixed position at the head of every request — not a different code path."
-  - q: "Putting your fixed rules in the user turn, after the pasted data, costs you..."
-    options: ["Nothing measurable, it is equivalent", "Only readability", "The prompt cache — the reusable prefix changes on every call"]
-    answer: 2
-    explain: "Caching matches an exact prefix, so anything variable in front of your stable text makes it unreusable."
-  - q: "You told the model to stop using bullets at turn 6 and it is bulleting again by turn 9. The best fix is..."
-    options: ["Move the rule to the system prompt and clear the bulleted history", "Repeat the instruction in capitals every turn", "Lower the temperature to 0"]
+  - q: "The system prompt tends to win a conflict with the same text in a user turn because..."
+    options: ["Training treats it as standing operator instruction and it sits first, but that is a strong default, not a guarantee", "A separate model reads it before the user turn", "The API enforces the system prompt over user content"]
     answer: 0
-    explain: "Five earlier bulleted replies are a stronger demonstration than one sentence asking for something else."
-  - q: "Earlier turns keep influencing the answer because..."
-    options: ["The provider keeps a session keyed to your API key", "Your code resends the whole history, so every earlier turn competes again on every call", "The model updates its weights as the conversation goes on"]
-    answer: 1
-    explain: "The API is stateless — the conversation exists only in the messages array you send each time."
-  - q: "The safe way to think about system-prompt rules and untrusted user text is..."
-    options: ["The API enforces system rules over user content", "User-supplied text cannot contain instructions the model will act on", "The system prompt is a strong prior, not a guarantee — validate what comes back"]
+    explain: "It is a learned prior plus a fixed position at the head of the request, and nothing in the API enforces it."
+  - q: "You are unsure whether a rule works better in the system prompt or the user turn on your model. The best move is..."
+    options: ["Always use the system prompt, because it outranks the user turn", "Always use the user turn, because it is more portable", "Run your own cases with the rule in each place and keep the one that scores better"]
     answer: 2
-    explain: "Text that looks like an instruction can still steer the model, whichever slot it arrived in, so the check has to happen in your code."
+    explain: "Placement effects differ by model and version, and the advice in both directions is opinion until you measure."
+  - q: "On Sonnet 5.5 with thinking on, a chat drifts back to bullets at turn 9. The safest fix is..."
+    options: ["Set the rule in the system prompt from the start, and in a running chat append a clear correcting turn or restart from a summary", "Edit the bulleted replies at turns 2 to 8 and resend", "Rebuild the system prompt with the rule added and keep the old thinking blocks"]
+    answer: 0
+    explain: "Editing earlier turns or rebuilding system makes later thinking blocks invalid, so you add to the list instead of rewriting it."
+  - q: "A user types a message while your agent is waiting on a tool. Where do their words go?"
+    options: ["Inside the tool_result, so they stay with the call", "In a system message at the top of the request", "As a text block in a user turn, after the last tool_result"]
+    answer: 2
+    explain: "A model trained to resist injection can read user text inside a tool result as an attack, so the channel matters."
+  - q: "A teammate says the system prompt will stop users from overriding your rules. The accurate reply is..."
+    options: ["It is a strong prior, not a lock, so anything costly to get wrong needs a check in your code", "That is right, as long as the rule is written in capitals", "That is right, because user text cannot contain instructions the model acts on"]
+    answer: 0
+    explain: "Text that looks like an instruction can steer the model whichever slot it arrives in."
 deeper:
-  - { label: "Anthropic — system prompts", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role" }
-  - { label: "Anthropic — prompt caching", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-caching" }
-  - { label: "Anthropic — Messages API reference", href: "https://platform.claude.com/docs/en/api/messages" }
-  - { label: "OpenAI — prompt engineering guide", href: "https://platform.openai.com/docs/guides/prompt-engineering" }
+  - { label: "Anthropic — prompting best practices, giving Claude a role", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role" }
+  - { label: "Anthropic — prompting Claude Sonnet 5.5", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5" }
+  - { label: "Anthropic — what is new in Sonnet 5.5 (thinking blocks and history)", href: "https://platform.claude.com/docs/en/models/sonnet-5-5/whats-new-sonnet-5-5" }
+  - { label: "Husain and Shankar — AI evals FAQ (system versus user prompt)", href: "https://hamel.dev/blog/posts/evals-faq/" }
+  - { label: "Willison — fireside chat with the Claude Code team (self-reported results)", href: "https://simonwillison.net/2026/Jul/21/cat-and-thariq/" }
 ---
 
-The Messages API gives you a `system` parameter sitting beside the `messages` list, and it is easy to read that as tidiness — a place to put the boilerplate. It is more than that. Moving a line across that boundary changes how much weight it carries, whether it survives a long conversation, and what you pay for it.
+The Messages API gives you a `system` parameter beside the `messages` list, and it is easy to read that as tidiness. It is more than that, and less than a lock. This lesson is about which text is the frame and which is the job, and what happens to each as a conversation grows. Where a line sits inside a slot, and what the cache does with it, is the next lesson.
 
-## 1. Two slots doing two different jobs
+## 1. Two slots, one default
 
-Mechanically, everything ends up as one flat sequence of tokens — the system prompt, the history and the new message are joined into one string before the model sees any of it. But "it is all tokens in the end" does not mean the slots are interchangeable, for three reasons.
+Mechanically, the system prompt, the history and the new message are joined into one sequence before the model reads any of it. That does not make the slots interchangeable.
 
-**Position.** The system prompt is at the very front of the context, on every single call, ahead of the whole conversation. As a chat grows, a rule you typed into turn 2 slides further and further back behind newer text. A rule in the system prompt never moves.
+**Position.** The system prompt is at the front of every call. As a chat grows, a rule typed into turn 2 slides further back behind newer text. A system rule never moves.
 
-**Training.** Models are post-trained on data where the system prompt is the operator's standing instruction and the user turn is the request being served. That is a learned prior, and it is a strong one: when the two conflict, the system prompt usually wins.
+**Training.** Models are post-trained on data where the system prompt is the operator's standing instruction and the user turn is the request being served. That is a learned prior, and a strong one. When the two conflict, the system prompt usually wins.
 
-**Stability.** The system prompt is the same bytes on every call, which is exactly what prompt caching needs.
-
-Say the honest version of the second point out loud, because it gets oversold: *usually* wins is not *always* wins. There is no enforcement in the API. A user message containing convincing instructions can still steer the model. Treat the system prompt as a reliable default, never as a security boundary — if a wrong answer would be expensive, check the answer in your code.
-
-The practical split is about what changes:
+*Usually*, on the models people have measured, is not *always*. Nothing in the API enforces it, and a user message with convincing instructions can still steer the model. Hamel Husain and Shreya Shankar, in an evals FAQ from September 2026, advise a different default when you are unsure: put the text in the user turn, because it moves between models more easily and is easier to debug. They give no data. Treat both views as opinion, and treat the split below as a default you confirm by running your own cases with the rule in each place.
 
 | Goes in the system prompt | Goes in the user turn |
 |---|---|
 | Who it is and what job it does | The specific request, this time |
 | Rules that are true on every call | The data for this one call |
-| The output format and the field names | The one variable question |
-| Few-shot examples | The user's own words, unedited |
-| Tone and register | Anything that changes per call |
-| What to do when the answer is not in the source | |
+| The output format and field names | The one variable question |
+| Tone and register | The user's own words, unedited |
+| What to do when the answer is not in the source | Anything that changes per call |
 
-There is a second reason to keep rules out of the user turn, separate from caching. A rule that arrives in a user message reads as *this request's preference*. The next user message can talk it out of that. A rule in the system prompt reads as policy, and policy is harder to argue with.
+A rule that arrives in a user message reads as *this request's preference*, and the next message can talk it out of it. A rule in the system prompt reads as policy, which is harder to argue with.
 
 > Anything you would be annoyed to see change between calls belongs in the system prompt.
 
-<Compare caption="The same request, assembled two ways. Splitting by role does not just look tidier — it changes what survives a long conversation and what the provider can cache.">
+<Compare caption="The same request, assembled two ways. The split costs nothing to try, and it is the arrangement the model's training expects.">
   <Panel label="Naive" title="One user message doing everything">
 
-Rules, examples, the pasted document and the actual question all arrive in the same block, in whatever order they were typed. Nothing in it is fixed, so nothing in it is cacheable, and a user's own words sit right beside your rules with no signal that one outranks the other.
+Rules, examples, the document and the question arrive in one block, in whatever order they were typed. A user's own words sit beside your rules with no signal that one outranks the other.
 
   </Panel>
-  <Panel label="What to do" title="Split rules from data">
+  <Panel label="What to do" title="Frame in system, job in the user turn">
 
-Everything true on every call — role, rules, format, examples — goes in the system prompt, at the front, unchanged. Everything that varies — the document, the question — goes in the user turn. The stable half can be cached, and the model's own training treats the split as operator instruction versus request.
+Role, rules and format go in the system prompt. The document and the question go in the user turn. Then test the split against your own cases.
 
   </Panel>
 </Compare>
 
-## 2. The stable half is the half you stop paying for
+More rules is not better. The Claude Code team said in a July 2026 conversation that they cut their agent's system prompt hard for the newest models and keep a separate prompt per model. That is one team describing its own product, with no published eval, so use it as a reason to re-read a long prompt whenever you change models, not as a number. They also counted tool definitions as part of the prompt, which is true: the model reads them too.
 
-Prompt caching lets the provider reuse the work it already did on a prefix of your request. The match is on an **exact prefix** — same tokens, same order, from the very start. That single detail decides your whole layout.
+## 2. A conversation is a list you append to
 
-Put 2,000 tokens of rules and examples at the front, unchanged on every call, and they are cacheable. Put the user's document in front of them and nothing is: the prefix is different every time, so the reusable part starts and ends nowhere.
+The API is stateless. Your code resends the whole conversation every turn, so your newest instruction competes with everything said earlier, including the model's own replies. Those replies are few-shot examples whether you meant them to be or not. Five bulleted answers teach it that this conversation produces bullets, and one sentence at turn 6 asking it to stop is outnumbered.
 
-| Layout | Cacheable prefix | Result |
-|---|---|---|
-| System: rules + examples. User: document + question. | The whole system prompt | Reads from cache on later calls |
-| User: rules + document + question, all in one block | Nothing stable at the front | Full price, every call |
-| System: rules. User: question + rules repeated "for emphasis" | The system prompt only | The repeat is pure cost and adds nothing |
+An older version of this lesson called the list an array you construct, free to edit. As of October 2026 that is wrong wherever thinking is in play. The vendor says that on Sonnet 5.5 and the other newest models it lists, a thinking block stays valid only while `system`, `tools` and the earlier messages are unchanged. Edit a turn, rebuild `system` or summarise old turns in place, and the next request either errors or, if you opt in, drops the block. For accounts created on or after 31 August 2026 the vendor says Sonnet 5.5 enforces this with an error. The rule is **append-only**.
 
 ```python
 from anthropic import Anthropic
 
 client = Anthropic()
+MODEL = "claude-sonnet-5-5"   # as of October 2026
 
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+# The format rule is here before turn one. Changing system later breaks the history.
 SYSTEM = """You write release notes for a developer tool.
 One line per user-visible change. Plain past tense. No bullets, no headings.
 If a change has no user-visible effect, omit it entirely."""
 
-resp = client.messages.create(
-    model="claude-sonnet-4-20250514",
-    max_tokens=500,
-    # A list of blocks, not a plain string, so the stable part can be cached.
-    system=[{
-        "type": "text",
-        "text": SYSTEM,
-        "cache_control": {"type": "ephemeral"},
-    }],
-    messages=[{"role": "user", "content": "fix(auth): correct token expiry check"}],
-)
+history = []   # append only: never edit, reorder or summarise an earlier turn
 
-print(resp.content[0].text)
-print(resp.usage)  # cache_creation_input_tokens, then cache_read_input_tokens
+def ask(user_text: str) -> str:
+    turn = {"role": "user", "content": user_text}
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=2000,   # thinking is on by default and counts against this
+        system=SYSTEM,
+        messages=history + [turn],
+    )
+    if resp.stop_reason != "end_turn":
+        raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+    # Commit only after success. Keep the whole assistant turn, thinking blocks
+    # included, exactly as it came back.
+    history.extend([turn, {"role": "assistant", "content": resp.content}])
+    return text_of(resp)
+
+print(ask("fix(auth): correct token expiry check"))
+print(ask("feat(export): add CSV export to reports"))
+# A later change is a new turn, not an edit of an old one.
+print(ask("From now on, put the area first, like 'Auth: ...'."))
 ```
 
-<Anatomy
-  caption="What the model actually reads: the system prompt first, byte-identical on every call, then the user turn, different every time. The cache can only reuse the part before the first byte that changes."
-  label="One assembled request"
-  parts={[
-    {
-      text: 'You write release notes for a developer tool.\nOne line per user-visible change. Plain past tense. No bullets, no headings.',
-      name: 'System prompt',
-      note: 'Same bytes on every call — the cacheable prefix',
-      subject: true,
-    },
-    { text: '\n\n' },
-    {
-      text: 'fix(auth): correct token expiry check',
-      name: 'User turn',
-      note: 'Different on every call — nothing after this point is cached',
-    },
-  ]}
-/>
+The parameter spellings are copied from the vendor docs as of October 2026, not run here, so try them on your SDK version first. Committing both turns only after the check keeps a failed call from leaving a half-finished turn in the list.
 
-Two things worth knowing before you rely on this. There is a minimum length below which a prefix will not be cached, and it differs by model — check the caching docs rather than trusting a number you read somewhere. And the cache entry expires, so a low-traffic endpoint may miss most of the time. Read `usage` on real traffic instead of assuming; the two counters above tell you exactly what happened.
+**The failure case.** Suppose `SYSTEM` had no format rule. The first user asked for bullets, the model gave bullets for five turns, and at turn 6 someone typed "stop using bullets". By turn 9 the bullets are back. The tempting fix is to edit turns 1 to 5 into plain lines and resend. On a thinking model that edit makes the later blocks invalid, so you get an error, or the block is dropped. Better, in order:
 
-## 3. Multi-turn: the history argues back
-
-The API is stateless. Your code resends the entire conversation on every turn, so the model re-reads all of it, every time. That has a consequence people find genuinely surprising: **your latest instruction is competing with everything said earlier, including things the model itself said.**
-
-Its own past replies are the strongest signal in the box. They are few-shot examples, whether you meant them that way or not. Nine turns of bulleted answers teach it that this conversation produces bullets, and one sentence at turn 6 asking it to stop is outnumbered.
-
-| What you see | What is actually happening | What to do |
-|---|---|---|
-| A formatting rule you gave mid-chat decays after a few turns | Earlier assistant messages demonstrate the old format | Move the rule to the system prompt, and drop the old replies from the array |
-| It keeps citing a document the user replaced two turns ago | Both versions are in the history and both read as current | Remove the superseded turn before sending |
-| A correction works once, then reverts | One corrective sentence against many contrary examples | Edit the offending assistant message, or start a fresh conversation |
-| Long chats drift in tone | Register is being set by accumulated history, not by your prompt | Pin the register in the system prompt, where it cannot scroll away |
-
-The fix in every row is the same underlying move, and it is the one thing chat interfaces train you out of: **the `messages` list is an array you construct, not a log you append to.** You are free to delete a superseded turn, rewrite a bad assistant reply into the answer you wanted, collapse ten turns into one summary message, or throw the history away and send the current state as a single fresh turn. None of that is cheating. It is the only place the conversation exists.
+1. Prevent it. Put the rule in `system` before turn one. Rebuilding `system` mid-chat has the same binding problem.
+2. In a running chat, append a firm, specific turn, and check the next answer. Nothing guarantees a new turn beats five old examples, so measure.
+3. Or start a new conversation whose first turn carries a short summary. It has no earlier blocks to invalidate.
 
 <Flow
-  caption="The array is resent whole on every call, so a stale turn does not fall out of the conversation on its own — you have four ways to take it out before the next request goes."
+  caption="The list is resent whole on every call, so a stale turn does not fall out on its own. On a thinking model you add to the list or start a new one; editing it in place is for plain chat only."
   steps={[
-    { label: 'Every turn, resent in full', note: 'The model re-reads its own past replies along with everything else' },
-    { label: 'A turn goes stale', note: 'Superseded, wrong, or setting an example you no longer want', subject: true },
+    { label: 'Every turn, resent in full', note: 'The model re-reads its own old replies along with everything else' },
+    { label: 'A turn goes stale', note: 'Superseded, wrong, or a format you no longer want', subject: true },
     {
-      label: 'Fixed before the next call',
+      label: 'What you can do next',
       branch: [
-        'Delete the superseded turn',
-        'Rewrite a bad assistant reply',
-        'Collapse old turns into one summary',
-        'Drop the history and start fresh',
+        'Append a correcting turn',
+        'Start a new conversation from a summary',
+        'Plain chat only: edit in place, strip old thinking blocks',
       ],
     },
   ]}
 />
 
-One caution: editing history invalidates the cache from the edit point onward, and it can confuse the user if the visible transcript and the sent transcript disagree. Keep the two in sync, or keep the differences deliberate and small.
+Two smaller notes from the vendor, both as of October 2026. A mid-conversation system message, in beta, is the vendor's way to change instructions without rewriting history. And the old trick of ending the list with a half-written assistant turn, so the model continues it, is a 400 on Claude 4.6 models and the later ones the vendor lists. Ask in the user turn, or use structured outputs, covered in *Output contracts*.
 
-## 4. XML tags keep instructions and data separate
+## 3. Channels carry weight, and when to leave the split alone
 
-When your prompt mixes instructions, context, examples and variable inputs, XML tags help the model parse them unambiguously. This is especially useful with long documents or multiple data sources.
+Where a piece of text arrives is a signal the model reads. Current models are trained to resist indirect injection, and the Sonnet 5.5 guide says that has a side effect. A real user message placed inside a `tool_result`, or wedged right after one, can be read as an attack. The model may tell the user the tool output impersonated them, or stop to ask for confirmation. The vendor gives no rates. Its advice is plain: user words go in a user turn as a text block after the last tool result, tool output stays in `tool_result`, and harness notices go in a separate system message.
 
-```python
-from anthropic import Anthropic
+That signal is a training prior, like the system prompt's weight, and not a lock. The system prompt is not a security boundary, and *Prompt injection* explains why.
 
-client = Anthropic()
+**When not to use the split.** A one-shot call with a short prompt gains nothing from it. One user message with the rules at the top reads fine, and the system slot buys you no weight you will notice. Skip it too when your own cases show the user-turn version scoring the same, because the user turn is the more portable choice if you may change models. Do not use the system prompt as a dumping ground either. Every standing rule is a rule that applies to every call, so check each one for the case where it is wrong.
 
-SYSTEM = """You extract key claims from customer support tickets.
-Return one JSON object: {"claims": ["claim1", "claim2"], "sentiment": "positive|neutral|negative"}"""
+Everything dated above will move, and the model-specific rules most of all. The ideas underneath are steadier: the frame goes first, the model copies what it has already said, and you confirm a placement by measuring it.
 
-ticket = "The app crashes every time I upload a photo larger than 5MB. This has been broken for three weeks now and nobody has responded to my emails."
-
-resp = client.messages.create(
-    model="claude-sonnet-4-20250514",
-    max_tokens=300,
-    system=SYSTEM,
-    messages=[{
-        "role": "user",
-        "content": (
-            "<ticket>\n"
-            f"{ticket}\n"
-            "</ticket>\n\n"
-            "Extract the claims and assess sentiment."
-        ),
-    }],
-)
-```
-
-The `<ticket>` tags tell the model where the data starts and ends, so instructions in the ticket text cannot be confused with your own instructions. Use consistent tag names (`<document>`, `<context>`, `<example>`) and nest them when content has hierarchy.
-
-| Without tags | With XML tags |
-|---|---|
-| Instructions and data run together in prose | Clear boundaries between each type of content |
-| User text that sounds like an instruction can confuse the model | The tags make the role of each block unambiguous |
-| Harder to template — finding where to insert variables is fragile | The insertion points are the tag contents, obvious and mechanical |
-
-> When working with multiple documents, wrap each in `<document index="1">` with `<source>` and `<document_content>` subtags. The structure helps the model track which fact came from which source.
-
-Next: what to do when describing the output still is not landing — showing it instead.
+Next: how the pieces sit inside the request, and what that decides for the cache — *Prompt layout and the cache*.
