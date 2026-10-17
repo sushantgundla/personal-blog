@@ -99,7 +99,7 @@ if resp.stop_reason != "end_turn":
 print(text_of(resp))
 ```
 
-The parameter spellings are copied from vendor docs as of October 2026, not run here; try them on your SDK version first.
+This sample was not run here, so try it on your SDK version first.
 
 Expect an answer shaped like this invented one: a few sentences of prose, and under question three, what it would be guessing — whether to name the customer, whether the engineer wants symptoms or cause, how long "short" is. Those are coins you left in the air. Write the decisions down: *Two lines. Line one: what the customer sees. Line two: what to check first. No names.* The summary was never the problem.
 
@@ -183,4 +183,4 @@ Two honest notes.
 
 **"Take your time" is not step-by-step reasoning.** Step-by-step prompting does work, for the mechanical reason in *Thinking out loud*, but the evidence is narrower than the folklore. A June 2025 Wharton study of older models on one hard science benchmark found a clear gain only against a baseline that forbade thinking, little against the model's default, and a small, mixed gain on reasoning models. Whether it holds today is untested.
 
-The next lesson goes at placement — which half of the request your instruction should live in, and why that changes how much weight it carries.
+Next: placement — which half of the request your instruction should live in, and why that changes how much weight it carries.
