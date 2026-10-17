@@ -82,7 +82,7 @@ Three instructions do most of the work, and the third is the one people leave ou
 
 The last row matters most: a model that takes half a fact from each of two chunks and cites both has two valid citations and a claim that is in neither.
 
-The failure branch has two cases beyond a plain miss. First, the set can be empty. A live permission check, as in *Permissions that travel with the data*, or a metadata filter can remove every passage. The only correct output is then the failure line; code that quietly retries without the filter turns a refusal into a leak. Second, near-miss passages make abstaining harder. In Chroma's July 2025 vendor study of 18 models, one distractor lowered accuracy and four lowered it more, and models differed in whether they said the answer was missing or answered with confidence. That is specific to those versions, so test yours and count the refusals.
+The failure branch has two cases beyond a plain miss. First, the set can be empty. A live permission check, as in *Permissions that travel with the data*, or a metadata filter can remove every passage. The only correct output is then the failure line; code that quietly retries without the filter turns a refusal into a leak. Second, near-miss passages make abstaining harder. Near-miss passages hurt models unevenly, as Chroma's vendor study found, so test yours and count the refusals; *Measuring the whole answer* shows how.
 
 ### Let the API do the pointing
 
@@ -202,7 +202,7 @@ Three habits narrow the gap. Ask for the whole sentence in the quote, so the qua
 
 How big is the gap? An April 2023 audit of four commercial generative search engines found that, on average, 51.5 percent of sentences were fully supported by their citations and 74.5 percent of citations supported their sentence. Those engines are old, so read the numbers as the shape of the problem. Retrieval matters too: in one August 2025 agent study (BrowseComp-Plus), swapping BM25 for a stronger embedder raised every tested model's citation precision.
 
-Page images break the quote check, because there is no text to match. Cite the page number and show the page. In the April 2026 version of ViDoRe V3, two models asked to box the supporting region scored under 0.1 F1 against about 0.60 between human annotators, so do not promise region-level pointers. *Retrieving pages as images* covers the rest.
+Page images break the quote check, because there is no text to match. Cite the page number and show the page. Do not promise region-level pointers: models boxing the supporting region did very poorly in ViDoRe V3. *Retrieving pages as images* covers the rest.
 
 **When not to use it.** Skip the quote check when nobody will look: a low-stakes brainstorm gains nothing from the extra output and the blocked answers. It fits badly when an answer is a computation or a summary of many passages, because no single span supports it; cite the source ids and let a person or a judge read it. If you need strict JSON with Anthropic's built-in citations, you cannot have both as of October 2026, so put the ids in a field and verify them yourself.
 
