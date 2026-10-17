@@ -89,7 +89,7 @@ Three rules cover most of it. **Discard partial output.** A refusal can land mid
 
 ## 3. One wrapper, four outcomes
 
-Put the sorting in one place so that no caller can skip it. This wrapper turns any reply into one of four outcomes. The call uses the SDK helper from *Structured outputs in practice*. The parameter and attribute names come from the vendor docs as of October 2026 and were not run here, so confirm that your SDK version exposes `stop_details` before you rely on it.
+Put the sorting in one place so that no caller can skip it. This wrapper turns any reply into one of four outcomes. The call uses the SDK helper from *Structured outputs in practice*. The parameter and attribute names come from the vendor docs as of October 2026 and were not run here, so confirm that your SDK version exposes `stop_details` before you rely on it. The vendor pages do not say whether `parse` raises on a refused or cut-off reply. If it raises, `classify` never runs; use `messages.create` with `output_config.format` when you need the raw reply in every case.
 
 ```python
 import logging
@@ -104,7 +104,7 @@ MODEL = "claude-sonnet-5-5"   # as of October 2026
 def text_of(resp) -> str:
     return "".join(b.text for b in resp.content if b.type == "text")
 
-class Ticket(BaseModel):   # the triage model from Validating what comes back
+class Ticket(BaseModel):   # a trimmed version of the triage model from Validating what comes back
     urgency: int = Field(ge=1, le=5)
     owner: str | None
     quote: str
@@ -126,6 +126,8 @@ def classify(resp) -> Result:
     text = text_of(resp)
     return Result("ok", text) if text.strip() else Result("empty")
 
+ticket_text = "..."   # the ticket body you are triaging
+
 resp = client.messages.parse(
     model=MODEL,
     max_tokens=2000,   # thinking is on by default and counts against this
@@ -140,7 +142,7 @@ else:
     log.error("outcome=%s category=%s raw=%r", result.outcome, result.category, text_of(resp))
 ```
 
-The `ValueError` is deliberate. If a stop reason shows up that you did not plan for, you want a loud failure on day one, not a silent default. Each outcome then maps to one action.
+The `ValueError` is deliberate (this call has no tools or stop strings; in a tool loop `tool_use` is expected, so do not copy this branch there). If a stop reason shows up that you did not plan for, you want a loud failure on day one, not a silent default. Each outcome then maps to one action.
 
 <Figure bare caption="What each outcome should do next. Only the first row reaches your validator.">
 
