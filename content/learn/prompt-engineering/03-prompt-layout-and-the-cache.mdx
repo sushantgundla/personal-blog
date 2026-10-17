@@ -1,0 +1,161 @@
+---
+title: "Prompt layout and the cache"
+subtitle: "Stable text first, changing text last. The model reads it better, and the provider can reuse the work."
+part: 1
+minutes: 7
+why: "You have a 3,000-token style guide in your system prompt, and a bill that says you pay for it in full on every call. Or you added a line that tells the model today's date, and the savings you were promised never showed up. Nothing errored in either case. The cache is a feature of the order of your request, so a prompt that reads fine can still be laid out wrong. This lesson is where each part of a request should sit, what quietly breaks reuse, and how to see it in the numbers."
+wins:
+  - "Order every request stable first and changing last: tools, standing rules, examples, then the document, the date and the question."
+  - "Put the cache breakpoint on the last block that is identical across the calls you want to share."
+  - "Read the three usage counters; a hit shows in cache_read_input_tokens, and input_tokens is only the tail."
+  - "Keep a date, a request id or a user name out of the front of the prompt."
+  - "Skip all of it for short prompts, slow traffic, or a layout that makes the prompt harder to read."
+quiz:
+  - q: "Every request ends with a fresh user question. The cache breakpoint belongs..."
+    options: ["On the question, so it is stored with everything else", "On the first block of the system prompt", "On the last block that is identical across requests, before the question"]
+    answer: 2
+    explain: "A breakpoint stores the prefix up to it, so it has to sit on text that is the same next time."
+  - q: "Which number proves a call read from the cache?"
+    options: ["cache_read_input_tokens above zero", "cache_creation_input_tokens above zero", "input_tokens being large"]
+    answer: 0
+    explain: "Creation counts what was written this time, and input_tokens only counts the part after the last breakpoint."
+  - q: "For a long multi-document input, the vendor advises putting the documents first and the question last. Why?"
+    options: ["The API rejects a question that comes before a document", "Documents are billed at a lower rate than questions", "The question sits next to where the answer starts, and vendor tests (no details published) report better quality"]
+    answer: 2
+    explain: "The 30 percent figure is the vendor's own claim, so confirm it on your cases."
+  - q: "You change one word in the middle of a cached style guide. On the next call..."
+    options: ["Everything before the changed word still reads from cache", "Only the changed word is reprocessed", "The prefix no longer matches, so the call writes a fresh entry"]
+    answer: 2
+    explain: "The entry is matched as a whole prefix, so a change inside the marked block is a miss."
+  - q: "Your stable prefix is shorter than the model's minimum cacheable length. What happens?"
+    options: ["The call runs uncached with no error, and both cache counters stay at zero", "A 400 error names the minimum", "It is cached anyway at a higher price"]
+    answer: 0
+    explain: "The silence is the trap, so check the counters on a real call."
+deeper:
+  - { label: "Anthropic — prompt caching", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-caching" }
+  - { label: "Anthropic — cache diagnostics", href: "https://platform.claude.com/docs/en/build-with-claude/cache-diagnostics" }
+  - { label: "Anthropic — prompting best practices (long context, XML tags)", href: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" }
+  - { label: "Anthropic — what is new in Sonnet 5.5", href: "https://platform.claude.com/docs/en/models/sonnet-5-5/whats-new-sonnet-5-5" }
+---
+
+This is not a lesson about saving money, though it will. It is about the order of a request, and why one order suits the model and the cache at once. *The system prompt and the user turn* decided which slot a line belongs in. This one decides where it sits inside the slot.
+
+## 1. The request has an order, and the cache keeps a prefix
+
+The API reads a request in a fixed order: tool definitions, then the system prompt, then the messages. Prompt caching stores the work done on a prefix of that sequence, up to a block you mark with `cache_control`. A later request that starts with identical content up to that block reads the stored work. From the first changed token onward, everything is processed fresh. The vendor says the output is the same either way (as of October 2026).
+
+That gives one layout rule.
+
+> Stable first, volatile last.
+
+Tools, standing rules, the style guide and the examples go at the front. The document goes next, then the date, then the question.
+
+The same order helps the model on long inputs. The vendor's advice (as of October 2026) is that past about 20,000 tokens you put the documents above the question, and ask the model to pull out the relevant quotes before it answers. The vendor claims the question at the end can lift quality by up to 30 percent on complex multi-document inputs. That figure is vendor-run, with no test details published, so try it on your own cases. Wrap each document in tags, `<documents>` around `<document index="1">` with `<source>` and `<document_content>` inside, and keep the tag names the same across calls. Tags help the model tell the pieces apart. Quote-first looks like one sentence at the end of the user turn: copy the passages that bear on the question into `<quotes>` tags, then answer from them. It costs a few output tokens and gives you something to check the answer against. They are not a security boundary, as *Prompt injection* explains.
+
+<Anatomy
+  caption="The order a request is read in. A cache entry covers a prefix of it, so the breakpoint goes at the end of the last block that never changes."
+  label="One assembled request"
+  parts={[
+    { text: 'every tool definition', name: 'Tools', note: 'Read first. Edit one and everything after it misses' },
+    { text: '\n' },
+    { text: 'the style guide and twelve example commits', name: 'System', note: 'Stable. The breakpoint ends this block', subject: true },
+    { text: '\n' },
+    { text: 'the date, the diff, the request', name: 'Messages', note: 'Volatile. Different every call, so it comes last' },
+  ]}
+/>
+
+Two ways to mark the breakpoint. Automatic mode is one top-level switch, and the breakpoint moves forward each turn, which suits chat. Explicit mode puts `cache_control` on a block, up to four of them, for parts that change at different rates. Either way, the entry lasts five minutes and each read refreshes it; an optional `"ttl": "1h"` suits slower traffic. There is a minimum cacheable length that depends on the model: 512 tokens on Sonnet 5.5, 1,024 to 4,096 on others, as of October 2026. Below it nothing is cached and nothing errors. Reads cost a fraction of normal input price; the **LLMs** course has the table in *What you actually pay for*. Since a write costs a little more than plain input and a read saves most of it, one reuse inside the window probably pays back the write. That is arithmetic on the vendor's multipliers, not a vendor claim.
+
+## 2. A worked example: release notes with a big style guide
+
+Back to the release-notes generator. The `system` prompt holds a style guide and twelve example commits, about 3,000 tokens that never change. Each call brings a diff and today's date.
+
+```python
+from datetime import date
+
+from anthropic import Anthropic
+
+client = Anthropic()
+MODEL = "claude-sonnet-5-5"   # as of October 2026
+
+def text_of(resp) -> str:
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+# About 3,000 tokens, well over the 512-token minimum, identical on every call.
+STYLE_GUIDE = open("release_notes_style.md").read()
+
+def write_notes(diff: str) -> str:
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=2000,   # thinking is on by default and counts against this
+        system=[{
+            "type": "text",
+            "text": STYLE_GUIDE,
+            "cache_control": {"type": "ephemeral"},   # the last block that never changes
+        }],
+        messages=[{
+            "role": "user",
+            # The date and the diff come after the breakpoint, in the user turn.
+            "content": f"<today>{date.today()}</today>\n<diff>\n{diff}\n</diff>\n\nWrite the release notes.",
+        }],
+    )
+    u = resp.usage
+    print(u.cache_creation_input_tokens, u.cache_read_input_tokens, u.input_tokens)
+    if resp.stop_reason != "end_turn":
+        raise RuntimeError(f"no usable answer: {resp.stop_reason}")
+    return text_of(resp)
+```
+
+The breakpoint sits on the style guide because that is the last block identical on every call. The date and diff land after it, so they are charged as ordinary input and never poison the stored part. The parameter spellings are copied from the vendor docs as of October 2026, not run here, so try them on your SDK version first.
+
+<Steps
+  caption="One release-notes script called three times. The token counts are an illustration, not a measurement. The pattern to look for in your own usage is a write, then reads, then one write again after an edit."
+  steps={[
+    {
+      label: 'First call',
+      title: 'The entry is written',
+      body: 'The style guide is new to the cache, so it is processed and stored. Writing costs slightly more than plain input.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'about 3,000' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'input_tokens', value: 'about 400' },
+      ],
+    },
+    {
+      label: 'Second call',
+      title: 'The entry is read',
+      body: 'Same bytes up to the breakpoint, inside the five minutes. The stored work is reused, and only the new diff is processed.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: '0' },
+        { label: 'cache_read_input_tokens', value: 'about 3,000' },
+        { label: 'input_tokens', value: 'about 350' },
+      ],
+    },
+    {
+      label: 'After an edit',
+      title: 'One line of the guide changes',
+      body: 'The marked block no longer matches, so this call writes a fresh entry. The next call reads it.',
+      facts: [
+        { label: 'cache_creation_input_tokens', value: 'about 3,000' },
+        { label: 'cache_read_input_tokens', value: '0' },
+        { label: 'input_tokens', value: 'about 350' },
+      ],
+    },
+  ]}
+/>
+
+Total input is the sum of the three counters. `input_tokens` is only the part after the last breakpoint, so a small value on a hit is the success case, not a bug. It also means every prompt edit costs one write. Expect that after each change to the guide.
+
+## 3. What breaks it silently, and when to skip it
+
+Someone wants the model to know the date, so the first line of `system` becomes `Today is 2026-10-17.` Worse, someone makes it a timestamp to the second. Now the first line is different on every call, so no stored prefix ever matches. Every call pays the write price, none reads, and `cache_creation_input_tokens` is full every time. The output is fine and there is no error. You find out from the invoice. The fix is the sample's: move the date into the user turn, after the breakpoint. The vendor says automatic mode has the same trap, because it marks the last block, so a last block holding a timestamp or the user's question stores nothing stable.
+
+Other quiet breakers, from the vendor's troubleshooting list (as of October 2026): changing `tool_choice`, adding or removing an image, or changing the thinking or effort settings partway through a cached conversation. Editing a tool definition is worse, because tools come first. Editing or reordering earlier turns moves the point where the prefix stops matching, so keep history append-only. In some languages, randomised key order in tool inputs can do it too. The vendor also tabulates which setting invalidates which level, but that table is the weakest part of the source this lesson was written from, so it is not reproduced here.
+
+To see why a call missed, the vendor's cache diagnostics (generally available, Claude API only, as of October 2026) takes the id of your previous response and says where the prefix first diverged: `system_changed`, `tools_changed`, `messages_changed` and so on. A `*_changed` reason with low reads is your bug. No reason with low reads usually means the entry expired, so shorten the gaps or use `1h`. The parameter name is unrun here too.
+
+Be honest about the shelf life here. Minimums, lifetimes and multipliers have all moved more than once, which is why each number above is dated. The layout rule has not moved. Read the vendor page before you size anything by a figure in this lesson.
+
+**When not to bother.** A prompt under the model's minimum has nothing to gain. Traffic with gaps over five minutes and no `1h` option writes every time, at a premium. Do not bend a prompt's clarity to chase the cache: if the question at the end makes a short prompt read worse, test it both ways. And the cache is not a privacy control. It is the same text, held for a while, and it makes nothing safer to put in a prompt.
+
+Next: a stable prefix is the best place for examples, and *Examples beat explanations* is about choosing them.
