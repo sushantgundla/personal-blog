@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { QuizQuestion } from '@/lib/learn'
+import { trackEvent } from '../_components/Analytics'
 import { useProgress } from '../_components/useProgress'
 import s from './lesson.module.css'
 
@@ -28,7 +29,9 @@ const KEYS = 'abcdefghij'
  * Answering the last question is the one thing it records: it marks
  * the lesson read, in localStorage and nowhere else, which is what
  * puts the read mark on the course page's schedule. See
- * app/learn/_components/useProgress.ts.
+ * app/learn/_components/useProgress.ts. It also sends one anonymous
+ * `finished/<course>/<lesson>` count to the visitor counter, with no
+ * answers in it — see app/learn/_components/Analytics.tsx.
  *
  * An option is a row on a ruled list and not a box. Nothing on this
  * page is an enclosed shape, and the recall band is built out of the
@@ -60,7 +63,8 @@ export function Recall({ courseSlug, lessonSlug, questions }: Props) {
     if (!finished || marked.current) return
     marked.current = true
     markDone(lessonSlug)
-  }, [finished, lessonSlug, markDone])
+    trackEvent(`finished/${courseSlug}/${lessonSlug}`)
+  }, [finished, courseSlug, lessonSlug, markDone])
 
   if (total === 0) return null
 

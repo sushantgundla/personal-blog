@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import Link from 'next/link'
+import { Analytics } from './_components/Analytics'
 import { ThemeChoice } from './_components/ThemeChoice'
 import { ViewWidth } from './_components/ViewWidth'
 import './learn.css'
@@ -67,6 +68,7 @@ export default function LearnLayout({ children }: { children: React.ReactNode })
   return (
     <div className="learn-root">
       <script dangerouslySetInnerHTML={{ __html: WIDTH_SCRIPT }} />
+      <Analytics />
 
       <header className="learn-rail">
         <div className="learn-rail-inner">
