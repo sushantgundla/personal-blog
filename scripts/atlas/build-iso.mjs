@@ -42,7 +42,7 @@ WHERE {
              schema:isPartOf <https://en.wikipedia.org/> ;
              schema:name ?articleName .
   }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
 }
 GROUP BY ?item ?itemLabel ?iso3 ?iso2 ?m49 ?articleName
 `

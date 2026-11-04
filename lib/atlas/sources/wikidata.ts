@@ -136,7 +136,7 @@ function dossierQuery(qid: string): string {
       wd:${qid} wdt:P417 ?patron . ?patron rdfs:label ?patronLabel FILTER(lang(?patronLabel) = "en")
     }
   }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
 } LIMIT 1`;
 }
 
@@ -149,7 +149,7 @@ function neighboursQuery(qid: string): string {
   return `SELECT ?neighbour ?neighbourLabel ?flag WHERE {
   wd:${qid} wdt:P47 ?neighbour .
   OPTIONAL { ?neighbour wdt:P41 ?flag . }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
 } LIMIT 40`;
 }
 
@@ -159,7 +159,7 @@ function unescoQuery(qid: string): string {
   ?site wdt:P17 wd:${qid} .
   OPTIONAL { ?site wdt:P18 ?image . }
   OPTIONAL { ?site wdt:P625 ?coord . }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
 } LIMIT 50`;
 }
 
@@ -300,6 +300,8 @@ export async function fetchUnescoSites(
       const siteQid = str(row, "site")?.split("/").pop() ?? "";
       if (seen.has(siteQid)) continue;
       seen.add(siteQid);
+      // No en/mul label at all: the label service echoes the bare QID.
+      if (str(row, "siteLabel") === siteQid) continue;
       sites.push({
         qid: siteQid,
         name: str(row, "siteLabel") ?? "Unnamed site",
