@@ -27,12 +27,13 @@ const SOURCE_LABELS: Record<string, string> = {
   fx: 'Exchange rate',
 }
 
+/** Pinned to UTC: this renders on the server (whose zone is UTC on Vercel)
+ * and again on hydration in the visitor's own zone, so a zone-dependent
+ * string differed between the two and React flagged a hydration mismatch. */
 function formatCapturedAt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-  } catch {
-    return iso
-  }
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return `${date.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`
 }
 
 type Status = 'idle' | 'running' | 'done' | 'error'
