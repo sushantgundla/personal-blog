@@ -1,28 +1,11 @@
 import Image from 'next/image'
 import type { SourceResult, WikidataFacts } from '@/lib/atlas/types'
-import { toHttps } from '@/lib/atlas/format'
+import { formatWikidataDate, toHttps } from '@/lib/atlas/format'
 import styles from './facts.module.css'
 
 export interface FactsPanelProps {
   wikidata: SourceResult<WikidataFacts>
   countryName: string
-}
-
-/** Wikidata dates arrive as full ISO timestamps ("1947-08-15T00:00:00Z");
- * a banknote wants an engraved date, not a datetime. Mirrors
- * HistoryStrip.tsx's own formatter — kept local rather than imported so
- * this panel doesn't reach into a component file it doesn't own. */
-function formatFactDate(iso: string): string {
-  const m = /^(-?\d{1,6})-(\d{2})-(\d{2})/.exec(iso)
-  if (!m) return iso
-  const [, year, month, day] = m
-  if (month === '01' && day === '01') return year
-  const MONTHS = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ]
-  const mi = Number(month) - 1
-  return mi >= 0 && mi < 12 ? `${day} ${MONTHS[mi]} ${year}` : year
 }
 
 function capitalize(s: string): string {
@@ -75,7 +58,7 @@ function buildRows(facts: WikidataFacts): Row[] {
   }
 
   if (facts.independenceDate) {
-    rows.push({ label: 'Independence / founding', value: formatFactDate(facts.independenceDate) })
+    rows.push({ label: 'Independence / founding', value: formatWikidataDate(facts.independenceDate) })
   }
 
   if (facts.highestPoint) {

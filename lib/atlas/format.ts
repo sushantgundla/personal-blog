@@ -77,8 +77,36 @@ export function commonsThumbnail(url: string | null, width: number): string | nu
   return `${url}${sep}width=${width}`;
 }
 
+/** `Infinity` counts as missing too: it is never a real measurement, and
+ * left alone it would engrave as `∞T` / `$∞T`. */
 function isMissing(v: number | null | undefined): v is null | undefined {
-  return v === null || v === undefined || typeof v !== 'number' || Number.isNaN(v);
+  return v === null || v === undefined || typeof v !== 'number' || !Number.isFinite(v);
+}
+
+/** Compact suffixes, smallest first, with each one's default decimals. */
+const COMPACT_UNITS: ReadonlyArray<{ div: number; suffix: string; decimals: number }> = [
+  { div: 1e6, suffix: 'M', decimals: 1 },
+  { div: 1e9, suffix: 'B', decimals: 2 },
+  { div: 1e12, suffix: 'T', decimals: 2 },
+];
+
+/**
+ * `abs` (already >= 1e6) as a compact figure. Picks the unit from the
+ * magnitude, then steps up one unit whenever rounding alone would carry the
+ * figure to 1,000 — so 999,960,000 reads `1.00B`, not `1,000.0M`.
+ */
+function compact(abs: number, decimals: number | undefined): string {
+  let i = COMPACT_UNITS.length - 1;
+  while (i > 0 && abs < COMPACT_UNITS[i].div) i--;
+  for (; i < COMPACT_UNITS.length; i++) {
+    const unit = COMPACT_UNITS[i];
+    const d = decimals ?? unit.decimals;
+    const rounded = Number((abs / unit.div).toFixed(d));
+    if (rounded < 1000 || i === COMPACT_UNITS.length - 1) {
+      return `${fixed(abs / unit.div, d)}${unit.suffix}`;
+    }
+  }
+  return fixed(abs, decimals ?? 0); // unreachable: the last unit always returns
 }
 
 /** Fixed-decimal, `en-US`-grouped formatting. Safe at any magnitude. */
@@ -118,22 +146,17 @@ export function formatValue(
   const empty = opts.empty ?? DEFAULT_EMPTY;
   if (isMissing(value)) return empty;
 
-  const negative = value < 0;
   const abs = Math.abs(value);
   const allowCompact = opts.compact ?? (format === 'number' || format === 'currency');
 
-  let body: string;
-  if (allowCompact && abs >= 1e6) {
-    if (abs >= 1e12) {
-      body = `${fixed(abs / 1e12, opts.decimals ?? 2)}T`;
-    } else if (abs >= 1e9) {
-      body = `${fixed(abs / 1e9, opts.decimals ?? 2)}B`;
-    } else {
-      body = `${fixed(abs / 1e6, opts.decimals ?? 1)}M`;
-    }
-  } else {
-    body = fixed(abs, opts.decimals ?? defaultDecimalsFor(format));
-  }
+  const body =
+    allowCompact && abs >= 1e6
+      ? compact(abs, opts.decimals)
+      : fixed(abs, opts.decimals ?? defaultDecimalsFor(format));
+
+  // A tiny negative that rounds to zero (-0.04 → "0.0") must not keep its
+  // minus sign: "-0.0%" reads as a real, if small, decline.
+  const negative = value < 0 && /[1-9]/.test(body);
 
   let prefix = '';
   let suffix = '';
@@ -159,11 +182,32 @@ export function formatValue(
   return `${sign}${prefix}${body}${suffix}`;
 }
 
-/** `formatRank(5, 195)` → `"#5 of 195"`. Missing rank → `"—"`. */
-export function formatRank(rank: number | null | undefined, total: number): string {
+/** `formatRank(5, 195)` → `"#5 of 195"`. Missing rank → `"—"`. A missing
+ * or zero total drops the "of" rather than claiming `"#5 of 0"`. */
+export function formatRank(rank: number | null | undefined, total: number | null | undefined): string {
   if (isMissing(rank)) return DEFAULT_EMPTY;
-  const safeTotal = isMissing(total) ? 0 : Math.round(total);
-  return `#${Math.round(rank)} of ${new Intl.NumberFormat('en-US').format(safeTotal)}`;
+  if (isMissing(total) || total <= 0) return `#${Math.round(rank)}`;
+  return `#${Math.round(rank)} of ${new Intl.NumberFormat('en-US').format(Math.round(total))}`;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * A Wikidata date ("1947-08-15T00:00:00Z") as an engraved date:
+ * `"15 Aug 1947"`. A padded 01-01 is how Wikidata stores a year-only
+ * value, so it prints the bare year rather than a false "01 Jan".
+ * The year's xsd:dateTime zero-padding is stripped in both branches —
+ * France's P571 is "0481-01-01" and must read `"481"`, not `"0481"`.
+ * Anything that doesn't parse is returned unchanged.
+ */
+export function formatWikidataDate(iso: string): string {
+  const m = /^([+-]?)(\d{1,6})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  const [, sign, digits, month, day] = m;
+  const year = `${sign === '-' ? '-' : ''}${Number(digits)}`;
+  if (month === '01' && day === '01') return year;
+  const mi = Number(month) - 1;
+  return mi >= 0 && mi < 12 ? `${day} ${MONTHS[mi]} ${year}` : year;
 }
 
 /**

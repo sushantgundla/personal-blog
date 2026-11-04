@@ -73,7 +73,7 @@ export function DenominationNote({ indicator, value, timeSeries, cascadeIndex }:
 
       <div className={styles.noteMeta}>
         <span className={`atlas-serial ${remarkable ? 'atlas-remarkable' : ''}`}>
-          {rankSuppressed ? 'not enough data to rank' : formatRank(value.rank, value.outOf ?? 0)}
+          {rankSuppressed ? 'not enough data to rank' : formatRank(value.rank, value.outOf)}
         </span>
         <span className="atlas-serial">{formatYear(year)}</span>
       </div>

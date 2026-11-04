@@ -1,30 +1,11 @@
 import type { HistoryEvent } from '@/lib/atlas/types'
+import { formatWikidataDate } from '@/lib/atlas/format'
 import styles from './extras.module.css'
 
 export interface HistoryStripProps {
   independenceDate: string | null
   historyEvents: HistoryEvent[] | undefined
   countryName: string
-}
-
-/** Wikidata dates arrive as full ISO timestamps ("1947-08-15T00:00:00Z");
- * a banknote wants an engraved date, not a datetime. */
-function formatEventDate(iso: string): string {
-  const m = /^(-?\d{1,6})-(\d{2})-(\d{2})/.exec(iso)
-  if (!m) return iso
-  const [, year, month, day] = m
-  // Some inception dates on Wikidata carry only year precision with a
-  // padded 01-01 — showing "1 Jan" on those would imply false precision.
-  // String(Number(year)) strips the zero-padding Wikidata's xsd:dateTime
-  // literal carries (France's P571 is "0481-01-01" — this rendered as the
-  // literal string "0481" until now).
-  if (month === '01' && day === '01') return String(Number(year))
-  const MONTHS = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ]
-  const mi = Number(month) - 1
-  return mi >= 0 && mi < 12 ? `${day} ${MONTHS[mi]} ${year}` : year
 }
 
 /**
@@ -89,7 +70,7 @@ export function HistoryStrip({ independenceDate, historyEvents, countryName }: H
       <div className={styles.historyStrip}>
         {timeline.map((event) => (
           <div key={`${event.date}-${event.label}`} className={styles.historyEvent}>
-            <span className={styles.historyDate}>{formatEventDate(event.date)}</span>
+            <span className={styles.historyDate}>{formatWikidataDate(event.date)}</span>
             <span className={styles.historyText}>{event.label}</span>
           </div>
         ))}
