@@ -1,5 +1,6 @@
 import type { CountryDossier } from '@/lib/atlas/types'
 import type { IsoCountry } from '@/lib/atlas/iso-countries'
+import { hasRealName } from './PeopleWatermarks'
 import styles from './dossier.module.css'
 
 export interface SourcesProps {
@@ -33,8 +34,10 @@ export function Sources({ dossier, country }: SourcesProps) {
   const wikipedia = dossier.wikipedia.ok ? dossier.wikipedia.data : null
   const worldBank = dossier.worldBank.ok ? dossier.worldBank.data : null
   const wikidata = dossier.wikidata.ok ? dossier.wikidata.data : null
+  // Must pick the same person FaceNote shows as its watermark, or the
+  // credit names a different image from the one on the page.
   const portrait = dossier.famousPeople.ok
-    ? dossier.famousPeople.data.find((p) => p.imageUrl) ?? null
+    ? dossier.famousPeople.data.find((p) => p.imageUrl && hasRealName(p)) ?? null
     : null
   const portraitFilePage = portrait?.imageUrl ? commonsFilePage(portrait.imageUrl) : null
 

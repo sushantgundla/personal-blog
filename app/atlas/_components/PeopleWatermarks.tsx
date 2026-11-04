@@ -25,7 +25,7 @@ export interface PeopleWatermarksProps {
  * back to the raw Q-id as the name (e.g. "Q133707864") — filtering those
  * out here is a display choice, not a data fix, since a plate engraved
  * with a Wikidata ID instead of a name looks broken, not composed. */
-function hasRealName(person: Person): boolean {
+export function hasRealName(person: Person): boolean {
   return !/^Q\d+$/.test(person.name.trim())
 }
 
