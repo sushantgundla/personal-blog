@@ -104,7 +104,15 @@ export function buildCountryOfDay(deck: Deck, date: string = utcDateStamp()): Co
     // already in hand, so it stays a pure function of the date — no further
     // draws from `rng`, and therefore no risk of it changing what the *next*
     // attempt (a different country) would draw.
-    const ranked = candidates.slice().sort((a, b) => a.tier - b.tier || a.rank - b.rank);
+    //
+    // "Most extreme" means closest to *either* end of the table, which is
+    // what `describeRank`'s `place` measures. Sorting on the raw rank put a
+    // 189th-of-189 record (a world lowest) behind every 3rd-of-189, so a
+    // country's bottom-end records were the first facts dropped.
+    const place = (c: Candidate) => describeRank(c.indicator, c.rank).place;
+    const ranked = candidates
+      .slice()
+      .sort((a, b) => a.tier - b.tier || place(a) - place(b) || a.rank - b.rank);
 
     // At most one fact per indicator label. Three World Bank codes share the
     // label "Military spending" (% of GDP, US$, % of government spending);
