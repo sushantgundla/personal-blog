@@ -41,6 +41,26 @@ const nextConfig = {
       },
     ],
   },
+  // Baseline hardening for The Atlas, the one section with its own API routes
+  // (app/atlas/api/refresh, app/atlas/learn/api/round). No CSP: the section
+  // loads Google Fonts and inline styles, and a policy strict enough to matter
+  // would need auditing page by page. These three break nothing:
+  // - nosniff: a JSON or NDJSON API response is never re-read as HTML/script.
+  // - SAMEORIGIN: no other site can frame the dossier and its refresh button.
+  // - strict-origin-when-cross-origin: outbound links (Wikipedia, World Bank)
+  //   see only the origin, never the full /atlas/... path and query.
+  async headers() {
+    return [
+      {
+        source: '/atlas/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ]
+  },
   // The context-grid documentation is a separate Astro build in its own Vercel project. It is
   // served from a path here rather than its own subdomain so the docs live on the same domain
   // as everything else, and so the docs project needs no domain of its own.
