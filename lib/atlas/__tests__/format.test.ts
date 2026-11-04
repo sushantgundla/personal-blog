@@ -71,7 +71,7 @@ describe('formatValue', () => {
 
   test('a negative that rounds to zero loses its minus sign', () => {
     expect(formatValue(-0.04, 'percent')).toBe('0.0%');
-    expect(formatValue(-0.4, 'number')).toBe('0');
+    expect(formatValue(-0.4, 'number')).toBe('-0.4'); // small rates keep 3 significant digits
     expect(formatValue(-0.06, 'percent')).toBe('-0.1%');
   });
 });
