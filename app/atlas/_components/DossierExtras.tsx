@@ -33,9 +33,9 @@ export function DossierExtras({ dossier }: DossierExtrasProps) {
 
   return (
     <section className={styles.extrasSection} aria-label="Extras">
-      <div className="atlas-section-rule" style={{ color: 'var(--note-ink)' }}>
+      <h2 className="atlas-section-rule" style={{ color: 'var(--note-ink)' }}>
         — EXTRAS —
-      </div>
+      </h2>
 
       <div className={styles.utilityRow}>
         <AnthemPlayer

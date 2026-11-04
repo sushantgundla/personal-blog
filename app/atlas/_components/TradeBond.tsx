@@ -103,7 +103,7 @@ export function TradeBond({ trade, countryName }: TradeBondProps) {
   if (!trade.ok) {
     return (
       <section className={`atlas-note ${styles.bond}`} aria-label="Trade">
-        <div className="atlas-section-rule">— TRADE —</div>
+        <h2 className="atlas-section-rule">— TRADE —</h2>
         <p className={`atlas-body ${styles.bondEmpty}`}>
           No trade data available for {countryName}.
         </p>
@@ -116,7 +116,7 @@ export function TradeBond({ trade, countryName }: TradeBondProps) {
   if (year === null || (exports.length === 0 && imports.length === 0)) {
     return (
       <section className={`atlas-note ${styles.bond}`} aria-label="Trade">
-        <div className="atlas-section-rule">— TRADE —</div>
+        <h2 className="atlas-section-rule">— TRADE —</h2>
         <p className={`atlas-body ${styles.bondEmpty}`}>
           {countryName} has no export or import data on record with UN Comtrade. That is normal —
           many small or non-reporting states carry nothing here.
@@ -132,7 +132,7 @@ export function TradeBond({ trade, countryName }: TradeBondProps) {
 
   return (
     <section className={`atlas-note ${styles.bond}`} aria-label="Trade">
-      <div className="atlas-section-rule">— TRADE —</div>
+      <h2 className="atlas-section-rule">— TRADE —</h2>
 
       <div className={styles.bondColumns}>
         <PartnerColumn title="Exports to" partners={exports} year={year} />

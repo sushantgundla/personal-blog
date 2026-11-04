@@ -103,7 +103,7 @@ export function FactsPanel({ wikidata, countryName }: FactsPanelProps) {
   if (!wikidata.ok) {
     return (
       <section className={`atlas-note ${styles.facts}`} aria-label="Facts">
-        <div className="atlas-section-rule">— FACTS —</div>
+        <h2 className="atlas-section-rule">— FACTS —</h2>
         <p className={styles.empty}>No Wikidata facts on file for {countryName}.</p>
       </section>
     )
@@ -116,7 +116,7 @@ export function FactsPanel({ wikidata, countryName }: FactsPanelProps) {
   return (
     <section className={`atlas-note ${styles.facts}`} aria-label="Facts">
       <div className={styles.header}>
-        <div className={`atlas-section-rule ${styles.headerRule}`}>— FACTS —</div>
+        <h2 className={`atlas-section-rule ${styles.headerRule}`}>— FACTS —</h2>
         {emblemUrl && (
           <div className={styles.emblemSeal}>
             <Image

@@ -66,7 +66,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
   if (!trade.ok || (trade.data.exports.length === 0 && trade.data.imports.length === 0)) {
     return (
       <section className={`atlas-note ${styles.arcs}`} aria-label="Trade partner map">
-        <div className="atlas-section-rule">— TRADE PARTNERS —</div>
+        <h2 className="atlas-section-rule">— TRADE PARTNERS —</h2>
         <p className={styles.empty}>
           No trade partner data available to map for {countryName}.
         </p>
@@ -77,7 +77,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
   if (!home) {
     return (
       <section className={`atlas-note ${styles.arcs}`} aria-label="Trade partner map">
-        <div className="atlas-section-rule">— TRADE PARTNERS —</div>
+        <h2 className="atlas-section-rule">— TRADE PARTNERS —</h2>
         <p className={styles.empty}>
           {countryName} has no map geometry at this resolution, so partner lines can&apos;t be drawn.
         </p>
@@ -107,7 +107,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
   return (
     <section className={`atlas-note ${styles.arcs}`} aria-label="Trade partner map">
       <div className={styles.header}>
-        <div className={`atlas-section-rule ${styles.headerRule}`}>— TRADE PARTNERS —</div>
+        <h2 className={`atlas-section-rule ${styles.headerRule}`}>— TRADE PARTNERS —</h2>
         <div className={styles.toggle} role="group" aria-label="Show exports or imports">
           <button
             type="button"

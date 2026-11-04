@@ -130,9 +130,9 @@ export function NoteSheet({ indicators, timeSeries, countryName }: NoteSheetProp
         if (availableRows.length === 0) {
           return (
             <section key={section} className={styles.section} aria-label={section}>
-              <div className="atlas-section-rule" style={{ color: 'var(--note-ink)' }}>
+              <h2 className="atlas-section-rule" style={{ color: 'var(--note-ink)' }}>
                 — {section} —
-              </div>
+              </h2>
               <p className={styles.sectionEmpty}>
                 {missingCount} of {defs.length} figures unavailable for {who}.
               </p>
@@ -149,9 +149,9 @@ export function NoteSheet({ indicators, timeSeries, countryName }: NoteSheetProp
           <section key={section} className={styles.section} aria-label={section}>
             {/* Per-country ink tints the cutting guide, alongside the
                 guilloché and note edges — see lib/atlas/ink.ts. */}
-            <div className="atlas-section-rule" style={{ color: 'var(--note-ink)' }}>
+            <h2 className="atlas-section-rule" style={{ color: 'var(--note-ink)' }}>
               — {section} —
-            </div>
+            </h2>
 
             <div className={styles.grid}>
               {visibleRows.map((row, i) => (
