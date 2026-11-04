@@ -43,11 +43,20 @@ interface GuillocheParams {
 }
 
 const DEFAULT_SIZE = 200;
+
+/** A hash mapped to a whole number in [0, n). Same value as
+ *  `Math.floor(hashToRange(value, 0, n))` for every hash but the very top one,
+ *  which that expression would turn into `n` itself. */
+function hashIndex(value: number, n: number): number {
+  return Math.min(n - 1, Math.floor(hashToRange(value, 0, n)));
+}
 const DEFAULT_POINTS = 400;
 
 function deriveParams(seed: string): GuillocheParams {
   const s = seed.toUpperCase();
-  const petals = 7 + Math.floor(hashToRange(hashString(`${s}:petals`), 0, 8)); // 7..14
+  // hashToRange's top is inclusive: a hash of exactly 0xffffffff would floor
+  // to the range's end, one past the last integer meant. hashIndex clamps it.
+  const petals = 7 + hashIndex(hashString(`${s}:petals`), 8); // 7..14
   // d/r near 1.0 is the degenerate case: the loop collapses to a near-straight
   // spoke between cusps, which reads as a plain pointed star, not an engraved
   // rosette. Split into two bands on either side of that dead zone instead —
@@ -58,7 +67,7 @@ function deriveParams(seed: string): GuillocheParams {
     : hashToRange(hashString(`${s}:d`), 0.5, 0.82);
   const texHarmonicMultiplier: 2 | 3 =
     hashToRange(hashString(`${s}:texmul`), 0, 1) < 0.5 ? 2 : 3;
-  const texFreqOffset = (Math.floor(hashToRange(hashString(`${s}:texoff`), 0, 3)) - 1) as
+  const texFreqOffset = (hashIndex(hashString(`${s}:texoff`), 3) - 1) as
     | -1
     | 0
     | 1;
@@ -291,7 +300,7 @@ function buildTickRing(seed: string, size: number): { d: string; length: number 
   // the major marks stay evenly spaced all the way round), and the count stays
   // in the 60-96 band where ticks read as an index rather than as a solid
   // hairline ring at card size.
-  const step = Math.floor(hashToRange(hashString(`${seed}:tickstep`), 0, 4)); // 0..3
+  const step = hashIndex(hashString(`${seed}:tickstep`), 4); // 0..3
   const count = 60 + step * 12; // 60, 72, 84 or 96
   const half = size / 2;
   const outer = half * LAYER_RADIUS.ticks;
@@ -327,7 +336,7 @@ function buildMedallion(seed: string, size: number): { d: string; length: number
   // 11-18 lobes. Fewer than about 11 at this radius looks like a scaled-down
   // copy of the main rosette rather than a different piece of engraving; more
   // than 18 and the lobes are finer than a 0.9px stroke can separate.
-  const lobes = 11 + Math.floor(hashToRange(hashString(`${seed}:medlobes`), 0, 8));
+  const lobes = 11 + hashIndex(hashString(`${seed}:medlobes`), 8);
   const rosette = placeClosed(
     sampleSpec(
       {
@@ -386,8 +395,8 @@ export function guillocheLayers(
   // the main reads as a printing misregistration rather than a second pass.
   // Offsets of 3 or 4, either side, guarantee the gap without a retry loop.
   const offsets = [-4, -3, 3, 4] as const;
-  const pick = Math.floor(hashToRange(hashString(`${s}:counteroff`), 0, offsets.length));
-  const counterPetals = Math.max(4, main.petals + offsets[Math.min(pick, offsets.length - 1)]);
+  const pick = hashIndex(hashString(`${s}:counteroff`), offsets.length);
+  const counterPetals = Math.max(4, main.petals + offsets[pick]);
 
   const ticks = buildTickRing(s, size);
   const mainCurve = placeClosed(sampleRawPoints(seed, count), size, LAYER_RADIUS.main);

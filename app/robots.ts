@@ -22,6 +22,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
+      // The Atlas's JSON endpoints: nothing for a search index, and the
+      // refresh one only answers POST.
+      disallow: ['/atlas/api/', '/atlas/learn/api/'],
     },
     sitemap: learnSubdomainLive ? [apexSitemap, `${LEARN_ORIGIN}/sitemap.xml`] : apexSitemap,
   }

@@ -216,8 +216,11 @@ lower this without checking that every `PRERENDER_ISO3` entry has a current snap
   known regression — `next/image` rejects non-`https://` sources under
   `images.remotePatterns`). Cheap; safe to run anytime, including in CI.
 - `lib/atlas/__tests__/` — unit tests for `guilloche.ts` (deterministic path from an ISO3 hash),
-  `ink.ts` (hue always passes contrast), `format.ts` (null/zero/negative/trillions), and a hash
-  test, plus `iso3-fixture.ts` and three captured fixtures in `lib/atlas/fixtures/`
+  `ink.ts` (hue always passes contrast), `format.ts` (null/zero/negative/trillions),
+  `capital-timezones.ts` (every zone valid, full coverage), `land-borders.ts` (symmetric, no
+  unknown codes), and a hash test. Run them, and `lib/atlas/learn/__tests__/`, with
+  `npm run atlas:test` — plain `node --test` with no dependency; `__tests__/globals.mjs` supplies
+  the Jest-style `describe`/`test`/`expect` globals. Alongside them sit `iso3-fixture.ts` and three captured fixtures in `lib/atlas/fixtures/`
   (`ind.json` rich, `tuv.json` sparse, `twn.json` absent from the World Bank) — the same
   three-country test matrix `design.md` §8 specifies (that section also names North Korea as a
   fourth; only three fixture files exist in the repo).

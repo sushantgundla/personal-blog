@@ -102,7 +102,9 @@ function dim(hex: string): string {
  */
 export function countryInk(iso3: string): CountryInk {
   const seed = iso3.toUpperCase();
-  const hue = Math.round(hashToRange(hashString(`${seed}:hue`), 0, 360));
+  // hashToRange's top is inclusive, and Math.round lifts anything from 359.5
+  // up to 360 — the same colour as 0, but outside the documented [0, 360).
+  const hue = Math.round(hashToRange(hashString(`${seed}:hue`), 0, 360)) % 360;
   const sat = hashToRange(hashString(`${seed}:sat`), SAT_MIN, SAT_MAX);
   const nominalLight = hashToRange(hashString(`${seed}:light`), LIGHT_MIN, LIGHT_MAX);
 
