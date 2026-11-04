@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { IndicatorDef } from '@/lib/atlas/types'
 import { formatValue, formatYear } from '@/lib/atlas/format'
@@ -35,7 +35,18 @@ export interface RankRailProps {
  * let a plain button reveal the rest — no virtualisation library needed. */
 const INITIAL_ROWS = 60
 
-export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, onPlate, metricCode }: RankRailProps) {
+/** Memoised: Plate re-renders on every mousemove over the map (the
+ * cartouche follows the pointer) and on every zoom frame, and none of that
+ * touches the standings. */
+export const RankRail = memo(function RankRail({
+  rows,
+  indicator,
+  worldAverage,
+  hoveredIso3,
+  onHover,
+  onPlate,
+  metricCode,
+}: RankRailProps) {
   const [expanded, setExpanded] = useState(false)
 
   const sorted = useMemo(() => {
@@ -137,4 +148,4 @@ export function RankRail({ rows, indicator, worldAverage, hoveredIso3, onHover, 
       )}
     </div>
   )
-}
+})

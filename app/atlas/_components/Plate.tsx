@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// Types only. A value import from world-paths (or indicators) would put the
+// whole 157 KB module of country outlines (or the full indicator list) into
+// this client bundle, on top of the copy already sent as props — see
+// `viewBox` below.
 import type { CountryPath } from '@/lib/atlas/geo/world-paths'
-import { WORLD_VIEWBOX } from '@/lib/atlas/geo/world-paths'
 import type { IsoCountry } from '@/lib/atlas/iso-countries'
-import type { IndicatorDef, Ranking } from '@/lib/atlas/types'
-import { INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
+import type { IndicatorDef, Ranking, RankingRow } from '@/lib/atlas/types'
 import { formatValue, formatRank } from '@/lib/atlas/format'
 import { AtlasSearch } from './AtlasSearch'
 import { Cartouche } from './Cartouche'
@@ -25,9 +27,13 @@ export interface PlateProps {
   /** The metric prefetched server-side and used as the resting rank-rail
    * order and the cartouche's "population" line — SP.POP.TOTL. */
   defaultMetric: string
+  /** WORLD_VIEWBOX, handed down by the server page. It used to be imported
+   * here directly, and that one string import was enough to pull the entire
+   * world-paths module — every country's outline, ~63 KB gzipped — into the
+   * /atlas client bundle, even though the same paths already arrive as the
+   * `countryPaths` prop. */
+  viewBox: string
 }
-
-const [VB_X, VB_Y, VB_W, VB_H] = WORLD_VIEWBOX.split(' ').map(Number)
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '')
@@ -62,14 +68,124 @@ function RegCross({ x, y }: { x: number; y: number }) {
   )
 }
 
-export function Plate({ countryPaths, allCountries, rankings, dialIndicators, defaultMetric }: PlateProps) {
+interface CountryLayerProps {
+  countryPaths: readonly CountryPath[]
+  paintByIso3: Map<string, { color: string; delay: number }> | null
+  hoverIso3: string | null
+  popByIso3: Map<string, RankingRow>
+  onEnter: (iso3: string) => void
+  onLeave: () => void
+  onFocusCountry: (c: CountryPath) => void
+}
+
+/**
+ * Every country on the plate, as links. Memoised, and pulled out of Plate
+ * for that reason alone: Plate re-renders on every mousemove (the
+ * cartouche's position is state) and on every zoom/pan frame (the transform
+ * is state), and none of that changes a single path. Before this, each of
+ * those frames rebuilt all ~174 links — style object, class list, label —
+ * just to arrive at the same markup. Now this only renders when the paint,
+ * the hovered country or the population rows change.
+ */
+const CountryLayer = memo(function CountryLayer({
+  countryPaths,
+  paintByIso3,
+  hoverIso3,
+  popByIso3,
+  onEnter,
+  onLeave,
+  onFocusCountry,
+}: CountryLayerProps) {
+  return (
+    <>
+      {countryPaths.map((c) => {
+        const paint = paintByIso3?.get(c.iso3)
+        const isHover = hoverIso3 === c.iso3
+        const popRow = popByIso3.get(c.iso3)
+        const headline = popRow?.value
+          ? `${c.name} — population ${formatValue(popRow.value, 'number')} (${popRow.year ?? '—'})`
+          : c.name
+
+        /* styles.hatch, not the global 'atlas-hatch': the shared
+           class fills from the shared patterns, which grow with the
+           zoom (see the <defs> in Plate). styles.hatchActive replaces
+           the global 'is-active' for the same reason — the pair only
+           ever meant anything together, so both moved into the module
+           at once. app/atlas/learn's MapQuestion.tsx still uses the
+           global pair and is untouched. */
+        const classNames = [
+          styles.countryPath,
+          paint ? styles.painted : styles.hatch,
+          'atlas-vt-map-path',
+          !paint && isHover ? styles.hatchActive : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+
+        return (
+          <a
+            key={c.iso3}
+            href={`/atlas/${c.iso3}`}
+            className={styles.countryLink}
+            aria-label={headline}
+            // Focus/blur belong on the <a> — it's the SVG element
+            // Tab actually lands on; the <path> inside it is never
+            // itself focusable, so handlers placed there (the
+            // pre-existing code) silently never fired for keyboard
+            // users. plate.module.css's own
+            // .countryLink:focus-visible .countryPath rule already
+            // assumed focus lands here.
+            onFocus={() => onFocusCountry(c)}
+            onBlur={onLeave}
+          >
+            <path
+              d={c.d}
+              className={classNames}
+              style={
+                {
+                  fill: paint ? paint.color : undefined,
+                  transitionDelay: paint ? `${paint.delay}ms` : undefined,
+                  '--atlas-vt-name': `atlas-country-${c.iso3}`,
+                  // Undo the map's zoom on the hover stroke/focus ring so
+                  // it stays a hairline instead of thickening with scale.
+                  vectorEffect: 'non-scaling-stroke',
+                } as React.CSSProperties
+              }
+              onMouseEnter={() => onEnter(c.iso3)}
+              onMouseLeave={onLeave}
+            >
+              <title>{headline}</title>
+            </path>
+          </a>
+        )
+      })}
+    </>
+  )
+})
+
+export function Plate({ countryPaths, allCountries, rankings, dialIndicators, defaultMetric, viewBox }: PlateProps) {
   const [activeMetric, setActiveMetric] = useState<string | null>(null)
   const [hoverIso3, setHoverIso3] = useState<string | null>(null)
   const [hoverSource, setHoverSource] = useState<'map' | 'rail' | null>(null)
   const [cartouchePos, setCartouchePos] = useState({ x: 0, y: 0 })
 
+  const [VB_X, VB_Y, VB_W, VB_H] = useMemo(() => viewBox.split(' ').map(Number), [viewBox])
+
   const mapWrapRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  /** The search box, the zoom hint and the zoom buttons. They sit inside
+   * .mapWrap, so every pointer, wheel and key event aimed at them bubbles
+   * through the map's own handlers on the way up — see isFurniture(). */
+  const cornerRef = useRef<HTMLDivElement>(null)
+
+  /** True for an event that started on the corner furniture rather than on
+   * the map. Those belong to the control under them: typing "-" or "0" in
+   * the search box, arrowing through its text, dragging to select it,
+   * scrolling its result list or pressing a zoom button must not also pan or
+   * zoom the plate behind it. */
+  function isFurniture(target: EventTarget | null): boolean {
+    return target instanceof Node && cornerRef.current !== null && cornerRef.current.contains(target)
+  }
 
   const {
     transform,
@@ -96,6 +212,8 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
     const node = mapWrapRef.current
     if (!node) return
     function handleWheel(e: WheelEvent) {
+      // Let the search results list scroll natively.
+      if (e.target instanceof Node && cornerRef.current?.contains(e.target)) return
       e.preventDefault()
       const factor = Math.exp(-e.deltaY * 0.0015)
       zoomAt(e.clientX, e.clientY, factor)
@@ -116,14 +234,31 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
     return Math.hypot(a.x - b.x, a.y - b.y)
   }
 
+  /** Pointer capture is taken only once a press has become a gesture — a
+   * drag past the click threshold, or a second finger. Capturing on
+   * pointerdown (the old code) retargets the pointerup to .mapWrap, and a
+   * click whose down and up land on different elements is dispatched to
+   * their common ancestor: the map itself, not the country link that was
+   * pressed. Deferring it leaves a plain click on a country alone. */
+  function capture(el: HTMLDivElement, pointerId: number) {
+    if (el.hasPointerCapture(pointerId)) return
+    try {
+      el.setPointerCapture(pointerId)
+    } catch {
+      // The pointer already lifted — nothing left to capture.
+    }
+  }
+
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0 && e.pointerType === 'mouse') return
-    e.currentTarget.setPointerCapture(e.pointerId)
+    if (isFurniture(e.target)) return
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (activePointers.current.size === 1) {
       beginDrag(e.clientX, e.clientY)
     } else if (activePointers.current.size === 2) {
       pinchStartDist.current = pinchDistance()
+      const el = e.currentTarget
+      activePointers.current.forEach((_, id) => capture(el, id))
     }
   }
 
@@ -139,10 +274,12 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
       pinchStartDist.current = dist
     } else if (activePointers.current.size === 1 && e.buttons === 1) {
       dragTo(e.clientX, e.clientY)
+      if (wasDragged()) capture(e.currentTarget, e.pointerId)
     }
   }
 
   function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!activePointers.current.has(e.pointerId)) return
     activePointers.current.delete(e.pointerId)
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
 
@@ -153,14 +290,20 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
       // One finger lifted out of a pinch — restart the drag baseline from
       // the remaining finger so panning doesn't jump.
       const [remaining] = Array.from(activePointers.current.values())
-      beginDrag(remaining.x, remaining.y)
+      beginDrag(remaining.x, remaining.y, true)
     }
   }
 
   /** A drag that ended up moving the map shouldn't also fire the country
    * link's navigation underneath the pointer — this runs in the capture
-   * phase, ahead of the <a>'s own click. */
+   * phase, ahead of the <a>'s own click. `detail === 0` is a click made by
+   * the keyboard (Enter on a focused country); a touch pan fires no click of
+   * its own, so its leftover flag must not swallow that one. */
   function handleClickCapture(e: React.MouseEvent<HTMLDivElement>) {
+    if (e.detail === 0 || isFurniture(e.target)) {
+      clearDragged()
+      return
+    }
     if (wasDragged()) {
       e.preventDefault()
       e.stopPropagation()
@@ -176,6 +319,8 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
   }
 
   function handleMapKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (isFurniture(e.target)) return
+    if (e.altKey || e.ctrlKey || e.metaKey) return
     const dir = PAN_KEYS[e.key]
     if (dir) {
       e.preventDefault()
@@ -216,7 +361,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
       map.set(row.iso3, { color: rampColor(row.percentile ?? 50), delay: Math.round(nx * 900) })
     }
     return map
-  }, [activeRanking, pathsByIso3])
+  }, [activeRanking, pathsByIso3, VB_X, VB_W])
 
   const nodataCount = activeRanking ? activeRanking.rows.filter((r) => r.value === null).length : null
 
@@ -241,33 +386,41 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
     if (rect) setCartouchePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
   }
 
-  function handleCountryEnter(iso3: string) {
+  // The handlers below are handed to the memoised CountryLayer and RankRail,
+  // so they have to keep the same identity across renders or the memo is
+  // worthless. worldToClient changes with every zoom frame, hence the ref.
+  const worldToClientRef = useRef(worldToClient)
+  useEffect(() => {
+    worldToClientRef.current = worldToClient
+  }, [worldToClient])
+
+  const handleCountryEnter = useCallback((iso3: string) => {
     setHoverIso3(iso3)
     setHoverSource('map')
-  }
+  }, [])
 
-  function handleCountryFocus(c: CountryPath) {
+  const handleCountryFocus = useCallback((c: CountryPath) => {
     setHoverIso3(c.iso3)
     setHoverSource('map')
     const rect = mapWrapRef.current?.getBoundingClientRect()
     // worldToClient accounts for the current zoom/pan — a plain
     // percent-of-viewBox calculation (the old code) only lined up with
     // rect.width/height at scale 1, tx=ty=0.
-    const client = worldToClient(c.centroid[0], c.centroid[1])
+    const client = worldToClientRef.current(c.centroid[0], c.centroid[1])
     if (rect && client) {
       setCartouchePos({ x: client.x - rect.left, y: client.y - rect.top })
     }
-  }
+  }, [])
 
-  function handleCountryLeave() {
+  const handleCountryLeave = useCallback(() => {
     setHoverIso3(null)
     setHoverSource(null)
-  }
+  }, [])
 
-  function handleRailHover(iso3: string | null) {
+  const handleRailHover = useCallback((iso3: string | null) => {
     setHoverIso3(iso3)
     setHoverSource(iso3 ? 'rail' : null)
-  }
+  }, [])
 
   /* The number that makes the engraving hatch hold still while the map zooms.
      See the <defs> block below for the whole story; this is just the guard.
@@ -284,7 +437,9 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
   const hoveredPath = hoverIso3 ? pathsByIso3.get(hoverIso3) : null
   const hoveredPopRow = hoverIso3 ? popByIso3.get(hoverIso3) : undefined
   const hoveredMetricRow = hoverIso3 && activeRanking ? activeRanking.rows.find((r) => r.iso3 === hoverIso3) : undefined
-  const activeIndicatorDef = activeMetric ? INDICATORS_BY_CODE[activeMetric] : null
+  // dialIndicators already holds the definition of every metric the dial can
+  // pick, so the full indicator list never has to reach the browser.
+  const activeIndicatorDef = activeMetric ? (dialIndicators.find((d) => d.code === activeMetric) ?? null) : null
 
   return (
     <div className={styles.layout}>
@@ -343,13 +498,19 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
           onClickCapture={handleClickCapture}
           onKeyDown={handleMapKeyDown}
           tabIndex={0}
+          // A name on a bare <div> is ignored by most screen readers; a
+          // group role is what makes this instruction actually get read.
+          role="group"
           aria-label="Map view. Arrow keys pan, plus and minus keys zoom, zero resets. Tab again to reach a country."
         >
           <svg
             ref={svgRef}
-            viewBox={WORLD_VIEWBOX}
+            viewBox={viewBox}
             className={styles.svg}
-            role="img"
+            // role="group", not "img": an img's children are presentational,
+            // which hid every country link inside it from screen readers —
+            // Tab reached them, but nothing was announced.
+            role="group"
             aria-label={`World map, ${countryPaths.length} of ${allCountries.length} countries engraved. Use search or the standings list to reach any country.`}
           >
             {/* The plate's own copies of the engraving hatch, and the one
@@ -382,10 +543,10 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
                 here — unique in the document, so nothing collides — with the
                 same geometry and colours as the shared pair.
 
-                Living inside this <svg> rather than in a memoised child is
-                deliberate and free: `transform` is state on this component, so
-                the country list below re-renders on every zoom frame either
-                way. Two <pattern> nodes add nothing measurable to that. */}
+                These two do re-render on every zoom frame — they have to, the
+                inverse scale is the whole point — but that is two <pattern>
+                nodes. The country list below is a memoised CountryLayer and
+                does not. */}
             <defs>
               {/* Resting state for land — mirrors #atlas-hatch. */}
               <pattern
@@ -417,71 +578,19 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
               <RegCross x={VB_X + 22} y={VB_Y + VB_H - 22} />
               <RegCross x={VB_X + VB_W - 22} y={VB_Y + VB_H - 22} />
 
-              {countryPaths.map((c) => {
-                const paint = paintByIso3?.get(c.iso3)
-                const isHover = hoverIso3 === c.iso3
-                const popRow = popByIso3.get(c.iso3)
-                const headline = popRow?.value
-                  ? `${c.name} — population ${formatValue(popRow.value, 'number')} (${popRow.year ?? '—'})`
-                  : c.name
-
-                /* styles.hatch, not the global 'atlas-hatch': the shared
-                   class fills from the shared patterns, which grow with the
-                   zoom (see the <defs> above). styles.hatchActive replaces
-                   the global 'is-active' for the same reason — the pair only
-                   ever meant anything together, so both moved into the module
-                   at once. app/atlas/learn's MapQuestion.tsx still uses the
-                   global pair and is untouched. */
-                const classNames = [
-                  styles.countryPath,
-                  paint ? styles.painted : styles.hatch,
-                  'atlas-vt-map-path',
-                  !paint && isHover ? styles.hatchActive : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-
-                return (
-                  <a
-                    key={c.iso3}
-                    href={`/atlas/${c.iso3}`}
-                    className={styles.countryLink}
-                    aria-label={headline}
-                    // Focus/blur belong on the <a> — it's the SVG element
-                    // Tab actually lands on; the <path> inside it is never
-                    // itself focusable, so handlers placed there (the
-                    // pre-existing code) silently never fired for keyboard
-                    // users. plate.module.css's own
-                    // .countryLink:focus-visible .countryPath rule already
-                    // assumed focus lands here.
-                    onFocus={() => handleCountryFocus(c)}
-                    onBlur={handleCountryLeave}
-                  >
-                    <path
-                      d={c.d}
-                      className={classNames}
-                      style={
-                        {
-                          fill: paint ? paint.color : undefined,
-                          transitionDelay: paint ? `${paint.delay}ms` : undefined,
-                          '--atlas-vt-name': `atlas-country-${c.iso3}`,
-                          // Undo the map's zoom on the hover stroke/focus ring so
-                          // it stays a hairline instead of thickening with scale.
-                          vectorEffect: 'non-scaling-stroke',
-                        } as React.CSSProperties
-                      }
-                      onMouseEnter={() => handleCountryEnter(c.iso3)}
-                      onMouseLeave={handleCountryLeave}
-                    >
-                      <title>{headline}</title>
-                    </path>
-                  </a>
-                )
-              })}
+              <CountryLayer
+                countryPaths={countryPaths}
+                paintByIso3={paintByIso3}
+                hoverIso3={hoverIso3}
+                popByIso3={popByIso3}
+                onEnter={handleCountryEnter}
+                onLeave={handleCountryLeave}
+                onFocusCountry={handleCountryFocus}
+              />
             </g>
           </svg>
 
-          <div className={styles.cornerCluster}>
+          <div className={styles.cornerCluster} ref={cornerRef}>
             {/* Search moved here from the header — see AtlasSearch.tsx's
                 doc comment for why it only ever renders on /atlas now.
                 Sits above the zoom hint/buttons so its dropdown (opens
@@ -503,12 +612,18 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
             <span className={`atlas-label ${styles.zoomHint}`} aria-hidden="true">
               Scroll or drag to explore
             </span>
+            {/* aria-disabled, not disabled: a real `disabled` drops keyboard
+                focus to <body> the moment the last press reaches the limit,
+                sending a keyboard user back to the top of the page. At the
+                limit each handler is already a no-op (useMapTransform clamps
+                the scale; resetting at rest changes nothing), so the
+                attribute only has to say so. */}
             <div className={styles.zoomControls} role="group" aria-label="Zoom map">
               <button
                 type="button"
                 className={styles.zoomButton}
                 onClick={() => zoomStep(1)}
-                disabled={transform.scale >= maxScale}
+                aria-disabled={transform.scale >= maxScale}
                 aria-label="Zoom in"
               >
                 +
@@ -517,7 +632,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
                 type="button"
                 className={styles.zoomButton}
                 onClick={() => zoomStep(-1)}
-                disabled={transform.scale <= minScale}
+                aria-disabled={transform.scale <= minScale}
                 aria-label="Zoom out"
               >
                 −
@@ -526,7 +641,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
                 type="button"
                 className={styles.zoomButton}
                 onClick={resetView}
-                disabled={transform.scale === 1 && transform.tx === 0 && transform.ty === 0}
+                aria-disabled={transform.scale === 1 && transform.tx === 0 && transform.ty === 0}
                 aria-label="Reset map zoom and position"
               >
                 Reset

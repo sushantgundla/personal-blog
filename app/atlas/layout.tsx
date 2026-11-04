@@ -17,6 +17,31 @@ export const metadata: Metadata = {
   title: 'The Atlas — every country in the world, engraved',
   description:
     'An interactive atlas of every country on Earth, rendered as an uncut sheet of banknotes — geography, economy, trade, society and history, one note per country.',
+  // Fixed: app/layout.tsx sets `alternates.canonical: '/'` and a home-page
+  // openGraph/twitter block for the whole site, and none of the Atlas routes
+  // replaced them — so every /atlas/* page declared the home page as its
+  // canonical URL (telling search engines to drop it as a duplicate) and
+  // shared as "Sushant Gundla, Technical Lead AI/ML" at og:url "/".
+  //
+  // './' is resolved by Next against each route's own pathname, so this one
+  // line gives every Atlas page its own canonical. The openGraph and twitter
+  // blocks deliberately carry no title or description: Next fills both from
+  // each page's own <title> and description when they are missing. The
+  // image is the root opengraph-image, restated because setting openGraph
+  // here replaces the inherited block, image and all.
+  alternates: { canonical: './' },
+  openGraph: {
+    url: './',
+    siteName: 'Sushant Gundla',
+    locale: 'en_US',
+    type: 'website',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    creator: '@sushantgundla',
+    images: ['/opengraph-image'],
+  },
 }
 
 export const viewport: Viewport = {
