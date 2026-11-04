@@ -13,7 +13,7 @@
 // invalidated the cached page render) — the button reflects both the
 // stream's own payload and the page's own re-render, not just one of them.
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './dossier.module.css'
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -27,12 +27,20 @@ const SOURCE_LABELS: Record<string, string> = {
   fx: 'Exchange rate',
 }
 
-function formatCapturedAt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-  } catch {
-    return iso
-  }
+// The server renders this in its own timezone (UTC on Vercel) and the
+// browser in the visitor's, so formatting in local time straight away makes
+// the two disagree and React throws away the server HTML on hydration. The
+// first render, on both sides, is pinned to UTC and says so; after mount it
+// switches to the visitor's local time.
+function formatCapturedAt(iso: string, local: boolean): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  const text = date.toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: local ? undefined : 'UTC',
+  })
+  return local ? text : `${text} UTC`
 }
 
 type Status = 'idle' | 'running' | 'done' | 'error'
@@ -43,6 +51,12 @@ export function RefreshButton({ iso3, capturedAt }: { iso3: string; capturedAt: 
   const [log, setLog] = useState<{ source: string; ok: boolean }[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [asOf, setAsOf] = useState(capturedAt)
+  const [local, setLocal] = useState(false)
+  useEffect(() => setLocal(true), [])
+
+  // router.refresh() hands down a new capturedAt prop once the page
+  // re-renders; keep the label in step with it.
+  useEffect(() => setAsOf(capturedAt), [capturedAt])
 
   async function refresh() {
     setStatus('running')
@@ -118,7 +132,7 @@ export function RefreshButton({ iso3, capturedAt }: { iso3: string; capturedAt: 
 
   return (
     <div className={styles.refreshRow}>
-      <span className={styles.refreshAsOf}>Data as of {formatCapturedAt(asOf)}</span>
+      <span className={styles.refreshAsOf}>Data as of {formatCapturedAt(asOf, local)}</span>
       <button type="button" onClick={refresh} disabled={running} className={styles.refreshButton}>
         {running ? '↻ Refreshing…' : '↻ Refresh live data'}
       </button>
