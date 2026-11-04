@@ -55,10 +55,16 @@ export function AtlasSearch({ countries }: AtlasSearchProps) {
   // already typing into some other field.
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key !== '/') return
+      if (e.key !== '/' || e.defaultPrevented) return
+      // Leave modified presses to the browser and the OS (Cmd+/ and Ctrl+/
+      // are common shortcuts of their own).
+      if (e.metaKey || e.ctrlKey || e.altKey) return
       const active = document.activeElement as HTMLElement | null
       const tag = active?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || active?.isContentEditable) return
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active?.isContentEditable) return
+      // The guided tour traps focus in its card; "/" must not pull it out
+      // to a search box sitting under the dimmed overlay.
+      if (active?.closest('[role="dialog"]')) return
       e.preventDefault()
       inputRef.current?.focus()
     }
