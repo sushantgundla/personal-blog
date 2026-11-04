@@ -1,5 +1,6 @@
 import type { TradePartner, TradeSummary, SourceResult } from '@/lib/atlas/types'
 import { countryInk } from '@/lib/atlas/ink'
+import { BY_ISO3 } from '@/lib/atlas/iso-countries'
 import { formatValue, formatYear } from '@/lib/atlas/format'
 import styles from './compare.module.css'
 
@@ -20,7 +21,10 @@ const VISIBLE_PARTNERS = 8
  * overriding whatever fallback string the source client produced.
  */
 function partnerLabel(partner: TradePartner): string {
-  return partner.iso3 ? partner.name : 'Other'
+  if (!partner.iso3) return 'Other'
+  // Comtrade's own names ("USA", "Rep. of Korea", "Cayman Isds") differ
+  // from the name every other part of the Atlas uses for the same country.
+  return BY_ISO3[partner.iso3]?.name ?? partner.name
 }
 
 /** The Comtrade "World" aggregate row carries each partner's true share

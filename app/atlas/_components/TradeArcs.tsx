@@ -19,6 +19,8 @@ const PATHS_BY_ISO3 = new Map(COUNTRY_PATHS.map((c) => [c.iso3, c] as const))
 
 interface Arc {
   partner: TradePartner
+  /** The map's own name for the partner, not Comtrade's ("USA", "Rep. of Korea"). */
+  name: string
   x1: number
   y1: number
   x2: number
@@ -99,7 +101,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
     const [x1, y1] = home.centroid
     const [x2, y2] = path.centroid
     const { cx, cy } = buildArc(x1, y1, x2, y2)
-    arcs.push({ partner, x1, y1, x2, y2, cx, cy })
+    arcs.push({ partner, name: path.name, x1, y1, x2, y2, cx, cy })
   }
 
   const maxValue = Math.max(1, ...arcs.map((a) => a.partner.value))
@@ -158,7 +160,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
                 // which only gets filled in on the client, tripping a
                 // hydration mismatch. Plate.tsx's own countryLink title
                 // dodges the same trap by building one string first.
-                const titleText = `${arc.partner.name} — ${formatValue(arc.partner.value, 'currency')} (${trade.data.year})`
+                const titleText = `${arc.name} — ${formatValue(arc.partner.value, 'currency')} (${arc.partner.year})`
                 return (
                   <path
                     key={`${arc.partner.iso3}-${i}`}
