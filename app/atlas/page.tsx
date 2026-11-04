@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { COUNTRY_PATHS } from '@/lib/atlas/geo/world-paths'
+import { COUNTRY_PATHS, WORLD_VIEWBOX } from '@/lib/atlas/geo/world-paths'
 import { ISO_COUNTRIES } from '@/lib/atlas/iso-countries'
 import { INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
 import { getRanking } from '@/lib/atlas/rankings'
@@ -29,6 +28,7 @@ export const metadata: Metadata = {
   title: 'The Atlas — every country in the world, engraved',
   description:
     'The uncut printing plate of every country on Earth. Hover, search, or pick an indicator to paint the world — then open any country as its own banknote.',
+  alternates: { canonical: '/atlas' },
 }
 
 /** The default rank-rail order and the cartouche's "population" line. */
@@ -49,24 +49,16 @@ const DIAL_CODES = [
   'SL.UEM.TOTL.ZS',
 ] as const
 
-interface AtlasPageProps {
-  searchParams: { c?: string }
-}
-
 /**
  * A Server Component: the world map is in the HTML before any JavaScript
- * runs. `searchParams.c` is how the no-JS search fallback (a plain
- * `<form method="get">` in AtlasSearch.tsx) reaches a country without any
- * client-side routing — the browser submits `/atlas?c=IND` and this
- * redirects to the real dossier URL, entirely server-side.
+ * runs. The no-JS search fallback (a plain `<form method="get">` in
+ * AtlasSearch.tsx) used to submit back here as `/atlas?c=IND` and be
+ * redirected from `searchParams` — but reading searchParams makes this page
+ * render on every request, which silently overrode `revalidate` above. That
+ * redirect is its own route handler now, app/atlas/search/route.ts, and
+ * this page takes no props.
  */
-export default async function AtlasPage({ searchParams }: AtlasPageProps) {
-  const requested = searchParams?.c?.trim().toUpperCase()
-  if (requested) {
-    const match = ISO_COUNTRIES.find((c) => c.iso3 === requested || c.iso2 === requested)
-    if (match) redirect(`/atlas/${match.iso3}`)
-  }
-
+export default async function AtlasPage() {
   const settled = await Promise.allSettled(DIAL_CODES.map((code) => getRanking(code)))
 
   const rankings: Record<string, Ranking> = {}
@@ -161,6 +153,7 @@ export default async function AtlasPage({ searchParams }: AtlasPageProps) {
         rankings={rankings}
         dialIndicators={dialIndicators}
         defaultMetric={DEFAULT_METRIC}
+        viewBox={WORLD_VIEWBOX}
       />
     </div>
   )

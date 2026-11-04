@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+// Types only. A value import from world-paths (or indicators) would put the
+// whole 157 KB module of country outlines (or the full indicator list) into
+// this client bundle, on top of the copy already sent as props — see
+// `viewBox` below.
 import type { CountryPath } from '@/lib/atlas/geo/world-paths'
-import { WORLD_VIEWBOX } from '@/lib/atlas/geo/world-paths'
 import type { IsoCountry } from '@/lib/atlas/iso-countries'
 import type { IndicatorDef, Ranking } from '@/lib/atlas/types'
-import { INDICATORS_BY_CODE } from '@/lib/atlas/indicators'
 import { formatValue, formatRank } from '@/lib/atlas/format'
 import { AtlasSearch } from './AtlasSearch'
 import { Cartouche } from './Cartouche'
@@ -25,9 +27,13 @@ export interface PlateProps {
   /** The metric prefetched server-side and used as the resting rank-rail
    * order and the cartouche's "population" line — SP.POP.TOTL. */
   defaultMetric: string
+  /** WORLD_VIEWBOX, handed down by the server page. It used to be imported
+   * here directly, and that one string import was enough to pull the entire
+   * world-paths module — every country's outline, ~63 KB gzipped — into the
+   * /atlas client bundle, even though the same paths already arrive as the
+   * `countryPaths` prop. */
+  viewBox: string
 }
-
-const [VB_X, VB_Y, VB_W, VB_H] = WORLD_VIEWBOX.split(' ').map(Number)
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '')
@@ -62,11 +68,13 @@ function RegCross({ x, y }: { x: number; y: number }) {
   )
 }
 
-export function Plate({ countryPaths, allCountries, rankings, dialIndicators, defaultMetric }: PlateProps) {
+export function Plate({ countryPaths, allCountries, rankings, dialIndicators, defaultMetric, viewBox }: PlateProps) {
   const [activeMetric, setActiveMetric] = useState<string | null>(null)
   const [hoverIso3, setHoverIso3] = useState<string | null>(null)
   const [hoverSource, setHoverSource] = useState<'map' | 'rail' | null>(null)
   const [cartouchePos, setCartouchePos] = useState({ x: 0, y: 0 })
+
+  const [VB_X, VB_Y, VB_W, VB_H] = useMemo(() => viewBox.split(' ').map(Number), [viewBox])
 
   const mapWrapRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -216,7 +224,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
       map.set(row.iso3, { color: rampColor(row.percentile ?? 50), delay: Math.round(nx * 900) })
     }
     return map
-  }, [activeRanking, pathsByIso3])
+  }, [activeRanking, pathsByIso3, VB_X, VB_W])
 
   const nodataCount = activeRanking ? activeRanking.rows.filter((r) => r.value === null).length : null
 
@@ -284,7 +292,9 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
   const hoveredPath = hoverIso3 ? pathsByIso3.get(hoverIso3) : null
   const hoveredPopRow = hoverIso3 ? popByIso3.get(hoverIso3) : undefined
   const hoveredMetricRow = hoverIso3 && activeRanking ? activeRanking.rows.find((r) => r.iso3 === hoverIso3) : undefined
-  const activeIndicatorDef = activeMetric ? INDICATORS_BY_CODE[activeMetric] : null
+  // dialIndicators already holds the definition of every metric the dial can
+  // pick, so the full indicator list never has to reach the browser.
+  const activeIndicatorDef = activeMetric ? (dialIndicators.find((d) => d.code === activeMetric) ?? null) : null
 
   return (
     <div className={styles.layout}>
@@ -347,7 +357,7 @@ export function Plate({ countryPaths, allCountries, rankings, dialIndicators, de
         >
           <svg
             ref={svgRef}
-            viewBox={WORLD_VIEWBOX}
+            viewBox={viewBox}
             className={styles.svg}
             role="img"
             aria-label={`World map, ${countryPaths.length} of ${allCountries.length} countries engraved. Use search or the standings list to reach any country.`}

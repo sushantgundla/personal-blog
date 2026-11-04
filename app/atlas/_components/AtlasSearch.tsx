@@ -38,9 +38,11 @@ function optionId(iso3: string | undefined): string | undefined {
  *
  * Below the enhanced control, always rendered server-side, sits a plain
  * `<form method="get">` + `<select>` wrapped in `<noscript>` — it works
- * with JavaScript off: submitting it hits `/atlas?c=IND`, which
- * app/atlas/page.tsx reads from `searchParams` and redirects from,
- * server-side, to `/atlas/IND`.
+ * with JavaScript off: submitting it hits `/atlas/search?c=IND`, a route
+ * handler (app/atlas/search/route.ts) that redirects, server-side, to
+ * `/atlas/IND`. It used to submit to `/atlas?c=IND` and have the page read
+ * `searchParams`, but reading searchParams turns the whole landing page into
+ * a per-request render and switches off its hourly `revalidate`.
  */
 export function AtlasSearch({ countries }: AtlasSearchProps) {
   const router = useRouter()
@@ -173,7 +175,7 @@ export function AtlasSearch({ countries }: AtlasSearchProps) {
             Search without JavaScript
           </summary>
           <form
-            action="/atlas"
+            action="/atlas/search"
             method="get"
             style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}
           >
