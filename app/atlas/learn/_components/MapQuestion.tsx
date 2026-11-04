@@ -15,7 +15,9 @@ export interface MapQuestionProps {
    *  right/wrong contract only needs two values here. */
   picked: number | null
   disabled: boolean
-  onPick: (index: number) => void
+  /** `label` is the name of the shape actually clicked, so the run summary
+   *  can say "You said: Spain" rather than the "Elsewhere" sentinel. */
+  onPick: (index: number, label?: string) => void
 }
 
 const [VB_X, VB_Y, VB_W, VB_H] = WORLD_VIEWBOX.split(' ').map(Number)
@@ -100,15 +102,9 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
     maxScale,
   } = useMapTransform(svgRef, VB_W, VB_H)
 
-  // A fresh card: nothing clicked, nothing focused, the view reset. Same
-  // reset-on-question.id pattern GuessCountryQuestion uses for its own
-  // per-question state.
-  useEffect(() => {
-    setClickedIso3(null)
-    setFocusedIso3(null)
-    reset()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [question.id])
+  // No reset-on-new-question effect: PlayScreen keys this component by
+  // `question.id`, so every card mounts fresh — nothing clicked, nothing
+  // focused, the view at rest.
 
   function focusIndexOf(iso3: string | null): number {
     if (!iso3) return -1
@@ -195,7 +191,7 @@ export function MapQuestion({ question, picked, disabled, onPick }: MapQuestionP
     if (disabled || answered) return
     setClickedIso3(iso3)
     setFocusedIso3(iso3)
-    onPick(iso3 === correctIso3 ? 0 : 1)
+    onPick(iso3 === correctIso3 ? 0 : 1, nameOf(iso3))
   }
 
   // Seeding a focused country is for keyboard players: Tab lands on the map

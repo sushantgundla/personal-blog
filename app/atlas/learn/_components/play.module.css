@@ -205,6 +205,13 @@
   padding: clamp(1.25rem, 4vw, 2.25rem);
 }
 
+/* PlayScreen moves focus here (tabindex="-1") on each new question so a
+   screen reader reads the card. It is not a control and cannot be tabbed to,
+   so it draws no focus ring of its own. */
+.card:focus {
+  outline: none;
+}
+
 /* The dashed cutting guide printed just inside a note's own edge, the same
    detail the floor's game cards carry. Purely decorative. */
 .card::before {

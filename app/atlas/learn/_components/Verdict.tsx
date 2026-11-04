@@ -24,10 +24,11 @@ export interface VerdictProps {
  *
  * The stamp is the only theatre. Everything below it is a ledger.
  *
- * Announced through `role="status"` so a screen reader hears the outcome
- * without the player having to go looking for it, and the plain words
- * "Correct" / "Not correct" lead — the stamp's own lettering is decorative
- * and is hidden from assistive tech.
+ * The plain words "Correct" / "Not correct" lead — the stamp's own
+ * lettering is decorative and is hidden from assistive tech. The outcome is
+ * announced by an always-mounted live region in PlayScreen, not by this
+ * panel: a `role="status"` that mounts with its text already inside is
+ * silently skipped by most screen readers.
  */
 export function Verdict({ question, picked }: VerdictProps) {
   const correct = picked === question.answer
@@ -56,7 +57,7 @@ export function Verdict({ question, picked }: VerdictProps) {
   )
 
   return (
-    <section className={styles.verdict} data-correct={correct} role="status">
+    <section className={styles.verdict} data-correct={correct}>
       <div className={styles.verdictTop}>
         <p className={styles.verdictCall}>
           <span className={styles.verdictCallWord}>{correct ? 'Correct.' : 'Not correct.'}</span>{' '}
