@@ -223,6 +223,7 @@ function SlotSearch({ countries, taken, onSelect, open, onOpenChange }: SlotSear
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
 
   const results = useMemo(() => {
     const pool = countries.filter((c) => !taken.includes(c.iso3))
@@ -242,6 +243,7 @@ function SlotSearch({ countries, taken, onSelect, open, onOpenChange }: SlotSear
   if (!open) {
     return (
       <button
+        ref={addButtonRef}
         type="button"
         className={styles.slotAddButton}
         onClick={() => {
@@ -291,6 +293,9 @@ function SlotSearch({ countries, taken, onSelect, open, onOpenChange }: SlotSear
             }
           } else if (e.key === 'Escape') {
             onOpenChange(false)
+            // The input unmounts on close; hand focus back to the button
+            // that opened it rather than dropping it on <body>.
+            requestAnimationFrame(() => addButtonRef.current?.focus())
           }
         }}
       />
@@ -298,8 +303,13 @@ function SlotSearch({ countries, taken, onSelect, open, onOpenChange }: SlotSear
         <ul id="compare-slot-search-listbox" role="listbox" className={styles.slotSearchListbox}>
           {results.map((c, i) => (
             <li key={c.iso3} id={slotOptionId(c.iso3)} role="option" aria-selected={i === activeIndex}>
+              {/* Mouse-only: keyboard users pick with the arrow keys and
+                  Enter from the input, so the button stays out of the Tab
+                  order (tabbing onto it would blur the input and close the
+                  list before it could be pressed). */}
               <button
                 type="button"
+                tabIndex={-1}
                 className={styles.slotSearchOption}
                 data-active={i === activeIndex}
                 onMouseDown={(e) => {
