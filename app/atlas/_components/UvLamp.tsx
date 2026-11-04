@@ -22,16 +22,37 @@ export function UvLamp() {
   const [on, setOn] = useState(false)
   const [hydrated, setHydrated] = useState(false)
 
+  // localStorage throws outright when site data is blocked (and in some
+  // private windows) — a remembered lamp is a nicety, never worth an
+  // error boundary over.
   useEffect(() => {
-    setOn(window.localStorage.getItem(STORAGE_KEY) === '1')
+    try {
+      setOn(window.localStorage.getItem(STORAGE_KEY) === '1')
+    } catch {
+      // keep the default: off
+    }
     setHydrated(true)
   }, [])
 
   useEffect(() => {
     if (!hydrated) return
     document.querySelector('.atlas-root')?.classList.toggle('uv-on', on)
-    window.localStorage.setItem(STORAGE_KEY, on ? '1' : '0')
+    try {
+      window.localStorage.setItem(STORAGE_KEY, on ? '1' : '0')
+    } catch {
+      // not remembered this time; the lamp itself still works
+    }
   }, [on, hydrated])
+
+  // .atlas-root belongs to app/atlas/layout.tsx, which stays mounted across
+  // client navigations. Without this, leaving a dossier with the lamp on
+  // (the "Back to the plate" link) kept the map lit with no lamp to switch
+  // it off. The saved choice is untouched, so the next dossier relights it.
+  useEffect(() => {
+    return () => {
+      document.querySelector('.atlas-root')?.classList.remove('uv-on')
+    }
+  }, [])
 
   return (
     <MagneticButton className="atlas-magnetic" strength={0.2}>

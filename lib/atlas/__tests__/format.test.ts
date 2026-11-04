@@ -1,6 +1,6 @@
 // @ts-nocheck -- describe/test/expect come from lib/atlas/__tests__/globals.mjs
 // at run time (npm run atlas:test) and have no type declarations here.
-import { formatValue, formatRank, formatYear, formatComparison } from '../format';
+import { formatValue, formatRank, formatYear, formatComparison, formatWikidataDate } from '../format';
 
 describe('formatValue', () => {
   test('never prints NaN, undefined or $NaN', () => {
@@ -49,6 +49,23 @@ describe('formatValue', () => {
   test('a custom empty marker is honoured', () => {
     expect(formatValue(null, 'number', { empty: 'n/a' })).toBe('n/a');
   });
+
+  test('infinity is treated as missing, never engraved as ∞', () => {
+    expect(formatValue(Infinity, 'currency')).toBe('—');
+    expect(formatValue(-Infinity, 'number')).toBe('—');
+  });
+
+  test('rounding up to 1,000 of a unit steps to the next unit', () => {
+    expect(formatValue(999_960_000, 'number')).toBe('1.00B');
+    expect(formatValue(999_996_000_000, 'currency')).toBe('$1.00T');
+    expect(formatValue(999_940_000, 'number')).toBe('999.9M');
+  });
+
+  test('a negative that rounds to zero loses its minus sign', () => {
+    expect(formatValue(-0.04, 'percent')).toBe('0.0%');
+    expect(formatValue(-0.4, 'number')).toBe('0');
+    expect(formatValue(-0.06, 'percent')).toBe('-0.1%');
+  });
 });
 
 describe('formatRank', () => {
@@ -59,6 +76,30 @@ describe('formatRank', () => {
   test('missing rank renders the empty marker', () => {
     expect(formatRank(null, 195)).toBe('—');
     expect(formatRank(undefined, 195)).toBe('—');
+  });
+
+  test('a missing or zero total drops the "of" instead of printing "of 0"', () => {
+    expect(formatRank(5, null)).toBe('#5');
+    expect(formatRank(5, 0)).toBe('#5');
+  });
+});
+
+describe('formatWikidataDate', () => {
+  test('a full date reads day, month, year', () => {
+    expect(formatWikidataDate('1947-08-15T00:00:00Z')).toBe('15 Aug 1947');
+  });
+
+  test('a year-only date prints the bare year, without zero-padding', () => {
+    expect(formatWikidataDate('0481-01-01T00:00:00Z')).toBe('481');
+    expect(formatWikidataDate('1776-01-01T00:00:00Z')).toBe('1776');
+  });
+
+  test('zero-padding is stripped from a full early date too', () => {
+    expect(formatWikidataDate('0301-09-04T00:00:00Z')).toBe('04 Sep 301');
+  });
+
+  test('anything unparseable is returned unchanged', () => {
+    expect(formatWikidataDate('sometime')).toBe('sometime');
   });
 });
 

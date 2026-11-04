@@ -1,5 +1,6 @@
 import type { TradePartner, TradeSummary, SourceResult } from '@/lib/atlas/types'
 import { countryInk } from '@/lib/atlas/ink'
+import { BY_ISO3 } from '@/lib/atlas/iso-countries'
 import { formatValue, formatYear } from '@/lib/atlas/format'
 import styles from './compare.module.css'
 
@@ -20,7 +21,10 @@ const VISIBLE_PARTNERS = 8
  * overriding whatever fallback string the source client produced.
  */
 function partnerLabel(partner: TradePartner): string {
-  return partner.iso3 ? partner.name : 'Other'
+  if (!partner.iso3) return 'Other'
+  // Comtrade's own names ("USA", "Rep. of Korea", "Cayman Isds") differ
+  // from the name every other part of the Atlas uses for the same country.
+  return BY_ISO3[partner.iso3]?.name ?? partner.name
 }
 
 /** The Comtrade "World" aggregate row carries each partner's true share
@@ -103,7 +107,7 @@ export function TradeBond({ trade, countryName }: TradeBondProps) {
   if (!trade.ok) {
     return (
       <section className={`atlas-note ${styles.bond}`} aria-label="Trade">
-        <div className="atlas-section-rule">— TRADE —</div>
+        <h2 className="atlas-section-rule">— TRADE —</h2>
         <p className={`atlas-body ${styles.bondEmpty}`}>
           No trade data available for {countryName}.
         </p>
@@ -116,7 +120,7 @@ export function TradeBond({ trade, countryName }: TradeBondProps) {
   if (year === null || (exports.length === 0 && imports.length === 0)) {
     return (
       <section className={`atlas-note ${styles.bond}`} aria-label="Trade">
-        <div className="atlas-section-rule">— TRADE —</div>
+        <h2 className="atlas-section-rule">— TRADE —</h2>
         <p className={`atlas-body ${styles.bondEmpty}`}>
           {countryName} has no export or import data on record with UN Comtrade. That is normal —
           many small or non-reporting states carry nothing here.
@@ -132,7 +136,7 @@ export function TradeBond({ trade, countryName }: TradeBondProps) {
 
   return (
     <section className={`atlas-note ${styles.bond}`} aria-label="Trade">
-      <div className="atlas-section-rule">— TRADE —</div>
+      <h2 className="atlas-section-rule">— TRADE —</h2>
 
       <div className={styles.bondColumns}>
         <PartnerColumn title="Exports to" partners={exports} year={year} />

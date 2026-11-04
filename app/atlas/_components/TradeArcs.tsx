@@ -19,6 +19,8 @@ const PATHS_BY_ISO3 = new Map(COUNTRY_PATHS.map((c) => [c.iso3, c] as const))
 
 interface Arc {
   partner: TradePartner
+  /** The map's own name for the partner, not Comtrade's ("USA", "Rep. of Korea"). */
+  name: string
   x1: number
   y1: number
   x2: number
@@ -66,7 +68,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
   if (!trade.ok || (trade.data.exports.length === 0 && trade.data.imports.length === 0)) {
     return (
       <section className={`atlas-note ${styles.arcs}`} aria-label="Trade partner map">
-        <div className="atlas-section-rule">— TRADE PARTNERS —</div>
+        <h2 className="atlas-section-rule">— TRADE PARTNERS —</h2>
         <p className={styles.empty}>
           No trade partner data available to map for {countryName}.
         </p>
@@ -77,7 +79,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
   if (!home) {
     return (
       <section className={`atlas-note ${styles.arcs}`} aria-label="Trade partner map">
-        <div className="atlas-section-rule">— TRADE PARTNERS —</div>
+        <h2 className="atlas-section-rule">— TRADE PARTNERS —</h2>
         <p className={styles.empty}>
           {countryName} has no map geometry at this resolution, so partner lines can&apos;t be drawn.
         </p>
@@ -99,7 +101,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
     const [x1, y1] = home.centroid
     const [x2, y2] = path.centroid
     const { cx, cy } = buildArc(x1, y1, x2, y2)
-    arcs.push({ partner, x1, y1, x2, y2, cx, cy })
+    arcs.push({ partner, name: path.name, x1, y1, x2, y2, cx, cy })
   }
 
   const maxValue = Math.max(1, ...arcs.map((a) => a.partner.value))
@@ -107,7 +109,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
   return (
     <section className={`atlas-note ${styles.arcs}`} aria-label="Trade partner map">
       <div className={styles.header}>
-        <div className={`atlas-section-rule ${styles.headerRule}`}>— TRADE PARTNERS —</div>
+        <h2 className={`atlas-section-rule ${styles.headerRule}`}>— TRADE PARTNERS —</h2>
         <div className={styles.toggle} role="group" aria-label="Show exports or imports">
           <button
             type="button"
@@ -158,7 +160,7 @@ export function TradeArcs({ iso3, countryName, trade }: TradeArcsProps) {
                 // which only gets filled in on the client, tripping a
                 // hydration mismatch. Plate.tsx's own countryLink title
                 // dodges the same trap by building one string first.
-                const titleText = `${arc.partner.name} — ${formatValue(arc.partner.value, 'currency')} (${trade.data.year})`
+                const titleText = `${arc.name} — ${formatValue(arc.partner.value, 'currency')} (${arc.partner.year})`
                 return (
                   <path
                     key={`${arc.partner.iso3}-${i}`}

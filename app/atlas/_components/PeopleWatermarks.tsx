@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import type { Person } from '@/lib/atlas/types'
 import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
-import { toHttps } from '@/lib/atlas/format'
+import { commonsThumbnail, toHttps } from '@/lib/atlas/format'
 import styles from './extras.module.css'
 
 export interface PeopleWatermarksProps {
@@ -25,7 +25,7 @@ export interface PeopleWatermarksProps {
  * back to the raw Q-id as the name (e.g. "Q133707864") — filtering those
  * out here is a display choice, not a data fix, since a plate engraved
  * with a Wikidata ID instead of a name looks broken, not composed. */
-function hasRealName(person: Person): boolean {
+export function hasRealName(person: Person): boolean {
   return !/^Q\d+$/.test(person.name.trim())
 }
 
@@ -62,8 +62,11 @@ function PersonCard({ person, iso3 }: { person: Person; iso3: string }) {
     <div className={styles.personCard}>
       {person.imageUrl ? (
         <div className={`atlas-watermark ${styles.personPortraitWrap}`}>
+          {/* famous-people.json stores bare Special:FilePath URLs, which
+              serve the original upload (often several MB) — and `unoptimized`
+              means nothing downsizes it. Ask Commons for a 2x-of-80px thumb. */}
           <Image
-            src={toHttps(person.imageUrl)}
+            src={commonsThumbnail(toHttps(person.imageUrl), 160)}
             alt=""
             fill
             sizes="80px"

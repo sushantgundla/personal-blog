@@ -2,6 +2,7 @@ import type { CountryDossier } from '@/lib/atlas/types'
 import type { IsoCountry } from '@/lib/atlas/iso-countries'
 import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
 import { commonsThumbnail, formatValue, formatYear, toHttps } from '@/lib/atlas/format'
+import { hasRealName } from './PeopleWatermarks'
 import styles from './dossier.module.css'
 
 export interface FaceNoteProps {
@@ -101,8 +102,10 @@ export function FaceNote({ dossier, country, compact }: FaceNoteProps) {
   const since = inceptionYear(facts?.independenceDate ?? null)
   const areaValue = area?.value != null ? `${formatValue(area.value, 'number')} km²` : null
 
+  // Same Q-id filter as the People strip, so the watermark (and its
+  // screen-reader name) is never someone engraved as "Q21914464".
   const portrait = dossier.famousPeople.ok
-    ? dossier.famousPeople.data.find((p) => p.imageUrl) ?? null
+    ? dossier.famousPeople.data.find((p) => p.imageUrl && hasRealName(p)) ?? null
     : null
   const hasPortrait = Boolean(portrait?.imageUrl)
 

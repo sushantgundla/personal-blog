@@ -23,7 +23,7 @@ export function CountryStory({ wikipedia, countryName }: CountryStoryProps) {
   if (!wikipedia.ok) {
     return (
       <section className={`atlas-note ${styles.story}`} aria-label="About">
-        <div className="atlas-section-rule">— THE COUNTRY —</div>
+        <h2 className="atlas-section-rule">— THE COUNTRY —</h2>
         <p className={styles.empty}>No Wikipedia summary on file for {countryName}.</p>
       </section>
     )
@@ -33,7 +33,7 @@ export function CountryStory({ wikipedia, countryName }: CountryStoryProps) {
 
   return (
     <section className={`atlas-note ${styles.story}`} aria-label="About">
-      <div className="atlas-section-rule">— THE COUNTRY —</div>
+      <h2 className="atlas-section-rule">— THE COUNTRY —</h2>
 
       {description && <p className={styles.description}>{description}</p>}
 

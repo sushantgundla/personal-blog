@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { NeighbourCountry } from '@/lib/atlas/types'
 import { toHttps } from '@/lib/atlas/format'
+import { BY_ISO3 } from '@/lib/atlas/iso-countries'
 import styles from './extras.module.css'
 
 export interface NeighboursProps {
@@ -76,7 +77,10 @@ export function Neighbours({ neighbours, countryName }: NeighboursProps) {
               </span>
             ) : (
               <span className={styles.neighbourFlagFallback} aria-hidden="true">
-                {n.iso3.slice(0, 2)}
+                {/* The real ISO2, not the ISO3's first two letters —
+                    those name a different country often enough
+                    (AUT → "AU", Australia's code). */}
+                {BY_ISO3[n.iso3]?.iso2 ?? n.iso3.slice(0, 2)}
               </span>
             )}
             <span className={styles.neighbourName}>{n.name}</span>

@@ -21,7 +21,7 @@ const TradeArcs = dynamic(() => import('./TradeArcs').then((m) => m.TradeArcs), 
   ssr: false,
   loading: () => (
     <section className="atlas-note" aria-label="Trade partner map" aria-busy="true">
-      <div className="atlas-section-rule">— TRADE PARTNERS —</div>
+      <h2 className="atlas-section-rule">— TRADE PARTNERS —</h2>
       <p className="atlas-label">Loading trade partner map…</p>
     </section>
   ),

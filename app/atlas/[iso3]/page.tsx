@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BY_ISO3 } from '@/lib/atlas/iso-countries'
@@ -40,16 +40,42 @@ export function generateStaticParams() {
   return PRERENDER_ISO3.map((iso3) => ({ iso3: iso3.toLowerCase() }))
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { iso3: string }
-}): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: { params: { iso3: string } },
+  parent: ResolvingMetadata
+): Promise<Metadata> {
   const country = BY_ISO3[params.iso3.toUpperCase()]
   if (!country) return {}
+  const title = `${country.name} — The Atlas`
+  const description = `${country.name}'s dossier: geography, economy, trade, society and history, rendered as an uncut sheet of banknotes.`
+  // The root layout sets canonical '/' and a site-wide openGraph/twitter
+  // card; without overriding them every dossier declared the home page as
+  // its canonical URL and shared as "Sushant Gundla, Technical Lead AI/ML".
+  // Lowercase is the one URL generateStaticParams prerenders. An openGraph
+  // or twitter object here replaces the parent's wholesale, so the site's
+  // share image, site name and large-card type are carried over explicitly.
+  const url = `/atlas/${country.iso3.toLowerCase()}`
+  const { openGraph: og, twitter: tw } = await parent
   return {
-    title: `${country.name} — The Atlas`,
-    description: `${country.name}'s dossier: geography, economy, trade, society and history, rendered as an uncut sheet of banknotes.`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website',
+      siteName: og?.siteName,
+      locale: og?.locale,
+      images: og?.images,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      creator: tw?.creator ?? undefined,
+      images: tw?.images,
+    },
   }
 }
 

@@ -74,6 +74,9 @@ export function CapitalClock({ capital, coordinates, iso3 }: CapitalClockProps) 
       <div className={styles.clockFace}>
         <span
           className={styles.clockTime}
+          // A bare span's aria-label is ignored by screen readers; the
+          // timer role (implicitly aria-live="off") makes it count.
+          role="timer"
           aria-live="off"
           aria-label={`Local time in ${capital}${reading ? `: ${reading.time} (${reading.label})` : ''}`}
         >
