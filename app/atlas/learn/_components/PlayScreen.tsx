@@ -86,6 +86,10 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
    *  `results`. Kept so the summary can show what got past the player, not
    *  just how many did. */
   const [picks, setPicks] = useState<number[]>([])
+  /** What the player actually chose, in words, when the option itself can't
+   *  say it — Where in the world's options are [country, "Elsewhere"], and
+   *  the summary should name the shape that was clicked, not the sentinel. */
+  const [pickLabels, setPickLabels] = useState<Array<string | null>>([])
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [progress, setProgress] = useState<Progress | null>(null)
 
@@ -93,6 +97,7 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
   const nextRoundRef = useRef<Round | null>(null)
   const prefetchingRef = useRef(false)
   const continueRef = useRef<HTMLButtonElement>(null)
+  const cardRef = useRef<HTMLElement>(null)
   const againRef = useRef<HTMLButtonElement>(null)
   /** The visible request — the one the loading state belongs to. */
   const abortRef = useRef<AbortController | null>(null)
@@ -108,7 +113,7 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
    *  summary reprints these in full — the score is the least interesting
    *  thing about a run. */
   const missed = questions
-    .map((question, i) => ({ question, picked: picks[i] ?? -1 }))
+    .map((question, i) => ({ question, picked: picks[i] ?? -1, pickedLabel: pickLabels[i] ?? null }))
     .filter((_, i) => results[i] === false)
 
   const beginRound = useCallback((round: Round) => {
@@ -119,6 +124,7 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
     setPicked(null)
     setResults([])
     setPicks([])
+    setPickLabels([])
     setErrorMessage('')
     setPhase('asking')
     prefetchingRef.current = false
@@ -177,13 +183,14 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
   useEffect(() => () => prefetchAbortRef.current?.abort(), [])
 
   const pick = useCallback(
-    (choice: number) => {
+    (choice: number, label?: string) => {
       if (phase !== 'asking' || !current) return
       if (choice < 0 || choice >= current.options.length) return
       const right = choice === current.answer
       setPicked(choice)
       setResults((prev) => [...prev, right])
       setPicks((prev) => [...prev, choice])
+      setPickLabels((prev) => [...prev, label ?? null])
       setPhase('answered')
       setProgress(recordAnswer(game, right))
     },
@@ -261,9 +268,16 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
   // Put the keyboard somewhere useful the moment the state changes: on the
   // continue button after an answer, on "run it again" at the end. The ring
   // only shows for :focus-visible, so a mouse player sees nothing.
+  //
+  // On a new question (not the first — that one follows the page's own
+  // reading order) focus goes to the card itself. Without this the "Next
+  // question" button that held focus unmounts, focus drops to <body>, a
+  // screen reader hears nothing of the new question and Tab restarts from
+  // the top of the page.
   useEffect(() => {
     if (phase === 'answered') continueRef.current?.focus()
     if (phase === 'summary') againRef.current?.focus()
+    if (phase === 'asking' && index > 0) cardRef.current?.focus({ preventScroll: true })
   }, [phase, index])
 
   if (phase === 'loading') {
@@ -353,23 +367,44 @@ export function PlayScreen({ game, houseRule }: PlayScreenProps) {
 
       {index === 0 && !answered && <p className={styles.houseRule}>{houseRule}</p>}
 
-      <article className={`atlas-note atlas-perforated ${styles.card}`}>
+      {/* Each question component is keyed by question id so it mounts
+          fresh: per-question state (revealed clues, the map's pan and zoom)
+          can never leak into the next card, not even for the one frame a
+          reset effect would take. */}
+      <article
+        ref={cardRef}
+        tabIndex={-1}
+        aria-label={`Question ${index + 1} of ${total}`}
+        className={`atlas-note atlas-perforated ${styles.card}`}
+      >
         {current.game === 'forgery' && (
-          <ForgeryQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
+          <ForgeryQuestion key={current.id} question={current} picked={picked} disabled={answered} onPick={pick} />
         )}
         {current.game === 'higher-lower' && (
-          <HigherLowerQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
+          <HigherLowerQuestion key={current.id} question={current} picked={picked} disabled={answered} onPick={pick} />
         )}
         {current.game === 'flags' && (
-          <FlagQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
+          <FlagQuestion key={current.id} question={current} picked={picked} disabled={answered} onPick={pick} />
         )}
         {current.game === 'guess-country' && (
-          <GuessCountryQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
+          <GuessCountryQuestion key={current.id} question={current} picked={picked} disabled={answered} onPick={pick} />
         )}
         {current.game === 'where-in-the-world' && (
-          <MapQuestion question={current} picked={picked} disabled={answered} onPick={pick} />
+          <MapQuestion key={current.id} question={current} picked={picked} disabled={answered} onPick={pick} />
         )}
       </article>
+
+      {/* The outcome, announced. A live region only speaks when its text
+          changes, so this one is always mounted and only its words change —
+          the verdict panel below appears with its content already inside,
+          which most screen readers never announce. Where in the world is
+          left out because MapQuestion's own status line already says
+          "Correct — France." / "The answer was France." in words. */}
+      <p className="sr-only" role="status">
+        {answered && picked !== null && current.game !== 'where-in-the-world'
+          ? `${picked === current.answer ? 'Correct.' : 'Not correct.'} ${current.verdict.headline}`
+          : ''}
+      </p>
 
       {answered && picked !== null && <Verdict question={current} picked={picked} />}
 

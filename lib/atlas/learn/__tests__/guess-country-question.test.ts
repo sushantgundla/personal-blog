@@ -1,8 +1,8 @@
 // @ts-nocheck -- see the note at the top of questions.test.ts: no runner is
 // wired into this project yet, but the assertions below are runner-ready
-// for a Jest/Vitest-compatible runner with JSX support (needed because this
-// one file, unlike its neighbours, imports a component under app/, not a
-// plain .ts module under lib/).
+// for a Jest/Vitest-compatible runner. The function under test lives in
+// lib/atlas/learn/guess-country-score.ts, a plain .ts module, so no JSX
+// support is needed.
 /**
  * Regression test for a bug found while chasing a report of "Guess the
  * country": the player revealed a second clue by clicking the reveal
@@ -23,7 +23,7 @@
  * directly — no rendering needed — plus the "click and keyboard must agree"
  * property the bug actually broke.
  */
-import { answeredAtFor } from '../../../app/atlas/learn/_components/GuessCountryQuestion';
+import { answeredAtFor } from '../guess-country-score';
 
 describe('answeredAtFor', () => {
   test('reports null while the question is still open (no answer yet)', () => {

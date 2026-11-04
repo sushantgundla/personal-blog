@@ -9,6 +9,9 @@ export interface MissedQuestion {
   question: Question
   /** The option the player chose. -1 if it somehow wasn't recorded. */
   picked: number
+  /** The choice in words, when the option can't say it itself — the shape
+   *  clicked in Where in the world, whose option is just "Elsewhere". */
+  pickedLabel?: string | null
 }
 
 export interface RunSummaryProps {
@@ -149,13 +152,14 @@ export function RunSummary({
             What got past you
           </h3>
           <ul className={styles.missList}>
-            {missed.map(({ question, picked }) => {
+            {missed.map(({ question, picked, pickedLabel }) => {
               const row = answerRow(question)
               const chosen = question.options[picked]
               // Each game names its options differently — a forgery option is
               // a statement, a country is a name. One shape, read three ways.
-              const chosenLabel =
-                chosen === undefined
+              const chosenLabel = pickedLabel
+                ? pickedLabel
+                : chosen === undefined
                   ? null
                   : 'text' in chosen
                     ? chosen.text

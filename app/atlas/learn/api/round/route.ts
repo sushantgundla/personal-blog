@@ -107,8 +107,11 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json(card, { headers: NO_STORE_HEADERS })
     } catch (err) {
+      // Logged, not returned: a failed deck read's message carries the
+      // server's absolute file path, which has no business in a browser.
+      console.error('[atlas/learn] surprise card failed:', err)
       return NextResponse.json(
-        { error: err instanceof Error ? err.message : 'Could not deal a card just now.' },
+        { error: 'Could not deal a card just now. Try again.' },
         { status: 500, headers: NO_STORE_HEADERS }
       )
     }
@@ -117,7 +120,8 @@ export async function GET(request: NextRequest) {
   if (!isGameId(game)) {
     return NextResponse.json(
       {
-        error: `"${game}" is not a game here. Try forgery, higher-lower, flags, guess-country or where-in-the-world.`,
+        // Clipped so an arbitrary query string is not echoed back whole.
+        error: `"${game.slice(0, 40)}" is not a game here. Try forgery, higher-lower, flags, guess-country or where-in-the-world.`,
       },
       { status: 400, headers: NO_STORE_HEADERS }
     )
@@ -133,8 +137,10 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json(round, { headers: NO_STORE_HEADERS })
   } catch (err) {
+    // See the surprise branch above: the real error goes to the server log.
+    console.error(`[atlas/learn] ${game} round failed:`, err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Could not build a round.' },
+      { error: 'Could not build a round just now. Try again.' },
       { status: 500, headers: NO_STORE_HEADERS }
     )
   }

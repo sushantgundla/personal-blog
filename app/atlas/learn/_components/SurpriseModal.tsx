@@ -175,6 +175,7 @@ export function SurpriseModal({ onClose }: SurpriseModalProps) {
   const [flipped, setFlipped] = useState(false)
 
   const dialogRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
   /** Guards against a slow first deal landing after a fast second one and
    *  putting the older card back on the table. */
   const requestId = useRef(0)
@@ -183,6 +184,14 @@ export function SurpriseModal({ onClose }: SurpriseModalProps) {
   const deal = useCallback(async () => {
     const id = requestId.current + 1
     requestId.current = id
+    // The stage is about to be swapped for the loading panel, taking the
+    // card or the "Try again" button with it. If focus is on one of those it
+    // would fall to <body> — outside the dialog, where the Tab trap cannot
+    // see it — so park it on the dialog itself first.
+    const active = document.activeElement
+    if (active instanceof HTMLElement && stageRef.current?.contains(active)) {
+      dialogRef.current?.focus()
+    }
     setLoading(true)
     setError(null)
     setFlipped(false)
@@ -361,7 +370,7 @@ export function SurpriseModal({ onClose }: SurpriseModalProps) {
         {/* One live region for the whole stage: the loading line, any
             error and the dealt card all announce from here, so nothing
             has to move focus to be heard. */}
-        <div className={styles.stage} aria-live="polite" aria-busy={loading}>
+        <div ref={stageRef} className={styles.stage} aria-live="polite" aria-busy={loading}>
           {loading && (
             <div className={styles.panel}>
               <div className={styles.waiting} aria-hidden="true">
@@ -497,10 +506,16 @@ export function SurpriseModal({ onClose }: SurpriseModalProps) {
           >
             {flipped ? 'Turn it back' : 'Turn it over'}
           </button>
+          {/* aria-disabled, not disabled: a disabled button drops the focus
+              it holds, and this is the button that has focus whenever a
+              keyboard player deals again — focus would land on <body>,
+              outside the dialog's Tab trap. */}
           <button
             type="button"
-            onClick={() => void deal()}
-            disabled={loading}
+            onClick={() => {
+              if (!loading) void deal()
+            }}
+            aria-disabled={loading}
             className={`${styles.control} ${styles.controlPrimary}`}
           >
             {loading ? 'Dealing…' : 'Deal another'}
