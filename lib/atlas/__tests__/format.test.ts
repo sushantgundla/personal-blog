@@ -53,6 +53,14 @@ describe('formatValue', () => {
     expect(formatValue(23.4, 'per1000')).toBe('23.4 /1,000');
   });
 
+  test('small non-integer numbers keep their decimals', () => {
+    expect(formatValue(1.62, 'number')).toBe('1.62');
+    expect(formatValue(35.24, 'number')).toBe('35.2');
+    expect(formatValue(0.31, 'number')).toBe('0.31');
+    expect(formatValue(5, 'number')).toBe('5');
+    expect(formatValue(456.7, 'number')).toBe('457');
+  });
+
   test('a custom empty marker is honoured', () => {
     expect(formatValue(null, 'number', { empty: 'n/a' })).toBe('n/a');
   });
