@@ -920,13 +920,14 @@
   transition: color 0.15s var(--atlas-ease), background 0.15s var(--atlas-ease);
 }
 
-.zoomButton:hover:not(:disabled),
+.zoomButton:hover:not([aria-disabled='true']),
 .zoomButton:focus-visible {
   background: var(--note-paper);
   color: var(--note-ember);
 }
 
-.zoomButton:disabled {
+/* aria-disabled rather than :disabled — see the zoom controls in Plate.tsx. */
+.zoomButton[aria-disabled='true'] {
   color: var(--note-intaglio-dim);
   cursor: default;
 }

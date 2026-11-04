@@ -43,6 +43,9 @@ export function useMapTransform(
   // Drag bookkeeping lives in refs, not state — every pointermove would
   // otherwise trigger a render just to update "am I dragging".
   const dragStart = useRef<{ x: number; y: number } | null>(null)
+  /** Where the gesture began. dragStart moves on every pointermove, so the
+   * click-vs-pan threshold has to be measured from here instead. */
+  const dragOrigin = useRef<{ x: number; y: number } | null>(null)
   const dragMoved = useRef(false)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -157,9 +160,17 @@ export function useMapTransform(
 
   const reset = useCallback(() => setTransform({ scale: 1, tx: 0, ty: 0 }), [])
 
-  const beginDrag = useCallback((clientX: number, clientY: number) => {
+  /** `continuing` is for re-basing a gesture already under way — one finger
+   * lifting out of a pinch. That gesture has moved the map, so it must still
+   * swallow the click; only a fresh press starts out as a possible click. */
+  const beginDrag = useCallback((clientX: number, clientY: number, continuing = false) => {
     dragStart.current = { x: clientX, y: clientY }
-    dragMoved.current = false
+    if (continuing) {
+      dragMoved.current = true
+    } else {
+      dragOrigin.current = { x: clientX, y: clientY }
+      dragMoved.current = false
+    }
     setIsDragging(true)
   }, [])
 
@@ -170,8 +181,12 @@ export function useMapTransform(
       const dx = clientX - start.x
       const dy = clientY - start.y
       // A few px of jitter shouldn't count as a drag — that's how a click
-      // is told apart from a pan once the pointer settles.
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved.current = true
+      // is told apart from a pan once the pointer settles. Measured from
+      // where the press began, not from the last move: a slow drag arrives
+      // as many 1-2px steps, none of which would cross the line alone, and
+      // the release would then open whichever country was under it.
+      const origin = dragOrigin.current ?? start
+      if (Math.abs(clientX - origin.x) > 3 || Math.abs(clientY - origin.y) > 3) dragMoved.current = true
       panByScreenDelta(dx, dy)
       dragStart.current = { x: clientX, y: clientY }
     },
@@ -180,6 +195,7 @@ export function useMapTransform(
 
   const endDrag = useCallback(() => {
     dragStart.current = null
+    dragOrigin.current = null
     setIsDragging(false)
     // Left true for the click handler that fires right after pointerup to
     // read (and clear) — see Plate.tsx's onClickCapture.
