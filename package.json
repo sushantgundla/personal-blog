@@ -15,7 +15,8 @@
     "atlas:snapshot": "node --experimental-loader=./scripts/atlas/ts-resolve-hook.mjs scripts/atlas/build-snapshot.mjs",
     "atlas:verify": "node scripts/atlas/verify-indicators.mjs",
     "atlas:learn-selfcheck": "node scripts/atlas/learn-selfcheck.mjs",
-    "atlas:smoke": "node scripts/atlas/smoke.mjs"
+    "atlas:smoke": "node scripts/atlas/smoke.mjs",
+    "atlas:test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./lib/atlas/__tests__/globals.mjs --test 'lib/atlas/__tests__/*.test.ts' 'lib/atlas/learn/__tests__/*.test.ts'"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

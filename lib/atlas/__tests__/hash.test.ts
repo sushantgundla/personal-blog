@@ -1,12 +1,5 @@
-// @ts-nocheck -- no test runner is wired into this project yet, so
-// describe/test/expect have no type declarations. Remove this line once a
-// runner (Jest/Vitest) is added; the assertions themselves are already
-// runner-ready.
-/**
- * Written for a Jest/Vitest-compatible runner (describe/test/expect globals).
- * No runner is wired into this project yet — see `scratch/atlas-selfcheck.mjs`
- * for a runner-free version of these same checks that has actually been run.
- */
+// @ts-nocheck -- describe/test/expect come from lib/atlas/__tests__/globals.mjs
+// at run time (npm run atlas:test) and have no type declarations here.
 import { hashString, hashToUnitFloat, hashSequence, hashToRange } from '../hash';
 
 describe('hashString', () => {

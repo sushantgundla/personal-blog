@@ -1,15 +1,8 @@
-// @ts-nocheck -- no test runner is wired into this project yet, so
-// describe/test/expect have no type declarations. Remove this line once a
-// runner (Jest/Vitest) is added; the assertions themselves are already
-// runner-ready.
-/**
- * Written for a Jest/Vitest-compatible runner (describe/test/expect globals).
- * No runner is wired into this project yet — see `scratch/atlas-selfcheck.mjs`
- * for a runner-free version of these same checks that has actually been run,
- * including the full contrast sweep this file describes.
- */
+// @ts-nocheck -- describe/test/expect come from lib/atlas/__tests__/globals.mjs
+// at run time (npm run atlas:test) and have no type declarations here.
 import { countryInk, contrastRatio } from '../ink';
 import { ISO3_CODES } from './iso3-fixture';
+import { ISO_COUNTRIES } from '../iso-countries';
 
 const NOTE_PAPER = '#1A1613';
 
@@ -49,6 +42,21 @@ describe('countryInk', () => {
       const { hue } = countryInk(iso3);
       expect(hue).toBeGreaterThanOrEqual(0);
       expect(hue).toBeLessThan(360);
+    }
+  });
+
+  test('the real ISO table: every code passes contrast, hue stays in [0, 360)', () => {
+    for (const { iso3 } of ISO_COUNTRIES) {
+      const ink = countryInk(iso3);
+      expect(contrastRatio(ink.hex, NOTE_PAPER)).toBeGreaterThanOrEqual(4.5);
+      expect(ink.hue).toBeGreaterThanOrEqual(0);
+      expect(ink.hue).toBeLessThan(360);
+    }
+  });
+
+  test('hue never rounds up to 360 for any seed', () => {
+    for (let i = 0; i < 20000; i++) {
+      expect(countryInk(`S${i}`).hue).toBeLessThan(360);
     }
   });
 
