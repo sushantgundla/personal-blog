@@ -56,16 +56,25 @@ function loadCountries() {
   return out;
 }
 
+// The top-N pick runs in a subquery so the image lookup and label service
+// only touch those N people, not every citizen. Without it USA, France and
+// Germany hit the 60s timeout on every run. "mul" is Wikidata's
+// language-neutral label; many people now carry only that, not "en".
 function query(qid) {
   return `SELECT ?person ?personLabel ?personDescription ?sitelinks ?image WHERE {
-  ?person wdt:P31 wd:Q5;
-          wdt:P27 wd:${qid};
-          wikibase:sitelinks ?sitelinks.
+  {
+    SELECT ?person ?sitelinks WHERE {
+      ?person wdt:P31 wd:Q5;
+              wdt:P27 wd:${qid};
+              wikibase:sitelinks ?sitelinks.
+    }
+    ORDER BY DESC(?sitelinks)
+    LIMIT ${PEOPLE_PER_COUNTRY}
+  }
   OPTIONAL { ?person wdt:P18 ?image }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
 }
-ORDER BY DESC(?sitelinks)
-LIMIT ${PEOPLE_PER_COUNTRY}`;
+ORDER BY DESC(?sitelinks)`;
 }
 
 async function fetchPeople(qid) {
@@ -79,13 +88,17 @@ async function fetchPeople(qid) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const body = await res.json();
-    return body.results.bindings.map((row) => ({
-      qid: row.person.value.split("/").pop(),
-      name: row.personLabel?.value ?? "Unknown",
-      description: row.personDescription?.value ?? null,
-      imageUrl: toHttps(row.image?.value ?? null),
-      occupations: [],
-    }));
+    const seen = new Set();
+    return body.results.bindings
+      .map((row) => ({
+        qid: row.person.value.split("/").pop(),
+        name: row.personLabel?.value ?? "Unknown",
+        description: row.personDescription?.value ?? null,
+        imageUrl: toHttps(row.image?.value ?? null),
+        occupations: [],
+      }))
+      .filter((p) => !seen.has(p.qid) && seen.add(p.qid)) // one row per extra P18 image
+      .filter((p) => p.name !== p.qid); // no en/mul label at all: the label service echoes the QID
   } finally {
     clearTimeout(timer);
   }

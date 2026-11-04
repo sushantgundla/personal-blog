@@ -40,7 +40,7 @@ export const ISO_COUNTRIES: readonly IsoCountry[] = [
   { iso3: "BRB", iso2: "BB", m49: "052", name: "Barbados", qid: "Q244", wikiTitle: "Barbados", region: "North America" },
   { iso3: "BLR", iso2: "BY", m49: "112", name: "Belarus", qid: "Q184", wikiTitle: "Belarus", region: "Europe" },
   { iso3: "BEL", iso2: "BE", m49: "056", name: "Belgium", qid: "Q31", wikiTitle: "Belgium", region: "Europe" },
-  { iso3: "BLZ", iso2: "BZ", m49: "084", name: "Belize", qid: "Q242", wikiTitle: "Belize", region: "Central America" },
+  { iso3: "BLZ", iso2: "BZ", m49: "084", name: "Belize", qid: "Q242", wikiTitle: "Belize", region: "North America" },
   { iso3: "BEN", iso2: "BJ", m49: "204", name: "Benin", qid: "Q962", wikiTitle: "Benin", region: "Africa" },
   { iso3: "BMU", iso2: "BM", m49: "060", name: "Bermuda", qid: "Q23635", wikiTitle: "Bermuda", region: "North America" },
   { iso3: "BTN", iso2: "BT", m49: "064", name: "Bhutan", qid: "Q917", wikiTitle: "Bhutan", region: "Asia" },
