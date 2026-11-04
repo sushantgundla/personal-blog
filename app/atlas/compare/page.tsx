@@ -6,15 +6,31 @@ import { CompareSlots } from '../_components/CompareSlots'
 import dossierStyles from '../_components/dossier.module.css'
 import styles from '../_components/compare.module.css'
 
+const SLOT_KEYS = ['a', 'b', 'c', 'd', 'e'] as const
+const MIN_COMPARE = 2
+const MAX_COMPARE = 5
+
+type PickerSearchParams = { a?: string; b?: string; c?: string; d?: string; e?: string }
+
+/** What the no-JS form asked for, and where it should land if it is valid. */
+function readSelection(searchParams: PickerSearchParams) {
+  const raw = SLOT_KEYS.map((k) => searchParams[k]?.trim()).filter((v): v is string => Boolean(v))
+  // The same country picked in two selects counts once.
+  const isos = Array.from(new Set(raw.map((v) => v.toUpperCase())))
+  const valid =
+    isos.every((iso) => BY_ISO3[iso]) && isos.length >= MIN_COMPARE && isos.length <= MAX_COMPARE
+  return {
+    attempted: raw.length > 0,
+    target: valid ? `/atlas/compare/${isos.map((i) => i.toLowerCase()).join('-vs-')}` : null,
+  }
+}
+
 export const metadata: Metadata = {
   title: 'Compare — The Atlas',
   description:
     'Put up to five countries head to head — the same sheet of denomination notes, rendered as a ledger.',
+  alternates: { canonical: '/atlas/compare' },
 }
-
-const SLOT_KEYS = ['a', 'b', 'c', 'd', 'e'] as const
-const MIN_COMPARE = 2
-const MAX_COMPARE = 5
 
 /**
  * `/atlas/compare` with no countries chosen — the same screen as
@@ -29,21 +45,11 @@ const MAX_COMPARE = 5
 export default function ComparePickerPage({
   searchParams,
 }: {
-  searchParams: { a?: string; b?: string; c?: string; d?: string; e?: string }
+  searchParams: PickerSearchParams
 }) {
-  const raw = SLOT_KEYS.map((k) => searchParams[k]?.trim()).filter((v): v is string => Boolean(v))
-  const attemptedSelection = raw.length > 0
-
-  if (attemptedSelection) {
-    const isos = raw.map((v) => v.toUpperCase())
-    const allKnown = isos.every((iso) => BY_ISO3[iso])
-    if (allKnown && isos.length >= MIN_COMPARE && isos.length <= MAX_COMPARE) {
-      redirect(`/atlas/compare/${isos.map((i) => i.toLowerCase()).join('-vs-')}`)
-    }
-  }
-
-  const invalidSelection =
-    attemptedSelection && !(raw.length >= MIN_COMPARE && raw.every((v) => BY_ISO3[v.toUpperCase()]))
+  const { attempted, target } = readSelection(searchParams)
+  if (target) redirect(target)
+  const invalidSelection = attempted
 
   return (
     <div className={`${styles.pickerPage} atlas-fade-in`}>
