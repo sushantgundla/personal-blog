@@ -93,9 +93,13 @@ export function buildRanking(
       )
     : [];
 
+  // Ties share a rank ("1, 1, 3"), never an arbitrary order: 140-odd
+  // countries report 100% electricity access, and they are all #1 — not
+  // #1 to #140 by whichever order the World Bank happened to list them.
   const n = sorted.length;
+  let rank = 0;
   const rankedRows: RankingRow[] = sorted.map((r, i) => {
-    const rank = i + 1;
+    if (i === 0 || r.value !== sorted[i - 1].value) rank = i + 1;
     const percentile = n > 1 ? Math.round(((n - rank) / (n - 1)) * 100) : 100;
     return {
       iso3: r.iso3,
@@ -171,9 +175,7 @@ export interface RankingsSnapshotFile {
 
 /**
  * A plain, cache-free read of content/atlas/snapshot/rankings.json.
- * rankings.ts wraps this in `unstable_cache` for the live site (see its doc
- * comment on getCachedRankingsSnapshotFile); nothing here needs `next/cache`,
- * which is exactly why this function lives in this file and not there.
+ * rankings.ts memoizes the result per server process.
  */
 export async function loadRankingsSnapshotFile(): Promise<{
   capturedAt: string | null;

@@ -269,13 +269,13 @@
 
 /* ---------------------------------------------------------- pair page */
 
+/* Fluid: no max-width. Five ledger columns are exactly the content that
+   wants a wide screen, and a capped column left bare page down each side. */
 .pairPage {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: 1.5rem clamp(1rem, 3vw, 3rem) 4rem;
 }
 
 .pairToolbar {

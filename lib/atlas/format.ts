@@ -149,10 +149,18 @@ export function formatValue(
   const abs = Math.abs(value);
   const allowCompact = opts.compact ?? (format === 'number' || format === 'currency');
 
-  const body =
-    allowCompact && abs >= 1e6
-      ? compact(abs, opts.decimals)
-      : fixed(abs, opts.decimals ?? defaultDecimalsFor(format));
+  let body: string;
+  if (allowCompact && abs >= 1e6) {
+    body = compact(abs, opts.decimals);
+  } else if (format === 'number' && opts.decimals === undefined && abs < 100 && !Number.isInteger(abs)) {
+    // Small 'number' figures are rates, not counts — births per woman,
+    // tonnes of CO2 per person, an exchange rate, a Gini score. Rounding
+    // them to a whole number made 1.6 and 2.4 births per woman both read
+    // "2", so they keep three significant digits instead.
+    body = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 3 }).format(abs);
+  } else {
+    body = fixed(abs, opts.decimals ?? defaultDecimalsFor(format));
+  }
 
   // A tiny negative that rounds to zero (-0.04 → "0.0") must not keep its
   // minus sign: "-0.0%" reads as a real, if small, decline.

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { BY_ISO3, ISO_COUNTRIES, type IsoCountry } from '@/lib/atlas/iso-countries'
 import { getDossier } from '@/lib/atlas/dossier'
 import { countryInk, type CountryInk } from '@/lib/atlas/ink'
@@ -89,17 +89,38 @@ type ParsedCountries =
  */
 function parseCountries(param: string): ParsedCountries {
   const tokens = param.split(/-vs-/i)
-  if (tokens.length < MIN_COMPARE || !tokens.every((t) => /^[a-z]{3}$/i.test(t))) {
-    return { kind: 'malformed' }
+  if (!tokens.every((t) => /^[a-z]{3}$/i.test(t))) return { kind: 'malformed' }
+  // A repeated country is dropped, not compared against itself — and
+  // `ind-vs-ind` is then one country, which is not a comparison.
+  const isos = Array.from(new Set(tokens.map((t) => t.toUpperCase())))
+  if (isos.length < MIN_COMPARE) return { kind: 'malformed' }
+  if (isos.length > MAX_COMPARE) {
+    return { kind: 'too-many', count: isos.length }
   }
-  if (tokens.length > MAX_COMPARE) {
-    return { kind: 'too-many', count: tokens.length }
-  }
-  const isos = tokens.map((t) => t.toUpperCase())
   for (const iso3 of isos) {
     if (!BY_ISO3[iso3]) return { kind: 'unknown', iso3 }
   }
   return { kind: 'ok', isos }
+}
+
+/** The one address each comparison lives at: lower case, no repeats. */
+function canonicalPath(isos: readonly string[]): string {
+  return `/atlas/compare/${isos.map((i) => i.toLowerCase()).join('-vs-')}`
+}
+
+/**
+ * 404 a bad list, and send any other spelling of a valid one (upper case,
+ * a repeated country) to its one lower-case address. Called from both
+ * generateMetadata and the page, so neither renders for a bad URL.
+ */
+function resolveCountries(param: string): Exclude<ParsedCountries, { kind: 'malformed' | 'unknown' }> {
+  const parsed = parseCountries(param)
+  if (parsed.kind === 'malformed' || parsed.kind === 'unknown') notFound()
+  if (parsed.kind === 'ok') {
+    const canonical = canonicalPath(parsed.isos)
+    if (`/atlas/compare/${param}` !== canonical) permanentRedirect(canonical)
+  }
+  return parsed
 }
 
 function hexToRgbString(hex: string): string {
@@ -115,19 +136,19 @@ export async function generateMetadata({
 }: {
   params: { countries: string }
 }): Promise<Metadata> {
-  const parsed = parseCountries(params.countries)
-  if (parsed.kind !== 'ok') return {}
+  const parsed = resolveCountries(params.countries)
+  if (parsed.kind === 'too-many') return { robots: { index: false } }
   const names = parsed.isos.map((iso) => BY_ISO3[iso]?.name).filter((n): n is string => Boolean(n))
   if (names.length < MIN_COMPARE) return {}
   return {
     title: `${names.join(' vs ')} — The Atlas`,
     description: `${names.join(', ')} head to head: every indicator laid out as a ledger, the honest best value struck in ember.`,
+    alternates: { canonical: canonicalPath(parsed.isos) },
   }
 }
 
 export default async function ComparePage({ params }: { params: { countries: string } }) {
-  const parsed = parseCountries(params.countries)
-  if (parsed.kind === 'malformed' || parsed.kind === 'unknown') notFound()
+  const parsed = resolveCountries(params.countries)
 
   if (parsed.kind === 'too-many') {
     return (

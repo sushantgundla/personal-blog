@@ -45,6 +45,9 @@ export async function generateMetadata({ params }: RankingPageProps): Promise<Me
   const def = INDICATORS_BY_CODE[params.indicator]
   if (!def) return {}
   return {
+    // Its own address, so `?dir=asc` and the root layout's site-wide
+    // canonical (the home page) don't claim this page.
+    alternates: { canonical: `/atlas/rankings/${def.code}` },
     title: `${def.label} — world rankings — The Atlas`,
     description: `Every country ranked by ${def.label.toLowerCase()} (${def.unit}), from the World Bank's World Development Indicators.`,
   }
@@ -147,14 +150,18 @@ export default async function RankingPage({ params, searchParams }: RankingPageP
             </p>
           )}
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '2rem' }}>
+          {/* Long country names and big currency figures can outgrow a
+              phone's width; the table scrolls inside this box, never the page. */}
+          <div style={{ overflowX: 'auto', marginTop: '2rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <caption className="sr-only">{def.label}</caption>
             <thead>
               <tr className="atlas-label" style={{ textAlign: 'left' }}>
-                <th style={{ padding: '0.5rem 0.5rem 0.5rem 0' }}>Rank</th>
-                <th style={{ padding: '0.5rem' }}>Country</th>
-                <th style={{ padding: '0.5rem' }}>Value</th>
-                <th style={{ padding: '0.5rem' }}>Year</th>
-                <th style={{ padding: '0.5rem 0 0.5rem 0.5rem', width: '30%' }} aria-hidden="true" />
+                <th scope="col" style={{ padding: '0.5rem 0.5rem 0.5rem 0' }}>Rank</th>
+                <th scope="col" style={{ padding: '0.5rem' }}>Country</th>
+                <th scope="col" style={{ padding: '0.5rem' }}>Value</th>
+                <th scope="col" style={{ padding: '0.5rem' }}>Year</th>
+                <td style={{ padding: '0.5rem 0 0.5rem 0.5rem', width: '30%' }} aria-hidden="true" />
               </tr>
             </thead>
             <tbody>
@@ -178,7 +185,7 @@ export default async function RankingPage({ params, searchParams }: RankingPageP
                   <td className="atlas-serial" style={{ padding: '0.5rem' }}>
                     {row.year ? formatYear(Number(row.year)) : '—'}
                   </td>
-                  <td style={{ padding: '0.5rem 0 0.5rem 0.5rem' }}>
+                  <td style={{ padding: '0.5rem 0 0.5rem 0.5rem' }} aria-hidden="true">
                     <span className="atlas-thread" style={{ width: '100%' }}>
                       <span
                         className="atlas-thread-fill"
@@ -190,6 +197,7 @@ export default async function RankingPage({ params, searchParams }: RankingPageP
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
 

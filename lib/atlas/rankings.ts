@@ -26,73 +26,45 @@
 // exists. See lib/atlas/dossier.ts for the same pattern applied per-country.
 //
 // Split 2026-08-08: buildRanking, computeAllRankings and the plain file read
-// now live in lib/atlas/rankings-data.ts, which has no `next/cache` import —
-// see that file's doc comment for why (scripts/atlas/build-snapshot.mjs
-// cannot resolve `next/cache` under plain Node). This file re-exports both so
-// nothing that already imports them from here needs to change, and keeps the
-// unstable_cache wrapping — the part that genuinely needs Next — on top.
-import { unstable_cache } from "next/cache";
+// live in lib/atlas/rankings-data.ts, which scripts/atlas/build-snapshot.mjs
+// can import under plain Node. This file re-exports both so nothing that
+// already imports them from here needs to change.
+//
+// Fixed 2026-11-04: the snapshot read used to sit behind `unstable_cache`,
+// meant to share one parse across cold starts. Next's Data Cache refuses any
+// entry over 2 MB (silently in production, with a thrown error in dev), and
+// rankings.json is 2.9 MB, so that wrapper never stored anything — it only
+// added a cache lookup and a 2.9 MB JSON.stringify per cold start. The
+// per-process memo below is the whole cache now.
 import { buildRanking, computeAllRankings, loadRankingsSnapshotFile } from "./rankings-data";
 import type { IndicatorValue, Ranking, RankingRow, SourceResult } from "./types";
 
 export { buildRanking, computeAllRankings };
 
 /**
- * Every indicator's ranking, computed once from one shared batched
- * `fetchIndicatorsAllCountries(ALL_INDICATOR_CODES)` call — ~10 World Bank
- * requests for the whole catalogue, not ~150. This promise is created on
- * first use and reused for the life of the server process (each request
- * inside it still carries its own `next: { revalidate }`, so Next's fetch
- * cache — not this module — is what makes it free across separate
- * processes/deploys once warm).
+ * Every indicator's ranking, loaded once per server process: the committed
+ * snapshot when there is one, else one shared batched World Bank fetch.
  */
 let allRankingsPromise: Promise<Map<string, SourceResult<Ranking>>> | null = null;
 
-let cachedSnapshotCapturedAt: string | null = null;
-
-/** The `capturedAt` timestamp from the last snapshot read, for "data as of" display. */
-export function getRankingsSnapshotCapturedAt(): string | null {
-  return cachedSnapshotCapturedAt;
-}
-
-/** The Next Data Cache tag for the rankings snapshot — no route revalidates
- * it today (unlike dossier.ts's per-country tag), it exists so the cached
- * value can be told apart from other unstable_cache entries and, if a
- * refresh path is ever added, invalidated the same way. */
-const RANKINGS_CACHE_TAG = "atlas-rankings";
-
 /**
- * content/atlas/snapshot/rankings.json (2.9 MB) is memoized per warm process
- * by allRankingsPromise below, but that buys nothing on a Vercel cold
- * start — every cold instance pays the same parse again. This wraps the
- * read in Next's Data Cache (unstable_cache), which — like dossier.ts's use
- * of it for getDossier — is a real store Vercel shares across every
- * instance and region, so only the first cold start after a deploy actually
- * parses the file.
- *
- * The cached value is a plain, already-JSON-shaped record (capturedAt +
- * the Record straight from JSON.parse), not a Map — unstable_cache persists
- * whatever it's given through Next's own serialization, and a Map does not
- * survive that round trip. The Map conversion, and setting
- * cachedSnapshotCapturedAt, both stay in readRankingsSnapshot below, outside
- * the cached function, so they still happen on every call — including a
- * cache *hit* in a process that never ran loadRankingsSnapshotFile itself.
- * loadRankingsSnapshotFile itself now lives in ./rankings-data (see this
- * file's top-of-file doc comment for why) — imported above, not redefined
- * here.
+ * The snapshot's rows are re-ranked through buildRanking on read, so the
+ * ranking rules (ties sharing a rank, the 30-country floor) are whatever
+ * this code says today, not whatever they were when the snapshot was built.
  */
-function getCachedRankingsSnapshotFile() {
-  return unstable_cache(loadRankingsSnapshotFile, ["atlas-rankings-v1"], {
-    tags: [RANKINGS_CACHE_TAG],
-    revalidate: false, // forever — there is no refresh route for rankings, a new deploy resets the Data Cache anyway
-  })();
-}
-
 async function readRankingsSnapshot(): Promise<Map<string, SourceResult<Ranking>> | null> {
-  const snapshot = await getCachedRankingsSnapshotFile();
+  const snapshot = await loadRankingsSnapshotFile();
   if (!snapshot) return null;
-  cachedSnapshotCapturedAt = snapshot.capturedAt;
-  return new Map(Object.entries(snapshot.rankings));
+  const out = new Map<string, SourceResult<Ranking>>();
+  for (const [code, result] of Object.entries(snapshot.rankings)) {
+    out.set(
+      code,
+      result.ok
+        ? { ok: true, data: buildRanking(code, result.data.rows, result.data.asOfNote) }
+        : result
+    );
+  }
+  return out;
 }
 
 async function loadAllRankings(): Promise<Map<string, SourceResult<Ranking>>> {
