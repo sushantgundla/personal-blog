@@ -1,6 +1,6 @@
 'use client'
 
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { guillochePath, guillocheLength } from '@/lib/atlas/guilloche'
 import styles from './plate.module.css'
 
@@ -42,6 +42,8 @@ export interface CartoucheProps {
 }
 
 const GAP = 14
+/** The rosette's own viewBox size, in guilloche units. */
+const CARTOUCHE_ROSETTE = 100
 
 export function Cartouche({
   iso3,
@@ -55,8 +57,13 @@ export function Cartouche({
   visible,
   containerRef,
 }: CartoucheProps) {
-  const path = guillochePath(iso3, { size: 100 })
-  const length = guillocheLength(iso3)
+  // Memoised per country: this card re-renders on every mousemove, and each
+  // call samples a 400-point curve. guillocheLength measures the curve at its
+  // default 200-unit size, so it is halved for this 100-unit one — unscaled,
+  // the dash was twice the real length and the draw-on animation spent its
+  // first half drawing nothing.
+  const path = useMemo(() => guillochePath(iso3, { size: CARTOUCHE_ROSETTE }), [iso3])
+  const length = useMemo(() => guillocheLength(iso3) * (CARTOUCHE_ROSETTE / 200), [iso3])
 
   const cardRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ left: x + GAP, top: y + GAP })

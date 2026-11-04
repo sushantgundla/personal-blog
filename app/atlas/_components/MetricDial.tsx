@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import type { IndicatorDef } from '@/lib/atlas/types'
 import { MagneticButton } from '@/components/MagneticButton'
 import styles from './plate.module.css'
@@ -46,7 +47,7 @@ export interface MetricDialProps {
  * active/onChange/nodataCount; the sweep/paint logic in Plate.tsx never
  * changed across any of these moves.
  */
-export function MetricDial({ indicators, active, onChange, nodataCount }: MetricDialProps) {
+export const MetricDial = memo(function MetricDial({ indicators, active, onChange, nodataCount }: MetricDialProps) {
   return (
     <div className={styles.dial}>
       <span className="atlas-label" style={{ flex: 'none' }}>
@@ -100,4 +101,4 @@ export function MetricDial({ indicators, active, onChange, nodataCount }: Metric
       )}
     </div>
   )
-}
+})
