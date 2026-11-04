@@ -313,9 +313,12 @@ describe('guess the flag', () => {
   test('distractors come from the answer’s region whenever the region has four flags', async () => {
     const deck = await getDeck();
     const rng = makeRng('flags-region');
+    // Sovereign only: that is the generator's own pool (flags.ts `flagPool`).
+    // Counting territories too made a region like Insular Oceania look as if
+    // it had four flags to draw from when the generator, rightly, sees fewer.
     const flagsPerRegion = new Map<string, number>();
     for (const c of deck.countries) {
-      if (!c.flagUrl || !c.region) continue;
+      if (!c.sovereign || !c.flagUrl || !c.region) continue;
       flagsPerRegion.set(c.region, (flagsPerRegion.get(c.region) ?? 0) + 1);
     }
     for (const q of many(200, () => buildFlagQuestion(deck, rng, EMPTY))) {
